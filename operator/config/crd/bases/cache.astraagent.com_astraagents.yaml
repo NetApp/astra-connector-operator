@@ -36,12 +36,81 @@ spec:
           spec:
             description: AstraAgentSpec defines the desired state of AstraAgent
             properties:
-              size:
-                description: Size is the size of the AstraAgent deployment
-                format: int32
-                type: integer
+              namespace:
+                type: string
+              nats:
+                properties:
+                  client-port:
+                    format: int32
+                    type: integer
+                  cluster-port:
+                    format: int32
+                    type: integer
+                  cluster-service-name:
+                    type: string
+                  gateways-port:
+                    format: int32
+                    type: integer
+                  image:
+                    type: string
+                  metrics-port:
+                    format: int32
+                    type: integer
+                  monitor-port:
+                    format: int32
+                    type: integer
+                  name:
+                    type: string
+                  nats-server-url:
+                    type: string
+                  size:
+                    format: int32
+                    type: integer
+                required:
+                - client-port
+                - cluster-port
+                - cluster-service-name
+                - gateways-port
+                - image
+                - metrics-port
+                - monitor-port
+                - name
+                - nats-server-url
+                - size
+                type: object
+              natssync-client:
+                properties:
+                  cloud-bridge-url:
+                    type: string
+                  image:
+                    type: string
+                  name:
+                    type: string
+                  nodeport:
+                    format: int32
+                    type: integer
+                  port:
+                    format: int32
+                    type: integer
+                  protocol:
+                    default: TCP
+                    type: string
+                  size:
+                    format: int32
+                    type: integer
+                required:
+                - cloud-bridge-url
+                - image
+                - name
+                - nodeport
+                - port
+                - protocol
+                - size
+                type: object
             required:
-            - size
+            - namespace
+            - nats
+            - natssync-client
             type: object
           status:
             description: AstraAgentStatus defines the observed state of AstraAgent

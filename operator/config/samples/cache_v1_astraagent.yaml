@@ -2,6 +2,24 @@ apiVersion: cache.astraagent.com/v1
 kind: AstraAgent
 metadata:
   name: astra-agent
-  namespace: astra-agent
 spec:
-  size: 1
+  namespace: astra-agent
+  natssync-client:
+    name: natssync-client
+    size: 1
+    image: theotw/natssync-client:latest
+    cloud-bridge-url: http://localhost:8081
+    port: 8080
+    nodeport: 31000
+    protocol: TCP
+  nats:
+    name: nats
+    cluster-service-name: nats-cluster
+    size: 2
+    image: nats:2.6.1-alpine3.14
+    nats-server-url: nats://nats:4222
+    client-port: 4222
+    cluster-port: 6222
+    monitor-port: 8222
+    metrics-port: 7777
+    gateways-port: 7522

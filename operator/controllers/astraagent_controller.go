@@ -29,7 +29,6 @@ import (
 	"time"
 
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -47,6 +46,7 @@ type AstraAgentReconciler struct {
 //+kubebuilder:rbac:groups=cache.astraagent.com,resources=astraagents/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=cache.astraagent.com,resources=astraagents/finalizers,verbs=update
 //+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=core,resources=pods,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=core,resources=services,verbs=get;list;watch;create;update;patch;delete
 
@@ -71,30 +71,30 @@ func (r *AstraAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 	// Check if the deployment already exists, if not create a new one
 	foundDep := &appsv1.Deployment{}
-	err = r.Get(ctx, types.NamespacedName{Name: astraAgent.Name, Namespace: astraAgent.Namespace}, foundDep)
+	err = r.Get(ctx, types.NamespacedName{Name: astraAgent.Spec.NatssyncClient.Name, Namespace: astraAgent.Spec.Namespace}, foundDep)
 	if err != nil && errors.IsNotFound(err) {
 		// Define a new deployment
-		dep := r.deploymentForAstraAgent(astraAgent)
-		log.Info("Creating a new Deployment", "Deployment.Namespace", dep.Namespace, "Deployment.Name", dep.Name)
+		dep := r.deploymentForNatssyncClient(astraAgent)
+		log.Info("Creating a new natssync Deployment", "Deployment.Namespace", dep.Namespace, "Deployment.Name", dep.Name)
 		err = r.Create(ctx, dep)
 		if err != nil {
-			log.Error(err, "Failed to create new Deployment", "Deployment.Namespace", dep.Namespace, "Deployment.Name", dep.Name)
+			log.Error(err, "Failed to create new natssync Deployment", "Deployment.Namespace", dep.Namespace, "Deployment.Name", dep.Name)
 			return ctrl.Result{}, err
 		}
 		// Deployment created successfully - return and requeue
 		return ctrl.Result{Requeue: true}, nil
 	} else if err != nil {
-		log.Error(err, "Failed to get Deployment")
+		log.Error(err, "Failed to get natssync Deployment")
 		return ctrl.Result{}, err
 	}
 
 	// Ensure the deployment size is the same as the spec
-	size := astraAgent.Spec.Size
-	if *foundDep.Spec.Replicas != size {
-		foundDep.Spec.Replicas = &size
+	natssyncClientSize := astraAgent.Spec.NatssyncClient.Size
+	if *foundDep.Spec.Replicas != natssyncClientSize {
+		foundDep.Spec.Replicas = &natssyncClientSize
 		err = r.Update(ctx, foundDep)
 		if err != nil {
-			log.Error(err, "Failed to update Deployment", "Deployment.Namespace", foundDep.Namespace, "Deployment.Name", foundDep.Name)
+			log.Error(err, "Failed to update natssync Deployment", "Deployment.Namespace", foundDep.Namespace, "Deployment.Name", foundDep.Name)
 			return ctrl.Result{}, err
 		}
 		// Ask to requeue after 1 minute in order to give enough time for the
@@ -103,22 +103,94 @@ func (r *AstraAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{RequeueAfter: time.Minute}, nil
 	}
 
-	// Check if the service already exists, if not create a new one
-	foundSer := &corev1.Service{}
-	err = r.Get(ctx, types.NamespacedName{Name: astraAgent.Name, Namespace: astraAgent.Namespace}, foundSer)
+	// Check if the natssync-client service already exists, if not create a new one
+	foundNatssyncSer := &corev1.Service{}
+	err = r.Get(ctx, types.NamespacedName{Name: astraAgent.Spec.NatssyncClient.Name, Namespace: astraAgent.Spec.Namespace}, foundNatssyncSer)
 	if err != nil && errors.IsNotFound(err) {
 		// Define a new service
-		serv := r.serviceForAstraAgent(astraAgent)
-		log.Info("Creating a new Service", "Service.Namespace", serv.Namespace, "Service.Name", serv.Name)
+		serv := r.serviceForNatssyncClient(astraAgent)
+		log.Info("Creating a new natssync Service", "Service.Namespace", serv.Namespace, "Service.Name", serv.Name)
 		err = r.Create(ctx, serv)
 		if err != nil {
-			log.Error(err, "Failed to create new Service", "Service.Namespace", serv.Namespace, "Service.Name", serv.Name)
+			log.Error(err, "Failed to create new natssync Service", "Service.Namespace", serv.Namespace, "Service.Name", serv.Name)
 			return ctrl.Result{}, err
 		}
 		// Service created successfully - return and requeue
 		return ctrl.Result{Requeue: true}, nil
 	} else if err != nil {
-		log.Error(err, "Failed to get Service")
+		log.Error(err, "Failed to get natssync Service")
+		return ctrl.Result{}, err
+	}
+
+	// Check if the nats statefulset already exists, if not create a new one
+	foundSet := &appsv1.StatefulSet{}
+	err = r.Get(ctx, types.NamespacedName{Name: astraAgent.Spec.Nats.Name, Namespace: astraAgent.Spec.Namespace}, foundSet)
+	if err != nil && errors.IsNotFound(err) {
+		// Define a new statefulset
+		set := r.statefulsetForNats(astraAgent)
+		log.Info("Creating a new nats StatefulSet", "StatefulSet.Namespace", set.Namespace, "StatefulSet.Name", set.Name)
+		err = r.Create(ctx, set)
+		if err != nil {
+			log.Error(err, "Failed to create new nats StatefulSet", "StatefulSet.Namespace", set.Namespace, "StatefulSet.Name", set.Name)
+			return ctrl.Result{}, err
+		}
+		// StatefulSet created successfully - return and requeue
+		return ctrl.Result{Requeue: true}, nil
+	} else if err != nil {
+		log.Error(err, "Failed to get nats StatefulSet")
+		return ctrl.Result{}, err
+	}
+
+	// Ensure the nats statefulset size is the same as the spec
+	natsSize := astraAgent.Spec.Nats.Size
+	if *foundSet.Spec.Replicas != natsSize {
+		foundSet.Spec.Replicas = &natsSize
+		err = r.Update(ctx, foundSet)
+		if err != nil {
+			log.Error(err, "Failed to update StatefulSet", "StatefulSet.Namespace", foundSet.Namespace, "StatefulSet.Name", foundSet.Name)
+			return ctrl.Result{}, err
+		}
+		// Ask to requeue after 1 minute in order to give enough time for the
+		// pods be created on the cluster side and the operand be able
+		// to do the next update step accurately.
+		return ctrl.Result{RequeueAfter: time.Minute}, nil
+	}
+
+	// Check if the nats service already exists, if not create a new one
+	foundNatsSer := &corev1.Service{}
+	err = r.Get(ctx, types.NamespacedName{Name: astraAgent.Spec.Nats.Name, Namespace: astraAgent.Spec.Namespace}, foundNatsSer)
+	if err != nil && errors.IsNotFound(err) {
+		// Define a new service
+		serv := r.serviceForNats(astraAgent)
+		log.Info("Creating a new nats Service", "Service.Namespace", serv.Namespace, "Service.Name", serv.Name)
+		err = r.Create(ctx, serv)
+		if err != nil {
+			log.Error(err, "Failed to create new nats Service", "Service.Namespace", serv.Namespace, "Service.Name", serv.Name)
+			return ctrl.Result{}, err
+		}
+		// Service created successfully - return and requeue
+		return ctrl.Result{Requeue: true}, nil
+	} else if err != nil {
+		log.Error(err, "Failed to get nats Service")
+		return ctrl.Result{}, err
+	}
+
+	// Check if the nats cluster service already exists, if not create a new one
+	foundNatsClusterSer := &corev1.Service{}
+	err = r.Get(ctx, types.NamespacedName{Name: astraAgent.Spec.Nats.ClusterServiceName, Namespace: astraAgent.Spec.Namespace}, foundNatsClusterSer)
+	if err != nil && errors.IsNotFound(err) {
+		// Define a new cluster service
+		serv := r.clusterServiceForNats(astraAgent)
+		log.Info("Creating a new nats cluster Service", "Service.Namespace", serv.Namespace, "Service.Name", serv.Name)
+		err = r.Create(ctx, serv)
+		if err != nil {
+			log.Error(err, "Failed to create new nats cluster Service", "Service.Namespace", serv.Namespace, "Service.Name", serv.Name)
+			return ctrl.Result{}, err
+		}
+		// Cluster service created successfully - return and requeue
+		return ctrl.Result{Requeue: true}, nil
+	} else if err != nil {
+		log.Error(err, "Failed to get nats cluster Service")
 		return ctrl.Result{}, err
 	}
 
@@ -126,11 +198,12 @@ func (r *AstraAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	// List the pods for this astraAgent's deployment
 	podList := &corev1.PodList{}
 	listOpts := []client.ListOption{
-		client.InNamespace(astraAgent.Namespace),
-		client.MatchingLabels(labelsForAstraAgent(astraAgent.Name)),
+		client.InNamespace(astraAgent.Spec.Namespace),
+		client.MatchingLabels(labelsForNatssyncClient(astraAgent.Spec.NatssyncClient.Name)),
+		client.MatchingLabels(labelsForNats(astraAgent.Spec.Nats.Name)),
 	}
 	if err = r.List(ctx, podList, listOpts...); err != nil {
-		log.Error(err, "Failed to list pods", "astraAgent.Namespace", astraAgent.Namespace, "astraAgent.Name", astraAgent.Name)
+		log.Error(err, "Failed to list pods", "astraAgent.Spec.Namespace", astraAgent.Spec.Namespace)
 		return ctrl.Result{}, err
 	}
 	podNames := getPodNames(podList.Items)
@@ -154,75 +227,8 @@ func (r *AstraAgentReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&cachev1.AstraAgent{}).
 		Owns(&appsv1.Deployment{}).
 		Owns(&corev1.Service{}).
+		Owns(&appsv1.StatefulSet{}).
 		Complete(r)
-}
-
-// deploymentForAstraAgent returns a astraAgent Deployment object
-func (r *AstraAgentReconciler) deploymentForAstraAgent(m *cachev1.AstraAgent) *appsv1.Deployment {
-	ls := labelsForAstraAgent(m.Name)
-	replicas := m.Spec.Size
-
-	dep := &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      m.Name,
-			Namespace: m.Namespace,
-		},
-		Spec: appsv1.DeploymentSpec{
-			Replicas: &replicas,
-			Selector: &metav1.LabelSelector{
-				MatchLabels: ls,
-			},
-			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: ls,
-				},
-				Spec: corev1.PodSpec{
-					Containers: []corev1.Container{{
-						Image: "theotw/natssync-client:latest",
-						Name:  "astra-agent",
-					}},
-				},
-			},
-		},
-	}
-	// Set astraAgent instance as the owner and controller
-	ctrl.SetControllerReference(m, dep, r.Scheme)
-	return dep
-}
-
-// serviceForAstraAgent returns a astraAgent Deployment object
-func (r *AstraAgentReconciler) serviceForAstraAgent(m *cachev1.AstraAgent) *corev1.Service {
-	service := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "astra-agent",
-			Namespace: "astra-agent",
-			Labels: map[string]string{
-				"app": "astra-agent",
-			},
-		},
-		Spec: corev1.ServiceSpec{
-			Type: corev1.ServiceTypeNodePort,
-			Ports: []corev1.ServicePort{
-				{
-					Port:     8080,
-					NodePort: 31000,
-					Protocol: "TCP",
-				},
-			},
-			Selector: map[string]string{
-				"app": "astra-agent",
-			},
-		},
-	}
-	// Set astraAgent instance as the owner and controller
-	ctrl.SetControllerReference(m, service, r.Scheme)
-	return service
-}
-
-// labelsForAstraAgent returns the labels for selecting the resources
-// belonging to the given astraAgent CR name.
-func labelsForAstraAgent(name string) map[string]string {
-	return map[string]string{"app": "astraAgent", "astraAgent_cr": name}
 }
 
 // getPodNames returns the pod names of the array of pods passed in

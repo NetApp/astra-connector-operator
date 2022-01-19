@@ -17,16 +17,41 @@ limitations under the License.
 package v1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
+type NatssyncClient struct {
+	Name           string          `json:"name"`
+	Size           int32           `json:"size"`
+	Image          string          `json:"image"`
+	CloudBridgeURL string          `json:"cloud-bridge-url"`
+	Port           int32           `json:"port"`
+	NodePort       int32           `json:"nodeport"`
+	Protocol       corev1.Protocol `json:"protocol"`
+}
+
+type Nats struct {
+	Name               string `json:"name"`
+	ClusterServiceName string `json:"cluster-service-name"`
+	Size               int32  `json:"size"`
+	Image              string `json:"image"`
+	ServerURL          string `json:"nats-server-url"`
+	ClientPort         int32  `json:"client-port"`
+	ClusterPort        int32  `json:"cluster-port"`
+	MonitorPort        int32  `json:"monitor-port"`
+	MetricsPort        int32  `json:"metrics-port"`
+	GatewaysPort       int32  `json:"gateways-port"`
+}
+
 // AstraAgentSpec defines the desired state of AstraAgent
 type AstraAgentSpec struct {
-	// Size is the size of the AstraAgent deployment
-	Size int32 `json:"size"`
+	Namespace      string         `json:"namespace"`
+	NatssyncClient NatssyncClient `json:"natssync-client"`
+	Nats           Nats           `json:"nats"`
 }
 
 // AstraAgentStatus defines the observed state of AstraAgent
