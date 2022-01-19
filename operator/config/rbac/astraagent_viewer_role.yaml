@@ -1,0 +1,20 @@
+# permissions for end users to view astraagents.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: astraagent-viewer-role
+rules:
+- apiGroups:
+  - cache.astraagent.com
+  resources:
+  - astraagents
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - cache.astraagent.com
+  resources:
+  - astraagents/status
+  verbs:
+  - get

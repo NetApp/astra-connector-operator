@@ -1,0 +1,7 @@
+apiVersion: cache.astraagent.com/v1
+kind: AstraAgent
+metadata:
+  name: astra-agent
+  namespace: astra-agent
+spec:
+  size: 1
