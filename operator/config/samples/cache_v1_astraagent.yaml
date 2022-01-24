@@ -27,4 +27,7 @@ spec:
     name: httpproxy-client
     size: 1
     image: theotw/httpproxylet:latest
-    port: 8080
+  echo-client:
+    name: echo-client
+    size: 1
+    image: theotw/echo-proxylet:latest

@@ -27,14 +27,12 @@ type HttpProxyClient struct {
 	Name  string `json:"name"`
 	Size  int32  `json:"size"`
 	Image string `json:"image"`
-	Port  int32  `json:"port"`
 }
 
 type EchoClient struct {
 	Name  string `json:"name"`
 	Size  int32  `json:"size"`
 	Image string `json:"image"`
-	Port  int32  `json:"port"`
 }
 
 type NatssyncClient struct {

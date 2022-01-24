@@ -71,6 +71,7 @@ func (r *AstraAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	deployments := map[string]string{
 		astraAgent.Spec.NatssyncClient.Name:  "DeploymentForNatssyncClient",
 		astraAgent.Spec.HttpProxyClient.Name: "DeploymentForProxyClient",
+		astraAgent.Spec.EchoClient.Name:      "DeploymentForEchoClient",
 	}
 	statefulSets := map[string]string{
 		astraAgent.Spec.Nats.Name: "StatefulsetForNats",
@@ -79,7 +80,6 @@ func (r *AstraAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		astraAgent.Spec.NatssyncClient.Name:     "ServiceForNatssyncClient",
 		astraAgent.Spec.Nats.Name:               "ServiceForNats",
 		astraAgent.Spec.Nats.ClusterServiceName: "ClusterServiceForNats",
-		astraAgent.Spec.HttpProxyClient.Name:    "ServiceForProxyClient",
 	}
 
 	// Check if the deployment already exists, if not create a new one

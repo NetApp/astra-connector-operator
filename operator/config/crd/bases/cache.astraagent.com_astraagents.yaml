@@ -36,6 +36,20 @@ spec:
           spec:
             description: AstraAgentSpec defines the desired state of AstraAgent
             properties:
+              echo-client:
+                properties:
+                  image:
+                    type: string
+                  name:
+                    type: string
+                  size:
+                    format: int32
+                    type: integer
+                required:
+                - image
+                - name
+                - size
+                type: object
               httpproxy-client:
                 description: 'EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
                   NOTE: json tags are required.  Any new fields you add must have
@@ -45,16 +59,12 @@ spec:
                     type: string
                   name:
                     type: string
-                  port:
-                    format: int32
-                    type: integer
                   size:
                     format: int32
                     type: integer
                 required:
                 - image
                 - name
-                - port
                 - size
                 type: object
               namespace:
@@ -129,6 +139,7 @@ spec:
                 - size
                 type: object
             required:
+            - echo-client
             - httpproxy-client
             - namespace
             - nats
