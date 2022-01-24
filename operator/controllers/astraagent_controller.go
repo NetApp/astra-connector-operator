@@ -205,8 +205,6 @@ func (r *AstraAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	podList := &corev1.PodList{}
 	listOpts := []client.ListOption{
 		client.InNamespace(astraAgent.Spec.Namespace),
-		client.MatchingLabels(labelsForNatssyncClient(astraAgent.Spec.NatssyncClient.Name)),
-		client.MatchingLabels(labelsForNats(astraAgent.Spec.Nats.Name)),
 	}
 	if err = r.List(ctx, podList, listOpts...); err != nil {
 		log.Error(err, "Failed to list pods", "astraAgent.Spec.Namespace", astraAgent.Spec.Namespace)
