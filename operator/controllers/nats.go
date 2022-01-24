@@ -8,8 +8,8 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
-// statefulsetForNats returns a astraAgent Deployment object
-func (r *AstraAgentReconciler) statefulsetForNats(m *cachev1.AstraAgent) *appsv1.StatefulSet {
+// StatefulsetForNats returns a astraAgent Deployment object
+func (r *AstraAgentReconciler) StatefulsetForNats(m *cachev1.AstraAgent) *appsv1.StatefulSet {
 	ls := labelsForNats(m.Spec.Nats.Name)
 	replicas := m.Spec.Nats.Size
 
@@ -59,8 +59,8 @@ func (r *AstraAgentReconciler) statefulsetForNats(m *cachev1.AstraAgent) *appsv1
 	return dep
 }
 
-// clusterServiceForNats returns a astraAgent Deployment object
-func (r *AstraAgentReconciler) clusterServiceForNats(m *cachev1.AstraAgent) *corev1.Service {
+// ClusterServiceForNats returns a astraAgent Deployment object
+func (r *AstraAgentReconciler) ClusterServiceForNats(m *cachev1.AstraAgent) *corev1.Service {
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "nats-cluster",
@@ -103,8 +103,8 @@ func (r *AstraAgentReconciler) clusterServiceForNats(m *cachev1.AstraAgent) *cor
 	return service
 }
 
-// serviceForNats returns a astraAgent Deployment object
-func (r *AstraAgentReconciler) serviceForNats(m *cachev1.AstraAgent) *corev1.Service {
+// ServiceForNats returns a astraAgent Deployment object
+func (r *AstraAgentReconciler) ServiceForNats(m *cachev1.AstraAgent) *corev1.Service {
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "nats",

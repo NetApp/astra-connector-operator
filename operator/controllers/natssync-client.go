@@ -8,8 +8,8 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
-// deploymentForNatssyncClient returns a astraAgent Deployment object
-func (r *AstraAgentReconciler) deploymentForNatssyncClient(m *cachev1.AstraAgent) *appsv1.Deployment {
+// DeploymentForNatssyncClient returns a astraAgent Deployment object
+func (r *AstraAgentReconciler) DeploymentForNatssyncClient(m *cachev1.AstraAgent) *appsv1.Deployment {
 	ls := labelsForNatssyncClient(m.Spec.NatssyncClient.Name)
 	replicas := m.Spec.NatssyncClient.Size
 
@@ -51,8 +51,8 @@ func (r *AstraAgentReconciler) deploymentForNatssyncClient(m *cachev1.AstraAgent
 	return dep
 }
 
-// serviceForNatssyncClient returns a astraAgent Deployment object
-func (r *AstraAgentReconciler) serviceForNatssyncClient(m *cachev1.AstraAgent) *corev1.Service {
+// ServiceForNatssyncClient returns a astraAgent Deployment object
+func (r *AstraAgentReconciler) ServiceForNatssyncClient(m *cachev1.AstraAgent) *corev1.Service {
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      m.Spec.NatssyncClient.Name,

@@ -19,7 +19,6 @@ package controllers
 import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
@@ -69,129 +68,131 @@ func (r *AstraAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, err
 	}
 
+	deployments := map[string]string{
+		astraAgent.Spec.NatssyncClient.Name: "DeploymentForNatssyncClient",
+	}
+	statefulSets := map[string]string{
+		astraAgent.Spec.Nats.Name: "StatefulsetForNats",
+	}
+	services := map[string]string{
+		astraAgent.Spec.NatssyncClient.Name:     "ServiceForNatssyncClient",
+		astraAgent.Spec.Nats.Name:               "ServiceForNats",
+		astraAgent.Spec.Nats.ClusterServiceName: "ClusterServiceForNats",
+	}
+
 	// Check if the deployment already exists, if not create a new one
-	foundDep := &appsv1.Deployment{}
-	err = r.Get(ctx, types.NamespacedName{Name: astraAgent.Spec.NatssyncClient.Name, Namespace: astraAgent.Spec.Namespace}, foundDep)
-	if err != nil && errors.IsNotFound(err) {
-		// Define a new deployment
-		dep := r.deploymentForNatssyncClient(astraAgent)
-		log.Info("Creating a new natssync Deployment", "Deployment.Namespace", dep.Namespace, "Deployment.Name", dep.Name)
-		err = r.Create(ctx, dep)
-		if err != nil {
-			log.Error(err, "Failed to create new natssync Deployment", "Deployment.Namespace", dep.Namespace, "Deployment.Name", dep.Name)
-			return ctrl.Result{}, err
-		}
-		// Deployment created successfully - return and requeue
-		return ctrl.Result{Requeue: true}, nil
-	} else if err != nil {
-		log.Error(err, "Failed to get natssync Deployment")
-		return ctrl.Result{}, err
+	replicaSize := map[string]int32{
+		astraAgent.Spec.Nats.Name:           astraAgent.Spec.Nats.Size,
+		astraAgent.Spec.NatssyncClient.Name: astraAgent.Spec.NatssyncClient.Size,
 	}
 
-	// Ensure the deployment size is the same as the spec
-	natssyncClientSize := astraAgent.Spec.NatssyncClient.Size
-	if *foundDep.Spec.Replicas != natssyncClientSize {
-		foundDep.Spec.Replicas = &natssyncClientSize
-		err = r.Update(ctx, foundDep)
-		if err != nil {
-			log.Error(err, "Failed to update natssync Deployment", "Deployment.Namespace", foundDep.Namespace, "Deployment.Name", foundDep.Name)
+	for statefulSet, funcName := range statefulSets {
+		foundSet := &appsv1.StatefulSet{}
+		err = r.Get(ctx, types.NamespacedName{Name: statefulSet, Namespace: astraAgent.Spec.Namespace}, foundSet)
+		if err != nil && errors.IsNotFound(err) {
+			// Define a new statefulset
+			// Use reflection to call the method
+			in := make([]reflect.Value, 1)
+			in[0] = reflect.ValueOf(astraAgent)
+			method := reflect.ValueOf(r).MethodByName(funcName)
+			val := method.Call(in)
+			set := val[0].Interface().(*appsv1.StatefulSet)
+
+			log.Info("Creating a new StatefulSet", "StatefulSet.Namespace", set.Namespace, "StatefulSet.Name", set.Name)
+			err = r.Create(ctx, set)
+			if err != nil {
+				log.Error(err, "Failed to create new StatefulSet", "StatefulSet.Namespace", set.Namespace, "StatefulSet.Name", set.Name)
+				return ctrl.Result{}, err
+			}
+			// StatefulSet created successfully - return and requeue
+			return ctrl.Result{Requeue: true}, nil
+		} else if err != nil {
+			log.Error(err, "Failed to get nats StatefulSet")
 			return ctrl.Result{}, err
 		}
-		// Ask to requeue after 1 minute in order to give enough time for the
-		// pods be created on the cluster side and the operand be able
-		// to do the next update step accurately.
-		return ctrl.Result{RequeueAfter: time.Minute}, nil
+
+		// Ensure the nats statefulset size is the same as the spec
+		natsSize := replicaSize[astraAgent.Spec.Nats.Name]
+		if *foundSet.Spec.Replicas != natsSize {
+			foundSet.Spec.Replicas = &natsSize
+			err = r.Update(ctx, foundSet)
+			if err != nil {
+				log.Error(err, "Failed to update StatefulSet", "StatefulSet.Namespace", foundSet.Namespace, "StatefulSet.Name", foundSet.Name)
+				return ctrl.Result{}, err
+			}
+			// Ask to requeue after 1 minute in order to give enough time for the
+			// pods be created on the cluster side and the operand be able
+			// to do the next update step accurately.
+			return ctrl.Result{RequeueAfter: time.Minute}, nil
+		}
 	}
 
-	// Check if the natssync-client service already exists, if not create a new one
-	foundNatssyncSer := &corev1.Service{}
-	err = r.Get(ctx, types.NamespacedName{Name: astraAgent.Spec.NatssyncClient.Name, Namespace: astraAgent.Spec.Namespace}, foundNatssyncSer)
-	if err != nil && errors.IsNotFound(err) {
-		// Define a new service
-		serv := r.serviceForNatssyncClient(astraAgent)
-		log.Info("Creating a new natssync Service", "Service.Namespace", serv.Namespace, "Service.Name", serv.Name)
-		err = r.Create(ctx, serv)
-		if err != nil {
-			log.Error(err, "Failed to create new natssync Service", "Service.Namespace", serv.Namespace, "Service.Name", serv.Name)
+	for deployment, funcName := range deployments {
+		foundDep := &appsv1.Deployment{}
+		err = r.Get(ctx, types.NamespacedName{Name: deployment, Namespace: astraAgent.Spec.Namespace}, foundDep)
+		if err != nil && errors.IsNotFound(err) {
+			// Define a new deployment
+			// Use reflection to call the method
+			in := make([]reflect.Value, 1)
+			in[0] = reflect.ValueOf(astraAgent)
+			method := reflect.ValueOf(r).MethodByName(funcName)
+			val := method.Call(in)
+			dep := val[0].Interface().(*appsv1.Deployment)
+
+			log.Info("Creating a new Deployment", "Deployment.Namespace", dep.Namespace, "Deployment.Name", dep.Name)
+			err = r.Create(ctx, dep)
+			if err != nil {
+				log.Error(err, "Failed to create new Deployment", "Deployment.Namespace", dep.Namespace, "Deployment.Name", dep.Name)
+				return ctrl.Result{}, err
+			}
+			// Deployment created successfully - return and requeue
+			return ctrl.Result{Requeue: true}, nil
+		} else if err != nil {
+			log.Error(err, "Failed to get Deployment")
 			return ctrl.Result{}, err
 		}
-		// Service created successfully - return and requeue
-		return ctrl.Result{Requeue: true}, nil
-	} else if err != nil {
-		log.Error(err, "Failed to get natssync Service")
-		return ctrl.Result{}, err
+
+		// Ensure the deployment size is the same as the spec
+		size := replicaSize[astraAgent.Spec.NatssyncClient.Name]
+		if *foundDep.Spec.Replicas != size {
+			foundDep.Spec.Replicas = &size
+			err = r.Update(ctx, foundDep)
+			if err != nil {
+				log.Error(err, "Failed to update Deployment", "Deployment.Namespace", foundDep.Namespace, "Deployment.Name", foundDep.Name)
+				return ctrl.Result{}, err
+			}
+			// Ask to requeue after 1 minute in order to give enough time for the
+			// pods be created on the cluster side and the operand be able
+			// to do the next update step accurately.
+			return ctrl.Result{RequeueAfter: time.Minute}, nil
+		}
 	}
 
-	// Check if the nats statefulset already exists, if not create a new one
-	foundSet := &appsv1.StatefulSet{}
-	err = r.Get(ctx, types.NamespacedName{Name: astraAgent.Spec.Nats.Name, Namespace: astraAgent.Spec.Namespace}, foundSet)
-	if err != nil && errors.IsNotFound(err) {
-		// Define a new statefulset
-		set := r.statefulsetForNats(astraAgent)
-		log.Info("Creating a new nats StatefulSet", "StatefulSet.Namespace", set.Namespace, "StatefulSet.Name", set.Name)
-		err = r.Create(ctx, set)
-		if err != nil {
-			log.Error(err, "Failed to create new nats StatefulSet", "StatefulSet.Namespace", set.Namespace, "StatefulSet.Name", set.Name)
-			return ctrl.Result{}, err
-		}
-		// StatefulSet created successfully - return and requeue
-		return ctrl.Result{Requeue: true}, nil
-	} else if err != nil {
-		log.Error(err, "Failed to get nats StatefulSet")
-		return ctrl.Result{}, err
-	}
+	// Check if the services already exists, if not create a new one
+	for service, funcName := range services {
+		foundSer := &corev1.Service{}
+		err = r.Get(ctx, types.NamespacedName{Name: service, Namespace: astraAgent.Spec.Namespace}, foundSer)
+		if err != nil && errors.IsNotFound(err) {
+			// Define a new service
+			// Use reflection to call the method
+			in := make([]reflect.Value, 1)
+			in[0] = reflect.ValueOf(astraAgent)
+			method := reflect.ValueOf(r).MethodByName(funcName)
+			val := method.Call(in)
+			serv := val[0].Interface().(*corev1.Service)
 
-	// Ensure the nats statefulset size is the same as the spec
-	natsSize := astraAgent.Spec.Nats.Size
-	if *foundSet.Spec.Replicas != natsSize {
-		foundSet.Spec.Replicas = &natsSize
-		err = r.Update(ctx, foundSet)
-		if err != nil {
-			log.Error(err, "Failed to update StatefulSet", "StatefulSet.Namespace", foundSet.Namespace, "StatefulSet.Name", foundSet.Name)
+			log.Info("Creating a new Service", "Service.Namespace", serv.Namespace, "Service.Name", serv.Name)
+			err = r.Create(ctx, serv)
+			if err != nil {
+				log.Error(err, "Failed to create new Service", "Service.Namespace", serv.Namespace, "Service.Name", serv.Name)
+				return ctrl.Result{}, err
+			}
+			// Service created successfully - return and requeue
+			return ctrl.Result{Requeue: true}, nil
+		} else if err != nil {
+			log.Error(err, "Failed to get Service")
 			return ctrl.Result{}, err
 		}
-		// Ask to requeue after 1 minute in order to give enough time for the
-		// pods be created on the cluster side and the operand be able
-		// to do the next update step accurately.
-		return ctrl.Result{RequeueAfter: time.Minute}, nil
-	}
-
-	// Check if the nats service already exists, if not create a new one
-	foundNatsSer := &corev1.Service{}
-	err = r.Get(ctx, types.NamespacedName{Name: astraAgent.Spec.Nats.Name, Namespace: astraAgent.Spec.Namespace}, foundNatsSer)
-	if err != nil && errors.IsNotFound(err) {
-		// Define a new service
-		serv := r.serviceForNats(astraAgent)
-		log.Info("Creating a new nats Service", "Service.Namespace", serv.Namespace, "Service.Name", serv.Name)
-		err = r.Create(ctx, serv)
-		if err != nil {
-			log.Error(err, "Failed to create new nats Service", "Service.Namespace", serv.Namespace, "Service.Name", serv.Name)
-			return ctrl.Result{}, err
-		}
-		// Service created successfully - return and requeue
-		return ctrl.Result{Requeue: true}, nil
-	} else if err != nil {
-		log.Error(err, "Failed to get nats Service")
-		return ctrl.Result{}, err
-	}
-
-	// Check if the nats cluster service already exists, if not create a new one
-	foundNatsClusterSer := &corev1.Service{}
-	err = r.Get(ctx, types.NamespacedName{Name: astraAgent.Spec.Nats.ClusterServiceName, Namespace: astraAgent.Spec.Namespace}, foundNatsClusterSer)
-	if err != nil && errors.IsNotFound(err) {
-		// Define a new cluster service
-		serv := r.clusterServiceForNats(astraAgent)
-		log.Info("Creating a new nats cluster Service", "Service.Namespace", serv.Namespace, "Service.Name", serv.Name)
-		err = r.Create(ctx, serv)
-		if err != nil {
-			log.Error(err, "Failed to create new nats cluster Service", "Service.Namespace", serv.Namespace, "Service.Name", serv.Name)
-			return ctrl.Result{}, err
-		}
-		// Cluster service created successfully - return and requeue
-		return ctrl.Result{Requeue: true}, nil
-	} else if err != nil {
-		log.Error(err, "Failed to get nats cluster Service")
-		return ctrl.Result{}, err
 	}
 
 	// Update the astraAgent status with the pod names
