@@ -61,13 +61,12 @@ func (r *AstraAgentReconciler) StatefulsetForNats(m *cachev1.AstraAgent) *appsv1
 
 // ClusterServiceForNats returns a astraAgent Deployment object
 func (r *AstraAgentReconciler) ClusterServiceForNats(m *cachev1.AstraAgent) *corev1.Service {
+	ls := labelsForNats(m.Spec.Nats.Name)
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "nats-cluster",
+			Name:      m.Spec.Nats.ClusterServiceName,
 			Namespace: m.Spec.Namespace,
-			Labels: map[string]string{
-				"app": m.Spec.Nats.Name,
-			},
+			Labels:    ls,
 		},
 		Spec: corev1.ServiceSpec{
 			ClusterIP: "",
@@ -93,9 +92,7 @@ func (r *AstraAgentReconciler) ClusterServiceForNats(m *cachev1.AstraAgent) *cor
 					Port: m.Spec.Nats.GatewaysPort,
 				},
 			},
-			Selector: map[string]string{
-				"app": m.Spec.Nats.Name,
-			},
+			Selector: ls,
 		},
 	}
 	// Set astraAgent instance as the owner and controller
@@ -105,25 +102,22 @@ func (r *AstraAgentReconciler) ClusterServiceForNats(m *cachev1.AstraAgent) *cor
 
 // ServiceForNats returns a astraAgent Deployment object
 func (r *AstraAgentReconciler) ServiceForNats(m *cachev1.AstraAgent) *corev1.Service {
+	ls := labelsForNats(m.Spec.Nats.Name)
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "nats",
-			Namespace: "astra-agent",
-			Labels: map[string]string{
-				"app": "nats",
-			},
+			Name:      m.Spec.Nats.Name,
+			Namespace: m.Spec.Namespace,
+			Labels:    ls,
 		},
 		Spec: corev1.ServiceSpec{
 			Type: corev1.ServiceTypeClusterIP,
 			Ports: []corev1.ServicePort{
 				{
-					Name: "client",
+					Name: m.Spec.Nats.Name,
 					Port: m.Spec.Nats.ClientPort,
 				},
 			},
-			Selector: map[string]string{
-				"app": "nats",
-			},
+			Selector: ls,
 		},
 	}
 	// Set astraAgent instance as the owner and controller

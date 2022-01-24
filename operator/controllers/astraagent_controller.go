@@ -69,7 +69,8 @@ func (r *AstraAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	}
 
 	deployments := map[string]string{
-		astraAgent.Spec.NatssyncClient.Name: "DeploymentForNatssyncClient",
+		astraAgent.Spec.NatssyncClient.Name:  "DeploymentForNatssyncClient",
+		astraAgent.Spec.HttpProxyClient.Name: "DeploymentForProxyClient",
 	}
 	statefulSets := map[string]string{
 		astraAgent.Spec.Nats.Name: "StatefulsetForNats",
@@ -78,6 +79,7 @@ func (r *AstraAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		astraAgent.Spec.NatssyncClient.Name:     "ServiceForNatssyncClient",
 		astraAgent.Spec.Nats.Name:               "ServiceForNats",
 		astraAgent.Spec.Nats.ClusterServiceName: "ClusterServiceForNats",
+		astraAgent.Spec.HttpProxyClient.Name:    "ServiceForProxyClient",
 	}
 
 	// Check if the deployment already exists, if not create a new one
@@ -88,6 +90,7 @@ func (r *AstraAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 	for statefulSet, funcName := range statefulSets {
 		foundSet := &appsv1.StatefulSet{}
+		log.Info("Finding StatefulSet", "StatefulSet.Namespace", astraAgent.Spec.Namespace, "StatefulSet.Name", statefulSet)
 		err = r.Get(ctx, types.NamespacedName{Name: statefulSet, Namespace: astraAgent.Spec.Namespace}, foundSet)
 		if err != nil && errors.IsNotFound(err) {
 			// Define a new statefulset
@@ -129,6 +132,7 @@ func (r *AstraAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 	for deployment, funcName := range deployments {
 		foundDep := &appsv1.Deployment{}
+		log.Info("Finding Deployment", "Deployment.Namespace", astraAgent.Spec.Namespace, "Deployment.Name", deployment)
 		err = r.Get(ctx, types.NamespacedName{Name: deployment, Namespace: astraAgent.Spec.Namespace}, foundDep)
 		if err != nil && errors.IsNotFound(err) {
 			// Define a new deployment
@@ -171,6 +175,7 @@ func (r *AstraAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	// Check if the services already exists, if not create a new one
 	for service, funcName := range services {
 		foundSer := &corev1.Service{}
+		log.Info("Finding Service", "Service.Namespace", astraAgent.Spec.Namespace, "Service.Name", service)
 		err = r.Get(ctx, types.NamespacedName{Name: service, Namespace: astraAgent.Spec.Namespace}, foundSer)
 		if err != nil && errors.IsNotFound(err) {
 			// Define a new service

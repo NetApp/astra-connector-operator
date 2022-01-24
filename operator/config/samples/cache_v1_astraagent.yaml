@@ -23,3 +23,8 @@ spec:
     monitor-port: 8222
     metrics-port: 7777
     gateways-port: 7522
+  httpproxy-client:
+    name: httpproxy-client
+    size: 1
+    image: theotw/httpproxylet:latest
+    port: 8080

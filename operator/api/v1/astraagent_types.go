@@ -23,6 +23,19 @@ import (
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
+type HttpProxyClient struct {
+	Name  string `json:"name"`
+	Size  int32  `json:"size"`
+	Image string `json:"image"`
+	Port  int32  `json:"port"`
+}
+
+type EchoClient struct {
+	Name  string `json:"name"`
+	Size  int32  `json:"size"`
+	Image string `json:"image"`
+	Port  int32  `json:"port"`
+}
 
 type NatssyncClient struct {
 	Name           string          `json:"name"`
@@ -49,9 +62,11 @@ type Nats struct {
 
 // AstraAgentSpec defines the desired state of AstraAgent
 type AstraAgentSpec struct {
-	Namespace      string         `json:"namespace"`
-	NatssyncClient NatssyncClient `json:"natssync-client"`
-	Nats           Nats           `json:"nats"`
+	Namespace       string          `json:"namespace"`
+	NatssyncClient  NatssyncClient  `json:"natssync-client"`
+	HttpProxyClient HttpProxyClient `json:"httpproxy-client"`
+	EchoClient      EchoClient      `json:"echo-client"`
+	Nats            Nats            `json:"nats"`
 }
 
 // AstraAgentStatus defines the observed state of AstraAgent
