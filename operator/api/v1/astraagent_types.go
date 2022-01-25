@@ -48,7 +48,6 @@ type Nats struct {
 	ClusterServiceName string `json:"cluster-service-name"`
 	Size               int32  `json:"size"`
 	Image              string `json:"image"`
-	ServerURL          string `json:"nats-server-url"`
 	ClientPort         int32  `json:"client-port"`
 	ClusterPort        int32  `json:"cluster-port"`
 	MonitorPort        int32  `json:"monitor-port"`
@@ -73,13 +72,16 @@ type AstraAgentStatus struct {
 
 // NatssyncClientStatus defines the observed state of NatssyncClient
 type NatssyncClientStatus struct {
-	PodIP      string `json:"ip"`
+	Version    string `json:"version"`
 	State      string `json:"state"`
 	Registered string `json:"registered"`
+	LocationID string `json:"locationID"`
 }
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
+//+kubebuilder:printcolumn:name="Registered",type=string,JSONPath=`.status.natssync-client.registered`
+//+kubebuilder:printcolumn:name="LocationID",type=string,JSONPath=`.status.natssync-client.locationID`
 
 // AstraAgent is the Schema for the astraagents API
 type AstraAgent struct {

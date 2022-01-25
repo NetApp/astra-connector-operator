@@ -7,7 +7,7 @@ spec:
   natssync-client:
     name: natssync-client
     size: 1
-    image: theotw/natssync-client:latest
+    image: theotw/natssync-client:0.9.202201132025
     cloud-bridge-url: http://localhost:8081
     port: 8080
     nodeport: 31000
@@ -17,7 +17,6 @@ spec:
     cluster-service-name: nats-cluster
     size: 2
     image: nats:2.6.1-alpine3.14
-    nats-server-url: nats://nats:4222
     client-port: 4222
     cluster-port: 6222
     monitor-port: 8222
@@ -26,8 +25,8 @@ spec:
   httpproxy-client:
     name: httpproxy-client
     size: 1
-    image: theotw/httpproxylet:latest
+    image: theotw/httpproxylet:0.9.202201132025
   echo-client:
     name: echo-client
     size: 1
-    image: theotw/echo-proxylet:latest
+    image: theotw/echo-proxylet:0.9.202201132025

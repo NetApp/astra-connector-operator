@@ -44,7 +44,7 @@ func (r *AstraAgentReconciler) DeploymentForNatssyncClient(m *cachev1.AstraAgent
 						Env: []corev1.EnvVar{
 							{
 								Name:  "NATS_SERVER_URL",
-								Value: m.Spec.Nats.ServerURL,
+								Value: r.GetNatsURL(m),
 							},
 							{
 								Name:  "CLOUD_BRIDGE_URL",
@@ -110,7 +110,6 @@ func (r *AstraAgentReconciler) getNatssyncClientStatus(m *cachev1.AstraAgent, ct
 	}
 
 	natssyncClientStatus := cachev1.NatssyncClientStatus{
-		PodIP:      "",
 		Registered: "Unknown",
 	}
 
@@ -125,30 +124,60 @@ func (r *AstraAgentReconciler) getNatssyncClientStatus(m *cachev1.AstraAgent, ct
 	}
 
 	natssyncClientStatus.State = string(nsClientPod.Status.Phase)
-	natssyncClientStatus.PodIP = nsClientPod.Status.PodIP
-	natsSyncClientURL := fmt.Sprintf("http://%s.%s:%d/bridge-client/1/register", m.Spec.NatssyncClient.Name, m.Spec.Namespace, m.Spec.NatssyncClient.Port)
-	resp, err := http.Get(natsSyncClientURL)
+	natsSyncClientURL := fmt.Sprintf("http://%s.%s:%d/bridge-client/1", m.Spec.NatssyncClient.Name, m.Spec.Namespace, m.Spec.NatssyncClient.Port)
+	natsSyncClientRegisterURL := fmt.Sprintf("%s/register", natsSyncClientURL)
+	natsSyncClientAboutURL := fmt.Sprintf("%s/about", natsSyncClientURL)
+	natssyncClientRegistrationStatus, err := r.getNatssyncClientRegistrationStatus(natsSyncClientRegisterURL)
 	if err != nil {
-		log.Error(err, "Failed to get the registration state")
+		log.Error(err, "Failed to get the registration status")
 		return cachev1.NatssyncClientStatus{}, err
+	}
+	natssyncClientVersion, err := r.getNatssyncClientVersion(natsSyncClientAboutURL)
+	if err != nil {
+		log.Error(err, "Failed to get the natssync-client version")
+		return cachev1.NatssyncClientStatus{}, err
+	}
+	natssyncClientStatus.Registered = natssyncClientRegistrationStatus
+	natssyncClientStatus.Version = natssyncClientVersion
+	return natssyncClientStatus, nil
+}
+
+func (r *AstraAgentReconciler) getNatssyncClientRegistrationStatus(natsSyncClientRegisterURL string) (string, error) {
+	resp, err := http.Get(natsSyncClientRegisterURL)
+	if err != nil {
+		return "Unknown", err
 	}
 
 	type registrationResponse struct {
-		locationID string
+		LocationID string `json:"locationID,omitempty"`
 	}
 	var registrationResp registrationResponse
 	all, err := ioutil.ReadAll(resp.Body)
 	err = json.Unmarshal(all, &registrationResp)
 	if err != nil {
-		log.Error(err, "Failed to unmarshal the registration response")
-		return cachev1.NatssyncClientStatus{}, err
+		return "Unknown", err
 	}
 
-	if registrationResp.locationID == "" {
-		natssyncClientStatus.Registered = "False"
-	} else {
-		natssyncClientStatus.Registered = "True"
+	if registrationResp.LocationID == "" {
+		return "False", nil
+	}
+	return "True", nil
+}
+
+func (r *AstraAgentReconciler) getNatssyncClientVersion(natsSyncClientAboutURL string) (string, error) {
+	resp, err := http.Get(natsSyncClientAboutURL)
+	if err != nil {
+		return "", err
 	}
 
-	return natssyncClientStatus, nil
+	type aboutResponse struct {
+		AppVersion string `json:"appVersion,omitempty"`
+	}
+	var aboutResp aboutResponse
+	all, err := ioutil.ReadAll(resp.Body)
+	err = json.Unmarshal(all, &aboutResp)
+	if err != nil {
+		return "", err
+	}
+	return aboutResp.AppVersion, nil
 }

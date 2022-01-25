@@ -34,7 +34,7 @@ func (r *AstraAgentReconciler) DeploymentForEchoClient(m *cachev1.AstraAgent) *a
 						Env: []corev1.EnvVar{
 							{
 								Name:  "NATS_SERVER_URL",
-								Value: m.Spec.Nats.ServerURL,
+								Value: r.GetNatsURL(m),
 							},
 						},
 					}},

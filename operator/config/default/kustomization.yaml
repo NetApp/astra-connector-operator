@@ -1,5 +1,5 @@
 # Adds namespace to all resources.
-namespace: astra-agent-operator-system
+namespace: astra-agent-operator
 
 # Value of this field is prepended to the
 # names of all resources, e.g. a deployment named

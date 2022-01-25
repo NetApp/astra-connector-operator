@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"fmt"
 	cachev1 "github.com/NetApp/astraagent-operator/api/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -129,4 +130,10 @@ func (r *AstraAgentReconciler) ServiceForNats(m *cachev1.AstraAgent) *corev1.Ser
 // belonging to the given astraAgent CR name.
 func labelsForNats(name string) map[string]string {
 	return map[string]string{"app": name}
+}
+
+// GetNatsURL returns a astraAgent Deployment object
+func (r *AstraAgentReconciler) GetNatsURL(m *cachev1.AstraAgent) string {
+	natsURL := fmt.Sprintf("nats://%s.%s:%d", m.Spec.Nats.Name, m.Spec.Namespace, m.Spec.Nats.ClientPort)
+	return natsURL
 }

@@ -16,7 +16,14 @@ spec:
     singular: astraagent
   scope: Namespaced
   versions:
-  - name: v1
+  - additionalPrinterColumns:
+    - jsonPath: .status.natssync-client.registered
+      name: Registered
+      type: string
+    - jsonPath: .status.natssync-client.locationID
+      name: LocationID
+      type: string
+    name: v1
     schema:
       openAPIV3Schema:
         description: AstraAgent is the Schema for the astraagents API
@@ -89,8 +96,6 @@ spec:
                     type: integer
                   name:
                     type: string
-                  nats-server-url:
-                    type: string
                   size:
                     format: int32
                     type: integer
@@ -103,7 +108,6 @@ spec:
                 - metrics-port
                 - monitor-port
                 - name
-                - nats-server-url
                 - size
                 type: object
               natssync-client:
@@ -148,16 +152,19 @@ spec:
               natssync-client:
                 description: NatssyncClientStatus defines the observed state of NatssyncClient
                 properties:
-                  ip:
+                  locationID:
                     type: string
                   registered:
                     type: string
                   state:
                     type: string
+                  version:
+                    type: string
                 required:
-                - ip
+                - locationID
                 - registered
                 - state
+                - version
                 type: object
               nodes:
                 items:

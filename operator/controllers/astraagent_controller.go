@@ -218,6 +218,7 @@ func (r *AstraAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 	// Update status.Nodes if needed
 	if !reflect.DeepEqual(podNames, astraAgent.Status.Nodes) {
+		log.Info("Updating the pod status")
 		astraAgent.Status.Nodes = podNames
 		err := r.Status().Update(ctx, astraAgent)
 		if err != nil {
@@ -227,6 +228,7 @@ func (r *AstraAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	}
 
 	if !reflect.DeepEqual(natssyncClientStatus, astraAgent.Status.NatssyncClient) {
+		log.Info("Updating the natssync-client status")
 		astraAgent.Status.NatssyncClient = natssyncClientStatus
 		err := r.Status().Update(ctx, astraAgent)
 		if err != nil {

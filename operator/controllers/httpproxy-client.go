@@ -34,7 +34,7 @@ func (r *AstraAgentReconciler) DeploymentForProxyClient(m *cachev1.AstraAgent) *
 						Env: []corev1.EnvVar{
 							{
 								Name:  "NATS_SERVER_URL",
-								Value: m.Spec.Nats.ServerURL,
+								Value: r.GetNatsURL(m),
 							},
 						},
 					}},
