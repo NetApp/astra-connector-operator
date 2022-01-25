@@ -1,11 +1,21 @@
 package controllers
 
 import (
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io/ioutil"
+	"net/http"
+
 	cachev1 "github.com/NetApp/astraagent-operator/api/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 // DeploymentForNatssyncClient returns a astraAgent Deployment object
@@ -84,4 +94,61 @@ func (r *AstraAgentReconciler) ServiceForNatssyncClient(m *cachev1.AstraAgent) *
 // belonging to the given astraAgent CR name.
 func labelsForNatssyncClient(name string) map[string]string {
 	return map[string]string{"app": name}
+}
+
+func (r *AstraAgentReconciler) getNatssyncClientStatus(m *cachev1.AstraAgent, ctx context.Context) (cachev1.NatssyncClientStatus, error) {
+	pods := &corev1.PodList{}
+	lb := labelsForNatssyncClient(m.Spec.NatssyncClient.Name)
+	listOpts := []client.ListOption{
+		client.MatchingLabels(lb),
+	}
+	log := ctrllog.FromContext(ctx)
+
+	if err := r.List(ctx, pods, listOpts...); err != nil {
+		log.Error(err, "Failed to list pods", "Namespace", m.Spec.Namespace)
+		return cachev1.NatssyncClientStatus{}, err
+	}
+
+	natssyncClientStatus := cachev1.NatssyncClientStatus{
+		PodIP:      "",
+		Registered: "Unknown",
+	}
+
+	if len(pods.Items) < 1 {
+		return cachev1.NatssyncClientStatus{}, errors.New("natssync-client pods not found")
+	}
+	nsClientPod := pods.Items[0]
+	// If a pod is terminating, then we can't access the corresponding vault node's status.
+	// so we break from here and return an error.
+	if nsClientPod.Status.Phase != v1.PodRunning || nsClientPod.DeletionTimestamp != nil {
+		return cachev1.NatssyncClientStatus{}, errors.New("natssync-client pod is terminating")
+	}
+
+	natssyncClientStatus.State = string(nsClientPod.Status.Phase)
+	natssyncClientStatus.PodIP = nsClientPod.Status.PodIP
+	natsSyncClientURL := fmt.Sprintf("http://%s.%s:%d/bridge-client/1/register", m.Spec.NatssyncClient.Name, m.Spec.Namespace, m.Spec.NatssyncClient.Port)
+	resp, err := http.Get(natsSyncClientURL)
+	if err != nil {
+		log.Error(err, "Failed to get the registration state")
+		return cachev1.NatssyncClientStatus{}, err
+	}
+
+	type registrationResponse struct {
+		locationID string
+	}
+	var registrationResp registrationResponse
+	all, err := ioutil.ReadAll(resp.Body)
+	err = json.Unmarshal(all, &registrationResp)
+	if err != nil {
+		log.Error(err, "Failed to unmarshal the registration response")
+		return cachev1.NatssyncClientStatus{}, err
+	}
+
+	if registrationResp.locationID == "" {
+		natssyncClientStatus.Registered = "False"
+	} else {
+		natssyncClientStatus.Registered = "True"
+	}
+
+	return natssyncClientStatus, nil
 }

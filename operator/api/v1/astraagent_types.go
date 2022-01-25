@@ -21,8 +21,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 type HttpProxyClient struct {
 	Name  string `json:"name"`
 	Size  int32  `json:"size"`
@@ -69,8 +67,15 @@ type AstraAgentSpec struct {
 
 // AstraAgentStatus defines the observed state of AstraAgent
 type AstraAgentStatus struct {
-	// Nodes are the names of the AstraAgent pods
-	Nodes []string `json:"nodes"`
+	Nodes          []string             `json:"nodes"`
+	NatssyncClient NatssyncClientStatus `json:"natssync-client"`
+}
+
+// NatssyncClientStatus defines the observed state of NatssyncClient
+type NatssyncClientStatus struct {
+	PodIP      string `json:"ip"`
+	State      string `json:"state"`
+	Registered string `json:"registered"`
 }
 
 //+kubebuilder:object:root=true

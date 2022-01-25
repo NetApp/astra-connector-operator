@@ -52,7 +52,6 @@ spec:
                 - size
                 type: object
               httpproxy-client:
-                description: 'EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN! NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.'
                 properties:
                   image:
                     type: string
@@ -147,12 +146,29 @@ spec:
           status:
             description: AstraAgentStatus defines the observed state of AstraAgent
             properties:
+              natssync-client:
+                description: NatssyncClientStatus defines the observed state of NatssyncClient
+                properties:
+                  ip:
+                    type: string
+                  node:
+                    type: string
+                  registered:
+                    type: string
+                  state:
+                    type: string
+                required:
+                - ip
+                - node
+                - registered
+                - state
+                type: object
               nodes:
-                description: Nodes are the names of the AstraAgent pods
                 items:
                   type: string
                 type: array
             required:
+            - natssync-client
             - nodes
             type: object
         type: object
