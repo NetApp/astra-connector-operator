@@ -38,6 +38,7 @@ type ConfigMap struct {
 	RoleName           string `json:"rolename"`
 	RoleBindingName    string `json:"rolebindingname"`
 	ServiceAccountName string `json:"serviceaccountname"`
+	VolumeName         string `json:"volumename"`
 }
 
 type Astra struct {
@@ -47,13 +48,17 @@ type Astra struct {
 }
 
 type NatssyncClient struct {
-	Name           string          `json:"name"`
-	Size           int32           `json:"size"`
-	Image          string          `json:"image"`
-	CloudBridgeURL string          `json:"cloud-bridge-url"`
-	Port           int32           `json:"port"`
-	NodePort       int32           `json:"nodeport"`
-	Protocol       corev1.Protocol `json:"protocol"`
+	Name              string          `json:"name"`
+	Size              int32           `json:"size"`
+	Image             string          `json:"image"`
+	CloudBridgeURL    string          `json:"cloud-bridge-url"`
+	Port              int32           `json:"port"`
+	NodePort          int32           `json:"nodeport"`
+	Protocol          corev1.Protocol `json:"protocol"`
+	KeystoreUrl       string          `json:"keystoreUrl"`
+	SkipTLSValidation string          `json:"skipTLSValidation"`
+	HostAlias         bool            `json:"hostalias"`
+	HostAliasIP       string          `json:"hostaliasIP"`
 }
 
 type Nats struct {

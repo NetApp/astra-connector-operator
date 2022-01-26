@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strings"
 
 	cachev1 "github.com/NetApp/astraagent-operator/api/v1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -59,6 +60,20 @@ func (r *AstraAgentReconciler) DeploymentForNatssyncClient(m *cachev1.AstraAgent
 								Name:  "POD_NAMESPACE",
 								Value: m.Spec.Namespace,
 							},
+							{
+								Name:  "KEYSTORE_URL",
+								Value: m.Spec.NatssyncClient.KeystoreUrl,
+							},
+							{
+								Name:  "SKIP_TLS_VALIDATION",
+								Value: m.Spec.NatssyncClient.SkipTLSValidation,
+							},
+						},
+						VolumeMounts: []v1.VolumeMount{
+							{
+								Name:      m.Spec.ConfigMap.VolumeName,
+								MountPath: strings.Split(m.Spec.NatssyncClient.KeystoreUrl, "://")[1],
+							},
 						},
 					}},
 					Volumes: []v1.Volume{
@@ -76,6 +91,15 @@ func (r *AstraAgentReconciler) DeploymentForNatssyncClient(m *cachev1.AstraAgent
 				},
 			},
 		},
+	}
+
+	if m.Spec.NatssyncClient.HostAlias {
+		dep.Spec.Template.Spec.HostAliases = []v1.HostAlias{
+			{
+				IP:        m.Spec.NatssyncClient.HostAliasIP,
+				Hostnames: []string{strings.Split(m.Spec.NatssyncClient.CloudBridgeURL, "://")[1]},
+			},
+		}
 	}
 	// Set astraAgent instance as the owner and controller
 	err := ctrl.SetControllerReference(m, dep, r.Scheme)

@@ -67,11 +67,14 @@ spec:
                     type: string
                   serviceaccountname:
                     type: string
+                  volumename:
+                    type: string
                 required:
                 - name
                 - rolebindingname
                 - rolename
                 - serviceaccountname
+                - volumename
                 type: object
               echo-client:
                 properties:
@@ -144,7 +147,13 @@ spec:
                 properties:
                   cloud-bridge-url:
                     type: string
+                  hostalias:
+                    type: boolean
+                  hostaliasIP:
+                    type: string
                   image:
+                    type: string
+                  keystoreUrl:
                     type: string
                   name:
                     type: string
@@ -160,14 +169,20 @@ spec:
                   size:
                     format: int32
                     type: integer
+                  skipTLSValidation:
+                    type: string
                 required:
                 - cloud-bridge-url
+                - hostalias
+                - hostaliasIP
                 - image
+                - keystoreUrl
                 - name
                 - nodeport
                 - port
                 - protocol
                 - size
+                - skipTLSValidation
                 type: object
             required:
             - astra
