@@ -9,7 +9,7 @@ import (
 )
 
 // DeploymentForProxyClient returns a astraAgent Deployment object
-func (r *AstraAgentReconciler) DeploymentForProxyClient(m *cachev1.AstraAgent) *appsv1.Deployment {
+func (r *AstraAgentReconciler) DeploymentForProxyClient(m *cachev1.AstraAgent) (*appsv1.Deployment, error) {
 	ls := labelsForProxyClient(m.Spec.HttpProxyClient.Name)
 	replicas := m.Spec.HttpProxyClient.Size
 
@@ -43,8 +43,11 @@ func (r *AstraAgentReconciler) DeploymentForProxyClient(m *cachev1.AstraAgent) *
 		},
 	}
 	// Set astraAgent instance as the owner and controller
-	ctrl.SetControllerReference(m, dep, r.Scheme)
-	return dep
+	err := ctrl.SetControllerReference(m, dep, r.Scheme)
+	if err != nil {
+		return nil, err
+	}
+	return dep, nil
 }
 
 // labelsForProxyClient returns the labels for selecting the resources

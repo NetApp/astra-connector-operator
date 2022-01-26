@@ -33,6 +33,19 @@ type EchoClient struct {
 	Image string `json:"image"`
 }
 
+type ConfigMap struct {
+	Name               string `json:"name"`
+	RoleName           string `json:"rolename"`
+	RoleBindingName    string `json:"rolebindingname"`
+	ServiceAccountName string `json:"serviceaccountname"`
+}
+
+type Astra struct {
+	Register    bool   `json:"register"`
+	Token       string `json:"token"`
+	ClusterName string `json:"clusterName"`
+}
+
 type NatssyncClient struct {
 	Name           string          `json:"name"`
 	Size           int32           `json:"size"`
@@ -62,6 +75,8 @@ type AstraAgentSpec struct {
 	HttpProxyClient HttpProxyClient `json:"httpproxy-client"`
 	EchoClient      EchoClient      `json:"echo-client"`
 	Nats            Nats            `json:"nats"`
+	ConfigMap       ConfigMap       `json:"configMap"`
+	Astra           Astra           `json:"astra"`
 }
 
 // AstraAgentStatus defines the observed state of AstraAgent

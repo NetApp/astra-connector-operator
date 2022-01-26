@@ -9,7 +9,7 @@ import (
 )
 
 // DeploymentForEchoClient returns a astraAgent Deployment object
-func (r *AstraAgentReconciler) DeploymentForEchoClient(m *cachev1.AstraAgent) *appsv1.Deployment {
+func (r *AstraAgentReconciler) DeploymentForEchoClient(m *cachev1.AstraAgent) (*appsv1.Deployment, error) {
 	ls := labelsForEchoClient(m.Spec.EchoClient.Name)
 	replicas := m.Spec.EchoClient.Size
 
@@ -43,8 +43,12 @@ func (r *AstraAgentReconciler) DeploymentForEchoClient(m *cachev1.AstraAgent) *a
 		},
 	}
 	// Set astraAgent instance as the owner and controller
-	ctrl.SetControllerReference(m, dep, r.Scheme)
-	return dep
+	err := ctrl.SetControllerReference(m, dep, r.Scheme)
+	if err != nil {
+		return nil, err
+	}
+
+	return dep, nil
 }
 
 // labelsForProxyClient returns the labels for selecting the resources

@@ -44,6 +44,35 @@ spec:
           spec:
             description: AstraAgentSpec defines the desired state of AstraAgent
             properties:
+              astra:
+                properties:
+                  clusterName:
+                    type: string
+                  register:
+                    type: boolean
+                  token:
+                    type: string
+                required:
+                - clusterName
+                - register
+                - token
+                type: object
+              configMap:
+                properties:
+                  name:
+                    type: string
+                  rolebindingname:
+                    type: string
+                  rolename:
+                    type: string
+                  serviceaccountname:
+                    type: string
+                required:
+                - name
+                - rolebindingname
+                - rolename
+                - serviceaccountname
+                type: object
               echo-client:
                 properties:
                   image:
@@ -141,6 +170,8 @@ spec:
                 - size
                 type: object
             required:
+            - astra
+            - configMap
             - echo-client
             - httpproxy-client
             - namespace
@@ -290,6 +321,18 @@ rules:
 - apiGroups:
   - ""
   resources:
+  - configmaps
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
   - pods
   verbs:
   - create
@@ -302,7 +345,43 @@ rules:
 - apiGroups:
   - ""
   resources:
+  - serviceaccounts
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
   - services
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - rbac.authorization.k8s.io
+  resources:
+  - rolebindings
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - rbac.authorization.k8s.io
+  resources:
+  - roles
   verbs:
   - create
   - delete

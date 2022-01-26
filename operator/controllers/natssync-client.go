@@ -12,14 +12,15 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-// DeploymentForNatssyncClient returns a astraAgent Deployment object
-func (r *AstraAgentReconciler) DeploymentForNatssyncClient(m *cachev1.AstraAgent) *appsv1.Deployment {
+// DeploymentForNatssyncClient returns a Natssync-client Deployment object
+func (r *AstraAgentReconciler) DeploymentForNatssyncClient(m *cachev1.AstraAgent) (*appsv1.Deployment, error) {
 	ls := labelsForNatssyncClient(m.Spec.NatssyncClient.Name)
 	replicas := m.Spec.NatssyncClient.Size
 
@@ -50,18 +51,41 @@ func (r *AstraAgentReconciler) DeploymentForNatssyncClient(m *cachev1.AstraAgent
 								Name:  "CLOUD_BRIDGE_URL",
 								Value: m.Spec.NatssyncClient.CloudBridgeURL,
 							},
+							{
+								Name:  "CONFIGMAP_NAME",
+								Value: m.Spec.ConfigMap.Name,
+							},
+							{
+								Name:  "POD_NAMESPACE",
+								Value: m.Spec.Namespace,
+							},
 						},
 					}},
+					Volumes: []v1.Volume{
+						{
+							Name: fmt.Sprintf("%s-configmap-volume", m.Spec.NatssyncClient.Name),
+							VolumeSource: v1.VolumeSource{
+								ConfigMap: &v1.ConfigMapVolumeSource{
+									LocalObjectReference: v1.LocalObjectReference{
+										Name: m.Spec.ConfigMap.Name,
+									},
+								},
+							},
+						},
+					},
 				},
 			},
 		},
 	}
 	// Set astraAgent instance as the owner and controller
-	ctrl.SetControllerReference(m, dep, r.Scheme)
-	return dep
+	err := ctrl.SetControllerReference(m, dep, r.Scheme)
+	if err != nil {
+		return nil, err
+	}
+	return dep, nil
 }
 
-// ServiceForNatssyncClient returns a astraAgent Deployment object
+// ServiceForNatssyncClient returns a Natssync-client Service object
 func (r *AstraAgentReconciler) ServiceForNatssyncClient(m *cachev1.AstraAgent) *corev1.Service {
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
@@ -94,6 +118,72 @@ func (r *AstraAgentReconciler) ServiceForNatssyncClient(m *cachev1.AstraAgent) *
 // belonging to the given astraAgent CR name.
 func labelsForNatssyncClient(name string) map[string]string {
 	return map[string]string{"app": name}
+}
+
+// ConfigMap returns a astraAgent ConfigMap object
+func (r *AstraAgentReconciler) ConfigMap(m *cachev1.AstraAgent) *corev1.ConfigMap {
+	configMap := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: m.Spec.Namespace,
+			Name:      m.Spec.ConfigMap.Name,
+		},
+	}
+	ctrl.SetControllerReference(m, configMap, r.Scheme)
+	return configMap
+}
+
+// ConfigMapRole returns a astraAgent ConfigMap object
+func (r *AstraAgentReconciler) ConfigMapRole(m *cachev1.AstraAgent) *rbacv1.Role {
+	configMapRole := &rbacv1.Role{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: m.Spec.Namespace,
+			Name:      m.Spec.ConfigMap.RoleName,
+		},
+		Rules: []rbacv1.PolicyRule{
+			{
+				APIGroups: []string{""},
+				Resources: []string{"configmaps"},
+				Verbs:     []string{"get", "list", "patch"},
+			},
+		},
+	}
+	ctrl.SetControllerReference(m, configMapRole, r.Scheme)
+	return configMapRole
+}
+
+// ConfigMapRoleBinding returns a Natssync-Client ConfigMapRoleBinding object
+func (r *AstraAgentReconciler) ConfigMapRoleBinding(m *cachev1.AstraAgent) *rbacv1.RoleBinding {
+	configMapRoleBinding := &rbacv1.RoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: m.Spec.Namespace,
+			Name:      m.Spec.ConfigMap.RoleBindingName,
+		},
+		Subjects: []rbacv1.Subject{
+			{
+				Kind: "ServiceAccount",
+				Name: m.Spec.ConfigMap.ServiceAccountName,
+			},
+		},
+		RoleRef: rbacv1.RoleRef{
+			Kind:     "Role",
+			Name:     m.Spec.ConfigMap.RoleName,
+			APIGroup: "rbac.authorization.k8s.io",
+		},
+	}
+	ctrl.SetControllerReference(m, configMapRoleBinding, r.Scheme)
+	return configMapRoleBinding
+}
+
+// ServiceAccountForConfigMap returns a ServiceAccount object
+func (r *AstraAgentReconciler) ServiceAccountForConfigMap(m *cachev1.AstraAgent) *corev1.ServiceAccount {
+	sa := &corev1.ServiceAccount{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      m.Spec.ConfigMap.ServiceAccountName,
+			Namespace: m.Spec.Namespace,
+		},
+	}
+	ctrl.SetControllerReference(m, sa, r.Scheme)
+	return sa
 }
 
 func (r *AstraAgentReconciler) getNatssyncClientStatus(m *cachev1.AstraAgent, ctx context.Context) (cachev1.NatssyncClientStatus, error) {
