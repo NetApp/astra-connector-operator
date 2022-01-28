@@ -39,3 +39,4 @@ func (r *AstraAgentReconciler) RegisterClient(m *cachev1.AstraAgent) (string, er
 	}
 	return locationId.LocationId, nil
 }
+

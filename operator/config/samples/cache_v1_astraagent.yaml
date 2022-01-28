@@ -19,6 +19,9 @@ spec:
   nats:
     name: nats
     cluster-service-name: nats-cluster
+    configMapName: nats-configmap
+    serviceaccountname: nats-serviceaccount
+    volumename: nats-configmap-volume
     size: 2
     image: nats:2.6.1-alpine3.14
     client-port: 4222

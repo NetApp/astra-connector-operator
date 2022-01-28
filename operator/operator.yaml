@@ -116,6 +116,8 @@ spec:
                     type: integer
                   cluster-service-name:
                     type: string
+                  configMapName:
+                    type: string
                   gateways-port:
                     format: int32
                     type: integer
@@ -129,19 +131,26 @@ spec:
                     type: integer
                   name:
                     type: string
+                  serviceaccountname:
+                    type: string
                   size:
                     format: int32
                     type: integer
+                  volumename:
+                    type: string
                 required:
                 - client-port
                 - cluster-port
                 - cluster-service-name
+                - configMapName
                 - gateways-port
                 - image
                 - metrics-port
                 - monitor-port
                 - name
+                - serviceaccountname
                 - size
+                - volumename
                 type: object
               natssync-client:
                 properties:

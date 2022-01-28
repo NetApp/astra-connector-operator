@@ -64,6 +64,7 @@ type NatssyncClient struct {
 type Nats struct {
 	Name               string `json:"name"`
 	ClusterServiceName string `json:"cluster-service-name"`
+	ConfigMapName      string `json:"configMapName"`
 	Size               int32  `json:"size"`
 	Image              string `json:"image"`
 	ClientPort         int32  `json:"client-port"`
@@ -71,6 +72,8 @@ type Nats struct {
 	MonitorPort        int32  `json:"monitor-port"`
 	MetricsPort        int32  `json:"metrics-port"`
 	GatewaysPort       int32  `json:"gateways-port"`
+	ServiceAccountName string `json:"serviceaccountname"`
+	VolumeName         string `json:"volumename"`
 }
 
 // AstraAgentSpec defines the desired state of AstraAgent

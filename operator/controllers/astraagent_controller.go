@@ -22,6 +22,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"context"
@@ -74,9 +75,9 @@ func (r *AstraAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	}
 
 	deployments := map[string]string{
-		astraAgent.Spec.NatssyncClient.Name:  "DeploymentForNatssyncClient",
 		astraAgent.Spec.HttpProxyClient.Name: "DeploymentForProxyClient",
 		astraAgent.Spec.EchoClient.Name:      "DeploymentForEchoClient",
+		astraAgent.Spec.NatssyncClient.Name:  "DeploymentForNatssyncClient",
 	}
 	statefulSets := map[string]string{
 		astraAgent.Spec.Nats.Name: "StatefulsetForNats",
@@ -86,11 +87,145 @@ func (r *AstraAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		astraAgent.Spec.Nats.Name:               "ServiceForNats",
 		astraAgent.Spec.Nats.ClusterServiceName: "ClusterServiceForNats",
 	}
+	configmaps := map[string]string{
+		astraAgent.Spec.Nats.ConfigMapName: "ConfigMapForNats",
+		astraAgent.Spec.ConfigMap.Name:     "ConfigMapForNatssyncClient",
+	}
+	serviceaccounts := map[string]string{
+		astraAgent.Spec.ConfigMap.ServiceAccountName: "ServiceAccountForNatssyncClientConfigMap",
+		astraAgent.Spec.Nats.ServiceAccountName:      "ServiceAccountForNats",
+	}
 
 	// Check if the deployment already exists, if not create a new one
 	replicaSize := map[string]int32{
 		astraAgent.Spec.Nats.Name:           astraAgent.Spec.Nats.Size,
 		astraAgent.Spec.NatssyncClient.Name: astraAgent.Spec.NatssyncClient.Size,
+	}
+
+	// Check if the services already exists, if not create a new one
+	for service, funcName := range services {
+		foundSer := &corev1.Service{}
+		log.Info("Finding Service", "Service.Namespace", astraAgent.Spec.Namespace, "Service.Name", service)
+		err = r.Get(ctx, types.NamespacedName{Name: service, Namespace: astraAgent.Spec.Namespace}, foundSer)
+		if err != nil && errors.IsNotFound(err) {
+			// Define a new service
+			// Use reflection to call the method
+			in := make([]reflect.Value, 1)
+			in[0] = reflect.ValueOf(astraAgent)
+			method := reflect.ValueOf(r).MethodByName(funcName)
+			val := method.Call(in)
+			serv := val[0].Interface().(*corev1.Service)
+
+			log.Info("Creating a new Service", "Service.Namespace", serv.Namespace, "Service.Name", serv.Name)
+			err = r.Create(ctx, serv)
+			if err != nil {
+				log.Error(err, "Failed to create new Service", "Service.Namespace", serv.Namespace, "Service.Name", serv.Name)
+				return ctrl.Result{}, err
+			}
+			// Service created successfully - return and requeue
+			//return ctrl.Result{Requeue: true}, nil
+		} else if err != nil {
+			log.Error(err, "Failed to get Service")
+			return ctrl.Result{}, err
+		}
+	}
+
+	// Create configmap
+	for cm, funcName := range configmaps {
+		foundCM := &corev1.ConfigMap{}
+		log.Info("Finding ConfigMap", "ConfigMap.Namespace", astraAgent.Spec.Namespace, "ConfigMap.Name", cm)
+		err = r.Get(ctx, types.NamespacedName{Name: cm, Namespace: astraAgent.Spec.Namespace}, foundCM)
+		if err != nil && errors.IsNotFound(err) {
+			// Define a new configmap
+			// Use reflection to call the method
+			in := make([]reflect.Value, 1)
+			in[0] = reflect.ValueOf(astraAgent)
+			method := reflect.ValueOf(r).MethodByName(funcName)
+			val := method.Call(in)
+			configMP := val[0].Interface().(*corev1.ConfigMap)
+
+			//configMP := r.ConfigMap(astraAgent)
+			log.Info("Creating a new ConfigMap", "ConfigMap.Namespace", configMP.Namespace, "ConfigMap.Name", configMP.Name)
+			err = r.Create(ctx, configMP)
+			if err != nil {
+				log.Error(err, "Failed to create new ConfigMap", "ConfigMap.Namespace", configMP.Namespace, "ConfigMap.Name", configMP.Name)
+				return ctrl.Result{}, err
+			}
+			// ConfigMap created successfully - return and requeue
+			//return ctrl.Result{Requeue: true}, nil
+		} else if err != nil {
+			log.Error(err, "Failed to get ConfigMap")
+			return ctrl.Result{}, err
+		}
+	}
+
+	// Create configmap role
+	foundRole := &rbacv1.Role{}
+	log.Info("Finding ConfigMap Role", "Role.Namespace", astraAgent.Spec.Namespace, "Role.Name", astraAgent.Spec.ConfigMap.RoleName)
+	err = r.Get(ctx, types.NamespacedName{Name: astraAgent.Spec.ConfigMap.RoleName, Namespace: astraAgent.Spec.Namespace}, foundRole)
+	if err != nil && errors.IsNotFound(err) {
+		// Define a new Role
+		configMPRole := r.ConfigMapRole(astraAgent)
+		log.Info("Creating a new Role", "Role.Namespace", configMPRole.Namespace, "Role.Name", configMPRole.Name)
+		err = r.Create(ctx, configMPRole)
+		if err != nil {
+			log.Error(err, "Failed to create new Role", "Role.Namespace", configMPRole.Namespace, "Role.Name", configMPRole.Name)
+			return ctrl.Result{}, err
+		}
+		// Role created successfully - return and requeue
+		//return ctrl.Result{Requeue: true}, nil
+	} else if err != nil {
+		log.Error(err, "Failed to get Role")
+		return ctrl.Result{}, err
+	}
+
+	// Create configmap rolebinding
+	foundRoleB := &rbacv1.RoleBinding{}
+	log.Info("Finding ConfigMap RoleBinding", "RoleBinding.Namespace", astraAgent.Spec.Namespace, "RoleBinding.Name", astraAgent.Spec.ConfigMap.RoleBindingName)
+	err = r.Get(ctx, types.NamespacedName{Name: astraAgent.Spec.ConfigMap.RoleBindingName, Namespace: astraAgent.Spec.Namespace}, foundRoleB)
+	if err != nil && errors.IsNotFound(err) {
+		// Define a new RoleBinding
+		roleB := r.ConfigMapRoleBinding(astraAgent)
+		log.Info("Creating a new RoleBinding", "RoleBinding.Namespace", roleB.Namespace, "RoleBinding.Name", roleB.Name)
+		err = r.Create(ctx, roleB)
+		if err != nil {
+			log.Error(err, "Failed to create new RoleBinding", "RoleBinding.Namespace", roleB.Namespace, "RoleBinding.Name", roleB.Name)
+			return ctrl.Result{}, err
+		}
+		// RoleBinding created successfully - return and requeue
+		//return ctrl.Result{Requeue: true}, nil
+	} else if err != nil {
+		log.Error(err, "Failed to get RoleBinding")
+		return ctrl.Result{}, err
+	}
+
+	// Create configmap service account
+	for sas, funcName := range serviceaccounts {
+		foundSA := &corev1.ServiceAccount{}
+		log.Info("Finding ServiceAccount", "ServiceAccount.Namespace", astraAgent.Spec.Namespace, "ServiceAccount.Name", sas)
+		err = r.Get(ctx, types.NamespacedName{Name: sas, Namespace: astraAgent.Spec.Namespace}, foundSA)
+		if err != nil && errors.IsNotFound(err) {
+			// Define a new ServiceAccount
+			// Use reflection to call the method
+			in := make([]reflect.Value, 1)
+			in[0] = reflect.ValueOf(astraAgent)
+			method := reflect.ValueOf(r).MethodByName(funcName)
+			val := method.Call(in)
+			configMPSA := val[0].Interface().(*corev1.ServiceAccount)
+
+			//configMPRoleB := r.ServiceAccountForConfigMap(astraAgent)
+			log.Info("Creating a new ServiceAccount", "ServiceAccount.Namespace", configMPSA.Namespace, "ServiceAccount.Name", configMPSA.Name)
+			err = r.Create(ctx, configMPSA)
+			if err != nil {
+				log.Error(err, "Failed to create new ServiceAccount", "ServiceAccount.Namespace", configMPSA.Namespace, "ServiceAccount.Name", configMPSA.Name)
+				return ctrl.Result{}, err
+			}
+			// ServiceAccount created successfully - return and requeue
+			//return ctrl.Result{Requeue: true}, nil
+		} else if err != nil {
+			log.Error(err, "Failed to get ServiceAccount")
+			return ctrl.Result{}, err
+		}
 	}
 
 	for statefulSet, funcName := range statefulSets {
@@ -113,7 +248,7 @@ func (r *AstraAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 				return ctrl.Result{}, err
 			}
 			// StatefulSet created successfully - return and requeue
-			return ctrl.Result{Requeue: true}, nil
+			//return ctrl.Result{Requeue: true}, nil
 		} else if err != nil {
 			log.Error(err, "Failed to get nats StatefulSet")
 			return ctrl.Result{}, err
@@ -121,7 +256,7 @@ func (r *AstraAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 		// Ensure the nats statefulset size is the same as the spec
 		natsSize := replicaSize[astraAgent.Spec.Nats.Name]
-		if *foundSet.Spec.Replicas != natsSize {
+		if foundSet.Spec.Replicas != nil && *foundSet.Spec.Replicas != natsSize {
 			foundSet.Spec.Replicas = &natsSize
 			err = r.Update(ctx, foundSet)
 			if err != nil {
@@ -131,7 +266,7 @@ func (r *AstraAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			// Ask to requeue after 1 minute in order to give enough time for the
 			// pods be created on the cluster side and the operand be able
 			// to do the next update step accurately.
-			return ctrl.Result{RequeueAfter: time.Minute}, nil
+			//return ctrl.Result{RequeueAfter: 1 * time.Minute}, nil
 		}
 	}
 
@@ -160,7 +295,7 @@ func (r *AstraAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 				return ctrl.Result{}, err
 			}
 			// Deployment created successfully - return and requeue
-			return ctrl.Result{Requeue: true}, nil
+			//return ctrl.Result{Requeue: true}, nil
 		} else if err != nil {
 			log.Error(err, "Failed to get Deployment")
 			return ctrl.Result{}, err
@@ -168,7 +303,7 @@ func (r *AstraAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 		// Ensure the deployment size is the same as the spec
 		size := replicaSize[astraAgent.Spec.NatssyncClient.Name]
-		if *foundDep.Spec.Replicas != size {
+		if foundDep.Spec.Replicas != nil && *foundDep.Spec.Replicas != size {
 			foundDep.Spec.Replicas = &size
 			err = r.Update(ctx, foundDep)
 			if err != nil {
@@ -178,135 +313,26 @@ func (r *AstraAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			// Ask to requeue after 1 minute in order to give enough time for the
 			// pods be created on the cluster side and the operand be able
 			// to do the next update step accurately.
-			return ctrl.Result{RequeueAfter: time.Minute}, nil
+			return ctrl.Result{RequeueAfter: 1 * time.Minute}, nil
 		}
-	}
-
-	// Check if the services already exists, if not create a new one
-	for service, funcName := range services {
-		foundSer := &corev1.Service{}
-		log.Info("Finding Service", "Service.Namespace", astraAgent.Spec.Namespace, "Service.Name", service)
-		err = r.Get(ctx, types.NamespacedName{Name: service, Namespace: astraAgent.Spec.Namespace}, foundSer)
-		if err != nil && errors.IsNotFound(err) {
-			// Define a new service
-			// Use reflection to call the method
-			in := make([]reflect.Value, 1)
-			in[0] = reflect.ValueOf(astraAgent)
-			method := reflect.ValueOf(r).MethodByName(funcName)
-			val := method.Call(in)
-			serv := val[0].Interface().(*corev1.Service)
-
-			log.Info("Creating a new Service", "Service.Namespace", serv.Namespace, "Service.Name", serv.Name)
-			err = r.Create(ctx, serv)
-			if err != nil {
-				log.Error(err, "Failed to create new Service", "Service.Namespace", serv.Namespace, "Service.Name", serv.Name)
-				return ctrl.Result{}, err
-			}
-			// Service created successfully - return and requeue
-			return ctrl.Result{Requeue: true}, nil
-		} else if err != nil {
-			log.Error(err, "Failed to get Service")
-			return ctrl.Result{}, err
-		}
-	}
-
-	// Create configmap
-	foundCM := &corev1.ConfigMap{}
-	log.Info("Finding ConfigMap", "ConfigMap.Namespace", astraAgent.Spec.Namespace, "ConfigMap.Name", astraAgent.Spec.ConfigMap.Name)
-	err = r.Get(ctx, types.NamespacedName{Name: astraAgent.Spec.ConfigMap.Name, Namespace: astraAgent.Spec.Namespace}, foundCM)
-	if err != nil && errors.IsNotFound(err) {
-		// Define a new configmap
-		configMP := r.ConfigMap(astraAgent)
-		log.Info("Creating a new ConfigMap", "ConfigMap.Namespace", configMP.Namespace, "ConfigMap.Name", configMP.Name)
-		err = r.Create(ctx, configMP)
-		if err != nil {
-			log.Error(err, "Failed to create new ConfigMap", "ConfigMap.Namespace", configMP.Namespace, "ConfigMap.Name", configMP.Name)
-			return ctrl.Result{}, err
-		}
-		// ConfigMap created successfully - return and requeue
-		return ctrl.Result{Requeue: true}, nil
-	} else if err != nil {
-		log.Error(err, "Failed to get ConfigMap")
-		return ctrl.Result{}, err
-	}
-
-	// Create configmap role
-	foundRole := &rbacv1.Role{}
-	log.Info("Finding ConfigMap Role", "Role.Namespace", astraAgent.Spec.Namespace, "Role.Name", astraAgent.Spec.ConfigMap.RoleName)
-	err = r.Get(ctx, types.NamespacedName{Name: astraAgent.Spec.ConfigMap.RoleName, Namespace: astraAgent.Spec.Namespace}, foundRole)
-	if err != nil && errors.IsNotFound(err) {
-		// Define a new Role
-		configMPRole := r.ConfigMapRole(astraAgent)
-		log.Info("Creating a new Role", "Role.Namespace", configMPRole.Namespace, "Role.Name", configMPRole.Name)
-		err = r.Create(ctx, configMPRole)
-		if err != nil {
-			log.Error(err, "Failed to create new Role", "Role.Namespace", configMPRole.Namespace, "Role.Name", configMPRole.Name)
-			return ctrl.Result{}, err
-		}
-		// Role created successfully - return and requeue
-		return ctrl.Result{Requeue: true}, nil
-	} else if err != nil {
-		log.Error(err, "Failed to get Role")
-		return ctrl.Result{}, err
-	}
-
-	// Create configmap rolebinding
-	foundRoleB := &rbacv1.RoleBinding{}
-	log.Info("Finding ConfigMap RoleBinding", "RoleBinding.Namespace", astraAgent.Spec.Namespace, "RoleBinding.Name", astraAgent.Spec.ConfigMap.RoleBindingName)
-	err = r.Get(ctx, types.NamespacedName{Name: astraAgent.Spec.ConfigMap.RoleBindingName, Namespace: astraAgent.Spec.Namespace}, foundRoleB)
-	if err != nil && errors.IsNotFound(err) {
-		// Define a new RoleBinding
-		roleB := r.ConfigMapRoleBinding(astraAgent)
-		log.Info("Creating a new RoleBinding", "RoleBinding.Namespace", roleB.Namespace, "RoleBinding.Name", roleB.Name)
-		err = r.Create(ctx, roleB)
-		if err != nil {
-			log.Error(err, "Failed to create new RoleBinding", "RoleBinding.Namespace", roleB.Namespace, "RoleBinding.Name", roleB.Name)
-			return ctrl.Result{}, err
-		}
-		// RoleBinding created successfully - return and requeue
-		return ctrl.Result{Requeue: true}, nil
-	} else if err != nil {
-		log.Error(err, "Failed to get RoleBinding")
-		return ctrl.Result{}, err
-	}
-
-	// Create configmap service account
-	foundSA := &corev1.ServiceAccount{}
-	log.Info("Finding ServiceAccount", "ServiceAccount.Namespace", astraAgent.Spec.Namespace, "ServiceAccount.Name", astraAgent.Spec.ConfigMap.ServiceAccountName)
-	err = r.Get(ctx, types.NamespacedName{Name: astraAgent.Spec.ConfigMap.ServiceAccountName, Namespace: astraAgent.Spec.Namespace}, foundSA)
-	if err != nil && errors.IsNotFound(err) {
-		// Define a new ServiceAccount
-		configMPRoleB := r.ServiceAccountForConfigMap(astraAgent)
-		log.Info("Creating a new ServiceAccount", "ServiceAccount.Namespace", configMPRoleB.Namespace, "ServiceAccount.Name", configMPRoleB.Name)
-		err = r.Create(ctx, configMPRoleB)
-		if err != nil {
-			log.Error(err, "Failed to create new ServiceAccount", "ServiceAccount.Namespace", configMPRoleB.Namespace, "ServiceAccount.Name", configMPRoleB.Name)
-			return ctrl.Result{}, err
-		}
-		// ServiceAccount created successfully - return and requeue
-		return ctrl.Result{Requeue: true}, nil
-	} else if err != nil {
-		log.Error(err, "Failed to get ServiceAccount")
-		return ctrl.Result{}, err
 	}
 
 	// RegisterClient
-	natssyncClientStatus, err := r.getNatssyncClientStatus(astraAgent, ctx)
-	if err != nil {
-		log.Error(err, "Failed to get natssync-client status")
-		return ctrl.Result{}, err
-	}
-
-	if astraAgent.Spec.Astra.Register && natssyncClientStatus.Registered == "False" {
-		log.Info("Registering natssync-client")
-		locationID, err := r.RegisterClient(astraAgent)
-		if err != nil {
-			log.Error(err, "Failed to register natssync-client")
-			return ctrl.Result{}, err
+	if astraAgent.Spec.Astra.Register {
+		log.Info("Checking for natssync-client configmap")
+		foundCM := &corev1.ConfigMap{}
+		err = r.Get(ctx, types.NamespacedName{Name: astraAgent.Spec.ConfigMap.Name, Namespace: astraAgent.Spec.Namespace}, foundCM)
+		if len(foundCM.Data) != 0 {
+			log.Info("natssync-client configmap is non-empty, natssync-client already registered")
+		} else {
+			log.Info("Registering natssync-client")
+			locationID, err := r.RegisterClient(astraAgent)
+			if err != nil {
+				log.Error(err, "Failed to register natssync-client")
+				return ctrl.Result{Requeue: true}, err
+			}
+			log.Info("natssync-client locationID", "locationID", locationID)
 		}
-		natssyncClientStatus.Registered = "True"
-		natssyncClientStatus.LocationID = locationID
-		log.Info("natssync-client locationID", "locationID", locationID)
 	}
 
 	// Update the astraAgent status with the pod names
@@ -330,17 +356,25 @@ func (r *AstraAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			log.Error(err, "Failed to update astraAgent status")
 			return ctrl.Result{}, err
 		}
+		//return ctrl.Result{RequeueAfter: 1 * time.Minute}, nil
 	}
 
-	if !reflect.DeepEqual(natssyncClientStatus, astraAgent.Status.NatssyncClient) {
-		log.Info("Updating the natssync-client status")
-		astraAgent.Status.NatssyncClient = natssyncClientStatus
-		err := r.Status().Update(ctx, astraAgent)
-		if err != nil {
-			log.Error(err, "Failed to update natssync-client status")
-			return ctrl.Result{}, err
-		}
-	}
+	//natssyncClientStatus, err := r.getNatssyncClientStatus(astraAgent, ctx)
+	//if err != nil {
+	//	log.Error(err, "Failed to get natssync-client status")
+	//	return ctrl.Result{}, err
+	//}
+	//
+	//if !reflect.DeepEqual(natssyncClientStatus, astraAgent.Status.NatssyncClient) {
+	//	log.Info("Updating the natssync-client status")
+	//	astraAgent.Status.NatssyncClient = natssyncClientStatus
+	//	err := r.Status().Update(ctx, astraAgent)
+	//	if err != nil {
+	//		log.Error(err, "Failed to update natssync-client status")
+	//		return ctrl.Result{}, err
+	//	}
+	//	//return ctrl.Result{}, nil
+	//}
 
 	return ctrl.Result{}, nil
 }
@@ -352,6 +386,7 @@ func (r *AstraAgentReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&appsv1.Deployment{}).
 		Owns(&appsv1.StatefulSet{}).
 		Owns(&corev1.Service{}).
+		WithOptions(controller.Options{MaxConcurrentReconciles: 1}).
 		Complete(r)
 }
 

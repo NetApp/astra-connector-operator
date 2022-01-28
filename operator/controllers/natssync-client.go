@@ -7,12 +7,12 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strconv"
 	"strings"
 
 	cachev1 "github.com/NetApp/astraagent-operator/api/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -69,19 +69,20 @@ func (r *AstraAgentReconciler) DeploymentForNatssyncClient(m *cachev1.AstraAgent
 								Value: m.Spec.NatssyncClient.SkipTLSValidation,
 							},
 						},
-						VolumeMounts: []v1.VolumeMount{
+						VolumeMounts: []corev1.VolumeMount{
 							{
 								Name:      m.Spec.ConfigMap.VolumeName,
 								MountPath: strings.Split(m.Spec.NatssyncClient.KeystoreUrl, "://")[1],
 							},
 						},
 					}},
-					Volumes: []v1.Volume{
+					ServiceAccountName: m.Spec.ConfigMap.ServiceAccountName,
+					Volumes: []corev1.Volume{
 						{
-							Name: fmt.Sprintf("%s-configmap-volume", m.Spec.NatssyncClient.Name),
-							VolumeSource: v1.VolumeSource{
-								ConfigMap: &v1.ConfigMapVolumeSource{
-									LocalObjectReference: v1.LocalObjectReference{
+							Name: m.Spec.ConfigMap.VolumeName,
+							VolumeSource: corev1.VolumeSource{
+								ConfigMap: &corev1.ConfigMapVolumeSource{
+									LocalObjectReference: corev1.LocalObjectReference{
 										Name: m.Spec.ConfigMap.Name,
 									},
 								},
@@ -94,7 +95,7 @@ func (r *AstraAgentReconciler) DeploymentForNatssyncClient(m *cachev1.AstraAgent
 	}
 
 	if m.Spec.NatssyncClient.HostAlias {
-		dep.Spec.Template.Spec.HostAliases = []v1.HostAlias{
+		dep.Spec.Template.Spec.HostAliases = []corev1.HostAlias{
 			{
 				IP:        m.Spec.NatssyncClient.HostAliasIP,
 				Hostnames: []string{strings.Split(m.Spec.NatssyncClient.CloudBridgeURL, "://")[1]},
@@ -145,7 +146,7 @@ func labelsForNatssyncClient(name string) map[string]string {
 }
 
 // ConfigMap returns a astraAgent ConfigMap object
-func (r *AstraAgentReconciler) ConfigMap(m *cachev1.AstraAgent) *corev1.ConfigMap {
+func (r *AstraAgentReconciler) ConfigMapForNatssyncClient(m *cachev1.AstraAgent) *corev1.ConfigMap {
 	configMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: m.Spec.Namespace,
@@ -199,7 +200,7 @@ func (r *AstraAgentReconciler) ConfigMapRoleBinding(m *cachev1.AstraAgent) *rbac
 }
 
 // ServiceAccountForConfigMap returns a ServiceAccount object
-func (r *AstraAgentReconciler) ServiceAccountForConfigMap(m *cachev1.AstraAgent) *corev1.ServiceAccount {
+func (r *AstraAgentReconciler) ServiceAccountForNatssyncClientConfigMap(m *cachev1.AstraAgent) *corev1.ServiceAccount {
 	sa := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      m.Spec.ConfigMap.ServiceAccountName,
@@ -223,9 +224,7 @@ func (r *AstraAgentReconciler) getNatssyncClientStatus(m *cachev1.AstraAgent, ct
 		return cachev1.NatssyncClientStatus{}, err
 	}
 
-	natssyncClientStatus := cachev1.NatssyncClientStatus{
-		Registered: "Unknown",
-	}
+	natssyncClientStatus := cachev1.NatssyncClientStatus{}
 
 	if len(pods.Items) < 1 {
 		return cachev1.NatssyncClientStatus{}, errors.New("natssync-client pods not found")
@@ -233,7 +232,7 @@ func (r *AstraAgentReconciler) getNatssyncClientStatus(m *cachev1.AstraAgent, ct
 	nsClientPod := pods.Items[0]
 	// If a pod is terminating, then we can't access the corresponding vault node's status.
 	// so we break from here and return an error.
-	if nsClientPod.Status.Phase != v1.PodRunning || nsClientPod.DeletionTimestamp != nil {
+	if nsClientPod.Status.Phase != corev1.PodRunning || nsClientPod.DeletionTimestamp != nil {
 		return cachev1.NatssyncClientStatus{}, errors.New("natssync-client pod is terminating")
 	}
 
@@ -241,7 +240,7 @@ func (r *AstraAgentReconciler) getNatssyncClientStatus(m *cachev1.AstraAgent, ct
 	natsSyncClientURL := fmt.Sprintf("http://%s.%s:%d/bridge-client/1", m.Spec.NatssyncClient.Name, m.Spec.Namespace, m.Spec.NatssyncClient.Port)
 	natsSyncClientRegisterURL := fmt.Sprintf("%s/register", natsSyncClientURL)
 	natsSyncClientAboutURL := fmt.Sprintf("%s/about", natsSyncClientURL)
-	natssyncClientRegistrationStatus, err := r.getNatssyncClientRegistrationStatus(natsSyncClientRegisterURL)
+	natssyncClientLocationID, err := r.getNatssyncClientRegistrationStatus(natsSyncClientRegisterURL)
 	if err != nil {
 		log.Error(err, "Failed to get the registration status")
 		return cachev1.NatssyncClientStatus{}, err
@@ -251,7 +250,8 @@ func (r *AstraAgentReconciler) getNatssyncClientStatus(m *cachev1.AstraAgent, ct
 		log.Error(err, "Failed to get the natssync-client version")
 		return cachev1.NatssyncClientStatus{}, err
 	}
-	natssyncClientStatus.Registered = natssyncClientRegistrationStatus
+	natssyncClientStatus.Registered = strconv.FormatBool(natssyncClientLocationID != "")
+	natssyncClientStatus.LocationID = natssyncClientLocationID
 	natssyncClientStatus.Version = natssyncClientVersion
 	return natssyncClientStatus, nil
 }
@@ -259,23 +259,20 @@ func (r *AstraAgentReconciler) getNatssyncClientStatus(m *cachev1.AstraAgent, ct
 func (r *AstraAgentReconciler) getNatssyncClientRegistrationStatus(natsSyncClientRegisterURL string) (string, error) {
 	resp, err := http.Get(natsSyncClientRegisterURL)
 	if err != nil {
-		return "Unknown", err
+		return "", err
 	}
 
 	type registrationResponse struct {
-		LocationID string `json:"locationID,omitempty"`
+		LocationID string `json:"locationID"`
 	}
 	var registrationResp registrationResponse
 	all, err := ioutil.ReadAll(resp.Body)
 	err = json.Unmarshal(all, &registrationResp)
 	if err != nil {
-		return "Unknown", err
+		return "", err
 	}
 
-	if registrationResp.LocationID == "" {
-		return "False", nil
-	}
-	return "True", nil
+	return registrationResp.LocationID, nil
 }
 
 func (r *AstraAgentReconciler) getNatssyncClientVersion(natsSyncClientAboutURL string) (string, error) {

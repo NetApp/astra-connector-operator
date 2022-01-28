@@ -29,6 +29,7 @@ func (r *AstraAgentReconciler) StatefulsetForNats(m *cachev1.AstraAgent) *appsv1
 					Labels: ls,
 				},
 				Spec: corev1.PodSpec{
+					ServiceAccountName: m.Spec.Nats.ServiceAccountName,
 					Containers: []corev1.Container{{
 						Image: m.Spec.Nats.Image,
 						Name:  m.Spec.Nats.Name,
@@ -50,7 +51,51 @@ func (r *AstraAgentReconciler) StatefulsetForNats(m *cachev1.AstraAgent) *appsv1
 								ContainerPort: m.Spec.Nats.MetricsPort,
 							},
 						},
+						Command: []string{"nats-server", "--config", "/etc/nats-config/nats.conf"},
+						Env: []corev1.EnvVar{
+							{
+								Name:  "CLUSTER_ADVERTISE",
+								Value: fmt.Sprintf("%s.nats.%s.svc", m.Spec.Nats.Name, m.Spec.Namespace),
+							},
+							{
+								Name:  "POD_NAME",
+								Value: m.Spec.Nats.Name,
+							}, {
+								Name:  "POD_NAMESPACE",
+								Value: m.Spec.Namespace,
+							},
+						},
+						VolumeMounts: []corev1.VolumeMount{
+							{
+								Name:      m.Spec.Nats.VolumeName,
+								MountPath: "/etc/nats-config",
+							},
+							{
+								Name:      "pid",
+								MountPath: "/var/run/nats",
+							},
+						},
 					}},
+					Volumes: []corev1.Volume{
+						{
+							Name: m.Spec.Nats.VolumeName,
+							VolumeSource: corev1.VolumeSource{
+								ConfigMap: &corev1.ConfigMapVolumeSource{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: m.Spec.Nats.ConfigMapName,
+									},
+								},
+							},
+						},
+						{
+							Name: "pid",
+							VolumeSource: corev1.VolumeSource{
+								EmptyDir: &corev1.EmptyDirVolumeSource{
+									Medium: "",
+								},
+							},
+						},
+					},
 				},
 			},
 		},
@@ -101,6 +146,35 @@ func (r *AstraAgentReconciler) ClusterServiceForNats(m *cachev1.AstraAgent) *cor
 	return service
 }
 
+// ConfigMapForNats returns a ConfigMap object
+func (r *AstraAgentReconciler) ConfigMapForNats(m *cachev1.AstraAgent) *corev1.ConfigMap {
+	natsConf := "pid_file: \"/var/run/nats/nats.pid\"\nhttp: %d\n\ncluster {\n  port: %d\n  routes [\n    nats://nats-0.nats-cluster:%d\n    nats://nats-1.nats-cluster:%d\n    nats://nats-2.nats-cluster:%d\n  ]\n\n  cluster_advertise: $CLUSTER_ADVERTISE\n  connect_retries: 30\n}\n"
+	configMap := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: m.Spec.Namespace,
+			Name:      m.Spec.Nats.ConfigMapName,
+		},
+		Data: map[string]string{
+			"nats.conf": fmt.Sprintf(natsConf, m.Spec.Nats.MonitorPort, m.Spec.Nats.ClusterPort, m.Spec.Nats.ClusterPort, m.Spec.Nats.ClusterPort, m.Spec.Nats.ClusterPort),
+		},
+	}
+	ctrl.SetControllerReference(m, configMap, r.Scheme)
+	return configMap
+}
+
+// ServiceAccountForNats returns a ServiceAccount object
+func (r *AstraAgentReconciler) ServiceAccountForNats(m *cachev1.AstraAgent) *corev1.ServiceAccount {
+	sa := &corev1.ServiceAccount{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      m.Spec.Nats.ServiceAccountName,
+			Namespace: m.Spec.Namespace,
+			Labels:    labelsForNats(m.Spec.Nats.Name),
+		},
+	}
+	ctrl.SetControllerReference(m, sa, r.Scheme)
+	return sa
+}
+
 // ServiceForNats returns a astraAgent Deployment object
 func (r *AstraAgentReconciler) ServiceForNats(m *cachev1.AstraAgent) *corev1.Service {
 	ls := labelsForNats(m.Spec.Nats.Name)
@@ -126,7 +200,7 @@ func (r *AstraAgentReconciler) ServiceForNats(m *cachev1.AstraAgent) *corev1.Ser
 	return service
 }
 
-// labelsForNatssyncClient returns the labels for selecting the resources
+// labelsForNats returns the labels for selecting the resources
 // belonging to the given astraAgent CR name.
 func labelsForNats(name string) map[string]string {
 	return map[string]string{"app": name}
