@@ -8,7 +8,7 @@ spec:
     name: natssync-client
     size: 1
     image: theotw/natssync-client:0.9.202201132025
-    cloud-bridge-url: http://integration.astra.netapp.io
+    cloud-bridge-url: https://integration.astra.netapp.io
     port: 8080
     nodeport: 31000
     protocol: TCP
@@ -45,5 +45,5 @@ spec:
     volumename: natssync-client-configmap-volume
   astra:
     register: true
-    token: ZeGllRVYoldXbTO-uKok9oGxlBkRYovquPd6ceGXnJg=
+    token: w7bc1CbYtR_dCcp00lyGiZbi462WxhNO1ITHK4fzzMI=
     clusterName: ipsprintdemo

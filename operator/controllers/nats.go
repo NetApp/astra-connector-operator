@@ -20,7 +20,8 @@ func (r *AstraAgentReconciler) StatefulsetForNats(m *cachev1.AstraAgent) *appsv1
 			Namespace: m.Spec.Namespace,
 		},
 		Spec: appsv1.StatefulSetSpec{
-			Replicas: &replicas,
+			ServiceName: m.Spec.Nats.ClusterServiceName,
+			Replicas:    &replicas,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: ls,
 			},

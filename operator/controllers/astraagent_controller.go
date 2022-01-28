@@ -356,25 +356,25 @@ func (r *AstraAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			log.Error(err, "Failed to update astraAgent status")
 			return ctrl.Result{}, err
 		}
-		//return ctrl.Result{RequeueAfter: 1 * time.Minute}, nil
+		return ctrl.Result{RequeueAfter: 1 * time.Minute}, nil
 	}
 
-	//natssyncClientStatus, err := r.getNatssyncClientStatus(astraAgent, ctx)
-	//if err != nil {
-	//	log.Error(err, "Failed to get natssync-client status")
-	//	return ctrl.Result{}, err
-	//}
-	//
-	//if !reflect.DeepEqual(natssyncClientStatus, astraAgent.Status.NatssyncClient) {
-	//	log.Info("Updating the natssync-client status")
-	//	astraAgent.Status.NatssyncClient = natssyncClientStatus
-	//	err := r.Status().Update(ctx, astraAgent)
-	//	if err != nil {
-	//		log.Error(err, "Failed to update natssync-client status")
-	//		return ctrl.Result{}, err
-	//	}
-	//	//return ctrl.Result{}, nil
-	//}
+	natssyncClientStatus, err := r.getNatssyncClientStatus(astraAgent, ctx)
+	if err != nil {
+		log.Error(err, "Failed to get natssync-client status")
+		return ctrl.Result{}, err
+	}
+
+	if !reflect.DeepEqual(natssyncClientStatus, astraAgent.Status.NatssyncClient) {
+		log.Info("Updating the natssync-client status")
+		astraAgent.Status.NatssyncClient = natssyncClientStatus
+		err := r.Status().Update(ctx, astraAgent)
+		if err != nil {
+			log.Error(err, "Failed to update natssync-client status")
+			return ctrl.Result{}, err
+		}
+		//return ctrl.Result{}, nil
+	}
 
 	return ctrl.Result{}, nil
 }
