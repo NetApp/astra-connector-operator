@@ -199,7 +199,7 @@ func (r *AstraAgentReconciler) ConfigMapRoleBinding(m *cachev1.AstraAgent) *rbac
 	return configMapRoleBinding
 }
 
-// ServiceAccountForConfigMap returns a ServiceAccount object
+// ServiceAccountForNatssyncClientConfigMap returns a ServiceAccount object
 func (r *AstraAgentReconciler) ServiceAccountForNatssyncClientConfigMap(m *cachev1.AstraAgent) *corev1.ServiceAccount {
 	sa := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
@@ -237,15 +237,12 @@ func (r *AstraAgentReconciler) getNatssyncClientStatus(m *cachev1.AstraAgent, ct
 	}
 
 	natssyncClientStatus.State = string(nsClientPod.Status.Phase)
-	natsSyncClientURL := fmt.Sprintf("http://%s.%s:%d/bridge-client/1", m.Spec.NatssyncClient.Name, m.Spec.Namespace, m.Spec.NatssyncClient.Port)
-	natsSyncClientRegisterURL := fmt.Sprintf("%s/register", natsSyncClientURL)
-	natsSyncClientAboutURL := fmt.Sprintf("%s/about", natsSyncClientURL)
-	natssyncClientLocationID, err := r.getNatssyncClientRegistrationStatus(natsSyncClientRegisterURL)
+	natssyncClientLocationID, err := r.getNatssyncClientRegistrationStatus(r.getNatssyncClientRegistrationURL(m))
 	if err != nil {
 		log.Error(err, "Failed to get the registration status")
 		return cachev1.NatssyncClientStatus{}, err
 	}
-	natssyncClientVersion, err := r.getNatssyncClientVersion(natsSyncClientAboutURL)
+	natssyncClientVersion, err := r.getNatssyncClientVersion(r.getNatssyncClientAboutURL(m))
 	if err != nil {
 		log.Error(err, "Failed to get the natssync-client version")
 		return cachev1.NatssyncClientStatus{}, err
@@ -254,6 +251,18 @@ func (r *AstraAgentReconciler) getNatssyncClientStatus(m *cachev1.AstraAgent, ct
 	natssyncClientStatus.LocationID = natssyncClientLocationID
 	natssyncClientStatus.Version = natssyncClientVersion
 	return natssyncClientStatus, nil
+}
+
+func (r *AstraAgentReconciler) getNatssyncClientRegistrationURL(m *cachev1.AstraAgent) string {
+	natsSyncClientURL := fmt.Sprintf("http://%s.%s:%d/bridge-client/1", m.Spec.NatssyncClient.Name, m.Spec.Namespace, m.Spec.NatssyncClient.Port)
+	natsSyncClientRegisterURL := fmt.Sprintf("%s/register", natsSyncClientURL)
+	return natsSyncClientRegisterURL
+}
+
+func (r *AstraAgentReconciler) getNatssyncClientAboutURL(m *cachev1.AstraAgent) string {
+	natsSyncClientURL := fmt.Sprintf("http://%s.%s:%d/bridge-client/1", m.Spec.NatssyncClient.Name, m.Spec.Namespace, m.Spec.NatssyncClient.Port)
+	natsSyncClientAboutURL := fmt.Sprintf("%s/about", natsSyncClientURL)
+	return natsSyncClientAboutURL
 }
 
 func (r *AstraAgentReconciler) getNatssyncClientRegistrationStatus(natsSyncClientRegisterURL string) (string, error) {

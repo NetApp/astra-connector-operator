@@ -46,6 +46,10 @@ spec:
             properties:
               astra:
                 properties:
+                  accountId:
+                    type: string
+                  cloudType:
+                    type: string
                   clusterName:
                     type: string
                   register:
@@ -53,6 +57,8 @@ spec:
                   token:
                     type: string
                 required:
+                - accountId
+                - cloudType
                 - clusterName
                 - register
                 - token

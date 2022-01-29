@@ -45,6 +45,8 @@ type Astra struct {
 	Register    bool   `json:"register"`
 	Token       string `json:"token"`
 	ClusterName string `json:"clusterName"`
+	AccountID   string `json:"accountId"`
+	CloudType   string `json:"cloudType"`
 }
 
 type NatssyncClient struct {

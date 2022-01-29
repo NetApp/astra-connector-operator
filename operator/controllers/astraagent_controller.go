@@ -321,18 +321,32 @@ func (r *AstraAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	if astraAgent.Spec.Astra.Register {
 		log.Info("Checking for natssync-client configmap")
 		foundCM := &corev1.ConfigMap{}
+		locationID := ""
 		err = r.Get(ctx, types.NamespacedName{Name: astraAgent.Spec.ConfigMap.Name, Namespace: astraAgent.Spec.Namespace}, foundCM)
 		if len(foundCM.Data) != 0 {
 			log.Info("natssync-client configmap is non-empty, natssync-client already registered")
+			locationID, err = r.getNatssyncClientRegistrationStatus(r.getNatssyncClientRegistrationURL(astraAgent))
+			if err != nil {
+				log.Error(err, "Failed to get the location ID from natssync-client")
+				return ctrl.Result{Requeue: true}, err
+			}
 		} else {
 			log.Info("Registering natssync-client")
-			locationID, err := r.RegisterClient(astraAgent)
+			locationID, err = r.RegisterClient(astraAgent)
 			if err != nil {
 				log.Error(err, "Failed to register natssync-client")
 				return ctrl.Result{Requeue: true}, err
 			}
 			log.Info("natssync-client locationID", "locationID", locationID)
 		}
+
+		log.Info("Registering locationID with Astra")
+		err = r.AddLocationIDtoCloudExtension(astraAgent, locationID, ctx)
+		if err != nil {
+			log.Error(err, "Failed to register locationID with Astra")
+			return ctrl.Result{Requeue: true}, err
+		}
+		log.Error(err, "Registered locationID with Astra")
 	}
 
 	// Update the astraAgent status with the pod names
