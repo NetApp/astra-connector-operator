@@ -55,7 +55,6 @@ type NatssyncClient struct {
 	Image             string          `json:"image"`
 	CloudBridgeURL    string          `json:"cloud-bridge-url"`
 	Port              int32           `json:"port"`
-	NodePort          int32           `json:"nodeport"`
 	Protocol          corev1.Protocol `json:"protocol"`
 	KeystoreUrl       string          `json:"keystoreUrl"`
 	SkipTLSValidation string          `json:"skipTLSValidation"`

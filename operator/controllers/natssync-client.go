@@ -121,11 +121,10 @@ func (r *AstraAgentReconciler) ServiceForNatssyncClient(m *cachev1.AstraAgent) *
 			},
 		},
 		Spec: corev1.ServiceSpec{
-			Type: corev1.ServiceTypeNodePort,
+			Type: corev1.ServiceTypeClusterIP,
 			Ports: []corev1.ServicePort{
 				{
 					Port:     m.Spec.NatssyncClient.Port,
-					NodePort: m.Spec.NatssyncClient.NodePort,
 					Protocol: m.Spec.NatssyncClient.Protocol,
 				},
 			},

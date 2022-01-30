@@ -171,9 +171,6 @@ spec:
                     type: string
                   name:
                     type: string
-                  nodeport:
-                    format: int32
-                    type: integer
                   port:
                     format: int32
                     type: integer
@@ -192,7 +189,6 @@ spec:
                 - image
                 - keystoreUrl
                 - name
-                - nodeport
                 - port
                 - protocol
                 - size
