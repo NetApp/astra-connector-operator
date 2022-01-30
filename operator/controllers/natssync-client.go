@@ -232,7 +232,9 @@ func (r *AstraAgentReconciler) getNatssyncClientStatus(m *cachev1.AstraAgent, ct
 	// If a pod is terminating, then we can't access the corresponding vault node's status.
 	// so we break from here and return an error.
 	if nsClientPod.Status.Phase != corev1.PodRunning || nsClientPod.DeletionTimestamp != nil {
-		return cachev1.NatssyncClientStatus{}, errors.New("natssync-client pod is terminating")
+		errNew := errors.New("natssync-client not in the desired state")
+		log.Error(errNew, "natssync-client pod", "Phase", nsClientPod.Status.Phase, "DeletionTimestamp", nsClientPod.DeletionTimestamp)
+		return cachev1.NatssyncClientStatus{}, errNew
 	}
 
 	natssyncClientStatus.State = string(nsClientPod.Status.Phase)
