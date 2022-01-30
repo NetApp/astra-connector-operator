@@ -317,13 +317,18 @@ func (r *AstraAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		}
 	}
 
+	registered := false
+	log.Info("Checking for natssync-client configmap")
+	foundCM := &corev1.ConfigMap{}
+	locationID := ""
+	err = r.Get(ctx, types.NamespacedName{Name: astraAgent.Spec.ConfigMap.Name, Namespace: astraAgent.Spec.Namespace}, foundCM)
+	if len(foundCM.Data) != 0 {
+		registered = true
+	}
+
 	// RegisterClient
 	if astraAgent.Spec.Astra.Register {
-		log.Info("Checking for natssync-client configmap")
-		foundCM := &corev1.ConfigMap{}
-		locationID := ""
-		err = r.Get(ctx, types.NamespacedName{Name: astraAgent.Spec.ConfigMap.Name, Namespace: astraAgent.Spec.Namespace}, foundCM)
-		if len(foundCM.Data) != 0 {
+		if registered {
 			log.Info("natssync-client configmap is non-empty, natssync-client already registered")
 			locationID, err = r.getNatssyncClientRegistrationStatus(r.getNatssyncClientRegistrationURL(astraAgent))
 			if err != nil {
@@ -346,7 +351,20 @@ func (r *AstraAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			log.Error(err, "Failed to register locationID with Astra")
 			return ctrl.Result{Requeue: true}, err
 		}
-		log.Error(err, "Registered locationID with Astra")
+		log.Info("Registered locationID with Astra")
+	} else if !astraAgent.Spec.Astra.Register {
+		if registered {
+			log.Info("Unregistering natssync-client")
+			err = r.UnregisterClient(astraAgent)
+			if err != nil {
+				log.Error(err, "Failed to unregister natssync-client")
+				return ctrl.Result{Requeue: true}, err
+			}
+			log.Info("Unregistered natssync-client")
+		} else {
+			log.Info("Already unregistered with Astra")
+		}
+
 	}
 
 	// Update the astraAgent status with the pod names

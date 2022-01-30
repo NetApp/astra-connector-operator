@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -22,8 +23,7 @@ const (
 )
 
 func (r *AstraAgentReconciler) RegisterClient(m *cachev1.AstraAgent) (string, error) {
-	natsSyncClientURL := fmt.Sprintf("http://%s.%s:%d/bridge-client/1", m.Spec.NatssyncClient.Name, m.Spec.Namespace, m.Spec.NatssyncClient.Port)
-	natsSyncClientRegisterURL := fmt.Sprintf("%s/register", natsSyncClientURL)
+	natsSyncClientRegisterURL := r.getNatssyncClientRegistrationURL(m)
 	reqBodyBytes, err := json.Marshal(map[string]string{"authToken": m.Spec.Astra.Token})
 	response, err := http.Post(natsSyncClientRegisterURL, "application/json", bytes.NewBuffer(reqBodyBytes))
 	if err != nil {
@@ -49,18 +49,56 @@ func (r *AstraAgentReconciler) RegisterClient(m *cachev1.AstraAgent) (string, er
 	return locationId.LocationId, nil
 }
 
+func (r *AstraAgentReconciler) UnregisterClient(m *cachev1.AstraAgent) error {
+	natsSyncClientUnregisterURL := r.getNatssyncClientUnregisterURL(m)
+	reqBodyBytes, err := json.Marshal(map[string]string{"authToken": m.Spec.Astra.Token})
+	response, err := http.Post(natsSyncClientUnregisterURL, "application/json", bytes.NewBuffer(reqBodyBytes))
+	if err != nil {
+		return err
+	}
+
+	if response.StatusCode != 201 {
+		bodyBytes, err := io.ReadAll(response.Body)
+		if err != nil {
+			return err
+		}
+		errMsg := fmt.Sprintf("Unexpected unregistration status code: %d; %s", response.StatusCode, string(bodyBytes))
+		return errors.New(errMsg)
+	}
+	return nil
+}
+
 func (r *AstraAgentReconciler) AddLocationIDtoCloudExtension(m *cachev1.AstraAgent, locationID string, ctx context.Context) error {
 	log := ctrllog.FromContext(ctx)
 	setTlsValidation(m.Spec.NatssyncClient.SkipTLSValidation, ctx)
+
+	astraHost := m.Spec.NatssyncClient.CloudBridgeURL
+	if m.Spec.NatssyncClient.HostAlias {
+		dialer := &net.Dialer{
+			Timeout:   30 * time.Second,
+			KeepAlive: 30 * time.Second,
+		}
+
+		http.DefaultTransport.(*http.Transport).DialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
+			if addr == strings.Split(astraHost, "://")[1]+":443" {
+				addr = m.Spec.NatssyncClient.HostAliasIP + ":443"
+			}
+			if addr == strings.Split(astraHost, "://")[1]+":80" {
+				addr = m.Spec.NatssyncClient.HostAliasIP + ":80"
+			}
+			return dialer.DialContext(ctx, network, addr)
+		}
+	}
 	log.Info("Fetching cloud ID")
-	cloudID, err := GetCloudId(m.Spec.NatssyncClient.CloudBridgeURL, m.Spec.Astra.AccountID, m.Spec.Astra.Token, m.Spec.Astra.CloudType, ctx)
+	cloudID, err := GetCloudId(astraHost, m.Spec.Astra.AccountID, m.Spec.Astra.Token, m.Spec.Astra.CloudType, ctx)
 	if err != nil {
 		log.Error(err, "Error fetching cloud ID")
 		return err
 	}
+	log.Info("Found cloud ID", "cloudID", cloudID)
 
 	log.Info("Finding cluster ID")
-	clusterId, err := GetClusterId(m.Spec.NatssyncClient.CloudBridgeURL, m.Spec.Astra.ClusterName, m.Spec.Astra.AccountID, cloudID, m.Spec.Astra.Token, ctx)
+	clusterId, err := GetClusterId(astraHost, m.Spec.Astra.ClusterName, m.Spec.Astra.AccountID, cloudID, m.Spec.Astra.Token, ctx)
 	if err != nil {
 		log.Error(err, "Error fetching cluster ID")
 		return err
@@ -68,11 +106,59 @@ func (r *AstraAgentReconciler) AddLocationIDtoCloudExtension(m *cachev1.AstraAge
 	log.Info("Found cluster ID", "clusterId", clusterId)
 
 	// Register the locationId with Astra
-	err = RegisterLocationId(m.Spec.NatssyncClient.CloudBridgeURL, m.Spec.Astra.AccountID, m.Spec.Astra.Token, locationID, cloudID, clusterId, ctx)
+	locationID = fmt.Sprintf("v1:%s", locationID)
+	err = RegisterLocationId(astraHost, m.Spec.Astra.AccountID, m.Spec.Astra.Token, locationID, cloudID, clusterId, ctx)
 	if err != nil {
 		log.Error(err, "Error registering location ID with Astra")
 		return err
 	}
+	return nil
+}
+
+func (r *AstraAgentReconciler) RemoveLocationIDFromCloudExtension(m *cachev1.AstraAgent, ctx context.Context) error {
+	log := ctrllog.FromContext(ctx)
+	setTlsValidation(m.Spec.NatssyncClient.SkipTLSValidation, ctx)
+
+	astraHost := m.Spec.NatssyncClient.CloudBridgeURL
+	if m.Spec.NatssyncClient.HostAlias {
+		dialer := &net.Dialer{
+			Timeout:   30 * time.Second,
+			KeepAlive: 30 * time.Second,
+		}
+
+		http.DefaultTransport.(*http.Transport).DialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
+			if addr == strings.Split(astraHost, "://")[1]+":443" {
+				addr = m.Spec.NatssyncClient.HostAliasIP + ":443"
+			}
+			if addr == strings.Split(astraHost, "://")[1]+":80" {
+				addr = m.Spec.NatssyncClient.HostAliasIP + ":80"
+			}
+			return dialer.DialContext(ctx, network, addr)
+		}
+	}
+	log.Info("Fetching cloud ID")
+	cloudID, err := GetCloudId(astraHost, m.Spec.Astra.AccountID, m.Spec.Astra.Token, m.Spec.Astra.CloudType, ctx)
+	if err != nil {
+		log.Error(err, "Error fetching cloud ID")
+		return err
+	}
+	log.Info("Found cloud ID", "cloudID", cloudID)
+
+	log.Info("Finding cluster ID")
+	clusterId, err := GetClusterId(astraHost, m.Spec.Astra.ClusterName, m.Spec.Astra.AccountID, cloudID, m.Spec.Astra.Token, ctx)
+	if err != nil {
+		log.Error(err, "Error fetching cluster ID")
+		return err
+	}
+	log.Info("Found cluster ID", "clusterId", clusterId)
+
+	log.Info("Getting the cluster object")
+	_, err = GetCluster(astraHost, clusterId, m.Spec.Astra.AccountID, cloudID, m.Spec.Astra.Token, ctx)
+	if err != nil {
+		log.Error(err, "Error fetching cluster object")
+		return err
+	}
+	log.Info("Fetched the cluster object", "clusterId", clusterId)
 	return nil
 }
 
@@ -169,6 +255,26 @@ func GetClusterId(astraHost string, clusterName string, accountId string, cloudI
 	return clusterId, nil
 }
 
+func GetCluster(astraHost string, clusterID string, accountId string, cloudId string, token string, ctx context.Context) (*http.Response, error) {
+	url := fmt.Sprintf("%s/accounts/%s/topology/v1/clouds/%s/clusters/%s", astraHost, accountId, cloudId, clusterID)
+	client := http.Client{}
+	request, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+	request.Header = http.Header{
+		"authorization": []string{fmt.Sprintf("Bearer %s", token)},
+		"content-type":  []string{"application/json"},
+	}
+
+	response, err := client.Do(request)
+	if err != nil {
+		return nil, err
+	}
+
+	return response, nil
+}
+
 func ReadResponseBody(response *http.Response) ([]byte, error) {
 	bodyBytes, err := io.ReadAll(response.Body)
 	if err != nil {
@@ -259,7 +365,6 @@ func GetCloudId(astraHost string, accountId string, token string, cloudType stri
 
 func RegisterLocationId(astraCloudHost string, pcloudAccountId string, token string, locationId string, cloudId string, clusterId string, ctx context.Context) error {
 	log := ctrllog.FromContext(ctx)
-	locationId = fmt.Sprintf("v1:%s", locationId)
 	timeout := time.Second * 30
 	success := false
 	timeExpire := time.Now().Add(timeout)

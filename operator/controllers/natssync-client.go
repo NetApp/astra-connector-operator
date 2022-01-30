@@ -259,6 +259,12 @@ func (r *AstraAgentReconciler) getNatssyncClientRegistrationURL(m *cachev1.Astra
 	return natsSyncClientRegisterURL
 }
 
+func (r *AstraAgentReconciler) getNatssyncClientUnregisterURL(m *cachev1.AstraAgent) string {
+	natsSyncClientURL := fmt.Sprintf("http://%s.%s:%d/bridge-client/1", m.Spec.NatssyncClient.Name, m.Spec.Namespace, m.Spec.NatssyncClient.Port)
+	natsSyncClientRegisterURL := fmt.Sprintf("%s/unregister", natsSyncClientURL)
+	return natsSyncClientRegisterURL
+}
+
 func (r *AstraAgentReconciler) getNatssyncClientAboutURL(m *cachev1.AstraAgent) string {
 	natsSyncClientURL := fmt.Sprintf("http://%s.%s:%d/bridge-client/1", m.Spec.NatssyncClient.Name, m.Spec.Namespace, m.Spec.NatssyncClient.Port)
 	natsSyncClientAboutURL := fmt.Sprintf("%s/about", natsSyncClientURL)

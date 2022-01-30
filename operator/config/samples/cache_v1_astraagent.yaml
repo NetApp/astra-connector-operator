@@ -45,7 +45,7 @@ spec:
     volumename: natssync-client-configmap-volume
   astra:
     register: true
-    token: Mwn9_1-T30c7HrzcsQEKvUGWUIqmVY4FGjb3wGof2Gs=
+    token: nQeQPq065VWAq760PPULAizUDzrGweT3aCRR_-XA2q8=
     clusterName: ipsprintdemo
     accountId: 5831cf97-c52e-4185-ab83-db0fdd061c0e
     cloudType: Azure
