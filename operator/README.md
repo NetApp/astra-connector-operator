@@ -33,7 +33,7 @@ Apply the AstraAgent CRD
 ```
 kubectl apply -f config/samples/cache_v1_astraagent.yaml -n astra-agent
 ```
-### Uninstall the private cluster with Astra
+### Uninstall the private cluster components
 - Unmanage the cluster from the Astra UI
 - Unregister the cluster by changing the register value in the CRD to false
 - Remove the AstraAgent CRD
