@@ -106,7 +106,7 @@ Natssync-Client talks to the Natssync-Server on Astra and ensures communication 
 
 The natssync-client CRD is a map of key/value pairs
 
-| CRD Spec          | Explanation   |
+| CRD Spec          | Details       |
 | ----------------- | ------------- |
 | name              | Name for the natssync-client pod |
 | size              | Replica count for the natssync-client deployment |
@@ -117,7 +117,7 @@ The natssync-client CRD is a map of key/value pairs
 | keystoreUrl       | Volume mount for storing information |
 
 ### [nats](https://nats.io/)
-| CRD Spec             | Explanation   |
+| CRD Spec             | Details       |
 | ---------------------| ------------- |
 | name                 | Name for the nats pod |
 | size                 | Replica count for the nats statefulset |
@@ -133,21 +133,21 @@ The natssync-client CRD is a map of key/value pairs
 | gateways-port        | gateways port to use for nats statefulset |
 
 ### [httpproxy-client](https://github.com/theotw/natssync)
-| CRD Spec | Explanation   |
+| CRD Spec | Details       |
 | ---------| ------------- |
 | name     | Name for the httpproxy-client pod |
 | size     | Replica count for the httpproxy-client deployment |
 | image    | httpproxy-client image |
 
 ### [echo-client](https://github.com/theotw/natssync)
-| CRD Spec | Explanation   |
+| CRD Spec | Details       |
 | ---------| ------------- |
 | name     | Name for the echo-client pod |
 | size     | Replica count for the echo-client deployment |
 | image    | echo-client image |
 
 ### configMap
-| CRD Spec           | Explanation   |
+| CRD Spec           | Details       |
 | ------------------ | ------------- |
 | name               | Name of the ConfigMap that will be created and used by natssync-client |
 | rolename           | Name of the Role that will be created and used by natssync-client |
@@ -156,7 +156,7 @@ The natssync-client CRD is a map of key/value pairs
 | volumename         | Name of the Volume that will be created and used by natssync-client |
 
 ### [astra](https://cloud.netapp.com/astra)
-| CRD Spec      | Explanation   |
+| CRD Spec      | Details       |
 | ------------- | ------------- |
 | register      | (Un)Register the cluster with Astra |
 | token         | Astra API token of a user with an Owner Role|
