@@ -98,7 +98,7 @@ func (r *AstraAgentReconciler) AddLocationIDtoCloudExtension(m *cachev1.AstraAge
 	log.Info("Found cloud ID", "cloudID", cloudID)
 
 	log.Info("Finding cluster ID")
-	clusterId, err := GetClusterId(astraHost, m.Spec.Astra.ClusterName, m.Spec.Astra.AccountID, cloudID, m.Spec.Astra.Token, ctx)
+	clusterId, managedState, err := GetClusterId(astraHost, m.Spec.Astra.ClusterName, m.Spec.Astra.AccountID, cloudID, m.Spec.Astra.Token, ctx)
 	if err != nil {
 		log.Error(err, "Error fetching cluster ID")
 		return err
@@ -107,7 +107,7 @@ func (r *AstraAgentReconciler) AddLocationIDtoCloudExtension(m *cachev1.AstraAge
 
 	// Register the locationId with Astra
 	locationID = fmt.Sprintf("v1:%s", locationID)
-	err = RegisterLocationId(astraHost, m.Spec.Astra.AccountID, m.Spec.Astra.Token, locationID, cloudID, clusterId, ctx)
+	err = RegisterLocationId(astraHost, m.Spec.Astra.AccountID, m.Spec.Astra.Token, locationID, cloudID, clusterId, managedState, ctx)
 	if err != nil {
 		log.Error(err, "Error registering location ID with Astra")
 		return err
@@ -145,20 +145,19 @@ func (r *AstraAgentReconciler) RemoveLocationIDFromCloudExtension(m *cachev1.Ast
 	log.Info("Found cloud ID", "cloudID", cloudID)
 
 	log.Info("Finding cluster ID")
-	clusterId, err := GetClusterId(astraHost, m.Spec.Astra.ClusterName, m.Spec.Astra.AccountID, cloudID, m.Spec.Astra.Token, ctx)
+	clusterId, managedState, err := GetClusterId(astraHost, m.Spec.Astra.ClusterName, m.Spec.Astra.AccountID, cloudID, m.Spec.Astra.Token, ctx)
 	if err != nil {
 		log.Error(err, "Error fetching cluster ID")
 		return err
 	}
 	log.Info("Found cluster ID", "clusterId", clusterId)
 
-	log.Info("Getting the cluster object")
-	_, err = GetCluster(astraHost, clusterId, m.Spec.Astra.AccountID, cloudID, m.Spec.Astra.Token, ctx)
+	// Unregister the locationId with Astra
+	err = RegisterLocationId(astraHost, m.Spec.Astra.AccountID, m.Spec.Astra.Token, "", cloudID, clusterId, managedState, ctx)
 	if err != nil {
-		log.Error(err, "Error fetching cluster object")
+		log.Error(err, "Error registering location ID with Astra")
 		return err
 	}
-	log.Info("Fetched the cluster object", "clusterId", clusterId)
 	return nil
 }
 
@@ -178,7 +177,7 @@ func LogHttpError(response *http.Response, ctx context.Context) {
 
 func ListClusters(astraHost string, accountId string, cloudId string, token string) (*http.Response, error) {
 	url := fmt.Sprintf("%s/accounts/%s/topology/v1/clouds/%s/clusters", astraHost, accountId, cloudId)
-	client := http.Client{}
+	httpClient := http.Client{}
 	request, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, err
@@ -188,7 +187,7 @@ func ListClusters(astraHost string, accountId string, cloudId string, token stri
 		"content-type":  []string{"application/json"},
 	}
 
-	response, err := client.Do(request)
+	response, err := httpClient.Do(request)
 	if err != nil {
 		return nil, err
 	}
@@ -196,7 +195,7 @@ func ListClusters(astraHost string, accountId string, cloudId string, token stri
 	return response, nil
 }
 
-func GetClusterId(astraHost string, clusterName string, accountId string, cloudId string, token string, ctx context.Context) (string, error) {
+func GetClusterId(astraHost string, clusterName string, accountId string, cloudId string, token string, ctx context.Context) (string, string, error) {
 	log := ctrllog.FromContext(ctx)
 	var response *http.Response
 	success := false
@@ -220,7 +219,7 @@ func GetClusterId(astraHost string, clusterName string, accountId string, cloudI
 	}
 
 	if !success {
-		return "", fmt.Errorf("timed out querying Astra API")
+		return "", "", fmt.Errorf("timed out querying Astra API")
 	}
 	defer response.Body.Close()
 
@@ -233,31 +232,33 @@ func GetClusterId(astraHost string, clusterName string, accountId string, cloudI
 	}
 	bodyBytes, err := ReadResponseBody(response)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	resp := respData{}
 	err = json.Unmarshal(bodyBytes, &resp)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	// Find ID for given name
 	var clusterId string
+	var managedState string
 	for _, clusterData := range resp.Items {
 		if clusterData.Name == clusterName {
 			clusterId = clusterData.Id
+			managedState = clusterData.ManagedState
 			break
 		}
 	}
 	if clusterId == "" {
-		return "", fmt.Errorf("could not find cluster ID for cluster %s", clusterName)
+		return "", "", fmt.Errorf("could not find cluster ID for cluster %s", clusterName)
 	}
 
-	return clusterId, nil
+	return clusterId, managedState, nil
 }
 
 func GetCluster(astraHost string, clusterID string, accountId string, cloudId string, token string, ctx context.Context) (*http.Response, error) {
 	url := fmt.Sprintf("%s/accounts/%s/topology/v1/clouds/%s/clusters/%s", astraHost, accountId, cloudId, clusterID)
-	client := http.Client{}
+	httpClient := http.Client{}
 	request, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, err
@@ -267,7 +268,7 @@ func GetCluster(astraHost string, clusterID string, accountId string, cloudId st
 		"content-type":  []string{"application/json"},
 	}
 
-	response, err := client.Do(request)
+	response, err := httpClient.Do(request)
 	if err != nil {
 		return nil, err
 	}
@@ -286,7 +287,7 @@ func ReadResponseBody(response *http.Response) ([]byte, error) {
 func ListClouds(astraHost string, accountId string, token string) (*http.Response, error) {
 	url := fmt.Sprintf("%s/accounts/%s/topology/v1/clouds", astraHost, accountId)
 
-	client := http.Client{}
+	httpClient := http.Client{}
 	request, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, err
@@ -297,7 +298,7 @@ func ListClouds(astraHost string, accountId string, token string) (*http.Respons
 		"content-type":  []string{"application/json"},
 	}
 
-	response, err := client.Do(request)
+	response, err := httpClient.Do(request)
 	if err != nil {
 		return nil, err
 	}
@@ -363,13 +364,13 @@ func GetCloudId(astraHost string, accountId string, token string, cloudType stri
 	return cloudId, nil
 }
 
-func RegisterLocationId(astraCloudHost string, pcloudAccountId string, token string, locationId string, cloudId string, clusterId string, ctx context.Context) error {
+func RegisterLocationId(astraCloudHost string, pcloudAccountId string, token string, locationId string, cloudId string, clusterId string, managedState string, ctx context.Context) error {
 	log := ctrllog.FromContext(ctx)
 	timeout := time.Second * 30
 	success := false
 	timeExpire := time.Now().Add(timeout)
 	for time.Now().Before(timeExpire) {
-		response, err := PostLocationId(astraCloudHost, pcloudAccountId, token, locationId, cloudId, clusterId)
+		response, err := PostLocationId(astraCloudHost, pcloudAccountId, token, locationId, cloudId, clusterId, managedState, ctx)
 		if err != nil {
 			log.Error(err, "Error posting location ID")
 			time.Sleep(errorRetrySleep)
@@ -390,11 +391,24 @@ func RegisterLocationId(astraCloudHost string, pcloudAccountId string, token str
 	return nil
 }
 
-func PostLocationId(astraCloudHost string, pcloudAccountId string, token string, locationId string, cloudId string, clusterId string) (*http.Response, error) {
-	registerUrl := fmt.Sprintf("%s/accounts/%s/topology/v1/clouds/%s/clusters/%s", astraCloudHost, pcloudAccountId, cloudId, clusterId)
-	reqBodyBytes, err := json.Marshal(map[string]string{"privateRouteID": locationId})
+func PostLocationId(astraCloudHost string, pcloudAccountId string, token string, locationId string, cloudId string, clusterId string, managedState string, ctx context.Context) (*http.Response, error) {
+	log := ctrllog.FromContext(ctx)
+	clusterUrl := fmt.Sprintf("%s/accounts/%s/topology/v1/clouds/%s/clusters/%s", astraCloudHost, pcloudAccountId, cloudId, clusterId)
+	managedClusterUrl := fmt.Sprintf("%s/accounts/%s/topology/v1/managedClusters/%s", astraCloudHost, pcloudAccountId, clusterId)
+	registerUrl := clusterUrl
+	payLoad := map[string]string{
+		"privateRouteID": locationId,
+		"version":        "1.1",
+		"type":           "application/astra-cluster",
+	}
 
-	client := http.Client{}
+	if managedState == "managed" || managedState == "managing" {
+		log.Info("Using managedClusters URL", "managedState", managedState)
+		registerUrl = managedClusterUrl
+		payLoad["type"] = "application/astra-managedCluster"
+	}
+	reqBodyBytes, err := json.Marshal(payLoad)
+	httpClient := http.Client{}
 	request, err := http.NewRequest("PUT", registerUrl, bytes.NewBuffer(reqBodyBytes))
 	if err != nil {
 		return nil, err
@@ -408,7 +422,7 @@ func PostLocationId(astraCloudHost string, pcloudAccountId string, token string,
 		"Authorization":      []string{fmt.Sprintf("Bearer %s", token)},
 	}
 
-	response, err := client.Do(request)
+	response, err := httpClient.Do(request)
 	if err != nil {
 		return nil, err
 	}
