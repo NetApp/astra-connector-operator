@@ -40,6 +40,10 @@ kubectl apply -f config/samples/cache_v1_astraagent.yaml -n astra-agent
 ```
 kubectl delete -f config/samples/cache_v1_astraagent.yaml -n astra-agent
 ```
+### Uninstall the operator
+```
+kubectl delete -f operator.yaml -n astra-agent-operator
+```
 ## CRD
 Sample CRD
 ```
