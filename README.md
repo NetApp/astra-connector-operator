@@ -17,6 +17,8 @@ Create the namespace for the private cluster components
 kubectl create ns astra-agent
 ```
 Apply the AstraAgent CRD
+
+Update the CRD with the right values. Refer to the table below for explanations of the CRD spec
 ```
 kubectl apply -f config/samples/cache_v1_astraagent.yaml -n astra-agent
 ```
