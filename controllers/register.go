@@ -57,7 +57,7 @@ func (r *AstraAgentReconciler) UnregisterClient(m *cachev1.AstraAgent) error {
 		return err
 	}
 
-	if response.StatusCode != 201 {
+	if response.StatusCode != http.StatusNoContent {
 		bodyBytes, err := io.ReadAll(response.Body)
 		if err != nil {
 			return err
@@ -155,7 +155,7 @@ func (r *AstraAgentReconciler) RemoveLocationIDFromCloudExtension(m *cachev1.Ast
 	// Unregister the locationId with Astra
 	err = RegisterLocationId(astraHost, m.Spec.Astra.AccountID, m.Spec.Astra.Token, "", cloudID, clusterId, managedState, ctx)
 	if err != nil {
-		log.Error(err, "Error registering location ID with Astra")
+		log.Error(err, "Error unregistering location ID with Astra")
 		return err
 	}
 	return nil
@@ -377,7 +377,7 @@ func RegisterLocationId(astraCloudHost string, pcloudAccountId string, token str
 			continue
 		}
 		if response.StatusCode == 200 { // Assuming the response code at this point
-			log.Info("successfully registered locationId with Astra.")
+			log.Info("successfully registered locationId with Astra", "locationId", locationId)
 			success = true
 			break
 		}

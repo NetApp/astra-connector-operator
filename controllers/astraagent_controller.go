@@ -23,6 +23,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"context"
@@ -72,6 +73,51 @@ func (r *AstraAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		// Error reading the object - requeue the request.
 		log.Error(err, "Failed to get AstraAgent")
 		return ctrl.Result{}, err
+	}
+
+	// name of our custom finalizer
+	finalizerName := "astraagent.com/finalizer"
+	// examine DeletionTimestamp to determine if object is under deletion
+	if astraAgent.ObjectMeta.DeletionTimestamp.IsZero() {
+		// The object is not being deleted, so if it does not have our finalizer,
+		// then lets add the finalizer and update the object. This is equivalent
+		// registering our finalizer.
+		if !controllerutil.ContainsFinalizer(astraAgent, finalizerName) {
+			log.Info("Adding finalizer to AstraAgent instance", "finalizerName", finalizerName)
+			controllerutil.AddFinalizer(astraAgent, finalizerName)
+			if err := r.Update(ctx, astraAgent); err != nil {
+				return ctrl.Result{}, err
+			}
+		}
+	} else {
+		// The object is being deleted
+		if controllerutil.ContainsFinalizer(astraAgent, finalizerName) {
+			// our finalizer is present, so lets handle any external dependency
+			log.Info("Unregistering the cluster with Astra upon CRD delete")
+			err = r.RemoveLocationIDFromCloudExtension(astraAgent, ctx)
+			if err != nil {
+				log.Error(err, "Failed to unregister the cluster with Astra, ignoring...")
+			} else {
+				log.Info("Unregistered the cluster with Astra upon CRD delete")
+			}
+
+			log.Info("Unregistering natssync-client upon CRD delete")
+			err = r.UnregisterClient(astraAgent)
+			if err != nil {
+				log.Error(err, "Failed to unregister natssync-client, ignoring...")
+			} else {
+				log.Info("Unregistered natssync-client upon CRD delete")
+			}
+
+			// remove our finalizer from the list and update it.
+			controllerutil.RemoveFinalizer(astraAgent, finalizerName)
+			if err := r.Update(ctx, astraAgent); err != nil {
+				return ctrl.Result{}, err
+			}
+		}
+
+		// Stop reconciliation as the item is being deleted
+		return ctrl.Result{}, nil
 	}
 
 	deployments := map[string]string{
@@ -329,12 +375,12 @@ func (r *AstraAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	// RegisterClient
 	if astraAgent.Spec.Astra.Register {
 		if registered {
-			log.Info("natssync-client configmap is non-empty, natssync-client already registered")
 			locationID, err = r.getNatssyncClientRegistrationStatus(r.getNatssyncClientRegistrationURL(astraAgent))
 			if err != nil {
 				log.Error(err, "Failed to get the location ID from natssync-client")
 				return ctrl.Result{Requeue: true}, err
 			}
+			log.Info("natssync-client already registered", "locationID", locationID)
 		} else {
 			log.Info("Registering natssync-client")
 			locationID, err = r.RegisterClient(astraAgent)
@@ -354,6 +400,14 @@ func (r *AstraAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		log.Info("Registered locationID with Astra")
 	} else if !astraAgent.Spec.Astra.Register {
 		if registered {
+			log.Info("Unregistering the cluster with Astra")
+			err = r.RemoveLocationIDFromCloudExtension(astraAgent, ctx)
+			if err != nil {
+				log.Error(err, "Failed to unregister the cluster with Astra")
+				return ctrl.Result{Requeue: true}, err
+			}
+			log.Info("Unregistered the cluster with Astra")
+
 			log.Info("Unregistering natssync-client")
 			err = r.UnregisterClient(astraAgent)
 			if err != nil {
