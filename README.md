@@ -57,40 +57,16 @@ metadata:
 spec:
   namespace: astra-agent
   natssync-client:
-    name: natssync-client
-    size: 1
     image: theotw/natssync-client:0.9.202201132025
     cloud-bridge-url: https://integration.astra.netapp.io
-    port: 8080
-    protocol: TCP
-    keystoreUrl: configmap:///configmap-data
   nats:
-    name: nats
-    cluster-service-name: nats-cluster
-    configMapName: nats-configmap
-    serviceaccountname: nats-serviceaccount
-    volumename: nats-configmap-volume
     size: 2
     image: nats:2.6.1-alpine3.14
-    client-port: 4222
-    cluster-port: 6222
-    monitor-port: 8222
-    metrics-port: 7777
-    gateways-port: 7522
   httpproxy-client:
-    name: httpproxy-client
-    size: 1
     image: theotw/httpproxylet:0.9.202201132025
   echo-client:
-    name: echo-client
     size: 1
     image: theotw/echo-proxylet:0.9.202201132025
-  configMap:
-    name: natssync-client-configmap
-    rolename: natssync-client-configmap-role
-    rolebindingname: natssync-client-configmap-rolebinding
-    serviceaccountname: natssync-client-configmap-serviceaccount
-    volumename: natssync-client-configmap-volume
   astra:
     register: false
     token: <AstraApiToken>
