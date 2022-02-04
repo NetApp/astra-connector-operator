@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -24,7 +25,11 @@ const (
 
 func (r *AstraAgentReconciler) RegisterClient(m *cachev1.AstraAgent) (string, error) {
 	natsSyncClientRegisterURL := r.getNatssyncClientRegistrationURL(m)
-	reqBodyBytes, err := json.Marshal(map[string]string{"authToken": m.Spec.Astra.Token})
+	reqBodyBytes, err := r.generateAuthPayload(m)
+	if err != nil {
+		return "", err
+	}
+
 	response, err := http.Post(natsSyncClientRegisterURL, "application/json", bytes.NewBuffer(reqBodyBytes))
 	if err != nil {
 		return "", err
@@ -51,7 +56,11 @@ func (r *AstraAgentReconciler) RegisterClient(m *cachev1.AstraAgent) (string, er
 
 func (r *AstraAgentReconciler) UnregisterClient(m *cachev1.AstraAgent) error {
 	natsSyncClientUnregisterURL := r.getNatssyncClientUnregisterURL(m)
-	reqBodyBytes, err := json.Marshal(map[string]string{"authToken": m.Spec.Astra.Token})
+	reqBodyBytes, err := r.generateAuthPayload(m)
+	if err != nil {
+		return err
+	}
+
 	response, err := http.Post(natsSyncClientUnregisterURL, "application/json", bytes.NewBuffer(reqBodyBytes))
 	if err != nil {
 		return err
@@ -66,6 +75,21 @@ func (r *AstraAgentReconciler) UnregisterClient(m *cachev1.AstraAgent) error {
 		return errors.New(errMsg)
 	}
 	return nil
+}
+
+func (r *AstraAgentReconciler) generateAuthPayload(m *cachev1.AstraAgent) ([]byte, error) {
+	authPayload, err := json.Marshal(map[string]string{
+		"userToken": m.Spec.Astra.Token,
+		"accountId": m.Spec.Astra.AccountID,
+	})
+	if err != nil {
+		return nil, err
+	}
+	reqBodyBytes, err := json.Marshal(map[string]string{"authToken": base64.StdEncoding.EncodeToString(authPayload)})
+	if err != nil {
+		return nil, err
+	}
+	return reqBodyBytes, nil
 }
 
 func (r *AstraAgentReconciler) AddLocationIDtoCloudExtension(m *cachev1.AstraAgent, locationID string, ctx context.Context) error {

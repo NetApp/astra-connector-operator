@@ -115,52 +115,25 @@ The natssync-client CRD is a map of key/value pairs
 
 | CRD Spec          | Details       |
 | ----------------- | ------------- |
-| name              | Name for the natssync-client pod |
-| size              | Replica count for the natssync-client deployment |
 | image             | natssync-client image |
 | cloud-bridge-url  | Astra URL  |
-| port              | Port on which natssync-client listens |
-| protocol          | Protocol natssync-client uses |
-| keystoreUrl       | Volume mount for storing information |
 
 ### [nats](https://nats.io/)
 | CRD Spec             | Details       |
 | ---------------------| ------------- |
-| name                 | Name for the nats pod |
 | size                 | Replica count for the nats statefulset |
 | image                | nats image |
-| cluster-service-name | cluster service name for nats statefulset |
-| configMapName        | ConfigMap to create and use for nats |
-| serviceaccountname   | ServiceAccount to create and use for nats |
-| volumename           | Volume to create and use for nats |
-| client-port          | client port to use for nats statefulset |
-| cluster-port         | cluster port to use for nats statefulset |
-| monitor-port         | monitor port to use for nats statefulset |
-| metrics-port         | metrics port to use for nats statefulset |
-| gateways-port        | gateways port to use for nats statefulset |
 
 ### [httpproxy-client](https://github.com/theotw/natssync)
 | CRD Spec | Details       |
 | ---------| ------------- |
-| name     | Name for the httpproxy-client pod |
-| size     | Replica count for the httpproxy-client deployment |
 | image    | httpproxy-client image |
 
 ### [echo-client](https://github.com/theotw/natssync)
 | CRD Spec | Details       |
 | ---------| ------------- |
-| name     | Name for the echo-client pod |
 | size     | Replica count for the echo-client deployment |
 | image    | echo-client image |
-
-### configMap
-| CRD Spec           | Details       |
-| ------------------ | ------------- |
-| name               | Name of the ConfigMap that will be created and used by natssync-client |
-| rolename           | Name of the Role that will be created and used by natssync-client |
-| rolebindingname    | Name of the RoleBinding that will be created and used by natssync-client |
-| serviceaccountname | Name of the ServiceAccount that will be created and used by natssync-client |
-| volumename         | Name of the Volume that will be created and used by natssync-client |
 
 ### [astra](https://cloud.netapp.com/astra)
 | CRD Spec      | Details       |

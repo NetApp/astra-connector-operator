@@ -121,31 +121,31 @@ func (r *AstraAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	}
 
 	deployments := map[string]string{
-		astraAgent.Spec.HttpProxyClient.Name: "DeploymentForProxyClient",
-		astraAgent.Spec.EchoClient.Name:      "DeploymentForEchoClient",
-		astraAgent.Spec.NatssyncClient.Name:  "DeploymentForNatssyncClient",
+		HttpProxyClientName: "DeploymentForProxyClient",
+		EchoClientName:      "DeploymentForEchoClient",
+		NatssyncClientName:  "DeploymentForNatssyncClient",
 	}
 	statefulSets := map[string]string{
-		astraAgent.Spec.Nats.Name: "StatefulsetForNats",
+		NatsName: "StatefulsetForNats",
 	}
 	services := map[string]string{
-		astraAgent.Spec.NatssyncClient.Name:     "ServiceForNatssyncClient",
-		astraAgent.Spec.Nats.Name:               "ServiceForNats",
-		astraAgent.Spec.Nats.ClusterServiceName: "ClusterServiceForNats",
+		NatssyncClientName:     "ServiceForNatssyncClient",
+		NatsName:               "ServiceForNats",
+		NatsClusterServiceName: "ClusterServiceForNats",
 	}
 	configmaps := map[string]string{
-		astraAgent.Spec.Nats.ConfigMapName: "ConfigMapForNats",
-		astraAgent.Spec.ConfigMap.Name:     "ConfigMapForNatssyncClient",
+		NatsConfigMapName:           "ConfigMapForNats",
+		NatssyncClientConfigMapName: "ConfigMapForNatssyncClient",
 	}
 	serviceaccounts := map[string]string{
-		astraAgent.Spec.ConfigMap.ServiceAccountName: "ServiceAccountForNatssyncClientConfigMap",
-		astraAgent.Spec.Nats.ServiceAccountName:      "ServiceAccountForNats",
+		NatssyncClientConfigMapServiceAccountName: "ServiceAccountForNatssyncClientConfigMap",
+		NatsServiceAccountName:                    "ServiceAccountForNats",
 	}
 
 	// Check if the deployment already exists, if not create a new one
 	replicaSize := map[string]int32{
-		astraAgent.Spec.Nats.Name:           astraAgent.Spec.Nats.Size,
-		astraAgent.Spec.NatssyncClient.Name: astraAgent.Spec.NatssyncClient.Size,
+		NatsName:           astraAgent.Spec.Nats.Size,
+		NatssyncClientName: NatssyncClientSize,
 	}
 
 	// Check if the services already exists, if not create a new one
@@ -207,8 +207,8 @@ func (r *AstraAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 	// Create configmap role
 	foundRole := &rbacv1.Role{}
-	log.Info("Finding ConfigMap Role", "Role.Namespace", astraAgent.Spec.Namespace, "Role.Name", astraAgent.Spec.ConfigMap.RoleName)
-	err = r.Get(ctx, types.NamespacedName{Name: astraAgent.Spec.ConfigMap.RoleName, Namespace: astraAgent.Spec.Namespace}, foundRole)
+	log.Info("Finding ConfigMap Role", "Role.Namespace", astraAgent.Spec.Namespace, "Role.Name", NatssyncClientConfigMapRoleName)
+	err = r.Get(ctx, types.NamespacedName{Name: NatssyncClientConfigMapRoleName, Namespace: astraAgent.Spec.Namespace}, foundRole)
 	if err != nil && errors.IsNotFound(err) {
 		// Define a new Role
 		configMPRole := r.ConfigMapRole(astraAgent)
@@ -227,8 +227,8 @@ func (r *AstraAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 	// Create configmap rolebinding
 	foundRoleB := &rbacv1.RoleBinding{}
-	log.Info("Finding ConfigMap RoleBinding", "RoleBinding.Namespace", astraAgent.Spec.Namespace, "RoleBinding.Name", astraAgent.Spec.ConfigMap.RoleBindingName)
-	err = r.Get(ctx, types.NamespacedName{Name: astraAgent.Spec.ConfigMap.RoleBindingName, Namespace: astraAgent.Spec.Namespace}, foundRoleB)
+	log.Info("Finding ConfigMap RoleBinding", "RoleBinding.Namespace", astraAgent.Spec.Namespace, "RoleBinding.Name", NatssyncClientConfigMapRoleBindingName)
+	err = r.Get(ctx, types.NamespacedName{Name: NatssyncClientConfigMapRoleBindingName, Namespace: astraAgent.Spec.Namespace}, foundRoleB)
 	if err != nil && errors.IsNotFound(err) {
 		// Define a new RoleBinding
 		roleB := r.ConfigMapRoleBinding(astraAgent)
@@ -301,7 +301,7 @@ func (r *AstraAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		}
 
 		// Ensure the nats statefulset size is the same as the spec
-		natsSize := replicaSize[astraAgent.Spec.Nats.Name]
+		natsSize := replicaSize[NatsName]
 		if foundSet.Spec.Replicas != nil && *foundSet.Spec.Replicas != natsSize {
 			foundSet.Spec.Replicas = &natsSize
 			err = r.Update(ctx, foundSet)
@@ -348,7 +348,7 @@ func (r *AstraAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		}
 
 		// Ensure the deployment size is the same as the spec
-		size := replicaSize[astraAgent.Spec.NatssyncClient.Name]
+		size := replicaSize[NatssyncClientName]
 		if foundDep.Spec.Replicas != nil && *foundDep.Spec.Replicas != size {
 			foundDep.Spec.Replicas = &size
 			err = r.Update(ctx, foundDep)
@@ -367,7 +367,7 @@ func (r *AstraAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	log.Info("Checking for natssync-client configmap")
 	foundCM := &corev1.ConfigMap{}
 	locationID := ""
-	err = r.Get(ctx, types.NamespacedName{Name: astraAgent.Spec.ConfigMap.Name, Namespace: astraAgent.Spec.Namespace}, foundCM)
+	err = r.Get(ctx, types.NamespacedName{Name: NatssyncClientConfigMapName, Namespace: astraAgent.Spec.Namespace}, foundCM)
 	if len(foundCM.Data) != 0 {
 		registered = true
 	}

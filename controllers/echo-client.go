@@ -10,12 +10,12 @@ import (
 
 // DeploymentForEchoClient returns a astraAgent Deployment object
 func (r *AstraAgentReconciler) DeploymentForEchoClient(m *cachev1.AstraAgent) (*appsv1.Deployment, error) {
-	ls := labelsForEchoClient(m.Spec.EchoClient.Name)
+	ls := labelsForEchoClient(EchoClientName)
 	replicas := m.Spec.EchoClient.Size
 
 	dep := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      m.Spec.EchoClient.Name,
+			Name:      EchoClientName,
 			Namespace: m.Spec.Namespace,
 		},
 		Spec: appsv1.DeploymentSpec{
@@ -30,7 +30,7 @@ func (r *AstraAgentReconciler) DeploymentForEchoClient(m *cachev1.AstraAgent) (*
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{{
 						Image: m.Spec.EchoClient.Image,
-						Name:  m.Spec.EchoClient.Name,
+						Name:  EchoClientName,
 						Env: []corev1.EnvVar{
 							{
 								Name:  "NATS_SERVER_URL",

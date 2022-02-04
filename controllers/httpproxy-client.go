@@ -10,12 +10,12 @@ import (
 
 // DeploymentForProxyClient returns a astraAgent Deployment object
 func (r *AstraAgentReconciler) DeploymentForProxyClient(m *cachev1.AstraAgent) (*appsv1.Deployment, error) {
-	ls := labelsForProxyClient(m.Spec.HttpProxyClient.Name)
-	replicas := m.Spec.HttpProxyClient.Size
+	ls := labelsForProxyClient(HttpProxyClientName)
+	replicas := int32(HttpProxyClientsize)
 
 	dep := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      m.Spec.HttpProxyClient.Name,
+			Name:      HttpProxyClientName,
 			Namespace: m.Spec.Namespace,
 		},
 		Spec: appsv1.DeploymentSpec{
@@ -30,7 +30,7 @@ func (r *AstraAgentReconciler) DeploymentForProxyClient(m *cachev1.AstraAgent) (
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{{
 						Image: m.Spec.HttpProxyClient.Image,
-						Name:  m.Spec.HttpProxyClient.Name,
+						Name:  HttpProxyClientName,
 						Env: []corev1.EnvVar{
 							{
 								Name:  "NATS_SERVER_URL",

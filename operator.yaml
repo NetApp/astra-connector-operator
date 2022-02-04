@@ -63,100 +63,36 @@ spec:
                 - register
                 - token
                 type: object
-              configMap:
-                properties:
-                  name:
-                    type: string
-                  rolebindingname:
-                    type: string
-                  rolename:
-                    type: string
-                  serviceaccountname:
-                    type: string
-                  volumename:
-                    type: string
-                required:
-                - name
-                - rolebindingname
-                - rolename
-                - serviceaccountname
-                - volumename
-                type: object
               echo-client:
                 properties:
                   image:
-                    type: string
-                  name:
                     type: string
                   size:
                     format: int32
                     type: integer
                 required:
                 - image
-                - name
                 - size
                 type: object
               httpproxy-client:
                 properties:
                   image:
                     type: string
-                  name:
-                    type: string
-                  size:
-                    format: int32
-                    type: integer
                 required:
                 - image
-                - name
-                - size
                 type: object
               namespace:
                 type: string
               nats:
                 properties:
-                  client-port:
-                    format: int32
-                    type: integer
-                  cluster-port:
-                    format: int32
-                    type: integer
-                  cluster-service-name:
-                    type: string
-                  configMapName:
-                    type: string
-                  gateways-port:
-                    format: int32
-                    type: integer
                   image:
-                    type: string
-                  metrics-port:
-                    format: int32
-                    type: integer
-                  monitor-port:
-                    format: int32
-                    type: integer
-                  name:
-                    type: string
-                  serviceaccountname:
                     type: string
                   size:
                     format: int32
                     type: integer
-                  volumename:
-                    type: string
                 required:
-                - client-port
-                - cluster-port
-                - cluster-service-name
-                - configMapName
-                - gateways-port
                 - image
-                - metrics-port
-                - monitor-port
-                - name
-                - serviceaccountname
                 - size
-                - volumename
                 type: object
               natssync-client:
                 properties:
@@ -168,19 +104,6 @@ spec:
                     type: string
                   image:
                     type: string
-                  keystoreUrl:
-                    type: string
-                  name:
-                    type: string
-                  port:
-                    format: int32
-                    type: integer
-                  protocol:
-                    default: TCP
-                    type: string
-                  size:
-                    format: int32
-                    type: integer
                   skipTLSValidation:
                     type: string
                 required:
@@ -188,16 +111,10 @@ spec:
                 - hostalias
                 - hostaliasIP
                 - image
-                - keystoreUrl
-                - name
-                - port
-                - protocol
-                - size
                 - skipTLSValidation
                 type: object
             required:
             - astra
-            - configMap
             - echo-client
             - httpproxy-client
             - namespace

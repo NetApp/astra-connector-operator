@@ -17,28 +17,16 @@ limitations under the License.
 package v1
 
 import (
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type HttpProxyClient struct {
-	Name  string `json:"name"`
-	Size  int32  `json:"size"`
 	Image string `json:"image"`
 }
 
 type EchoClient struct {
-	Name  string `json:"name"`
-	Size  int32  `json:"size"`
 	Image string `json:"image"`
-}
-
-type ConfigMap struct {
-	Name               string `json:"name"`
-	RoleName           string `json:"rolename"`
-	RoleBindingName    string `json:"rolebindingname"`
-	ServiceAccountName string `json:"serviceaccountname"`
-	VolumeName         string `json:"volumename"`
+	Size  int32  `json:"size"`
 }
 
 type Astra struct {
@@ -50,31 +38,16 @@ type Astra struct {
 }
 
 type NatssyncClient struct {
-	Name              string          `json:"name"`
-	Size              int32           `json:"size"`
-	Image             string          `json:"image"`
-	CloudBridgeURL    string          `json:"cloud-bridge-url"`
-	Port              int32           `json:"port"`
-	Protocol          corev1.Protocol `json:"protocol"`
-	KeystoreUrl       string          `json:"keystoreUrl"`
-	SkipTLSValidation string          `json:"skipTLSValidation"`
-	HostAlias         bool            `json:"hostalias"`
-	HostAliasIP       string          `json:"hostaliasIP"`
+	Image             string `json:"image"`
+	CloudBridgeURL    string `json:"cloud-bridge-url"`
+	SkipTLSValidation string `json:"skipTLSValidation"`
+	HostAlias         bool   `json:"hostalias"`
+	HostAliasIP       string `json:"hostaliasIP"`
 }
 
 type Nats struct {
-	Name               string `json:"name"`
-	ClusterServiceName string `json:"cluster-service-name"`
-	ConfigMapName      string `json:"configMapName"`
-	Size               int32  `json:"size"`
-	Image              string `json:"image"`
-	ClientPort         int32  `json:"client-port"`
-	ClusterPort        int32  `json:"cluster-port"`
-	MonitorPort        int32  `json:"monitor-port"`
-	MetricsPort        int32  `json:"metrics-port"`
-	GatewaysPort       int32  `json:"gateways-port"`
-	ServiceAccountName string `json:"serviceaccountname"`
-	VolumeName         string `json:"volumename"`
+	Size  int32  `json:"size"`
+	Image string `json:"image"`
 }
 
 // AstraAgentSpec defines the desired state of AstraAgent
@@ -84,7 +57,6 @@ type AstraAgentSpec struct {
 	HttpProxyClient HttpProxyClient `json:"httpproxy-client"`
 	EchoClient      EchoClient      `json:"echo-client"`
 	Nats            Nats            `json:"nats"`
-	ConfigMap       ConfigMap       `json:"configMap"`
 	Astra           Astra           `json:"astra"`
 }
 
