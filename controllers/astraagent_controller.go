@@ -391,18 +391,6 @@ func (r *AstraAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			log.Info("natssync-client locationID", "locationID", locationID)
 		}
 
-		log.Info("Checking for a valid SA credential for cloud", "cloudName", astraAgent.Spec.Astra.CloudType)
-		credsAvailable, err := r.checkCloudCreds(astraAgent, ctx)
-		if err != nil {
-			log.Error(err, "Error finding a valid SA cred for cloud", "cloudType", astraAgent.Spec.Astra.CloudType)
-			return ctrl.Result{Requeue: true}, err
-		}
-		if credsAvailable == "" {
-			log.Error(err, "Could not find a valid SA cred for cloud", "cloudType", astraAgent.Spec.Astra.CloudType)
-			return ctrl.Result{RequeueAfter: 1 * time.Minute}, err
-		}
-		log.Info("Found a valid SA credential for cloud", "cloudName", astraAgent.Spec.Astra.CloudType, "credName", credsAvailable)
-
 		log.Info("Registering locationID with Astra")
 		err = r.AddLocationIDtoCloudExtension(astraAgent, locationID, ctx)
 		if err != nil {

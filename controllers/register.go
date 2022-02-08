@@ -113,11 +113,34 @@ func (r *AstraAgentReconciler) AddLocationIDtoCloudExtension(m *cachev1.AstraAge
 			return dialer.DialContext(ctx, network, addr)
 		}
 	}
+	log.Info("Checking for a valid SA credential for cloud", "cloudName", m.Spec.Astra.CloudType)
+	credentialName, err := r.checkCloudCreds(m, ctx)
+	if err != nil {
+		log.Error(err, "Error finding a valid SA cred for cloud", "cloudType", m.Spec.Astra.CloudType)
+		return err
+	}
+	if credentialName == "" {
+		log.Error(err, "Could not find a valid SA cred for cloud", "cloudType", m.Spec.Astra.CloudType)
+		return err
+	}
+	log.Info("Found a valid SA credential for cloud", "cloudName", m.Spec.Astra.CloudType, "credName", credentialName)
+
 	log.Info("Fetching cloud ID")
 	cloudID, err := GetCloudId(astraHost, m.Spec.Astra.AccountID, m.Spec.Astra.Token, m.Spec.Astra.CloudType, ctx)
 	if err != nil {
 		log.Error(err, "Error fetching cloud ID")
 		return err
+	}
+	if cloudID == "" && credentialName != "" {
+		log.Info("Cloud doesn't seem to exist, creating the cloud", "cloudType", m.Spec.Astra.CloudType)
+		cloudID, err = r.createCloud(m, ctx)
+		if err != nil {
+			log.Error(err, "Failed to create cloud", "CloudType", m.Spec.Astra.CloudType)
+			return err
+		}
+		if cloudID == "" {
+			return fmt.Errorf("could not create cloud %s", m.Spec.Astra.CloudType)
+		}
 	}
 	log.Info("Found cloud ID", "cloudID", cloudID)
 
@@ -381,9 +404,6 @@ func GetCloudId(astraHost string, accountId string, token string, cloudType stri
 			break
 		}
 	}
-	if cloudId == "" {
-		return "", fmt.Errorf("Could not find cloud ID")
-	}
 
 	return cloudId, nil
 }
@@ -483,6 +503,7 @@ func (r *AstraAgentReconciler) checkCloudCreds(m *cachev1.AstraAgent, ctx contex
 	httpClient := http.Client{}
 	request, err := http.NewRequest("GET", credentialURL, nil)
 	if err != nil {
+		log.Error(err, "Error forming http GET request")
 		return "", err
 	}
 	request.Header = http.Header{
@@ -514,16 +535,10 @@ func (r *AstraAgentReconciler) checkCloudCreds(m *cachev1.AstraAgent, ctx contex
 		Items []CredData `json:"items"`
 	}
 
-	//bodyBytes, err := ReadResponseBody(response)
-	//if err != nil {
-	//	log.Error(err, "Error reading credItems response body")
-	//	return "", err
-	//}
 	credItems := &CredItems{}
-	//err = json.Unmarshal(bodyBytes, &credItems)
 	err = json.NewDecoder(response.Body).Decode(credItems)
 	if err != nil {
-		log.Error(err, "error unmarshaling credItems", "response", response.Body)
+		log.Error(err, "error decoding response for credentials GET", "response", response.Body)
 		return "", err
 	}
 
@@ -556,4 +571,64 @@ func (r *AstraAgentReconciler) checkCloudCreds(m *cachev1.AstraAgent, ctx contex
 		}
 	}
 	return "", nil
+}
+
+func (r *AstraAgentReconciler) createCloud(m *cachev1.AstraAgent, ctx context.Context) (string, error) {
+	log := ctrllog.FromContext(ctx)
+	setTlsValidation(m.Spec.NatssyncClient.SkipTLSValidation, ctx)
+
+	if m.Spec.NatssyncClient.HostAlias {
+		dialer := &net.Dialer{
+			Timeout:   30 * time.Second,
+			KeepAlive: 30 * time.Second,
+		}
+
+		http.DefaultTransport.(*http.Transport).DialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
+			if addr == strings.Split(m.Spec.NatssyncClient.CloudBridgeURL, "://")[1]+":443" {
+				addr = m.Spec.NatssyncClient.HostAliasIP + ":443"
+			}
+			if addr == strings.Split(m.Spec.NatssyncClient.CloudBridgeURL, "://")[1]+":80" {
+				addr = m.Spec.NatssyncClient.HostAliasIP + ":80"
+			}
+			return dialer.DialContext(ctx, network, addr)
+		}
+	}
+
+	cloudsURL := fmt.Sprintf("%s/accounts/%s/topology/v1/clouds", m.Spec.NatssyncClient.CloudBridgeURL, m.Spec.Astra.AccountID)
+	httpClient := http.Client{}
+	payLoad := map[string]string{
+		"type":      "application/astra-cloud",
+		"version":   "1.0",
+		"name":      "Azure",
+		"cloudType": m.Spec.Astra.CloudType,
+	}
+
+	reqBodyBytes, err := json.Marshal(payLoad)
+	request, err := http.NewRequest("POST", cloudsURL, bytes.NewBuffer(reqBodyBytes))
+	if err != nil {
+		log.Error(err, "Error forming http GET request")
+		return "", err
+	}
+	request.Header = http.Header{
+		"authorization": []string{fmt.Sprintf("Bearer %s", m.Spec.Astra.Token)},
+		"content-type":  []string{"application/json"},
+	}
+	response, err := httpClient.Do(request)
+	if err != nil {
+		return "", err
+	}
+
+	type CloudResp struct {
+		ID   string `json:"id"`
+		Name string `json:"name"`
+	}
+
+	cloudResp := &CloudResp{}
+	err = json.NewDecoder(response.Body).Decode(cloudResp)
+	if err != nil {
+		log.Error(err, "error decoding response for cloud creation", "response", response.Body)
+		return "", err
+	}
+
+	return cloudResp.ID, nil
 }
