@@ -439,11 +439,8 @@ func PostLocationId(astraCloudHost string, pcloudAccountId string, token string,
 	}
 
 	request.Header = http.Header{
-		"x-pcloud-accountid": []string{pcloudAccountId},
-		"Content-Type":       []string{"application/json"},
-		"x-pcloud-userid":    []string{"system"},
-		"x-pcloud-role":      []string{"system"},
-		"Authorization":      []string{fmt.Sprintf("Bearer %s", token)},
+		"Content-Type":  []string{"application/json"},
+		"Authorization": []string{fmt.Sprintf("Bearer %s", token)},
 	}
 
 	response, err := httpClient.Do(request)
@@ -459,4 +456,104 @@ func setTlsValidation(disableTls string, ctx context.Context) {
 		http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 		log.Info("TLS Validation Disabled! Not for use in production!")
 	}
+}
+
+func (r *AstraAgentReconciler) checkCloudCreds(m *cachev1.AstraAgent, ctx context.Context) (string, error) {
+	log := ctrllog.FromContext(ctx)
+	setTlsValidation(m.Spec.NatssyncClient.SkipTLSValidation, ctx)
+
+	if m.Spec.NatssyncClient.HostAlias {
+		dialer := &net.Dialer{
+			Timeout:   30 * time.Second,
+			KeepAlive: 30 * time.Second,
+		}
+
+		http.DefaultTransport.(*http.Transport).DialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
+			if addr == strings.Split(m.Spec.NatssyncClient.CloudBridgeURL, "://")[1]+":443" {
+				addr = m.Spec.NatssyncClient.HostAliasIP + ":443"
+			}
+			if addr == strings.Split(m.Spec.NatssyncClient.CloudBridgeURL, "://")[1]+":80" {
+				addr = m.Spec.NatssyncClient.HostAliasIP + ":80"
+			}
+			return dialer.DialContext(ctx, network, addr)
+		}
+	}
+
+	credentialURL := fmt.Sprintf("%s/accounts/%s/core/v1/credentials", m.Spec.NatssyncClient.CloudBridgeURL, m.Spec.Astra.AccountID)
+	httpClient := http.Client{}
+	request, err := http.NewRequest("GET", credentialURL, nil)
+	if err != nil {
+		return "", err
+	}
+	request.Header = http.Header{
+		"authorization": []string{fmt.Sprintf("Bearer %s", m.Spec.Astra.Token)},
+		"content-type":  []string{"application/json"},
+	}
+	response, err := httpClient.Do(request)
+	if err != nil {
+		log.Error(err, "http GET error")
+		return "", err
+	}
+
+	type Labels struct {
+		Name  string `json:"name"`
+		Value string `json:"value"`
+	}
+
+	type Metadata struct {
+		Labels []Labels `json:"labels"`
+	}
+
+	type CredData struct {
+		Name     string   `json:"name"`
+		Valid    string   `json:"valid"`
+		Metadata Metadata `json:"metadata"`
+	}
+
+	type CredItems struct {
+		Items []CredData `json:"items"`
+	}
+
+	//bodyBytes, err := ReadResponseBody(response)
+	//if err != nil {
+	//	log.Error(err, "Error reading credItems response body")
+	//	return "", err
+	//}
+	credItems := &CredItems{}
+	//err = json.Unmarshal(bodyBytes, &credItems)
+	err = json.NewDecoder(response.Body).Decode(credItems)
+	if err != nil {
+		log.Error(err, "error unmarshaling credItems", "response", response.Body)
+		return "", err
+	}
+
+	credTypeKey := "astra.netapp.io/labels/read-only/credType"
+	cloudNameKey := "astra.netapp.io/labels/read-only/cloudName"
+	validatedKey := "astra.netapp.io/labels/read-only/validated"
+
+	for _, creds := range credItems.Items {
+		var credTypeSAPresent bool
+		var cloudNamePresent bool
+		var validated bool
+
+		for _, lables := range creds.Metadata.Labels {
+			name := lables.Name
+			value := lables.Value
+
+			if name == credTypeKey && value == "service-account" {
+				credTypeSAPresent = true
+			}
+			if name == cloudNameKey && value == m.Spec.Astra.CloudType {
+				cloudNamePresent = true
+			}
+			if name == validatedKey && value == "true" {
+				validated = true
+			}
+		}
+
+		if credTypeSAPresent && cloudNamePresent && validated {
+			return creds.Name, nil
+		}
+	}
+	return "", nil
 }
