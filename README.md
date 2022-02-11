@@ -33,7 +33,7 @@ spec:
 ```
 Apply the AstraAgent CRD
 ```
-kubectl apply -f config/samples/cache_v1_astraagent.yaml -n astra-agent
+kubectl apply -f config/samples/astraagent_v1.yaml -n astra-agent
 ```
 ### Uninstall the private cluster components
 - Unmanage the cluster from the Astra UI
@@ -41,7 +41,7 @@ kubectl apply -f config/samples/cache_v1_astraagent.yaml -n astra-agent
 
 NOTE: Removing the CRD will also attempt to unregister the cluster with Astra
 ```
-kubectl delete -f config/samples/cache_v1_astraagent.yaml -n astra-agent
+kubectl delete -f config/samples/astraagent_v1.yaml -n astra-agent
 ```
 ### Uninstall the operator
 ```
@@ -50,18 +50,17 @@ kubectl delete -f operator.yaml -n astra-agent-operator
 ## CRD
 Sample CRD
 ```
-apiVersion: cache.astraagent.com/v1
+apiVersion: netapp.astraagent.com/v1
 kind: AstraAgent
 metadata:
   name: astra-agent
 spec:
   namespace: astra-agent
   astra:
-    register: false
     token: <AstraApiToken>
     clusterName: ipsprintdemo
     accountId: 5831cf97-c52e-4185-ab83-db0fdd061c0e
-    acceptEULA: true
+    acceptEULA: yes
 ```
 
 ## CRD details
@@ -139,11 +138,10 @@ spec:
 ```
 ### [astra](https://cloud.netapp.com/astra)
 | CRD Spec      | Details       | Optional | Default |
-| ------------- | ------------- | -------- | --------|
-| register      | (Un)Register the cluster with Astra | Yes | false |
+| ------------- | ------------- | -------- |--------|
+| unregister    | (Unregister the cluster with Astra | Yes | false |
 | token         | Astra API token of a user with an Owner Role| No | |
 | clusterName   | Name of the private AKS cluster | No | |
 | accountId     | Astra account ID | No | |
-| cloudType     | Cloud Type of the private cluster | Yes | Azure |
-| acceptEULA    | End User License Agreement | No | false |
+| acceptEULA    | End User License Agreement | No | no |
 

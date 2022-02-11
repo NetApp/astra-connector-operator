@@ -6,9 +6,9 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.7.0
   creationTimestamp: null
-  name: astraagents.cache.astraagent.com
+  name: astraagents.netapp.astraagent.com
 spec:
-  group: cache.astraagent.com
+  group: netapp.astraagent.com
   names:
     kind: AstraAgent
     listKind: AstraAgentList
@@ -49,14 +49,12 @@ spec:
                     type: boolean
                   accountId:
                     type: string
-                  cloudType:
-                    type: string
                   clusterName:
                     type: string
-                  register:
-                    type: boolean
                   token:
                     type: string
+                  unregister:
+                    type: boolean
                 required:
                 - acceptEULA
                 - accountId

@@ -31,32 +31,6 @@ rules:
   - update
   - watch
 - apiGroups:
-  - cache.astraagent.com
-  resources:
-  - astraagents
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - cache.astraagent.com
-  resources:
-  - astraagents/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - cache.astraagent.com
-  resources:
-  - astraagents/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
   - ""
   resources:
   - configmaps
@@ -104,6 +78,32 @@ rules:
   - patch
   - update
   - watch
+- apiGroups:
+  - netapp.astraagent.com
+  resources:
+  - astraagents
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - netapp.astraagent.com
+  resources:
+  - astraagents/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - netapp.astraagent.com
+  resources:
+  - astraagents/status
+  verbs:
+  - get
+  - patch
+  - update
 - apiGroups:
   - rbac.authorization.k8s.io
   resources:

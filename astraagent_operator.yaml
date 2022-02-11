@@ -11,9 +11,9 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.7.0
   creationTimestamp: null
-  name: astraagents.cache.astraagent.com
+  name: astraagents.netapp.astraagent.com
 spec:
-  group: cache.astraagent.com
+  group: netapp.astraagent.com
   names:
     kind: AstraAgent
     listKind: AstraAgentList
@@ -50,14 +50,12 @@ spec:
                     type: boolean
                   accountId:
                     type: string
-                  cloudType:
-                    type: string
                   clusterName:
                     type: string
-                  register:
-                    type: boolean
                   token:
                     type: string
+                  unregister:
+                    type: boolean
                 required:
                 - acceptEULA
                 - accountId
@@ -219,32 +217,6 @@ rules:
   - update
   - watch
 - apiGroups:
-  - cache.astraagent.com
-  resources:
-  - astraagents
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - cache.astraagent.com
-  resources:
-  - astraagents/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - cache.astraagent.com
-  resources:
-  - astraagents/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
   - ""
   resources:
   - configmaps
@@ -292,6 +264,32 @@ rules:
   - patch
   - update
   - watch
+- apiGroups:
+  - netapp.astraagent.com
+  resources:
+  - astraagents
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - netapp.astraagent.com
+  resources:
+  - astraagents/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - netapp.astraagent.com
+  resources:
+  - astraagents/status
+  verbs:
+  - get
+  - patch
+  - update
 - apiGroups:
   - rbac.authorization.k8s.io
   resources:

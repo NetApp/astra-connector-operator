@@ -5,7 +5,7 @@ metadata:
   name: astraagent-viewer-role
 rules:
 - apiGroups:
-  - cache.astraagent.com
+  - netapp.astraagent.com
   resources:
   - astraagents
   verbs:
@@ -13,7 +13,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - cache.astraagent.com
+  - netapp.astraagent.com
   resources:
   - astraagents/status
   verbs:

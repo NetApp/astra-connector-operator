@@ -92,75 +92,79 @@ func (r *AstraAgentReconciler) generateAuthPayload(m *cachev1.AstraAgent) ([]byt
 	return reqBodyBytes, nil
 }
 
-func (r *AstraAgentReconciler) AddLocationIDtoCloudExtension(m *cachev1.AstraAgent, locationID string, ctx context.Context) error {
+func (r *AstraAgentReconciler) getAstraHostURL(m *cachev1.AstraAgent, ctx context.Context) string {
 	log := ctrllog.FromContext(ctx)
-	setTlsValidation(m.Spec.NatssyncClient.SkipTLSValidation, ctx)
-
-	var astraCloudType string
-	if m.Spec.Astra.CloudType != "" {
-		astraCloudType = m.Spec.Astra.CloudType
-	} else {
-		log.Info("Defaulting the astraCloudType", "CloudType", AstraDefaultCloudType)
-		astraCloudType = AstraDefaultCloudType
-	}
-
 	var astraHost string
 	if m.Spec.NatssyncClient.CloudBridgeURL != "" {
 		astraHost = m.Spec.NatssyncClient.CloudBridgeURL
 	} else {
-		log.Info("Defaulting the CloudBridgeURL", "CloudBridgeURL", NatssyncClientDefaultCloudBridgeURL)
 		astraHost = NatssyncClientDefaultCloudBridgeURL
 	}
+	log.Info("CloudBridgeURL for Astra Host", "CloudBridgeURL", astraHost)
+	return astraHost
+}
 
+func getAstraHostFromURL(astraHostURL string) (string, error) {
+	cloudBridgeURLSplit := strings.Split(astraHostURL, "://")
+	if len(cloudBridgeURLSplit) != 2 {
+		errStr := fmt.Sprintf("invalid cloudBridgeURL provided: %s, format - https://hostname", astraHostURL)
+		return "", errors.New(errStr)
+	}
+	return cloudBridgeURLSplit[1], nil
+}
+
+func (r *AstraAgentReconciler) AddLocationIDtoCloudExtension(m *cachev1.AstraAgent, locationID string, ctx context.Context) error {
+	log := ctrllog.FromContext(ctx)
+	setTlsValidation(m.Spec.NatssyncClient.SkipTLSValidation, ctx)
+
+	astraHost := r.getAstraHostURL(m, ctx)
 	if m.Spec.NatssyncClient.HostAlias {
 		dialer := &net.Dialer{
 			Timeout:   30 * time.Second,
 			KeepAlive: 30 * time.Second,
 		}
 
-		cloudBridgeURLSplit := strings.Split(astraHost, "://")
-		if len(cloudBridgeURLSplit) != 2 {
-			errStr := fmt.Sprintf("invalid cloudBridgeURL provided: %s, format - https://hostname", astraHost)
-			return errors.New(errStr)
+		cloudBridgeHost, err := getAstraHostFromURL(astraHost)
+		if err != nil {
+			return err
 		}
 
 		http.DefaultTransport.(*http.Transport).DialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
-			if addr == cloudBridgeURLSplit[1]+":443" {
+			if addr == cloudBridgeHost+":443" {
 				addr = m.Spec.NatssyncClient.HostAliasIP + ":443"
 			}
-			if addr == cloudBridgeURLSplit[1]+":80" {
+			if addr == cloudBridgeHost+":80" {
 				addr = m.Spec.NatssyncClient.HostAliasIP + ":80"
 			}
 			return dialer.DialContext(ctx, network, addr)
 		}
 	}
-	log.Info("Checking for a valid SA credential for cloud", "cloudName", astraCloudType)
-	credentialName, err := r.checkCloudCreds(m, ctx)
+	log.Info("Checking for a valid SA credential for cloud", "cloudType", AstraDefaultCloudType)
+	credentialName, err := r.checkCloudCreds(astraHost, m, ctx)
 	if err != nil {
-		log.Error(err, "Error finding a valid SA cred for cloud", "cloudType", astraCloudType)
+		log.Error(err, "Error finding a valid SA cred for cloud", "cloudType", AstraDefaultCloudType)
 		return err
 	}
 	if credentialName == "" {
-		log.Error(err, "Could not find a valid SA cred for cloud", "cloudType", astraCloudType)
-		return err
+		return fmt.Errorf("could not find a valid SA cred for cloud %s", AstraDefaultCloudType)
 	}
-	log.Info("Found a valid SA credential for cloud", "cloudName", astraCloudType, "credName", credentialName)
+	log.Info("Found a valid SA credential for cloud", "cloudType", AstraDefaultCloudType, "credName", credentialName)
 
 	log.Info("Fetching cloud ID")
-	cloudID, err := GetCloudId(astraHost, m.Spec.Astra.AccountID, m.Spec.Astra.Token, astraCloudType, ctx)
+	cloudID, err := GetCloudId(astraHost, m.Spec.Astra.AccountID, m.Spec.Astra.Token, AstraDefaultCloudType, ctx)
 	if err != nil {
 		log.Error(err, "Error fetching cloud ID")
 		return err
 	}
 	if cloudID == "" && credentialName != "" {
-		log.Info("Cloud doesn't seem to exist, creating the cloud", "cloudType", astraCloudType)
-		cloudID, err = r.createCloud(m, ctx)
+		log.Info("Cloud doesn't seem to exist, creating the cloud", "cloudType", AstraDefaultCloudType)
+		cloudID, err = r.createCloud(astraHost, m, ctx)
 		if err != nil {
-			log.Error(err, "Failed to create cloud", "CloudType", astraCloudType)
+			log.Error(err, "Failed to create cloud", "cloudType", AstraDefaultCloudType)
 			return err
 		}
 		if cloudID == "" {
-			return fmt.Errorf("could not create cloud %s", astraCloudType)
+			return fmt.Errorf("could not create cloud %s", AstraDefaultCloudType)
 		}
 	}
 	log.Info("Found cloud ID", "cloudID", cloudID)
@@ -187,46 +191,30 @@ func (r *AstraAgentReconciler) RemoveLocationIDFromCloudExtension(m *cachev1.Ast
 	log := ctrllog.FromContext(ctx)
 	setTlsValidation(m.Spec.NatssyncClient.SkipTLSValidation, ctx)
 
-	var astraCloudType string
-	if m.Spec.Astra.CloudType != "" {
-		astraCloudType = m.Spec.Astra.CloudType
-	} else {
-		log.Info("Defaulting the astraCloudType", "CloudType", AstraDefaultCloudType)
-		astraCloudType = AstraDefaultCloudType
-	}
-
-	var astraHost string
-	if m.Spec.NatssyncClient.CloudBridgeURL != "" {
-		astraHost = m.Spec.NatssyncClient.CloudBridgeURL
-	} else {
-		log.Info("Defaulting the CloudBridgeURL", "CloudBridgeURL", NatssyncClientDefaultCloudBridgeURL)
-		astraHost = NatssyncClientDefaultCloudBridgeURL
-	}
-
+	astraHost := r.getAstraHostURL(m, ctx)
 	if m.Spec.NatssyncClient.HostAlias {
 		dialer := &net.Dialer{
 			Timeout:   30 * time.Second,
 			KeepAlive: 30 * time.Second,
 		}
 
-		cloudBridgeURLSplit := strings.Split(astraHost, "://")
-		if len(cloudBridgeURLSplit) != 2 {
-			errStr := fmt.Sprintf("invalid cloudBridgeURL provided: %s, format - https://hostname", astraHost)
-			return errors.New(errStr)
+		cloudBridgeHost, err := getAstraHostFromURL(astraHost)
+		if err != nil {
+			return err
 		}
 
 		http.DefaultTransport.(*http.Transport).DialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
-			if addr == cloudBridgeURLSplit[1]+":443" {
+			if addr == cloudBridgeHost+":443" {
 				addr = m.Spec.NatssyncClient.HostAliasIP + ":443"
 			}
-			if addr == cloudBridgeURLSplit[1]+":80" {
+			if addr == cloudBridgeHost+":80" {
 				addr = m.Spec.NatssyncClient.HostAliasIP + ":80"
 			}
 			return dialer.DialContext(ctx, network, addr)
 		}
 	}
 	log.Info("Fetching cloud ID")
-	cloudID, err := GetCloudId(astraHost, m.Spec.Astra.AccountID, m.Spec.Astra.Token, astraCloudType, ctx)
+	cloudID, err := GetCloudId(astraHost, m.Spec.Astra.AccountID, m.Spec.Astra.Token, AstraDefaultCloudType, ctx)
 	if err != nil {
 		log.Error(err, "Error fetching cloud ID")
 		return err
@@ -500,17 +488,9 @@ func setTlsValidation(disableTls bool, ctx context.Context) {
 	}
 }
 
-func (r *AstraAgentReconciler) checkCloudCreds(m *cachev1.AstraAgent, ctx context.Context) (string, error) {
+func (r *AstraAgentReconciler) checkCloudCreds(astraHost string, m *cachev1.AstraAgent, ctx context.Context) (string, error) {
 	log := ctrllog.FromContext(ctx)
 	setTlsValidation(m.Spec.NatssyncClient.SkipTLSValidation, ctx)
-
-	var astraHost string
-	if m.Spec.NatssyncClient.CloudBridgeURL != "" {
-		astraHost = m.Spec.NatssyncClient.CloudBridgeURL
-	} else {
-		log.Info("Defaulting the CloudBridgeURL", "CloudBridgeURL", NatssyncClientDefaultCloudBridgeURL)
-		astraHost = NatssyncClientDefaultCloudBridgeURL
-	}
 
 	if m.Spec.NatssyncClient.HostAlias {
 		dialer := &net.Dialer{
@@ -518,17 +498,16 @@ func (r *AstraAgentReconciler) checkCloudCreds(m *cachev1.AstraAgent, ctx contex
 			KeepAlive: 30 * time.Second,
 		}
 
-		cloudBridgeURLSplit := strings.Split(astraHost, "://")
-		if len(cloudBridgeURLSplit) != 2 {
-			errStr := fmt.Sprintf("invalid cloudBridgeURL provided: %s, format - https://hostname", astraHost)
-			return "", errors.New(errStr)
+		cloudBridgeHost, err := getAstraHostFromURL(astraHost)
+		if err != nil {
+			return "", err
 		}
 
 		http.DefaultTransport.(*http.Transport).DialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
-			if addr == cloudBridgeURLSplit[1]+":443" {
+			if addr == cloudBridgeHost+":443" {
 				addr = m.Spec.NatssyncClient.HostAliasIP + ":443"
 			}
-			if addr == cloudBridgeURLSplit[1]+":80" {
+			if addr == cloudBridgeHost+":80" {
 				addr = m.Spec.NatssyncClient.HostAliasIP + ":80"
 			}
 			return dialer.DialContext(ctx, network, addr)
@@ -578,14 +557,6 @@ func (r *AstraAgentReconciler) checkCloudCreds(m *cachev1.AstraAgent, ctx contex
 		return "", err
 	}
 
-	var astraCloudType string
-	if m.Spec.Astra.CloudType != "" {
-		astraCloudType = m.Spec.Astra.CloudType
-	} else {
-		log.Info("Defaulting the astraCloudType", "CloudType", AstraDefaultCloudType)
-		astraCloudType = AstraDefaultCloudType
-	}
-
 	credTypeKey := "astra.netapp.io/labels/read-only/credType"
 	cloudNameKey := "astra.netapp.io/labels/read-only/cloudName"
 	validatedKey := "astra.netapp.io/labels/read-only/validated"
@@ -602,7 +573,7 @@ func (r *AstraAgentReconciler) checkCloudCreds(m *cachev1.AstraAgent, ctx contex
 			if name == credTypeKey && value == "service-account" {
 				credTypeSAPresent = true
 			}
-			if name == cloudNameKey && value == astraCloudType {
+			if name == cloudNameKey && value == AstraDefaultCloudType {
 				cloudNamePresent = true
 			}
 			if name == validatedKey && value == "true" {
@@ -617,31 +588,14 @@ func (r *AstraAgentReconciler) checkCloudCreds(m *cachev1.AstraAgent, ctx contex
 	return "", nil
 }
 
-func (r *AstraAgentReconciler) createCloud(m *cachev1.AstraAgent, ctx context.Context) (string, error) {
+func (r *AstraAgentReconciler) createCloud(astraHost string, m *cachev1.AstraAgent, ctx context.Context) (string, error) {
 	log := ctrllog.FromContext(ctx)
 	setTlsValidation(m.Spec.NatssyncClient.SkipTLSValidation, ctx)
 
-	var astraCloudType string
-	if m.Spec.Astra.CloudType != "" {
-		astraCloudType = m.Spec.Astra.CloudType
-	} else {
-		log.Info("Defaulting the astraCloudType", "CloudType", AstraDefaultCloudType)
-		astraCloudType = AstraDefaultCloudType
-	}
-
-	var astraHost string
-	if m.Spec.NatssyncClient.CloudBridgeURL != "" {
-		astraHost = m.Spec.NatssyncClient.CloudBridgeURL
-	} else {
-		log.Info("Defaulting the CloudBridgeURL", "CloudBridgeURL", NatssyncClientDefaultCloudBridgeURL)
-		astraHost = NatssyncClientDefaultCloudBridgeURL
-	}
-
 	if m.Spec.NatssyncClient.HostAlias {
-		cloudBridgeURLSplit := strings.Split(astraHost, "://")
-		if len(cloudBridgeURLSplit) != 2 {
-			errStr := fmt.Sprintf("invalid cloudBridgeURL provided: %s, format - https://hostname", astraHost)
-			return "", errors.New(errStr)
+		cloudBridgeHost, err := getAstraHostFromURL(astraHost)
+		if err != nil {
+			return "", err
 		}
 
 		dialer := &net.Dialer{
@@ -650,10 +604,10 @@ func (r *AstraAgentReconciler) createCloud(m *cachev1.AstraAgent, ctx context.Co
 		}
 
 		http.DefaultTransport.(*http.Transport).DialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
-			if addr == cloudBridgeURLSplit[1]+":443" {
+			if addr == cloudBridgeHost+":443" {
 				addr = m.Spec.NatssyncClient.HostAliasIP + ":443"
 			}
-			if addr == cloudBridgeURLSplit[1]+":80" {
+			if addr == cloudBridgeHost+":80" {
 				addr = m.Spec.NatssyncClient.HostAliasIP + ":80"
 			}
 			return dialer.DialContext(ctx, network, addr)
@@ -666,7 +620,7 @@ func (r *AstraAgentReconciler) createCloud(m *cachev1.AstraAgent, ctx context.Co
 		"type":      "application/astra-cloud",
 		"version":   "1.0",
 		"name":      "Azure",
-		"cloudType": astraCloudType,
+		"cloudType": AstraDefaultCloudType,
 	}
 
 	reqBodyBytes, err := json.Marshal(payLoad)
@@ -697,4 +651,19 @@ func (r *AstraAgentReconciler) createCloud(m *cachev1.AstraAgent, ctx context.Co
 	}
 
 	return cloudResp.ID, nil
+}
+
+func getLocationIDFromConfigMap(cmData map[string]string) (string, error) {
+	var serviceKeyDataString string
+	var serviceKeyData map[string]interface{}
+	for key := range cmData {
+		if key == "cloud-master_locationData.json" {
+			continue
+		}
+		serviceKeyDataString = cmData[key]
+		if err := json.Unmarshal([]byte(serviceKeyDataString), &serviceKeyData); err != nil {
+			return "", err
+		}
+	}
+	return serviceKeyData["locationID"].(string), nil
 }

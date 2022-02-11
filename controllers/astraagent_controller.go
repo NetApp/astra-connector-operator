@@ -17,6 +17,10 @@ limitations under the License.
 package controllers
 
 import (
+	"context"
+	"reflect"
+	"time"
+
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -25,10 +29,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
-
-	"context"
-	"reflect"
-	"time"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -44,9 +44,9 @@ type AstraAgentReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-//+kubebuilder:rbac:groups=cache.astraagent.com,resources=astraagents,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=cache.astraagent.com,resources=astraagents/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=cache.astraagent.com,resources=astraagents/finalizers,verbs=update
+//+kubebuilder:rbac:groups=netapp.astraagent.com,resources=astraagents,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=netapp.astraagent.com,resources=astraagents/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=netapp.astraagent.com,resources=astraagents/finalizers,verbs=update
 //+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=core,resources=pods,verbs=get;list;watch;create;update;patch;delete
@@ -347,23 +347,27 @@ func (r *AstraAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	err = r.Get(ctx, types.NamespacedName{Name: NatssyncClientConfigMapName, Namespace: astraAgent.Spec.Namespace}, foundCM)
 	if len(foundCM.Data) != 0 {
 		registered = true
+		locationID, err = getLocationIDFromConfigMap(foundCM.Data)
+		if err != nil {
+			log.Error(err, "Failed to get the location ID from configmap")
+			return ctrl.Result{RequeueAfter: 1 * time.Minute}, err
+		}
+		if locationID == "" {
+			log.Error(err, "Got an empty location ID from configmap")
+			return ctrl.Result{RequeueAfter: 1 * time.Minute}, err
+		}
 	}
 
 	// RegisterClient
-	if astraAgent.Spec.Astra.Register {
+	if !astraAgent.Spec.Astra.Unregister {
 		if registered {
-			locationID, err = r.getNatssyncClientRegistrationStatus(r.getNatssyncClientRegistrationURL(astraAgent))
-			if err != nil {
-				log.Error(err, "Failed to get the location ID from natssync-client")
-				return ctrl.Result{Requeue: true}, err
-			}
 			log.Info("natssync-client already registered", "locationID", locationID)
 		} else {
 			log.Info("Registering natssync-client")
 			locationID, err = r.RegisterClient(astraAgent)
 			if err != nil {
 				log.Error(err, "Failed to register natssync-client")
-				return ctrl.Result{Requeue: true}, err
+				return ctrl.Result{RequeueAfter: 1 * time.Minute}, err
 			}
 			log.Info("natssync-client locationID", "locationID", locationID)
 		}
@@ -372,10 +376,10 @@ func (r *AstraAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		err = r.AddLocationIDtoCloudExtension(astraAgent, locationID, ctx)
 		if err != nil {
 			log.Error(err, "Failed to register locationID with Astra")
-			return ctrl.Result{Requeue: true}, err
+			return ctrl.Result{RequeueAfter: 1 * time.Minute}, err
 		}
 		log.Info("Registered locationID with Astra")
-	} else if !astraAgent.Spec.Astra.Register {
+	} else {
 		if registered {
 			log.Info("Unregistering the cluster with Astra")
 			err = r.RemoveLocationIDFromCloudExtension(astraAgent, ctx)
@@ -395,7 +399,6 @@ func (r *AstraAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		} else {
 			log.Info("Already unregistered with Astra")
 		}
-
 	}
 
 	// Update the astraAgent status with the pod names
@@ -463,4 +466,14 @@ func getPodNames(pods []corev1.Pod) []string {
 		podNames = append(podNames, pod.Name)
 	}
 	return podNames
+}
+
+// contains checks if a string is present in a string array
+func contains(strArr []string, input string) bool {
+	for _, s := range strArr {
+		if s == input {
+			return true
+		}
+	}
+	return false
 }

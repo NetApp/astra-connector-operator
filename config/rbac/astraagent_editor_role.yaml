@@ -5,7 +5,7 @@ metadata:
   name: astraagent-editor-role
 rules:
 - apiGroups:
-  - cache.astraagent.com
+  - netapp.astraagent.com
   resources:
   - astraagents
   verbs:
@@ -17,7 +17,7 @@ rules:
   - update
   - watch
 - apiGroups:
-  - cache.astraagent.com
+  - netapp.astraagent.com
   resources:
   - astraagents/status
   verbs:

@@ -33,14 +33,7 @@ func (r *AstraAgentReconciler) DeploymentForNatssyncClient(m *cachev1.AstraAgent
 		natssyncClientImage = NatssyncClientDefaultImage
 	}
 
-	var natssyncCloudBridgeURL string
-	if m.Spec.NatssyncClient.CloudBridgeURL != "" {
-		natssyncCloudBridgeURL = m.Spec.NatssyncClient.CloudBridgeURL
-	} else {
-		log.Info("Defaulting the natssyncClient CloudBridgeURL", "CloudBridgeURL", NatssyncClientDefaultCloudBridgeURL)
-		natssyncCloudBridgeURL = NatssyncClientDefaultCloudBridgeURL
-	}
-
+	natssyncCloudBridgeURL := r.getAstraHostURL(m, ctx)
 	replicas := int32(NatssyncClientSize)
 	keyStoreURLSplit := strings.Split(NatssyncClientKeystoreUrl, "://")
 	if len(keyStoreURLSplit) < 2 {

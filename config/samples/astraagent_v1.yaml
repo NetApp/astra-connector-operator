@@ -1,4 +1,4 @@
-apiVersion: cache.astraagent.com/v1
+apiVersion: netapp.astraagent.com/v1
 kind: AstraAgent
 metadata:
   name: astra-agent
@@ -9,8 +9,7 @@ spec:
     hostalias: true
     hostaliasIP: 54.188.143.77
   astra:
-    register: true
     token: nQeQPq065VWAq760PPULAizUDzrGweT3aCRR_-XA2q8=
     clusterName: ipsprintdemo
     accountId: 5831cf97-c52e-4185-ab83-db0fdd061c0e
-    acceptEULA: true
+    acceptEULA: yes
