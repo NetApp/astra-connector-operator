@@ -1,17 +1,29 @@
 package controllers
 
 import (
+	"context"
+
 	cachev1 "github.com/NetApp/astraagent-operator/api/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
+	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-// DeploymentForProxyClient returns a astraAgent Deployment object
-func (r *AstraAgentReconciler) DeploymentForProxyClient(m *cachev1.AstraAgent) (*appsv1.Deployment, error) {
+// DeploymentForProxyClient returns an HttpProxyClient Deployment object
+func (r *AstraAgentReconciler) DeploymentForProxyClient(m *cachev1.AstraAgent, ctx context.Context) (*appsv1.Deployment, error) {
+	log := ctrllog.FromContext(ctx)
 	ls := labelsForProxyClient(HttpProxyClientName)
 	replicas := int32(HttpProxyClientsize)
+
+	var httpProxyClientImage string
+	if m.Spec.HttpProxyClient.Image != "" {
+		httpProxyClientImage = m.Spec.HttpProxyClient.Image
+	} else {
+		log.Info("Defaulting the HttpProxyClient image", "image", HttpProxyClientDefaultImage)
+		httpProxyClientImage = HttpProxyClientDefaultImage
+	}
 
 	dep := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -29,7 +41,7 @@ func (r *AstraAgentReconciler) DeploymentForProxyClient(m *cachev1.AstraAgent) (
 				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{{
-						Image: m.Spec.HttpProxyClient.Image,
+						Image: httpProxyClientImage,
 						Name:  HttpProxyClientName,
 						Env: []corev1.EnvVar{
 							{
@@ -50,7 +62,7 @@ func (r *AstraAgentReconciler) DeploymentForProxyClient(m *cachev1.AstraAgent) (
 	return dep, nil
 }
 
-// labelsForProxyClient returns the labels for selecting the resources
+// labelsForProxyClient returns the labels for selecting the HttpProxyClient
 // belonging to the given astraAgent CR name.
 func labelsForProxyClient(name string) map[string]string {
 	return map[string]string{"app": name}

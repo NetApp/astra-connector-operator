@@ -21,9 +21,31 @@ import (
 )
 
 // DeploymentForNatssyncClient returns a Natssync-client Deployment object
-func (r *AstraAgentReconciler) DeploymentForNatssyncClient(m *cachev1.AstraAgent) (*appsv1.Deployment, error) {
+func (r *AstraAgentReconciler) DeploymentForNatssyncClient(m *cachev1.AstraAgent, ctx context.Context) (*appsv1.Deployment, error) {
+	log := ctrllog.FromContext(ctx)
 	ls := labelsForNatssyncClient(NatssyncClientName)
+
+	var natssyncClientImage string
+	if m.Spec.NatssyncClient.Image != "" {
+		natssyncClientImage = m.Spec.NatssyncClient.Image
+	} else {
+		log.Info("Defaulting the natssyncClient image", "image", NatssyncClientDefaultImage)
+		natssyncClientImage = NatssyncClientDefaultImage
+	}
+
+	var natssyncCloudBridgeURL string
+	if m.Spec.NatssyncClient.CloudBridgeURL != "" {
+		natssyncCloudBridgeURL = m.Spec.NatssyncClient.CloudBridgeURL
+	} else {
+		log.Info("Defaulting the natssyncClient CloudBridgeURL", "CloudBridgeURL", NatssyncClientDefaultCloudBridgeURL)
+		natssyncCloudBridgeURL = NatssyncClientDefaultCloudBridgeURL
+	}
+
 	replicas := int32(NatssyncClientSize)
+	keyStoreURLSplit := strings.Split(NatssyncClientKeystoreUrl, "://")
+	if len(keyStoreURLSplit) < 2 {
+		return nil, errors.New("invalid keyStoreURLSplit provided, format - configmap:///configmap-data")
+	}
 
 	dep := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -41,7 +63,7 @@ func (r *AstraAgentReconciler) DeploymentForNatssyncClient(m *cachev1.AstraAgent
 				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{{
-						Image: m.Spec.NatssyncClient.Image,
+						Image: natssyncClientImage,
 						Name:  NatssyncClientName,
 						Env: []corev1.EnvVar{
 							{
@@ -50,7 +72,7 @@ func (r *AstraAgentReconciler) DeploymentForNatssyncClient(m *cachev1.AstraAgent
 							},
 							{
 								Name:  "CLOUD_BRIDGE_URL",
-								Value: m.Spec.NatssyncClient.CloudBridgeURL,
+								Value: natssyncCloudBridgeURL,
 							},
 							{
 								Name:  "CONFIGMAP_NAME",
@@ -66,13 +88,13 @@ func (r *AstraAgentReconciler) DeploymentForNatssyncClient(m *cachev1.AstraAgent
 							},
 							{
 								Name:  "SKIP_TLS_VALIDATION",
-								Value: m.Spec.NatssyncClient.SkipTLSValidation,
+								Value: strconv.FormatBool(m.Spec.NatssyncClient.SkipTLSValidation),
 							},
 						},
 						VolumeMounts: []corev1.VolumeMount{
 							{
 								Name:      NatssyncClientConfigMapVolumeName,
-								MountPath: strings.Split(NatssyncClientKeystoreUrl, "://")[1],
+								MountPath: keyStoreURLSplit[1],
 							},
 						},
 					}},
@@ -95,10 +117,14 @@ func (r *AstraAgentReconciler) DeploymentForNatssyncClient(m *cachev1.AstraAgent
 	}
 
 	if m.Spec.NatssyncClient.HostAlias {
+		hostNamesSplit := strings.Split(natssyncCloudBridgeURL, "://")
+		if len(hostNamesSplit) < 2 {
+			return nil, errors.New("invalid hostname provided, hostname format - https://hostname")
+		}
 		dep.Spec.Template.Spec.HostAliases = []corev1.HostAlias{
 			{
 				IP:        m.Spec.NatssyncClient.HostAliasIP,
-				Hostnames: []string{strings.Split(m.Spec.NatssyncClient.CloudBridgeURL, "://")[1]},
+				Hostnames: []string{hostNamesSplit[1]},
 			},
 		}
 	}
@@ -138,13 +164,12 @@ func (r *AstraAgentReconciler) ServiceForNatssyncClient(m *cachev1.AstraAgent) *
 	return service
 }
 
-// labelsForNatssyncClient returns the labels for selecting the resources
-// belonging to the given astraAgent CR name.
+// labelsForNatssyncClient returns the labels for selecting the NatssyncClient
 func labelsForNatssyncClient(name string) map[string]string {
 	return map[string]string{"app": name}
 }
 
-// ConfigMap returns a astraAgent ConfigMap object
+// ConfigMapForNatssyncClient returns a ConfigMap object for NatssyncClient
 func (r *AstraAgentReconciler) ConfigMapForNatssyncClient(m *cachev1.AstraAgent) *corev1.ConfigMap {
 	configMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
@@ -156,7 +181,7 @@ func (r *AstraAgentReconciler) ConfigMapForNatssyncClient(m *cachev1.AstraAgent)
 	return configMap
 }
 
-// ConfigMapRole returns a astraAgent ConfigMap object
+// ConfigMapRole returns a ConfigMapRole object for NatssyncClient
 func (r *AstraAgentReconciler) ConfigMapRole(m *cachev1.AstraAgent) *rbacv1.Role {
 	configMapRole := &rbacv1.Role{
 		ObjectMeta: metav1.ObjectMeta{
@@ -198,7 +223,7 @@ func (r *AstraAgentReconciler) ConfigMapRoleBinding(m *cachev1.AstraAgent) *rbac
 	return configMapRoleBinding
 }
 
-// ServiceAccountForNatssyncClientConfigMap returns a ServiceAccount object
+// ServiceAccountForNatssyncClientConfigMap returns a ServiceAccount object for NatssyncClient
 func (r *AstraAgentReconciler) ServiceAccountForNatssyncClientConfigMap(m *cachev1.AstraAgent) *corev1.ServiceAccount {
 	sa := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
@@ -210,6 +235,7 @@ func (r *AstraAgentReconciler) ServiceAccountForNatssyncClientConfigMap(m *cache
 	return sa
 }
 
+// getNatssyncClientStatus returns NatssyncClientStatus object
 func (r *AstraAgentReconciler) getNatssyncClientStatus(m *cachev1.AstraAgent, ctx context.Context) (cachev1.NatssyncClientStatus, error) {
 	pods := &corev1.PodList{}
 	lb := labelsForNatssyncClient(NatssyncClientName)
@@ -254,24 +280,28 @@ func (r *AstraAgentReconciler) getNatssyncClientStatus(m *cachev1.AstraAgent, ct
 	return natssyncClientStatus, nil
 }
 
+// getNatssyncClientRegistrationURL returns NatssyncClient Registration URL
 func (r *AstraAgentReconciler) getNatssyncClientRegistrationURL(m *cachev1.AstraAgent) string {
 	natsSyncClientURL := fmt.Sprintf("http://%s.%s:%d/bridge-client/1", NatssyncClientName, m.Spec.Namespace, NatssyncClientPort)
 	natsSyncClientRegisterURL := fmt.Sprintf("%s/register", natsSyncClientURL)
 	return natsSyncClientRegisterURL
 }
 
+// getNatssyncClientUnregisterURL returns NatssyncClient Unregister URL
 func (r *AstraAgentReconciler) getNatssyncClientUnregisterURL(m *cachev1.AstraAgent) string {
 	natsSyncClientURL := fmt.Sprintf("http://%s.%s:%d/bridge-client/1", NatssyncClientName, m.Spec.Namespace, NatssyncClientPort)
 	natsSyncClientRegisterURL := fmt.Sprintf("%s/unregister", natsSyncClientURL)
 	return natsSyncClientRegisterURL
 }
 
+// getNatssyncClientAboutURL returns NatssyncClient About URL
 func (r *AstraAgentReconciler) getNatssyncClientAboutURL(m *cachev1.AstraAgent) string {
 	natsSyncClientURL := fmt.Sprintf("http://%s.%s:%d/bridge-client/1", NatssyncClientName, m.Spec.Namespace, NatssyncClientPort)
 	natsSyncClientAboutURL := fmt.Sprintf("%s/about", natsSyncClientURL)
 	return natsSyncClientAboutURL
 }
 
+// getNatssyncClientRegistrationStatus returns the locationID string
 func (r *AstraAgentReconciler) getNatssyncClientRegistrationStatus(natsSyncClientRegisterURL string) (string, error) {
 	resp, err := http.Get(natsSyncClientRegisterURL)
 	if err != nil {
@@ -291,6 +321,7 @@ func (r *AstraAgentReconciler) getNatssyncClientRegistrationStatus(natsSyncClien
 	return registrationResp.LocationID, nil
 }
 
+// getNatssyncClientVersion returns the NatssyncClient Version
 func (r *AstraAgentReconciler) getNatssyncClientVersion(natsSyncClientAboutURL string) (string, error) {
 	resp, err := http.Get(natsSyncClientAboutURL)
 	if err != nil {

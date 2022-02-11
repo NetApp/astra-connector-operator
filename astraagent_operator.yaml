@@ -46,6 +46,8 @@ spec:
             properties:
               astra:
                 properties:
+                  acceptEULA:
+                    type: boolean
                   accountId:
                     type: string
                   cloudType:
@@ -57,10 +59,9 @@ spec:
                   token:
                     type: string
                 required:
+                - acceptEULA
                 - accountId
-                - cloudType
                 - clusterName
-                - register
                 - token
                 type: object
               echo-client:
@@ -70,16 +71,11 @@ spec:
                   size:
                     format: int32
                     type: integer
-                required:
-                - image
-                - size
                 type: object
               httpproxy-client:
                 properties:
                   image:
                     type: string
-                required:
-                - image
                 type: object
               namespace:
                 type: string
@@ -90,9 +86,6 @@ spec:
                   size:
                     format: int32
                     type: integer
-                required:
-                - image
-                - size
                 type: object
               natssync-client:
                 properties:
@@ -105,21 +98,11 @@ spec:
                   image:
                     type: string
                   skipTLSValidation:
-                    type: string
-                required:
-                - cloud-bridge-url
-                - hostalias
-                - hostaliasIP
-                - image
-                - skipTLSValidation
+                    type: boolean
                 type: object
             required:
             - astra
-            - echo-client
-            - httpproxy-client
             - namespace
-            - nats
-            - natssync-client
             type: object
           status:
             description: AstraAgentStatus defines the observed state of AstraAgent

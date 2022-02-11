@@ -1,18 +1,37 @@
 package controllers
 
 import (
+	"context"
 	"fmt"
+
 	cachev1 "github.com/NetApp/astraagent-operator/api/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
+	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-// StatefulsetForNats returns a astraAgent Deployment object
-func (r *AstraAgentReconciler) StatefulsetForNats(m *cachev1.AstraAgent) *appsv1.StatefulSet {
+// StatefulsetForNats returns a NATS Statefulset object
+func (r *AstraAgentReconciler) StatefulsetForNats(m *cachev1.AstraAgent, ctx context.Context) *appsv1.StatefulSet {
+	log := ctrllog.FromContext(ctx)
 	ls := labelsForNats(NatsName)
-	replicas := m.Spec.Nats.Size
+
+	var replicas int32
+	if m.Spec.Nats.Size > 2 {
+		replicas = m.Spec.Nats.Size
+	} else {
+		log.Info("Defaulting the Nats replica size", "size", NatsDefaultSize)
+		replicas = NatsDefaultSize
+	}
+
+	var natsImage string
+	if m.Spec.Nats.Image != "" {
+		natsImage = m.Spec.Nats.Image
+	} else {
+		log.Info("Defaulting the Nats image", "image", NatsDefaultImage)
+		natsImage = NatsDefaultImage
+	}
 
 	dep := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
@@ -32,7 +51,7 @@ func (r *AstraAgentReconciler) StatefulsetForNats(m *cachev1.AstraAgent) *appsv1
 				Spec: corev1.PodSpec{
 					ServiceAccountName: NatsServiceAccountName,
 					Containers: []corev1.Container{{
-						Image: m.Spec.Nats.Image,
+						Image: natsImage,
 						Name:  NatsName,
 						Ports: []corev1.ContainerPort{
 							{
@@ -106,7 +125,7 @@ func (r *AstraAgentReconciler) StatefulsetForNats(m *cachev1.AstraAgent) *appsv1
 	return dep
 }
 
-// ClusterServiceForNats returns a astraAgent Deployment object
+// ClusterServiceForNats returns a cluster Service object for Nats
 func (r *AstraAgentReconciler) ClusterServiceForNats(m *cachev1.AstraAgent) *corev1.Service {
 	ls := labelsForNats(NatsName)
 	service := &corev1.Service{
@@ -147,7 +166,7 @@ func (r *AstraAgentReconciler) ClusterServiceForNats(m *cachev1.AstraAgent) *cor
 	return service
 }
 
-// ConfigMapForNats returns a ConfigMap object
+// ConfigMapForNats returns a ConfigMap object for nats
 func (r *AstraAgentReconciler) ConfigMapForNats(m *cachev1.AstraAgent) *corev1.ConfigMap {
 	natsConf := "pid_file: \"/var/run/nats/nats.pid\"\nhttp: %d\n\ncluster {\n  port: %d\n  routes [\n    nats://nats-0.nats-cluster:%d\n    nats://nats-1.nats-cluster:%d\n    nats://nats-2.nats-cluster:%d\n  ]\n\n  cluster_advertise: $CLUSTER_ADVERTISE\n  connect_retries: 30\n}\n"
 	configMap := &corev1.ConfigMap{
@@ -163,7 +182,7 @@ func (r *AstraAgentReconciler) ConfigMapForNats(m *cachev1.AstraAgent) *corev1.C
 	return configMap
 }
 
-// ServiceAccountForNats returns a ServiceAccount object
+// ServiceAccountForNats returns a ServiceAccount object for nats
 func (r *AstraAgentReconciler) ServiceAccountForNats(m *cachev1.AstraAgent) *corev1.ServiceAccount {
 	sa := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
@@ -176,7 +195,7 @@ func (r *AstraAgentReconciler) ServiceAccountForNats(m *cachev1.AstraAgent) *cor
 	return sa
 }
 
-// ServiceForNats returns a astraAgent Deployment object
+// ServiceForNats returns a Service object for nats
 func (r *AstraAgentReconciler) ServiceForNats(m *cachev1.AstraAgent) *corev1.Service {
 	ls := labelsForNats(NatsName)
 	service := &corev1.Service{
@@ -201,13 +220,13 @@ func (r *AstraAgentReconciler) ServiceForNats(m *cachev1.AstraAgent) *corev1.Ser
 	return service
 }
 
-// labelsForNats returns the labels for selecting the resources
+// labelsForNats returns the labels for selecting the nats resources
 // belonging to the given astraAgent CR name.
 func labelsForNats(name string) map[string]string {
 	return map[string]string{"app": name}
 }
 
-// GetNatsURL returns a astraAgent Deployment object
+// GetNatsURL returns the nats URL
 func (r *AstraAgentReconciler) GetNatsURL(m *cachev1.AstraAgent) string {
 	natsURL := fmt.Sprintf("nats://%s.%s:%d", NatsName, m.Spec.Namespace, NatsClientPort)
 	return natsURL
