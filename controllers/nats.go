@@ -13,7 +13,7 @@ import (
 )
 
 // StatefulsetForNats returns a NATS Statefulset object
-func (r *AstraAgentReconciler) StatefulsetForNats(m *cachev1.AstraAgent, ctx context.Context) *appsv1.StatefulSet {
+func (r *AstraAgentReconciler) StatefulsetForNats(m *cachev1.AstraAgent, ctx context.Context) (*appsv1.StatefulSet, error) {
 	log := ctrllog.FromContext(ctx)
 	ls := labelsForNats(NatsName)
 
@@ -121,12 +121,15 @@ func (r *AstraAgentReconciler) StatefulsetForNats(m *cachev1.AstraAgent, ctx con
 		},
 	}
 	// Set astraAgent instance as the owner and controller
-	ctrl.SetControllerReference(m, dep, r.Scheme)
-	return dep
+	err := ctrl.SetControllerReference(m, dep, r.Scheme)
+	if err != nil {
+		return nil, err
+	}
+	return dep, nil
 }
 
 // ClusterServiceForNats returns a cluster Service object for Nats
-func (r *AstraAgentReconciler) ClusterServiceForNats(m *cachev1.AstraAgent) *corev1.Service {
+func (r *AstraAgentReconciler) ClusterServiceForNats(m *cachev1.AstraAgent) (*corev1.Service, error) {
 	ls := labelsForNats(NatsName)
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
@@ -162,12 +165,15 @@ func (r *AstraAgentReconciler) ClusterServiceForNats(m *cachev1.AstraAgent) *cor
 		},
 	}
 	// Set astraAgent instance as the owner and controller
-	ctrl.SetControllerReference(m, service, r.Scheme)
-	return service
+	err := ctrl.SetControllerReference(m, service, r.Scheme)
+	if err != nil {
+		return nil, err
+	}
+	return service, nil
 }
 
 // ConfigMapForNats returns a ConfigMap object for nats
-func (r *AstraAgentReconciler) ConfigMapForNats(m *cachev1.AstraAgent) *corev1.ConfigMap {
+func (r *AstraAgentReconciler) ConfigMapForNats(m *cachev1.AstraAgent) (*corev1.ConfigMap, error) {
 	natsConf := "pid_file: \"/var/run/nats/nats.pid\"\nhttp: %d\n\ncluster {\n  port: %d\n  routes [\n    nats://nats-0.nats-cluster:%d\n    nats://nats-1.nats-cluster:%d\n    nats://nats-2.nats-cluster:%d\n  ]\n\n  cluster_advertise: $CLUSTER_ADVERTISE\n  connect_retries: 30\n}\n"
 	configMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
@@ -178,12 +184,15 @@ func (r *AstraAgentReconciler) ConfigMapForNats(m *cachev1.AstraAgent) *corev1.C
 			"nats.conf": fmt.Sprintf(natsConf, NatsMonitorPort, NatsClusterPort, NatsClusterPort, NatsClusterPort, NatsClusterPort),
 		},
 	}
-	ctrl.SetControllerReference(m, configMap, r.Scheme)
-	return configMap
+	err := ctrl.SetControllerReference(m, configMap, r.Scheme)
+	if err != nil {
+		return nil, err
+	}
+	return configMap, nil
 }
 
 // ServiceAccountForNats returns a ServiceAccount object for nats
-func (r *AstraAgentReconciler) ServiceAccountForNats(m *cachev1.AstraAgent) *corev1.ServiceAccount {
+func (r *AstraAgentReconciler) ServiceAccountForNats(m *cachev1.AstraAgent) (*corev1.ServiceAccount, error) {
 	sa := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      NatsServiceAccountName,
@@ -191,12 +200,15 @@ func (r *AstraAgentReconciler) ServiceAccountForNats(m *cachev1.AstraAgent) *cor
 			Labels:    labelsForNats(NatsName),
 		},
 	}
-	ctrl.SetControllerReference(m, sa, r.Scheme)
-	return sa
+	err := ctrl.SetControllerReference(m, sa, r.Scheme)
+	if err != nil {
+		return nil, err
+	}
+	return sa, nil
 }
 
 // ServiceForNats returns a Service object for nats
-func (r *AstraAgentReconciler) ServiceForNats(m *cachev1.AstraAgent) *corev1.Service {
+func (r *AstraAgentReconciler) ServiceForNats(m *cachev1.AstraAgent) (*corev1.Service, error) {
 	ls := labelsForNats(NatsName)
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
@@ -216,8 +228,11 @@ func (r *AstraAgentReconciler) ServiceForNats(m *cachev1.AstraAgent) *corev1.Ser
 		},
 	}
 	// Set astraAgent instance as the owner and controller
-	ctrl.SetControllerReference(m, service, r.Scheme)
-	return service
+	err := ctrl.SetControllerReference(m, service, r.Scheme)
+	if err != nil {
+		return nil, err
+	}
+	return service, nil
 }
 
 // labelsForNats returns the labels for selecting the nats resources
