@@ -3,7 +3,6 @@ kind: AstraAgent
 metadata:
   name: astra-agent
 spec:
-  namespace: astra-agent
   natssync-client:
     skipTLSValidation: true
     hostalias: true

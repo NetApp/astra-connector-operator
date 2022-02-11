@@ -36,7 +36,7 @@ func (r *AstraAgentReconciler) StatefulsetForNats(m *cachev1.AstraAgent, ctx con
 	dep := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      NatsName,
-			Namespace: m.Spec.Namespace,
+			Namespace: m.Namespace,
 		},
 		Spec: appsv1.StatefulSetSpec{
 			ServiceName: NatsClusterServiceName,
@@ -75,14 +75,14 @@ func (r *AstraAgentReconciler) StatefulsetForNats(m *cachev1.AstraAgent, ctx con
 						Env: []corev1.EnvVar{
 							{
 								Name:  "CLUSTER_ADVERTISE",
-								Value: fmt.Sprintf("%s.nats.%s.svc", NatsName, m.Spec.Namespace),
+								Value: fmt.Sprintf("%s.nats.%s.svc", NatsName, m.Namespace),
 							},
 							{
 								Name:  "POD_NAME",
 								Value: NatsName,
 							}, {
 								Name:  "POD_NAMESPACE",
-								Value: m.Spec.Namespace,
+								Value: m.Namespace,
 							},
 						},
 						VolumeMounts: []corev1.VolumeMount{
@@ -131,7 +131,7 @@ func (r *AstraAgentReconciler) ClusterServiceForNats(m *cachev1.AstraAgent) *cor
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      NatsClusterServiceName,
-			Namespace: m.Spec.Namespace,
+			Namespace: m.Namespace,
 			Labels:    ls,
 		},
 		Spec: corev1.ServiceSpec{
@@ -171,7 +171,7 @@ func (r *AstraAgentReconciler) ConfigMapForNats(m *cachev1.AstraAgent) *corev1.C
 	natsConf := "pid_file: \"/var/run/nats/nats.pid\"\nhttp: %d\n\ncluster {\n  port: %d\n  routes [\n    nats://nats-0.nats-cluster:%d\n    nats://nats-1.nats-cluster:%d\n    nats://nats-2.nats-cluster:%d\n  ]\n\n  cluster_advertise: $CLUSTER_ADVERTISE\n  connect_retries: 30\n}\n"
 	configMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: m.Spec.Namespace,
+			Namespace: m.Namespace,
 			Name:      NatsConfigMapName,
 		},
 		Data: map[string]string{
@@ -187,7 +187,7 @@ func (r *AstraAgentReconciler) ServiceAccountForNats(m *cachev1.AstraAgent) *cor
 	sa := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      NatsServiceAccountName,
-			Namespace: m.Spec.Namespace,
+			Namespace: m.Namespace,
 			Labels:    labelsForNats(NatsName),
 		},
 	}
@@ -201,7 +201,7 @@ func (r *AstraAgentReconciler) ServiceForNats(m *cachev1.AstraAgent) *corev1.Ser
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      NatsName,
-			Namespace: m.Spec.Namespace,
+			Namespace: m.Namespace,
 			Labels:    ls,
 		},
 		Spec: corev1.ServiceSpec{
@@ -228,6 +228,6 @@ func labelsForNats(name string) map[string]string {
 
 // GetNatsURL returns the nats URL
 func (r *AstraAgentReconciler) GetNatsURL(m *cachev1.AstraAgent) string {
-	natsURL := fmt.Sprintf("nats://%s.%s:%d", NatsName, m.Spec.Namespace, NatsClientPort)
+	natsURL := fmt.Sprintf("nats://%s.%s:%d", NatsName, m.Namespace, NatsClientPort)
 	return natsURL
 }

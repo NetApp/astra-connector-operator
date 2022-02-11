@@ -56,7 +56,6 @@ type Nats struct {
 
 // AstraAgentSpec defines the desired state of AstraAgent
 type AstraAgentSpec struct {
-	Namespace       string          `json:"namespace"`
 	NatssyncClient  NatssyncClient  `json:"natssync-client,omitempty"`
 	HttpProxyClient HttpProxyClient `json:"httpproxy-client,omitempty"`
 	EchoClient      EchoClient      `json:"echo-client,omitempty"`

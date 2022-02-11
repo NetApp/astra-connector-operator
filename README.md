@@ -45,7 +45,7 @@ kubectl delete -f config/samples/astraagent_v1.yaml -n astra-agent
 ```
 ### Uninstall the operator
 ```
-kubectl delete -f operator.yaml -n astra-agent-operator
+kubectl delete -f astraagent_operator.yaml -n astra-agent-operator
 ```
 ## CRD
 Sample CRD
@@ -55,7 +55,6 @@ kind: AstraAgent
 metadata:
   name: astra-agent
 spec:
-  namespace: astra-agent
   astra:
     token: <AstraApiToken>
     clusterName: ipsprintdemo
@@ -65,13 +64,6 @@ spec:
 
 ## CRD details
 In the CRD, all the fields in the spec section have to be updated to the correct value
-
-### Namespace
-namespace is where the CRD and hence all the private cluster components get installed
-
-| CRD Spec   | Details | Optional | Default |
-| ---------- | --------|--------- | --------|
-| namespace | namespace for the CRD | No | |
 
 ### [natssync-client](https://github.com/theotw/natssync)
 Natssync-Client talks to the Natssync-Server on Astra and ensures communication between Astra and the private AKS cluster

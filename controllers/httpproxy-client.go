@@ -28,7 +28,7 @@ func (r *AstraAgentReconciler) DeploymentForProxyClient(m *cachev1.AstraAgent, c
 	dep := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      HttpProxyClientName,
-			Namespace: m.Spec.Namespace,
+			Namespace: m.Namespace,
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: &replicas,

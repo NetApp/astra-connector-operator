@@ -34,7 +34,7 @@ func (r *AstraAgentReconciler) DeploymentForEchoClient(m *cachev1.AstraAgent, ct
 	dep := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      EchoClientName,
-			Namespace: m.Spec.Namespace,
+			Namespace: m.Namespace,
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: &replicas,
