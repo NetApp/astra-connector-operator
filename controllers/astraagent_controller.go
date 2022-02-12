@@ -124,7 +124,7 @@ func (r *AstraAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		// Stop reconciliation as the item is being deleted
 		return ctrl.Result{}, nil
 	}
-	
+
 	err = r.CreateServices(astraAgent, ctx)
 	if err != nil {
 		log.Error(err, "Error creating services")
