@@ -1,4 +1,4 @@
-package controllers
+package common
 
 const (
 	NatssyncClientName                  = "natssync-client"
@@ -38,3 +38,25 @@ const (
 
 	AstraDefaultCloudType = "Azure"
 )
+
+// ServicesList - serviceName: deploymentName
+var ServicesList = map[string]string{
+	NatsName:               NatsName,
+	NatsClusterServiceName: NatsName,
+	NatssyncClientName:     NatssyncClientName,
+}
+
+// ConfigMapsList - configMapName: deploymentName
+var ConfigMapsList = map[string]string{
+	NatsConfigMapName:           NatsName,
+	NatssyncClientConfigMapName: NatssyncClientName,
+}
+
+// serviceAccountsList - serviceAccountName: deploymentName
+var ServiceAccountsList = map[string]string{
+	NatssyncClientConfigMapServiceAccountName: NatssyncClientName,
+	NatsServiceAccountName:                    NatsName,
+}
+
+// deploymentsList - deploymentNames
+var DeploymentsList = []string{HttpProxyClientName, EchoClientName, NatssyncClientName}

@@ -2,6 +2,9 @@ package controllers
 
 import (
 	"context"
+	"github.com/NetApp/astraagent-operator/common"
+	"github.com/NetApp/astraagent-operator/deployer"
+	ctrl "sigs.k8s.io/controller-runtime"
 
 	cachev1 "github.com/NetApp/astraagent-operator/api/v1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -14,24 +17,34 @@ func (r *AstraAgentReconciler) CreateStatefulSets(m *cachev1.AstraAgent, ctx con
 	log := ctrllog.FromContext(ctx)
 	foundSet := &appsv1.StatefulSet{}
 
-	var replicaSize int32 = NatsDefaultSize
+	var replicaSize int32 = common.NatsDefaultSize
 	if m.Spec.Nats.Size > 2 {
 		replicaSize = m.Spec.Nats.Size
 	}
 
-	log.Info("Finding StatefulSet", "Namespace", m.Namespace, "Name", NatsName)
-	err := r.Get(ctx, types.NamespacedName{Name: NatsName, Namespace: m.Namespace}, foundSet)
+	log.Info("Finding StatefulSet", "Namespace", m.Namespace, "Name", common.NatsName)
+	err := r.Get(ctx, types.NamespacedName{Name: common.NatsName, Namespace: m.Namespace}, foundSet)
 	if err != nil && errors.IsNotFound(err) {
 		// Define a new statefulset
-		set, errCall := r.StatefulsetForNats(m, ctx)
-		if errCall != nil {
-			log.Error(errCall.(error), "Failed to get statefulset object")
-			return errCall.(error)
+		deployerObj, err := deployer.Factory("nats")
+		if err != nil {
+			log.Error(err, "Failed to create deployer")
+			return err
+		}
+		set, err := deployerObj.GetStatefulsetObject(m, ctx)
+		if err != nil {
+			log.Error(err, "Failed to get statefulset object")
+			return err
 		}
 		log.Info("Creating a new StatefulSet", "Namespace", set.Namespace, "Name", set.Name)
 		err = r.Create(ctx, set)
 		if err != nil {
 			log.Error(err, "Failed to create new StatefulSet", "Namespace", set.Namespace, "Name", set.Name)
+			return err
+		}
+		// Set astraAgent instance as the owner and controller
+		err = ctrl.SetControllerReference(m, set, r.Scheme)
+		if err != nil {
 			return err
 		}
 	} else if err != nil {
@@ -49,5 +62,6 @@ func (r *AstraAgentReconciler) CreateStatefulSets(m *cachev1.AstraAgent, ctx con
 			return err
 		}
 	}
+
 	return nil
 }

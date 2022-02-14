@@ -1,4 +1,4 @@
-package controllers
+package register
 
 import (
 	"bytes"
@@ -14,6 +14,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/NetApp/astraagent-operator/common"
+
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	cachev1 "github.com/NetApp/astraagent-operator/api/v1"
@@ -23,9 +25,9 @@ const (
 	errorRetrySleep time.Duration = time.Second * 3
 )
 
-func (r *AstraAgentReconciler) RegisterClient(m *cachev1.AstraAgent) (string, error) {
-	natsSyncClientRegisterURL := r.getNatssyncClientRegistrationURL(m)
-	reqBodyBytes, err := r.generateAuthPayload(m)
+func RegisterClient(m *cachev1.AstraAgent) (string, error) {
+	natsSyncClientRegisterURL := GetNatssyncClientRegistrationURL(m)
+	reqBodyBytes, err := generateAuthPayload(m)
 	if err != nil {
 		return "", err
 	}
@@ -54,9 +56,9 @@ func (r *AstraAgentReconciler) RegisterClient(m *cachev1.AstraAgent) (string, er
 	return locationId.LocationId, nil
 }
 
-func (r *AstraAgentReconciler) UnregisterClient(m *cachev1.AstraAgent) error {
-	natsSyncClientUnregisterURL := r.getNatssyncClientUnregisterURL(m)
-	reqBodyBytes, err := r.generateAuthPayload(m)
+func UnregisterClient(m *cachev1.AstraAgent) error {
+	natsSyncClientUnregisterURL := getNatssyncClientUnregisterURL(m)
+	reqBodyBytes, err := generateAuthPayload(m)
 	if err != nil {
 		return err
 	}
@@ -77,7 +79,7 @@ func (r *AstraAgentReconciler) UnregisterClient(m *cachev1.AstraAgent) error {
 	return nil
 }
 
-func (r *AstraAgentReconciler) generateAuthPayload(m *cachev1.AstraAgent) ([]byte, error) {
+func generateAuthPayload(m *cachev1.AstraAgent) ([]byte, error) {
 	authPayload, err := json.Marshal(map[string]string{
 		"userToken": m.Spec.Astra.Token,
 		"accountId": m.Spec.Astra.AccountID,
@@ -92,13 +94,13 @@ func (r *AstraAgentReconciler) generateAuthPayload(m *cachev1.AstraAgent) ([]byt
 	return reqBodyBytes, nil
 }
 
-func (r *AstraAgentReconciler) getAstraHostURL(m *cachev1.AstraAgent, ctx context.Context) string {
+func GetAstraHostURL(m *cachev1.AstraAgent, ctx context.Context) string {
 	log := ctrllog.FromContext(ctx)
 	var astraHost string
 	if m.Spec.NatssyncClient.CloudBridgeURL != "" {
 		astraHost = m.Spec.NatssyncClient.CloudBridgeURL
 	} else {
-		astraHost = NatssyncClientDefaultCloudBridgeURL
+		astraHost = common.NatssyncClientDefaultCloudBridgeURL
 	}
 	log.Info("CloudBridgeURL for Astra Host", "CloudBridgeURL", astraHost)
 	return astraHost
@@ -113,11 +115,11 @@ func getAstraHostFromURL(astraHostURL string) (string, error) {
 	return cloudBridgeURLSplit[1], nil
 }
 
-func (r *AstraAgentReconciler) AddLocationIDtoCloudExtension(m *cachev1.AstraAgent, locationID string, ctx context.Context) error {
+func AddLocationIDtoCloudExtension(m *cachev1.AstraAgent, locationID string, ctx context.Context) error {
 	log := ctrllog.FromContext(ctx)
 	setTlsValidation(m.Spec.NatssyncClient.SkipTLSValidation, ctx)
 
-	astraHost := r.getAstraHostURL(m, ctx)
+	astraHost := GetAstraHostURL(m, ctx)
 	if m.Spec.NatssyncClient.HostAlias {
 		dialer := &net.Dialer{
 			Timeout:   30 * time.Second,
@@ -139,32 +141,32 @@ func (r *AstraAgentReconciler) AddLocationIDtoCloudExtension(m *cachev1.AstraAge
 			return dialer.DialContext(ctx, network, addr)
 		}
 	}
-	log.Info("Checking for a valid SA credential for cloud", "cloudType", AstraDefaultCloudType)
-	credentialName, err := r.checkCloudCreds(astraHost, m, ctx)
+	log.Info("Checking for a valid SA credential for cloud", "cloudType", common.AstraDefaultCloudType)
+	credentialName, err := checkCloudCreds(astraHost, m, ctx)
 	if err != nil {
-		log.Error(err, "Error finding a valid SA cred for cloud", "cloudType", AstraDefaultCloudType)
+		log.Error(err, "Error finding a valid SA cred for cloud", "cloudType", common.AstraDefaultCloudType)
 		return err
 	}
 	if credentialName == "" {
-		return fmt.Errorf("could not find a valid SA cred for cloud %s", AstraDefaultCloudType)
+		return fmt.Errorf("could not find a valid SA cred for cloud %s", common.AstraDefaultCloudType)
 	}
-	log.Info("Found a valid SA credential for cloud", "cloudType", AstraDefaultCloudType, "credName", credentialName)
+	log.Info("Found a valid SA credential for cloud", "cloudType", common.AstraDefaultCloudType, "credName", credentialName)
 
 	log.Info("Fetching cloud ID")
-	cloudID, err := GetCloudId(astraHost, m.Spec.Astra.AccountID, m.Spec.Astra.Token, AstraDefaultCloudType, ctx)
+	cloudID, err := GetCloudId(astraHost, m.Spec.Astra.AccountID, m.Spec.Astra.Token, common.AstraDefaultCloudType, ctx)
 	if err != nil {
 		log.Error(err, "Error fetching cloud ID")
 		return err
 	}
 	if cloudID == "" && credentialName != "" {
-		log.Info("Cloud doesn't seem to exist, creating the cloud", "cloudType", AstraDefaultCloudType)
-		cloudID, err = r.createCloud(astraHost, m, ctx)
+		log.Info("Cloud doesn't seem to exist, creating the cloud", "cloudType", common.AstraDefaultCloudType)
+		cloudID, err = createCloud(astraHost, m, ctx)
 		if err != nil {
-			log.Error(err, "Failed to create cloud", "cloudType", AstraDefaultCloudType)
+			log.Error(err, "Failed to create cloud", "cloudType", common.AstraDefaultCloudType)
 			return err
 		}
 		if cloudID == "" {
-			return fmt.Errorf("could not create cloud %s", AstraDefaultCloudType)
+			return fmt.Errorf("could not create cloud %s", common.AstraDefaultCloudType)
 		}
 	}
 	log.Info("Found cloud ID", "cloudID", cloudID)
@@ -187,11 +189,11 @@ func (r *AstraAgentReconciler) AddLocationIDtoCloudExtension(m *cachev1.AstraAge
 	return nil
 }
 
-func (r *AstraAgentReconciler) RemoveLocationIDFromCloudExtension(m *cachev1.AstraAgent, ctx context.Context) error {
+func RemoveLocationIDFromCloudExtension(m *cachev1.AstraAgent, ctx context.Context) error {
 	log := ctrllog.FromContext(ctx)
 	setTlsValidation(m.Spec.NatssyncClient.SkipTLSValidation, ctx)
 
-	astraHost := r.getAstraHostURL(m, ctx)
+	astraHost := GetAstraHostURL(m, ctx)
 	if m.Spec.NatssyncClient.HostAlias {
 		dialer := &net.Dialer{
 			Timeout:   30 * time.Second,
@@ -214,7 +216,7 @@ func (r *AstraAgentReconciler) RemoveLocationIDFromCloudExtension(m *cachev1.Ast
 		}
 	}
 	log.Info("Fetching cloud ID")
-	cloudID, err := GetCloudId(astraHost, m.Spec.Astra.AccountID, m.Spec.Astra.Token, AstraDefaultCloudType, ctx)
+	cloudID, err := GetCloudId(astraHost, m.Spec.Astra.AccountID, m.Spec.Astra.Token, common.AstraDefaultCloudType, ctx)
 	if err != nil {
 		log.Error(err, "Error fetching cloud ID")
 		return err
@@ -488,7 +490,7 @@ func setTlsValidation(disableTls bool, ctx context.Context) {
 	}
 }
 
-func (r *AstraAgentReconciler) checkCloudCreds(astraHost string, m *cachev1.AstraAgent, ctx context.Context) (string, error) {
+func checkCloudCreds(astraHost string, m *cachev1.AstraAgent, ctx context.Context) (string, error) {
 	log := ctrllog.FromContext(ctx)
 	setTlsValidation(m.Spec.NatssyncClient.SkipTLSValidation, ctx)
 
@@ -573,7 +575,7 @@ func (r *AstraAgentReconciler) checkCloudCreds(astraHost string, m *cachev1.Astr
 			if name == credTypeKey && value == "service-account" {
 				credTypeSAPresent = true
 			}
-			if name == cloudNameKey && value == AstraDefaultCloudType {
+			if name == cloudNameKey && value == common.AstraDefaultCloudType {
 				cloudNamePresent = true
 			}
 			if name == validatedKey && value == "true" {
@@ -588,7 +590,7 @@ func (r *AstraAgentReconciler) checkCloudCreds(astraHost string, m *cachev1.Astr
 	return "", nil
 }
 
-func (r *AstraAgentReconciler) createCloud(astraHost string, m *cachev1.AstraAgent, ctx context.Context) (string, error) {
+func createCloud(astraHost string, m *cachev1.AstraAgent, ctx context.Context) (string, error) {
 	log := ctrllog.FromContext(ctx)
 	setTlsValidation(m.Spec.NatssyncClient.SkipTLSValidation, ctx)
 
@@ -620,7 +622,7 @@ func (r *AstraAgentReconciler) createCloud(astraHost string, m *cachev1.AstraAge
 		"type":      "application/astra-cloud",
 		"version":   "1.0",
 		"name":      "Azure",
-		"cloudType": AstraDefaultCloudType,
+		"cloudType": common.AstraDefaultCloudType,
 	}
 
 	reqBodyBytes, err := json.Marshal(payLoad)
@@ -653,7 +655,7 @@ func (r *AstraAgentReconciler) createCloud(astraHost string, m *cachev1.AstraAge
 	return cloudResp.ID, nil
 }
 
-func getLocationIDFromConfigMap(cmData map[string]string) (string, error) {
+func GetLocationIDFromConfigMap(cmData map[string]string) (string, error) {
 	var serviceKeyDataString string
 	var serviceKeyData map[string]interface{}
 	for key := range cmData {
@@ -666,4 +668,18 @@ func getLocationIDFromConfigMap(cmData map[string]string) (string, error) {
 		}
 	}
 	return serviceKeyData["locationID"].(string), nil
+}
+
+// GetNatssyncClientRegistrationURL returns NatssyncClient Registration URL
+func GetNatssyncClientRegistrationURL(m *cachev1.AstraAgent) string {
+	natsSyncClientURL := fmt.Sprintf("http://%s.%s:%d/bridge-client/1", common.NatssyncClientName, m.Namespace, common.NatssyncClientPort)
+	natsSyncClientRegisterURL := fmt.Sprintf("%s/register", natsSyncClientURL)
+	return natsSyncClientRegisterURL
+}
+
+// getNatssyncClientUnregisterURL returns NatssyncClient Unregister URL
+func getNatssyncClientUnregisterURL(m *cachev1.AstraAgent) string {
+	natsSyncClientURL := fmt.Sprintf("http://%s.%s:%d/bridge-client/1", common.NatssyncClientName, m.Namespace, common.NatssyncClientPort)
+	natsSyncClientRegisterURL := fmt.Sprintf("%s/unregister", natsSyncClientURL)
+	return natsSyncClientRegisterURL
 }

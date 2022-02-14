@@ -18,7 +18,13 @@ package controllers
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io/ioutil"
+	"net/http"
 	"reflect"
+	"strconv"
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -30,12 +36,15 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
-	"k8s.io/apimachinery/pkg/api/errors"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 
 	"k8s.io/apimachinery/pkg/runtime"
 
 	cachev1 "github.com/NetApp/astraagent-operator/api/v1"
+	"github.com/NetApp/astraagent-operator/common"
+	"github.com/NetApp/astraagent-operator/natssync_client"
+	"github.com/NetApp/astraagent-operator/register"
 )
 
 // AstraAgentReconciler reconciles a AstraAgent object
@@ -63,7 +72,7 @@ func (r *AstraAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	astraAgent := &cachev1.AstraAgent{}
 	err := r.Get(ctx, req.NamespacedName, astraAgent)
 	if err != nil {
-		if errors.IsNotFound(err) {
+		if k8serrors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 			// Return and don't requeue
@@ -99,7 +108,7 @@ func (r *AstraAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		if controllerutil.ContainsFinalizer(astraAgent, finalizerName) {
 			// our finalizer is present, so lets handle any external dependency
 			log.Info("Unregistering the cluster with Astra upon CRD delete")
-			err = r.RemoveLocationIDFromCloudExtension(astraAgent, ctx)
+			err = register.RemoveLocationIDFromCloudExtension(astraAgent, ctx)
 			if err != nil {
 				log.Error(err, "Failed to unregister the cluster with Astra, ignoring...")
 			} else {
@@ -107,7 +116,7 @@ func (r *AstraAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			}
 
 			log.Info("Unregistering natssync-client upon CRD delete")
-			err = r.UnregisterClient(astraAgent)
+			err = register.UnregisterClient(astraAgent)
 			if err != nil {
 				log.Error(err, "Failed to unregister natssync-client, ignoring...")
 			} else {
@@ -171,10 +180,10 @@ func (r *AstraAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	log.Info("Checking for natssync-client configmap")
 	foundCM := &corev1.ConfigMap{}
 	locationID := ""
-	err = r.Get(ctx, types.NamespacedName{Name: NatssyncClientConfigMapName, Namespace: astraAgent.Namespace}, foundCM)
+	err = r.Get(ctx, types.NamespacedName{Name: common.NatssyncClientConfigMapName, Namespace: astraAgent.Namespace}, foundCM)
 	if len(foundCM.Data) != 0 {
 		registered = true
-		locationID, err = getLocationIDFromConfigMap(foundCM.Data)
+		locationID, err = register.GetLocationIDFromConfigMap(foundCM.Data)
 		if err != nil {
 			log.Error(err, "Failed to get the location ID from configmap")
 			return ctrl.Result{RequeueAfter: 1 * time.Minute}, err
@@ -191,7 +200,7 @@ func (r *AstraAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			log.Info("natssync-client already registered", "locationID", locationID)
 		} else {
 			log.Info("Registering natssync-client")
-			locationID, err = r.RegisterClient(astraAgent)
+			locationID, err = register.RegisterClient(astraAgent)
 			if err != nil {
 				log.Error(err, "Failed to register natssync-client")
 				return ctrl.Result{RequeueAfter: 1 * time.Minute}, err
@@ -200,7 +209,7 @@ func (r *AstraAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		}
 
 		log.Info("Registering locationID with Astra")
-		err = r.AddLocationIDtoCloudExtension(astraAgent, locationID, ctx)
+		err = register.AddLocationIDtoCloudExtension(astraAgent, locationID, ctx)
 		if err != nil {
 			log.Error(err, "Failed to register locationID with Astra")
 			return ctrl.Result{RequeueAfter: 1 * time.Minute}, err
@@ -209,7 +218,7 @@ func (r *AstraAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	} else {
 		if registered {
 			log.Info("Unregistering the cluster with Astra")
-			err = r.RemoveLocationIDFromCloudExtension(astraAgent, ctx)
+			err = register.RemoveLocationIDFromCloudExtension(astraAgent, ctx)
 			if err != nil {
 				log.Error(err, "Failed to unregister the cluster with Astra")
 				return ctrl.Result{Requeue: true}, err
@@ -217,7 +226,7 @@ func (r *AstraAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			log.Info("Unregistered the cluster with Astra")
 
 			log.Info("Unregistering natssync-client")
-			err = r.UnregisterClient(astraAgent)
+			err = register.UnregisterClient(astraAgent)
 			if err != nil {
 				log.Error(err, "Failed to unregister natssync-client")
 				return ctrl.Result{Requeue: true}, err
@@ -303,4 +312,95 @@ func contains(strArr []string, input string) bool {
 		}
 	}
 	return false
+}
+
+// getNatssyncClientStatus returns NatssyncClientStatus object
+func (r *AstraAgentReconciler) getNatssyncClientStatus(m *cachev1.AstraAgent, ctx context.Context) (cachev1.NatssyncClientStatus, error) {
+	pods := &corev1.PodList{}
+	lb := natssync_client.LabelsForNatssyncClient(common.NatssyncClientName)
+	listOpts := []client.ListOption{
+		client.MatchingLabels(lb),
+	}
+	log := ctrllog.FromContext(ctx)
+
+	if err := r.List(ctx, pods, listOpts...); err != nil {
+		log.Error(err, "Failed to list pods", "Namespace", m.Namespace)
+		return cachev1.NatssyncClientStatus{}, err
+	}
+
+	natssyncClientStatus := cachev1.NatssyncClientStatus{}
+
+	if len(pods.Items) < 1 {
+		return cachev1.NatssyncClientStatus{}, errors.New("natssync-client pods not found")
+	}
+	nsClientPod := pods.Items[0]
+	// If a pod is terminating, then we can't access the corresponding vault node's status.
+	// so we break from here and return an error.
+	if nsClientPod.Status.Phase != corev1.PodRunning || nsClientPod.DeletionTimestamp != nil {
+		errNew := errors.New("natssync-client not in the desired state")
+		log.Error(errNew, "natssync-client pod", "Phase", nsClientPod.Status.Phase, "DeletionTimestamp", nsClientPod.DeletionTimestamp)
+		return cachev1.NatssyncClientStatus{}, errNew
+	}
+
+	natssyncClientStatus.State = string(nsClientPod.Status.Phase)
+	natssyncClientLocationID, err := r.getNatssyncClientRegistrationStatus(register.GetNatssyncClientRegistrationURL(m))
+	if err != nil {
+		log.Error(err, "Failed to get the registration status")
+		return cachev1.NatssyncClientStatus{}, err
+	}
+	natssyncClientVersion, err := r.getNatssyncClientVersion(r.getNatssyncClientAboutURL(m))
+	if err != nil {
+		log.Error(err, "Failed to get the natssync-client version")
+		return cachev1.NatssyncClientStatus{}, err
+	}
+	natssyncClientStatus.Registered = strconv.FormatBool(natssyncClientLocationID != "")
+	natssyncClientStatus.LocationID = natssyncClientLocationID
+	natssyncClientStatus.Version = natssyncClientVersion
+	return natssyncClientStatus, nil
+}
+
+// getNatssyncClientAboutURL returns NatssyncClient About URL
+func (r *AstraAgentReconciler) getNatssyncClientAboutURL(m *cachev1.AstraAgent) string {
+	natsSyncClientURL := fmt.Sprintf("http://%s.%s:%d/bridge-client/1", common.NatssyncClientName, m.Namespace, common.NatssyncClientPort)
+	natsSyncClientAboutURL := fmt.Sprintf("%s/about", natsSyncClientURL)
+	return natsSyncClientAboutURL
+}
+
+// getNatssyncClientRegistrationStatus returns the locationID string
+func (r *AstraAgentReconciler) getNatssyncClientRegistrationStatus(natsSyncClientRegisterURL string) (string, error) {
+	resp, err := http.Get(natsSyncClientRegisterURL)
+	if err != nil {
+		return "", err
+	}
+
+	type registrationResponse struct {
+		LocationID string `json:"locationID"`
+	}
+	var registrationResp registrationResponse
+	all, err := ioutil.ReadAll(resp.Body)
+	err = json.Unmarshal(all, &registrationResp)
+	if err != nil {
+		return "", err
+	}
+
+	return registrationResp.LocationID, nil
+}
+
+// getNatssyncClientVersion returns the NatssyncClient Version
+func (r *AstraAgentReconciler) getNatssyncClientVersion(natsSyncClientAboutURL string) (string, error) {
+	resp, err := http.Get(natsSyncClientAboutURL)
+	if err != nil {
+		return "", err
+	}
+
+	type aboutResponse struct {
+		AppVersion string `json:"appVersion,omitempty"`
+	}
+	var aboutResp aboutResponse
+	all, err := ioutil.ReadAll(resp.Body)
+	err = json.Unmarshal(all, &aboutResp)
+	if err != nil {
+		return "", err
+	}
+	return aboutResp.AppVersion, nil
 }

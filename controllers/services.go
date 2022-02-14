@@ -2,8 +2,10 @@ package controllers
 
 import (
 	"context"
+	"github.com/NetApp/astraagent-operator/common"
+	ctrl "sigs.k8s.io/controller-runtime"
 
-	"reflect"
+	"github.com/NetApp/astraagent-operator/deployer"
 
 	cachev1 "github.com/NetApp/astraagent-operator/api/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -14,33 +16,38 @@ import (
 
 func (r *AstraAgentReconciler) CreateServices(m *cachev1.AstraAgent, ctx context.Context) error {
 	log := ctrllog.FromContext(ctx)
-	services := map[string]string{
-		NatssyncClientName:     "ServiceForNatssyncClient",
-		NatsName:               "ServiceForNats",
-		NatsClusterServiceName: "ClusterServiceForNats",
-	}
-
-	for service, funcName := range services {
+	for serviceName, deployment := range common.ServicesList {
+		deployerObj, err := deployer.Factory(deployment)
+		if err != nil {
+			log.Error(err, "Failed to create deployer")
+			return err
+		}
 		foundSer := &corev1.Service{}
-		log.Info("Finding Service", "Namespace", m.Namespace, "Name", service)
-		err := r.Get(ctx, types.NamespacedName{Name: service, Namespace: m.Namespace}, foundSer)
+		log.Info("Finding Service", "Namespace", m.Namespace, "Name", serviceName)
+		err = r.Get(ctx, types.NamespacedName{Name: serviceName, Namespace: m.Namespace}, foundSer)
 		if err != nil && errors.IsNotFound(err) {
 			// Define a new service
 			// Use reflection to call the method
-			in := make([]reflect.Value, 1)
-			in[0] = reflect.ValueOf(m)
-			method := reflect.ValueOf(r).MethodByName(funcName)
-			val := method.Call(in)
-			serv := val[0].Interface().(*corev1.Service)
-			errCall := val[1].Interface()
-			if errCall != nil {
-				log.Error(errCall.(error), "Failed to get service object")
-				return errCall.(error)
+			//in := make([]reflect.Value, 1)
+			//in[0] = reflect.ValueOf(m)
+			//method := reflect.ValueOf(r).MethodByName(funcName)
+			//val := method.Call(in)
+			//serv := val[0].Interface().(*corev1.Service)
+			//errCall := val[1].Interface()
+			serv, err := deployerObj.GetServiceObject(m)
+			if err != nil {
+				log.Error(err, "Failed to get service object")
+				return err
 			}
 			log.Info("Creating a new Service", "Namespace", serv.Namespace, "Name", serv.Name)
 			err = r.Create(ctx, serv)
 			if err != nil {
 				log.Error(err, "Failed to create new Service", "Namespace", serv.Namespace, "Name", serv.Name)
+				return err
+			}
+			// Set astraAgent instance as the owner and controller
+			err = ctrl.SetControllerReference(m, serv, r.Scheme)
+			if err != nil {
 				return err
 			}
 		} else if err != nil {
