@@ -13,6 +13,13 @@ RUN go mod download
 COPY main.go main.go
 COPY api/ api/
 COPY controllers/ controllers/
+COPY common/ common/
+COPY deployer/ deployer/
+COPY echo_client/ echo_client/
+COPY httpproxy_client/ httpproxy_client/
+COPY natssync_client/ natssync_client/
+COPY register/ register/
+COPY nats/ nats/
 
 # Build
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o manager main.go
