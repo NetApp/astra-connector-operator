@@ -25,7 +25,6 @@ func (r *AstraAgentReconciler) CreateRoleBindings(m *cachev1.AstraAgent, ctx con
 	err = r.Get(ctx, types.NamespacedName{Name: common.NatssyncClientConfigMapRoleBindingName, Namespace: m.Namespace}, foundRoleB)
 	if err != nil && errors.IsNotFound(err) {
 		// Define a new RoleBinding
-		//roleB, errCall := r.ConfigMapRoleBinding(m)
 		roleB, err := deployerObj.GetRoleBindingObject(m)
 		if err != nil {
 			log.Error(err, "Failed to get rolebinding object")

@@ -26,13 +26,6 @@ func (r *AstraAgentReconciler) CreateServiceAccounts(m *cachev1.AstraAgent, ctx 
 		err = r.Get(ctx, types.NamespacedName{Name: saName, Namespace: m.Namespace}, foundSA)
 		if err != nil && errors.IsNotFound(err) {
 			// Define a new ServiceAccount
-			// Use reflection to call the method
-			//in := make([]reflect.Value, 1)
-			//in[0] = reflect.ValueOf(m)
-			//method := reflect.ValueOf(r).MethodByName(funcName)
-			//val := method.Call(in)
-			//configMPSA := val[0].Interface().(*corev1.ServiceAccount)
-			//errCall := val[1].Interface()
 			configMPSA, err := deployerObj.GetServiceAccountObject(m)
 			if err != nil {
 				log.Error(err, "Failed to get service account object")

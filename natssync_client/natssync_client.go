@@ -130,10 +130,10 @@ func (d *Deployer) GetDeploymentObject(m *cachev1.AstraAgent, ctx context.Contex
 }
 
 // GetServiceObject returns a Natssync-client Service object
-func (d *Deployer) GetServiceObject(m *cachev1.AstraAgent) (*corev1.Service, error) {
+func (d *Deployer) GetServiceObject(m *cachev1.AstraAgent, serviceName string) (*corev1.Service, error) {
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      common.NatssyncClientName,
+			Name:      serviceName,
 			Namespace: m.Namespace,
 			Labels: map[string]string{
 				"app": common.NatssyncClientName,
@@ -222,10 +222,10 @@ func (d *Deployer) GetServiceAccountObject(m *cachev1.AstraAgent) (*corev1.Servi
 	return sa, nil
 }
 
-func (d Deployer) GetStatefulsetObject(m *cachev1.AstraAgent, ctx context.Context) (*appsv1.StatefulSet, error) {
+func (d *Deployer) GetStatefulsetObject(m *cachev1.AstraAgent, ctx context.Context) (*appsv1.StatefulSet, error) {
 	return nil, fmt.Errorf("not implemented")
 }
 
-func (d Deployer) GetClusterServiceObject(m *cachev1.AstraAgent) (*corev1.Service, error) {
+func (d *Deployer) GetClusterServiceObject(m *cachev1.AstraAgent) (*corev1.Service, error) {
 	return nil, fmt.Errorf("not implemented")
 }

@@ -52,11 +52,11 @@ var ConfigMapsList = map[string]string{
 	NatssyncClientConfigMapName: NatssyncClientName,
 }
 
-// serviceAccountsList - serviceAccountName: deploymentName
+// ServiceAccountsList - serviceAccountName: deploymentName
 var ServiceAccountsList = map[string]string{
 	NatssyncClientConfigMapServiceAccountName: NatssyncClientName,
 	NatsServiceAccountName:                    NatsName,
 }
 
-// deploymentsList - deploymentNames
+// DeploymentsList - deploymentNames
 var DeploymentsList = []string{HttpProxyClientName, EchoClientName, NatssyncClientName}

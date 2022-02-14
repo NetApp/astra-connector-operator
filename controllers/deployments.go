@@ -26,14 +26,6 @@ func (r *AstraAgentReconciler) CreateDeployments(m *cachev1.AstraAgent, ctx cont
 		err = r.Get(ctx, types.NamespacedName{Name: deployment, Namespace: m.Namespace}, foundDep)
 		if err != nil && errors.IsNotFound(err) {
 			// Define a new deployment
-			// Use reflection to call the method
-			//in := make([]reflect.Value, 2)
-			//in[0] = reflect.ValueOf(m)
-			//in[1] = reflect.ValueOf(ctx)
-			//method := reflect.ValueOf(r).MethodByName(funcName)
-			//val := method.Call(in)
-			//dep := val[0].Interface().(*appsv1.Deployment)
-			//errCall := val[1].Interface()
 			dep, err := deployerObj.GetDeploymentObject(m, ctx)
 			if err != nil {
 				log.Error(err, "Failed to get Deployment object")
@@ -46,6 +38,7 @@ func (r *AstraAgentReconciler) CreateDeployments(m *cachev1.AstraAgent, ctx cont
 				log.Error(err, "Failed to create new Deployment", "Namespace", dep.Namespace, "Name", dep.Name)
 				return err
 			}
+			// Set astraAgent instance as the owner and controller
 			err = ctrl.SetControllerReference(m, dep, r.Scheme)
 			if err != nil {
 				return err
@@ -64,10 +57,6 @@ func (r *AstraAgentReconciler) CreateDeployments(m *cachev1.AstraAgent, ctx cont
 				log.Error(err, "Failed to update Deployment", "Namespace", foundDep.Namespace, "Name", foundDep.Name)
 				return err
 			}
-			// Ask to requeue after 1 minute in order to give enough time for the
-			// pods be created on the cluster side and the operand be able
-			// to do the next update step accurately.
-
 		}
 	}
 	return nil

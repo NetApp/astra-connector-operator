@@ -27,14 +27,7 @@ func (r *AstraAgentReconciler) CreateServices(m *cachev1.AstraAgent, ctx context
 		err = r.Get(ctx, types.NamespacedName{Name: serviceName, Namespace: m.Namespace}, foundSer)
 		if err != nil && errors.IsNotFound(err) {
 			// Define a new service
-			// Use reflection to call the method
-			//in := make([]reflect.Value, 1)
-			//in[0] = reflect.ValueOf(m)
-			//method := reflect.ValueOf(r).MethodByName(funcName)
-			//val := method.Call(in)
-			//serv := val[0].Interface().(*corev1.Service)
-			//errCall := val[1].Interface()
-			serv, err := deployerObj.GetServiceObject(m)
+			serv, err := deployerObj.GetServiceObject(m, serviceName)
 			if err != nil {
 				log.Error(err, "Failed to get service object")
 				return err

@@ -13,8 +13,7 @@ import (
 type Deployer interface {
 	GetDeploymentObject(m *cachev1.AstraAgent, ctx context.Context) (*appsv1.Deployment, error)
 	GetStatefulsetObject(m *cachev1.AstraAgent, ctx context.Context) (*appsv1.StatefulSet, error)
-	GetServiceObject(m *cachev1.AstraAgent) (*corev1.Service, error)
-	GetClusterServiceObject(m *cachev1.AstraAgent) (*corev1.Service, error)
+	GetServiceObject(m *cachev1.AstraAgent, serviceName string) (*corev1.Service, error)
 	GetConfigMapObject(m *cachev1.AstraAgent) (*corev1.ConfigMap, error)
 	GetServiceAccountObject(m *cachev1.AstraAgent) (*corev1.ServiceAccount, error)
 	GetRoleObject(m *cachev1.AstraAgent) (*rbacv1.Role, error)

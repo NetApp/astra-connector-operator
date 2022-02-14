@@ -131,8 +131,8 @@ func (n *Deployer) GetStatefulsetObject(m *cachev1.AstraAgent, ctx context.Conte
 	return dep, nil
 }
 
-// GetClusterServiceObject returns a cluster Service object for Nats
-func (n *Deployer) GetClusterServiceObject(m *cachev1.AstraAgent) (*corev1.Service, error) {
+// GetNatsClusterServiceObject returns a cluster Service object for Nats
+func (n *Deployer) GetNatsClusterServiceObject(m *cachev1.AstraAgent) (*corev1.Service, error) {
 	ls := labelsForNats(common.NatsName)
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
@@ -198,7 +198,17 @@ func (n *Deployer) GetServiceAccountObject(m *cachev1.AstraAgent) (*corev1.Servi
 }
 
 // GetServiceObject returns a Service object for nats
-func (n *Deployer) GetServiceObject(m *cachev1.AstraAgent) (*corev1.Service, error) {
+func (n *Deployer) GetServiceObject(m *cachev1.AstraAgent, serviceName string) (*corev1.Service, error) {
+	if serviceName == common.NatsName {
+		return n.GetNatsServiceObject(m)
+	} else if serviceName == common.NatsClusterServiceName {
+		return n.GetNatsClusterServiceObject(m)
+	}
+	return nil, fmt.Errorf("unknown serviceName: %s", serviceName)
+}
+
+// GetNatsServiceObject returns a Service object for nats
+func (n *Deployer) GetNatsServiceObject(m *cachev1.AstraAgent) (*corev1.Service, error) {
 	ls := labelsForNats(common.NatsName)
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
@@ -221,7 +231,6 @@ func (n *Deployer) GetServiceObject(m *cachev1.AstraAgent) (*corev1.Service, err
 }
 
 // labelsForNats returns the labels for selecting the nats resources
-// belonging to the given astraAgent CR name.
 func labelsForNats(name string) map[string]string {
 	return map[string]string{"app": name}
 }

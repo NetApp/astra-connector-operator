@@ -25,7 +25,6 @@ func (r *AstraAgentReconciler) CreateRoles(m *cachev1.AstraAgent, ctx context.Co
 	err = r.Get(ctx, types.NamespacedName{Name: common.NatssyncClientConfigMapRoleName, Namespace: m.Namespace}, foundRole)
 	if err != nil && errors.IsNotFound(err) {
 		// Define a new Role
-		//configMPRole, errCall := r.ConfigMapRole(m)
 		configMPRole, err := deployerObj.GetRoleObject(m)
 		if err != nil {
 			log.Error(err, "Failed to get configmap role object")

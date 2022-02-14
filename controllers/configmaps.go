@@ -26,13 +26,6 @@ func (r *AstraAgentReconciler) CreateConfigMaps(m *cachev1.AstraAgent, ctx conte
 		err = r.Get(ctx, types.NamespacedName{Name: cmName, Namespace: m.Namespace}, foundCM)
 		if err != nil && errors.IsNotFound(err) {
 			// Define a new configmap
-			// Use reflection to call the method
-			//in := make([]reflect.Value, 1)
-			//in[0] = reflect.ValueOf(m)
-			//method := reflect.ValueOf(r).MethodByName(funcName)
-			//val := method.Call(in)
-			//configMP := val[0].Interface().(*corev1.ConfigMap)
-			//errCall := val[1].Interface()
 			configMP, err := deployerObj.GetConfigMapObject(m)
 			if err != nil {
 				log.Error(err, "Failed to get configmap object")
@@ -44,6 +37,7 @@ func (r *AstraAgentReconciler) CreateConfigMaps(m *cachev1.AstraAgent, ctx conte
 				log.Error(err, "Failed to create new ConfigMap", "Namespace", configMP.Namespace, "Name", configMP.Name)
 				return err
 			}
+			// Set astraAgent instance as the owner and controller
 			err = ctrl.SetControllerReference(m, configMP, r.Scheme)
 			if err != nil {
 				return err
