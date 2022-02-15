@@ -71,8 +71,6 @@ type AstraAgentStatus struct {
 
 // NatssyncClientStatus defines the observed state of NatssyncClient
 type NatssyncClientStatus struct {
-	Version    string `json:"version"`
-	State      string `json:"state"`
 	Registered string `json:"registered"`
 	LocationID string `json:"locationID"`
 }

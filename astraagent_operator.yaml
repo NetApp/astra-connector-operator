@@ -109,15 +109,9 @@ spec:
                     type: string
                   registered:
                     type: string
-                  state:
-                    type: string
-                  version:
-                    type: string
                 required:
                 - locationID
                 - registered
-                - state
-                - version
                 type: object
               nodes:
                 items:
