@@ -34,14 +34,23 @@ func (d *Deployer) GetDeploymentObject(m *cachev1.AstraAgent, ctx context.Contex
 	log := ctrllog.FromContext(ctx)
 	ls := LabelsForNatssyncClient(common.NatssyncClientName)
 
+	var imageRegistry string
+	var containerImage string
 	var natssyncClientImage string
-	if m.Spec.NatssyncClient.Image != "" {
-		natssyncClientImage = m.Spec.NatssyncClient.Image
+	if m.Spec.ImageRegistry.Name != "" {
+		imageRegistry = m.Spec.EchoClient.Image
 	} else {
-		log.Info("Defaulting the natssyncClient image", "image", common.NatssyncClientDefaultImage)
-		natssyncClientImage = common.NatssyncClientDefaultImage
+		imageRegistry = common.DefaultImageRegistry
 	}
 
+	if m.Spec.NatssyncClient.Image != "" {
+		containerImage = m.Spec.NatssyncClient.Image
+	} else {
+		containerImage = common.NatssyncClientDefaultImage
+	}
+
+	natssyncClientImage = fmt.Sprintf("%s/%s", imageRegistry, containerImage)
+	log.Info("Using NatssyncClient image", "image", natssyncClientImage)
 	natssyncCloudBridgeURL := register.GetAstraHostURL(m, ctx)
 	replicas := int32(common.NatssyncClientSize)
 	keyStoreURLSplit := strings.Split(common.NatssyncClientKeystoreUrl, "://")
@@ -127,6 +136,13 @@ func (d *Deployer) GetDeploymentObject(m *cachev1.AstraAgent, ctx context.Contex
 			{
 				IP:        m.Spec.NatssyncClient.HostAliasIP,
 				Hostnames: []string{hostNamesSplit[1]},
+			},
+		}
+	}
+	if m.Spec.ImageRegistry.Secret != "" {
+		dep.Spec.Template.Spec.ImagePullSecrets = []corev1.LocalObjectReference{
+			{
+				Name: m.Spec.ImageRegistry.Secret,
 			},
 		}
 	}

@@ -37,14 +37,23 @@ func (d *Deployer) GetDeploymentObject(m *cachev1.AstraAgent, ctx context.Contex
 		replicas = common.EchoClientDefaultSize
 	}
 
+	var imageRegistry string
 	var echoClientImage string
-	if m.Spec.EchoClient.Image != "" {
-		echoClientImage = m.Spec.EchoClient.Image
+	var containerImage string
+	if m.Spec.ImageRegistry.Name != "" {
+		imageRegistry = m.Spec.EchoClient.Image
 	} else {
-		log.Info("Defaulting the EchoClient image", "image", common.EchoClientDefaultImage)
-		echoClientImage = common.EchoClientDefaultImage
+		imageRegistry = common.DefaultImageRegistry
 	}
 
+	if m.Spec.EchoClient.Image != "" {
+		containerImage = m.Spec.EchoClient.Image
+	} else {
+		containerImage = common.EchoClientDefaultImage
+	}
+
+	echoClientImage = fmt.Sprintf("%s/%s", imageRegistry, containerImage)
+	log.Info("Using EchoClient image", "image", echoClientImage)
 	dep := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      common.EchoClientName,
@@ -73,6 +82,14 @@ func (d *Deployer) GetDeploymentObject(m *cachev1.AstraAgent, ctx context.Contex
 				},
 			},
 		},
+	}
+
+	if m.Spec.ImageRegistry.Secret != "" {
+		dep.Spec.Template.Spec.ImagePullSecrets = []corev1.LocalObjectReference{
+			{
+				Name: m.Spec.ImageRegistry.Secret,
+			},
+		}
 	}
 	return dep, nil
 }

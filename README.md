@@ -65,6 +65,21 @@ spec:
 ## CRD details
 In the CRD, all the fields in the spec section have to be updated to the correct value
 
+### imageRegistry
+| CRD Spec          | Details       | Optional | Default |
+| ----------------- | ------------- |--------- | --------|
+| name   | Image registry to pull images from | Yes | dockerhub for nats, theotw for the rest |
+| secret   | Image registry secret | Yes | "" |
+
+Example:
+```
+spec:
+    ...
+    imageRegistry:
+        name: theotw
+        secret: otw-secret
+```
+
 ### [natssync-client](https://github.com/theotw/natssync)
 Natssync-Client talks to the Natssync-Server on Astra and ensures communication between Astra and the private AKS cluster
 
@@ -72,7 +87,7 @@ The natssync-client CRD is a map of key/value pairs
 
 | CRD Spec          | Details       | Optional | Default |
 | ----------------- | ------------- |--------- | --------|
-| image   | natssync-client image | Yes | theotw/natssync-client:0.9.202201132025 |
+| image   | natssync-client image | Yes | natssync-client:0.9.202202161623 |
 | cloud-bridge-url  | Astra URL  | Yes | https://integration.astra.netapp.io |
 | skipTLSValidation | Skip TLS Validation| Yes| false |
 | hostalias | Use a custom IP for the cloud bridge hostname| Yes | false |
@@ -104,7 +119,7 @@ spec:
 ### [httpproxy-client](https://github.com/theotw/natssync)
 | CRD Spec | Details       | Optional | Default |
 | ---------| ------------- |--------- | --------|
-| image    | httpproxy-client image | Yes | theotw/httpproxylet:0.9.202201132025 |
+| image    | httpproxy-client image | Yes | httpproxylet:0.9.202202161623 |
 
 Example:
 ```
@@ -117,7 +132,7 @@ spec:
 | CRD Spec | Details       | Optional | Default |
 | ---------| ------------- |--------- | --------|
 | size     | Replica count for the echo-client deployment | Yes | 1 |
-| image    | echo-client image | Yes | theotw/echo-proxylet:0.9.202201132025 |
+| image    | echo-client image | Yes | echo-proxylet:0.9.202202161623 |
 
 Example:
 ```

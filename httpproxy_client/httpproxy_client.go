@@ -30,14 +30,23 @@ func (d *Deployer) GetDeploymentObject(m *cachev1.AstraAgent, ctx context.Contex
 	ls := labelsForProxyClient(common.HttpProxyClientName)
 	replicas := int32(common.HttpProxyClientsize)
 
+	var imageRegistry string
+	var containerImage string
 	var httpProxyClientImage string
-	if m.Spec.HttpProxyClient.Image != "" {
-		httpProxyClientImage = m.Spec.HttpProxyClient.Image
+	if m.Spec.ImageRegistry.Name != "" {
+		imageRegistry = m.Spec.EchoClient.Image
 	} else {
-		log.Info("Defaulting the HttpProxyClient image", "image", common.HttpProxyClientDefaultImage)
-		httpProxyClientImage = common.HttpProxyClientDefaultImage
+		imageRegistry = common.DefaultImageRegistry
 	}
 
+	if m.Spec.HttpProxyClient.Image != "" {
+		containerImage = m.Spec.HttpProxyClient.Image
+	} else {
+		containerImage = common.HttpProxyClientDefaultImage
+	}
+
+	httpProxyClientImage = fmt.Sprintf("%s/%s", imageRegistry, containerImage)
+	log.Info("Using HttpProxyClient image", "image", httpProxyClientImage)
 	dep := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      common.HttpProxyClientName,
@@ -66,6 +75,14 @@ func (d *Deployer) GetDeploymentObject(m *cachev1.AstraAgent, ctx context.Contex
 				},
 			},
 		},
+	}
+
+	if m.Spec.ImageRegistry.Secret != "" {
+		dep.Spec.Template.Spec.ImagePullSecrets = []corev1.LocalObjectReference{
+			{
+				Name: m.Spec.ImageRegistry.Secret,
+			},
+		}
 	}
 	return dep, nil
 }

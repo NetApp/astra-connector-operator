@@ -38,13 +38,26 @@ func (n *Deployer) GetStatefulsetObject(m *cachev1.AstraAgent, ctx context.Conte
 	}
 
 	var natsImage string
-	if m.Spec.Nats.Image != "" {
-		natsImage = m.Spec.Nats.Image
+	var imageRegistry string
+	var containerImage string
+	if m.Spec.ImageRegistry.Name != "" {
+		imageRegistry = m.Spec.EchoClient.Image
 	} else {
-		log.Info("Defaulting the Nats image", "image", common.NatsDefaultImage)
-		natsImage = common.NatsDefaultImage
+		imageRegistry = ""
 	}
 
+	if m.Spec.Nats.Image != "" {
+		containerImage = m.Spec.Nats.Image
+	} else {
+		containerImage = common.NatsDefaultImage
+	}
+
+	if imageRegistry == "" {
+		natsImage = containerImage
+	} else {
+		natsImage = fmt.Sprintf("%s/%s", imageRegistry, containerImage)
+	}
+	log.Info("Using nats image", "image", natsImage)
 	dep := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      common.NatsName,
@@ -131,6 +144,13 @@ func (n *Deployer) GetStatefulsetObject(m *cachev1.AstraAgent, ctx context.Conte
 				},
 			},
 		},
+	}
+	if m.Spec.ImageRegistry.Secret != "" {
+		dep.Spec.Template.Spec.ImagePullSecrets = []corev1.LocalObjectReference{
+			{
+				Name: m.Spec.ImageRegistry.Secret,
+			},
+		}
 	}
 	return dep, nil
 }

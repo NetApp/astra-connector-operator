@@ -75,6 +75,13 @@ spec:
                   image:
                     type: string
                 type: object
+              imageRegistry:
+                properties:
+                  name:
+                    type: string
+                  secret:
+                    type: string
+                type: object
               nats:
                 properties:
                   image:

@@ -5,12 +5,14 @@
 package common
 
 const (
+	DefaultImageRegistry = "theotw"
+
 	NatssyncClientName                  = "natssync-client"
 	NatssyncClientSize                  = 1
 	NatssyncClientPort                  = 8080
 	NatssyncClientProtocol              = "TCP"
 	NatssyncClientKeystoreUrl           = "configmap:///configmap-data"
-	NatssyncClientDefaultImage          = "theotw/natssync-client:0.9.202202161623"
+	NatssyncClientDefaultImage          = "natssync-client:0.9.202202161623"
 	NatssyncClientDefaultCloudBridgeURL = "https://integration.astra.netapp.io"
 
 	NatsName               = "nats"
@@ -28,11 +30,11 @@ const (
 
 	HttpProxyClientName         = "httpproxy-client"
 	HttpProxyClientsize         = 1
-	HttpProxyClientDefaultImage = "theotw/httpproxylet:0.9.202202161623"
+	HttpProxyClientDefaultImage = "httpproxylet:0.9.202202161623"
 
 	EchoClientName         = "echo-client"
 	EchoClientDefaultSize  = 1
-	EchoClientDefaultImage = "theotw/echo-proxylet:0.9.202202161623"
+	EchoClientDefaultImage = "echo-proxylet:0.9.202202161623"
 
 	NatssyncClientConfigMapName               = "natssync-client-configmap"
 	NatssyncClientConfigMapRoleName           = "natssync-client-configmap-role"
@@ -63,4 +65,4 @@ var ServiceAccountsList = map[string]string{
 }
 
 // DeploymentsList - deploymentNames
-var DeploymentsList = []string{HttpProxyClientName, EchoClientName, NatssyncClientName}
+var DeploymentsList = []string{NatssyncClientName, HttpProxyClientName, EchoClientName}
