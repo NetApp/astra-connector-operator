@@ -10,8 +10,7 @@ fi
 parentDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 outputFilename=$1
 crdPath="${parentDir}/../config/samples/astraagent_v1.yaml"
-
-repo=($(cat ${crdPath} | yq "..|.imageRegistry.name? | select(.)"))
+repo="theotw"
 
 # Parse images from chart. 'yq' parses yaml, and then we sort and create space separated array
 images=($(cat ${crdPath} | yq "..|.image? | select(.)" | sort -u | tr "\n" " "))
