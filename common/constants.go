@@ -29,7 +29,7 @@ const (
 	NatsDefaultImage       = "nats:2.6.1-alpine3.14"
 
 	HttpProxyClientName         = "httpproxy-client"
-	HttpProxyClientsize         = 2
+	HttpProxyClientsize         = 1
 	HttpProxyClientDefaultImage = "httpproxylet:0.9.202202170408"
 
 	EchoClientName         = "echo-client"
