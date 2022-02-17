@@ -1,3 +1,11 @@
+MAKEFILE_PATH := $(abspath $(lastword $(MAKEFILE_LIST)))
+MAKEFILE_DIR := $(shell echo "$(MAKEFILE_PATH)" | sed 's,/Makefile,,' )
+
+# Paths
+SCRIPTS_DIR := $(MAKEFILE_DIR)/scripts
+BUILD_DIR := $(MAKEFILE_DIR)/build
+OUTPUT_IMAGE_TAR_DIR := $(BUILD_DIR)/images
+
 # VERSION defines the project version for the bundle.
 # Update this value when you upgrade the version of your project.
 # To re-generate a bundle for another specific version without changing the standard setup, you can:
@@ -208,3 +216,8 @@ l1: manifests generate fmt vet envtest
 	cat out/l1_out.txt | go-junit-report > out/l1_report.xml || echo "Failure generating report xml"; \
 	cat out/l1_out.txt; \
 	exit $$SUCCESS;
+
+image-tar:
+	rm -rf ${OUTPUT_IMAGE_TAR_DIR}
+	mkdir -p ${OUTPUT_IMAGE_TAR_DIR}
+	$(SCRIPTS_DIR)/create-image-tar.sh ${OUTPUT_IMAGE_TAR_DIR}/astra-agent-images.tar

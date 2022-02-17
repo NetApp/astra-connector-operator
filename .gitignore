@@ -23,3 +23,6 @@ testbin/*
 *.swp
 *.swo
 *~
+
+# build dir
+build/
