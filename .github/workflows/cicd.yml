@@ -42,10 +42,10 @@ jobs:
       - name: Build Images
         run: |
           BASE_VERSION=$(cat version.txt)
-          export IMAGE_TAG=$BASE_VERSION.$(date -u '+%Y%m%d%H%M')
+          export VERSION=$BASE_VERSION.$(date -u '+%Y%m%d%H%M')
           echo $BASE_VERSION
-          echo $IMAGE_TAG
-          echo $IMAGE_TAG > IMAGE_TAG
+          echo $VERSION
+          echo $VERSION > VERSION
           make docker-build
 
       - name: Deploy to DockerHub
@@ -54,6 +54,6 @@ jobs:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           DOCKERHUB_PASSWORD: ${{ secrets.DOCKERHUB_PASSWORD }}
         run: |
-          export VERSION=$(cat IMAGE_TAG)
+          export VERSION=$(cat VERSION)
           docker login -u $DOCKERHUB_USERNAME -p $DOCKERHUB_PASSWORD
           make docker-push
