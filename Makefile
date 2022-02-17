@@ -199,12 +199,3 @@ catalog-build: opm ## Build a catalog image.
 .PHONY: catalog-push
 catalog-push: ## Push a catalog image.
 	$(MAKE) docker-push IMG=$(CATALOG_IMG)
-
-l1:
-	SUCCESS=0; \
-	go get github.com/jstemmer/go-junit-report; \
-	mkdir -p out; \
-	go test -v -coverpkg=github.com/NetApp/astraagent-operator/... -coverprofile=out/unit_coverage.out github.com/NetApp/astraagent-operator/... > out/l1_out.txt 2>&1 || SUCCESS=1; \
-	cat out/l1_out.txt | go-junit-report > out/l1_report.xml || echo "Failure generating report xml"; \
-	cat out/l1_out.txt; \
-	exit $$SUCCESS;
