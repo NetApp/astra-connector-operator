@@ -10,8 +10,9 @@ import (
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+
+	corev1 "k8s.io/api/core/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -23,7 +24,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/runtime"
 
-	cachev1 "github.com/NetApp/astraagent-operator/api/v1"
+	v1 "github.com/NetApp/astraagent-operator/api/v1"
 	"github.com/NetApp/astraagent-operator/common"
 	"github.com/NetApp/astraagent-operator/register"
 )
@@ -50,7 +51,7 @@ func (r *AstraAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	log := ctrllog.FromContext(ctx)
 
 	// Fetch the AstraAgent instance
-	astraAgent := &cachev1.AstraAgent{}
+	astraAgent := &v1.AstraAgent{}
 	err := r.Get(ctx, req.NamespacedName, astraAgent)
 	if err != nil {
 		if k8serrors.IsNotFound(err) {
@@ -176,7 +177,7 @@ func (r *AstraAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	}
 
 	// RegisterClient
-	natssyncClientStatus := cachev1.NatssyncClientStatus{}
+	natssyncClientStatus := v1.NatssyncClientStatus{}
 	if !astraAgent.Spec.Astra.Unregister {
 		if registered {
 			log.Info("natssync-client already registered", "locationID", locationID)
@@ -264,7 +265,7 @@ func (r *AstraAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 // SetupWithManager sets up the controller with the Manager.
 func (r *AstraAgentReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&cachev1.AstraAgent{}).
+		For(&v1.AstraAgent{}).
 		Owns(&appsv1.Deployment{}).
 		Owns(&appsv1.StatefulSet{}).
 		Owns(&corev1.Service{}).

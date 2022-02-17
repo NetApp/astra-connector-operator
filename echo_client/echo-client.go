@@ -10,7 +10,7 @@ import (
 
 	rbacv1 "k8s.io/api/rbac/v1"
 
-	cachev1 "github.com/NetApp/astraagent-operator/api/v1"
+	v1 "github.com/NetApp/astraagent-operator/api/v1"
 	"github.com/NetApp/astraagent-operator/common"
 	"github.com/NetApp/astraagent-operator/nats"
 	appsv1 "k8s.io/api/apps/v1"
@@ -26,7 +26,7 @@ func NewEchoClientDeployer() *Deployer {
 }
 
 // GetDeploymentObject returns an EchoClient Deployment object
-func (d *Deployer) GetDeploymentObject(m *cachev1.AstraAgent, ctx context.Context) (*appsv1.Deployment, error) {
+func (d *Deployer) GetDeploymentObject(m *v1.AstraAgent, ctx context.Context) (*appsv1.Deployment, error) {
 	log := ctrllog.FromContext(ctx)
 	ls := labelsForEchoClient(common.EchoClientName)
 	var replicas int32
@@ -99,26 +99,26 @@ func labelsForEchoClient(name string) map[string]string {
 	return map[string]string{"app": name}
 }
 
-func (d *Deployer) GetStatefulsetObject(m *cachev1.AstraAgent, ctx context.Context) (*appsv1.StatefulSet, error) {
+func (d *Deployer) GetStatefulsetObject(m *v1.AstraAgent, ctx context.Context) (*appsv1.StatefulSet, error) {
 	return nil, fmt.Errorf("not implemented")
 }
 
-func (d *Deployer) GetServiceObject(m *cachev1.AstraAgent, serviceName string) (*corev1.Service, error) {
+func (d *Deployer) GetServiceObject(m *v1.AstraAgent, serviceName string) (*corev1.Service, error) {
 	return nil, fmt.Errorf("not implemented")
 }
 
-func (d *Deployer) GetConfigMapObject(m *cachev1.AstraAgent) (*corev1.ConfigMap, error) {
+func (d *Deployer) GetConfigMapObject(m *v1.AstraAgent) (*corev1.ConfigMap, error) {
 	return nil, fmt.Errorf("not implemented")
 }
 
-func (d *Deployer) GetServiceAccountObject(m *cachev1.AstraAgent) (*corev1.ServiceAccount, error) {
+func (d *Deployer) GetServiceAccountObject(m *v1.AstraAgent) (*corev1.ServiceAccount, error) {
 	return nil, fmt.Errorf("not implemented")
 }
 
-func (d *Deployer) GetRoleObject(m *cachev1.AstraAgent) (*rbacv1.Role, error) {
+func (d *Deployer) GetRoleObject(m *v1.AstraAgent) (*rbacv1.Role, error) {
 	return nil, fmt.Errorf("not implemented")
 }
 
-func (d *Deployer) GetRoleBindingObject(m *cachev1.AstraAgent) (*rbacv1.RoleBinding, error) {
+func (d *Deployer) GetRoleBindingObject(m *v1.AstraAgent) (*rbacv1.RoleBinding, error) {
 	return nil, fmt.Errorf("not implemented")
 }

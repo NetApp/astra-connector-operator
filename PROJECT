@@ -4,7 +4,7 @@ layout:
 plugins:
   manifests.sdk.operatorframework.io/v2: {}
   scorecard.sdk.operatorframework.io/v2: {}
-projectName: operator
+projectName: astraagent-operator
 repo: github.com/NetApp/astraagent-operator
 resources:
 - api:
@@ -12,7 +12,7 @@ resources:
     namespaced: true
   controller: true
   domain: astraagent.com
-  group: cache
+  group: netapp.astraagent.com
   kind: AstraAgent
   path: github.com/NetApp/astraagent-operator/api/v1
   version: v1

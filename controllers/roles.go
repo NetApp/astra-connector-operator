@@ -6,18 +6,17 @@ package controllers
 
 import (
 	"context"
+	v1 "github.com/NetApp/astraagent-operator/api/v1"
 	"github.com/NetApp/astraagent-operator/common"
 	"github.com/NetApp/astraagent-operator/deployer"
-	ctrl "sigs.k8s.io/controller-runtime"
-
-	cachev1 "github.com/NetApp/astraagent-operator/api/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
+	ctrl "sigs.k8s.io/controller-runtime"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-func (r *AstraAgentReconciler) CreateRoles(m *cachev1.AstraAgent, ctx context.Context) error {
+func (r *AstraAgentReconciler) CreateRoles(m *v1.AstraAgent, ctx context.Context) error {
 	log := ctrllog.FromContext(ctx)
 	deployerObj, err := deployer.Factory("natssync-client")
 	if err != nil {
@@ -34,15 +33,15 @@ func (r *AstraAgentReconciler) CreateRoles(m *cachev1.AstraAgent, ctx context.Co
 			log.Error(err, "Failed to get configmap role object")
 			return err
 		}
+		// Set astraAgent instance as the owner and controller
+		err = ctrl.SetControllerReference(m, configMPRole, r.Scheme)
+		if err != nil {
+			return err
+		}
 		log.Info("Creating a new Role", "Namespace", configMPRole.Namespace, "Name", configMPRole.Name)
 		err = r.Create(ctx, configMPRole)
 		if err != nil {
 			log.Error(err, "Failed to create new Role", "Namespace", configMPRole.Namespace, "Name", configMPRole.Name)
-			return err
-		}
-		// Set astraAgent instance as the owner and controller
-		err = ctrl.SetControllerReference(m, configMPRole, r.Scheme)
-		if err != nil {
 			return err
 		}
 	} else if err != nil {

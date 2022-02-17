@@ -6,18 +6,19 @@ package controllers
 
 import (
 	"context"
-	"github.com/NetApp/astraagent-operator/common"
-	"github.com/NetApp/astraagent-operator/deployer"
+
 	ctrl "sigs.k8s.io/controller-runtime"
 
-	cachev1 "github.com/NetApp/astraagent-operator/api/v1"
+	v1 "github.com/NetApp/astraagent-operator/api/v1"
+	"github.com/NetApp/astraagent-operator/common"
+	"github.com/NetApp/astraagent-operator/deployer"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-func (r *AstraAgentReconciler) CreateDeployments(m *cachev1.AstraAgent, ctx context.Context) error {
+func (r *AstraAgentReconciler) CreateDeployments(m *v1.AstraAgent, ctx context.Context) error {
 	log := ctrllog.FromContext(ctx)
 	for _, deployment := range common.DeploymentsList {
 		foundDep := &appsv1.Deployment{}
@@ -35,16 +36,15 @@ func (r *AstraAgentReconciler) CreateDeployments(m *cachev1.AstraAgent, ctx cont
 				log.Error(err, "Failed to get Deployment object")
 				return err
 			}
-
+			// Set astraAgent instance as the owner and controller
+			err = ctrl.SetControllerReference(m, dep, r.Scheme)
+			if err != nil {
+				return err
+			}
 			log.Info("Creating a new Deployment", "Namespace", dep.Namespace, "Name", dep.Name)
 			err = r.Create(ctx, dep)
 			if err != nil {
 				log.Error(err, "Failed to create new Deployment", "Namespace", dep.Namespace, "Name", dep.Name)
-				return err
-			}
-			// Set astraAgent instance as the owner and controller
-			err = ctrl.SetControllerReference(m, dep, r.Scheme)
-			if err != nil {
 				return err
 			}
 		} else if err != nil {

@@ -6,18 +6,17 @@ package controllers
 
 import (
 	"context"
+	v1 "github.com/NetApp/astraagent-operator/api/v1"
 	"github.com/NetApp/astraagent-operator/common"
 	"github.com/NetApp/astraagent-operator/deployer"
-	ctrl "sigs.k8s.io/controller-runtime"
-
-	cachev1 "github.com/NetApp/astraagent-operator/api/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
+	ctrl "sigs.k8s.io/controller-runtime"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-func (r *AstraAgentReconciler) CreateRoleBindings(m *cachev1.AstraAgent, ctx context.Context) error {
+func (r *AstraAgentReconciler) CreateRoleBindings(m *v1.AstraAgent, ctx context.Context) error {
 	log := ctrllog.FromContext(ctx)
 	deployerObj, err := deployer.Factory("natssync-client")
 	if err != nil {
@@ -34,15 +33,15 @@ func (r *AstraAgentReconciler) CreateRoleBindings(m *cachev1.AstraAgent, ctx con
 			log.Error(err, "Failed to get rolebinding object")
 			return err
 		}
+		// Set astraAgent instance as the owner and controller
+		err = ctrl.SetControllerReference(m, roleB, r.Scheme)
+		if err != nil {
+			return err
+		}
 		log.Info("Creating a new RoleBinding", "Namespace", roleB.Namespace, "Name", roleB.Name)
 		err = r.Create(ctx, roleB)
 		if err != nil {
 			log.Error(err, "Failed to create new RoleBinding", "Namespace", roleB.Namespace, "Name", roleB.Name)
-			return err
-		}
-		// Set astraAgent instance as the owner and controller
-		err = ctrl.SetControllerReference(m, roleB, r.Scheme)
-		if err != nil {
 			return err
 		}
 	} else if err != nil {

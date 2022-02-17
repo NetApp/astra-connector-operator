@@ -22,14 +22,14 @@ import (
 
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
-	cachev1 "github.com/NetApp/astraagent-operator/api/v1"
+	v1 "github.com/NetApp/astraagent-operator/api/v1"
 )
 
 const (
 	errorRetrySleep time.Duration = time.Second * 3
 )
 
-func RegisterClient(m *cachev1.AstraAgent) (string, error) {
+func RegisterClient(m *v1.AstraAgent) (string, error) {
 	natsSyncClientRegisterURL := GetNatssyncClientRegistrationURL(m)
 	reqBodyBytes, err := generateAuthPayload(m)
 	if err != nil {
@@ -60,7 +60,7 @@ func RegisterClient(m *cachev1.AstraAgent) (string, error) {
 	return locationId.LocationId, nil
 }
 
-func UnregisterClient(m *cachev1.AstraAgent) error {
+func UnregisterClient(m *v1.AstraAgent) error {
 	natsSyncClientUnregisterURL := getNatssyncClientUnregisterURL(m)
 	reqBodyBytes, err := generateAuthPayload(m)
 	if err != nil {
@@ -83,7 +83,7 @@ func UnregisterClient(m *cachev1.AstraAgent) error {
 	return nil
 }
 
-func generateAuthPayload(m *cachev1.AstraAgent) ([]byte, error) {
+func generateAuthPayload(m *v1.AstraAgent) ([]byte, error) {
 	authPayload, err := json.Marshal(map[string]string{
 		"userToken": m.Spec.Astra.Token,
 		"accountId": m.Spec.Astra.AccountID,
@@ -98,7 +98,7 @@ func generateAuthPayload(m *cachev1.AstraAgent) ([]byte, error) {
 	return reqBodyBytes, nil
 }
 
-func GetAstraHostURL(m *cachev1.AstraAgent, ctx context.Context) string {
+func GetAstraHostURL(m *v1.AstraAgent, ctx context.Context) string {
 	log := ctrllog.FromContext(ctx)
 	var astraHost string
 	if m.Spec.NatssyncClient.CloudBridgeURL != "" {
@@ -119,7 +119,7 @@ func getAstraHostFromURL(astraHostURL string) (string, error) {
 	return cloudBridgeURLSplit[1], nil
 }
 
-func AddLocationIDtoCloudExtension(m *cachev1.AstraAgent, locationID string, ctx context.Context) error {
+func AddLocationIDtoCloudExtension(m *v1.AstraAgent, locationID string, ctx context.Context) error {
 	log := ctrllog.FromContext(ctx)
 	setTlsValidation(m.Spec.NatssyncClient.SkipTLSValidation, ctx)
 
@@ -193,7 +193,7 @@ func AddLocationIDtoCloudExtension(m *cachev1.AstraAgent, locationID string, ctx
 	return nil
 }
 
-func RemoveLocationIDFromCloudExtension(m *cachev1.AstraAgent, ctx context.Context) error {
+func RemoveLocationIDFromCloudExtension(m *v1.AstraAgent, ctx context.Context) error {
 	log := ctrllog.FromContext(ctx)
 	setTlsValidation(m.Spec.NatssyncClient.SkipTLSValidation, ctx)
 
@@ -494,7 +494,7 @@ func setTlsValidation(disableTls bool, ctx context.Context) {
 	}
 }
 
-func checkCloudCreds(astraHost string, m *cachev1.AstraAgent, ctx context.Context) (string, error) {
+func checkCloudCreds(astraHost string, m *v1.AstraAgent, ctx context.Context) (string, error) {
 	log := ctrllog.FromContext(ctx)
 	setTlsValidation(m.Spec.NatssyncClient.SkipTLSValidation, ctx)
 
@@ -594,7 +594,7 @@ func checkCloudCreds(astraHost string, m *cachev1.AstraAgent, ctx context.Contex
 	return "", nil
 }
 
-func createCloud(astraHost string, m *cachev1.AstraAgent, ctx context.Context) (string, error) {
+func createCloud(astraHost string, m *v1.AstraAgent, ctx context.Context) (string, error) {
 	log := ctrllog.FromContext(ctx)
 	setTlsValidation(m.Spec.NatssyncClient.SkipTLSValidation, ctx)
 
@@ -675,14 +675,14 @@ func GetLocationIDFromConfigMap(cmData map[string]string) (string, error) {
 }
 
 // GetNatssyncClientRegistrationURL returns NatssyncClient Registration URL
-func GetNatssyncClientRegistrationURL(m *cachev1.AstraAgent) string {
+func GetNatssyncClientRegistrationURL(m *v1.AstraAgent) string {
 	natsSyncClientURL := fmt.Sprintf("http://%s.%s:%d/bridge-client/1", common.NatssyncClientName, m.Namespace, common.NatssyncClientPort)
 	natsSyncClientRegisterURL := fmt.Sprintf("%s/register", natsSyncClientURL)
 	return natsSyncClientRegisterURL
 }
 
 // getNatssyncClientUnregisterURL returns NatssyncClient Unregister URL
-func getNatssyncClientUnregisterURL(m *cachev1.AstraAgent) string {
+func getNatssyncClientUnregisterURL(m *v1.AstraAgent) string {
 	natsSyncClientURL := fmt.Sprintf("http://%s.%s:%d/bridge-client/1", common.NatssyncClientName, m.Namespace, common.NatssyncClientPort)
 	natsSyncClientRegisterURL := fmt.Sprintf("%s/unregister", natsSyncClientURL)
 	return natsSyncClientRegisterURL

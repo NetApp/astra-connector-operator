@@ -13,7 +13,7 @@ import (
 	"strconv"
 	"strings"
 
-	cachev1 "github.com/NetApp/astraagent-operator/api/v1"
+	v1 "github.com/NetApp/astraagent-operator/api/v1"
 	"github.com/NetApp/astraagent-operator/common"
 	"github.com/NetApp/astraagent-operator/nats"
 	appsv1 "k8s.io/api/apps/v1"
@@ -30,7 +30,7 @@ func NewNatssyncClientDeployer() *Deployer {
 }
 
 // GetDeploymentObject returns a Natssync-client Deployment object
-func (d *Deployer) GetDeploymentObject(m *cachev1.AstraAgent, ctx context.Context) (*appsv1.Deployment, error) {
+func (d *Deployer) GetDeploymentObject(m *v1.AstraAgent, ctx context.Context) (*appsv1.Deployment, error) {
 	log := ctrllog.FromContext(ctx)
 	ls := LabelsForNatssyncClient(common.NatssyncClientName)
 
@@ -150,7 +150,7 @@ func (d *Deployer) GetDeploymentObject(m *cachev1.AstraAgent, ctx context.Contex
 }
 
 // GetServiceObject returns a Natssync-client Service object
-func (d *Deployer) GetServiceObject(m *cachev1.AstraAgent, serviceName string) (*corev1.Service, error) {
+func (d *Deployer) GetServiceObject(m *v1.AstraAgent, serviceName string) (*corev1.Service, error) {
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      serviceName,
@@ -181,7 +181,7 @@ func LabelsForNatssyncClient(name string) map[string]string {
 }
 
 // GetConfigMapObject returns a ConfigMap object for NatssyncClient
-func (d *Deployer) GetConfigMapObject(m *cachev1.AstraAgent) (*corev1.ConfigMap, error) {
+func (d *Deployer) GetConfigMapObject(m *v1.AstraAgent) (*corev1.ConfigMap, error) {
 	configMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: m.Namespace,
@@ -192,7 +192,7 @@ func (d *Deployer) GetConfigMapObject(m *cachev1.AstraAgent) (*corev1.ConfigMap,
 }
 
 // GetRoleObject returns a ConfigMapRole object for NatssyncClient
-func (d *Deployer) GetRoleObject(m *cachev1.AstraAgent) (*rbacv1.Role, error) {
+func (d *Deployer) GetRoleObject(m *v1.AstraAgent) (*rbacv1.Role, error) {
 	configMapRole := &rbacv1.Role{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: m.Namespace,
@@ -210,7 +210,7 @@ func (d *Deployer) GetRoleObject(m *cachev1.AstraAgent) (*rbacv1.Role, error) {
 }
 
 // GetRoleBindingObject returns a Natssync-Client ConfigMapRoleBinding object
-func (d *Deployer) GetRoleBindingObject(m *cachev1.AstraAgent) (*rbacv1.RoleBinding, error) {
+func (d *Deployer) GetRoleBindingObject(m *v1.AstraAgent) (*rbacv1.RoleBinding, error) {
 	configMapRoleBinding := &rbacv1.RoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: m.Namespace,
@@ -232,7 +232,7 @@ func (d *Deployer) GetRoleBindingObject(m *cachev1.AstraAgent) (*rbacv1.RoleBind
 }
 
 // GetServiceAccountObject returns a ServiceAccount object for NatssyncClient
-func (d *Deployer) GetServiceAccountObject(m *cachev1.AstraAgent) (*corev1.ServiceAccount, error) {
+func (d *Deployer) GetServiceAccountObject(m *v1.AstraAgent) (*corev1.ServiceAccount, error) {
 	sa := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      common.NatssyncClientConfigMapServiceAccountName,
@@ -242,10 +242,10 @@ func (d *Deployer) GetServiceAccountObject(m *cachev1.AstraAgent) (*corev1.Servi
 	return sa, nil
 }
 
-func (d *Deployer) GetStatefulsetObject(m *cachev1.AstraAgent, ctx context.Context) (*appsv1.StatefulSet, error) {
+func (d *Deployer) GetStatefulsetObject(m *v1.AstraAgent, ctx context.Context) (*appsv1.StatefulSet, error) {
 	return nil, fmt.Errorf("not implemented")
 }
 
-func (d *Deployer) GetClusterServiceObject(m *cachev1.AstraAgent) (*corev1.Service, error) {
+func (d *Deployer) GetClusterServiceObject(m *v1.AstraAgent) (*corev1.Service, error) {
 	return nil, fmt.Errorf("not implemented")
 }
