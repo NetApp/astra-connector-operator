@@ -22,15 +22,7 @@ Update the CRD with the right values. Refer to the table below for explanations 
 ```
 kubectl apply -f config/samples/astraagent_v1.yaml -n astra-agent
 ```
-### Unregister the private cluster with Astra
-- Unmanage the cluster from the Astra UI
-- Change the value of `register` to false in the CRD
-```
-spec:
-  ......
-  astra:
-    register: false
-```
+
 Apply the AstraAgent CRD
 ```
 kubectl apply -f config/samples/astraagent_v1.yaml -n astra-agent
@@ -146,8 +138,8 @@ spec:
 ### [astra](https://cloud.netapp.com/astra)
 | CRD Spec      | Details       | Optional | Default |
 | ------------- | ------------- | -------- |--------|
-| unregister    | (Unregister the cluster with Astra | Yes | false |
-| token         | Astra API token of a user with an Owner Role| No | |
+| unregister    | Unregister the cluster with Astra | Yes | false |
+| token         | Astra API token of a user with an Owner Role| Yes | |
 | clusterName   | Name of the private AKS cluster | No | |
 | accountId     | Astra account ID | No | |
 | acceptEULA    | End User License Agreement | No | no |

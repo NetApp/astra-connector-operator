@@ -194,22 +194,30 @@ func (r *AstraAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		natssyncClientStatus.Registered = "true"
 		natssyncClientStatus.LocationID = locationID
 
-		log.Info("Registering locationID with Astra")
-		err = register.AddLocationIDtoCloudExtension(astraAgent, locationID, ctx)
-		if err != nil {
-			log.Error(err, "Failed to register locationID with Astra")
-			return ctrl.Result{RequeueAfter: 1 * time.Minute}, err
+		if astraAgent.Spec.Astra.Token == "" ||  astraAgent.Spec.Astra.AccountID == "" ||  astraAgent.Spec.Astra.ClusterName == "" {
+			log.Info("Skipping cluster registration with Astra, incomplete Astra details provided Token/AccountID/ClusterName")
+		} else {
+			log.Info("Registering cluster with Astra")
+			err = register.AddLocationIDtoCloudExtension(astraAgent, locationID, ctx)
+			if err != nil {
+				log.Error(err, "Failed to register locationID with Astra")
+				return ctrl.Result{RequeueAfter: 1 * time.Minute}, err
+			}
+			log.Info("Registered cluster with Astra")
 		}
-		log.Info("Registered locationID with Astra")
 	} else {
 		if registered {
-			log.Info("Unregistering the cluster with Astra")
-			err = register.RemoveLocationIDFromCloudExtension(astraAgent, ctx)
-			if err != nil {
-				log.Error(err, "Failed to unregister the cluster with Astra")
-				return ctrl.Result{Requeue: true}, err
+			if astraAgent.Spec.Astra.Token == "" ||  astraAgent.Spec.Astra.AccountID == "" ||  astraAgent.Spec.Astra.ClusterName == "" {
+				log.Info("Skipping cluster unregister with Astra, incomplete Astra details provided Token/AccountID/ClusterName")
+			} else {
+				log.Info("Unregistering the cluster with Astra")
+				err = register.RemoveLocationIDFromCloudExtension(astraAgent, ctx)
+				if err != nil {
+					log.Error(err, "Failed to unregister the cluster with Astra")
+					return ctrl.Result{Requeue: true}, err
+				}
+				log.Info("Unregistered the cluster with Astra")
 			}
-			log.Info("Unregistered the cluster with Astra")
 
 			log.Info("Unregistering natssync-client")
 			err = register.UnregisterClient(astraAgent)

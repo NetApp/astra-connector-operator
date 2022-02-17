@@ -59,7 +59,6 @@ spec:
                 - acceptEULA
                 - accountId
                 - clusterName
-                - token
                 type: object
               echo-client:
                 properties:
