@@ -4,9 +4,15 @@ metadata:
   name: astra-agent
 spec:
   natssync-client:
-    skipTLSValidation: true
-    hostalias: true
-    hostaliasIP: 54.188.143.77
+    image: natssync-client:0.9.202202170408
+  nats:
+    image: nats:2.6.1-alpine3.14
+  httpproxy-client:
+    image: httpproxylet:0.9.202202170408
+  echo-client:
+    image: echo-proxylet:0.9.202202170408
+  imageRegistry:
+    name: theotw
   astra:
     token: nQeQPq065VWAq760PPULAizUDzrGweT3aCRR_-XA2q8=
     clusterName: ipsprintdemo
