@@ -450,7 +450,7 @@ spec:
         - --leader-elect
         command:
         - /manager
-        image: netapp/astra-agent-operator:1.0.202202182238
+        image: netapp/astra-agent-operator:1.0.202202182249
         livenessProbe:
           httpGet:
             path: /healthz
