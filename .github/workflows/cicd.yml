@@ -59,7 +59,7 @@ jobs:
           make docker-push
 
       - name: Update the operator image tag
-        if: github.ref == 'refs/heads/cicd-operator-yaml-1'
+        if: github.ref == 'refs/heads/master'
         run: |
           export VERSION=$(cat VERSION)
           sed -i "s/netapp\/astra-agent-operator.*/netapp\/astra-agent-operator:${VERSION}/" astraagent_operator.yaml
@@ -68,4 +68,4 @@ jobs:
           git add astraagent_operator.yaml
           git diff astraagent_operator.yaml
           git commit -m "Auto updating the operator image tag" -n
-          git push --set-upstream origin cicd-operator-yaml-1
+          git push --set-upstream origin master
