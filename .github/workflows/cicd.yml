@@ -63,6 +63,8 @@ jobs:
         run: |
           export VERSION=$(cat VERSION)
           sed -i 's/netapp\/astra-agent-operator.*/netapp\/astra-agent-operator:$VERSION/' astraagent_operator.yaml
+          git config --global user.name ${{ secrets.GITHUB_REPOSITORY_OWNER }}
+          git config --global user.email "${{ secrets.GITHUB_REPOSITORY_OWNER }}@netapp.com"
           git add astraagent_operator.yaml
           git diff astraagent_operator.yaml
           git commit -m "Auto updating the operator image tag" -n
