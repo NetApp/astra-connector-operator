@@ -58,8 +58,8 @@ jobs:
           docker login -u $DOCKERHUB_USERNAME -p $DOCKERHUB_PASSWORD
           make docker-push
 
-      - uses: actions/checkout@v2
       - name: Update the operator image tag
+        uses: actions/checkout@v2
         if: github.ref == 'refs/heads/cicd-operator-yaml'
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -69,4 +69,4 @@ jobs:
           git status
           git add astraagent_operator.yaml
           git commit -m "Auto updating the operator image tag"
-          git push origin cicd-operator-yaml
+          git push --set-upstream origin cicd-operator-yaml
