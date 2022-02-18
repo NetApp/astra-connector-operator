@@ -59,10 +59,7 @@ jobs:
           make docker-push
 
       - name: Update the operator image tag
-        uses: actions/checkout@v2
         if: github.ref == 'refs/heads/cicd-operator-yaml'
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
         run: |
           export VERSION=$(cat VERSION)
           sed -i 's/netapp\/astra-agent-operator.*/netapp\/astra-agent-operator:$VERSION/' astraagent_operator.yaml
