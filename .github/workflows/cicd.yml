@@ -63,7 +63,7 @@ jobs:
         run: |
           export VERSION=$(cat VERSION)
           sed -i 's/netapp\/astra-agent-operator.*/netapp\/astra-agent-operator:$VERSION/' astraagent_operator.yaml
-          git status
           git add astraagent_operator.yaml
-          git commit -m "Auto updating the operator image tag"
+          git diff astraagent_operator.yaml
+          git commit -m "Auto updating the operator image tag" -n
           git push --set-upstream origin cicd-operator-yaml
