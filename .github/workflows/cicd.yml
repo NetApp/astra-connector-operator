@@ -66,8 +66,6 @@ jobs:
           make generate-operator-yaml
           git config --global user.name ${{ secrets.ACTIONS_USER }}
           git config --global user.email ${{ secrets.ACTIONS_EMAIL }}
-          pwd
-          ls
           git diff astraagent_operator.yaml
           git add astraagent_operator.yaml
           git commit -m "Auto updating the operator image tag" -n
