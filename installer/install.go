@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/docker/docker/client"
+	"github.com/docker/docker/pkg/system"
 	"github.com/jessevdk/go-flags"
 	"io/ioutil"
 	"log"
@@ -44,6 +45,15 @@ func main() {
 
 		//edit yaml
 	}
+
+	// We use system.OpenSequential to use sequential file access on Windows, avoiding
+	// depleting the standby list un-necessarily. On Linux, this equates to a regular os.Open.
+	file, err := system.OpenSequential(opts.input)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	input = file
 
 	imageLoadResponse, err := cli.ImageLoad(context.Background(), input, true)
 	if err != nil {
