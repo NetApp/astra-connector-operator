@@ -26,9 +26,17 @@ for image in "${images[@]}"; do
   fi
 done
 
+# Get operator-image
+operatorYamlPath="${parentDir}/../astraagent_operator.yaml"
+pattern=' +image: netapp\/astra-agent-operator:([^\n ]*)'
+[[ "$(cat ${operatorYamlPath})" =~ ${pattern} ]]
+operatorTag="${BASH_REMATCH[1]}"
+# Add operator image to list of images
+imagesWithRepo+="${imagesWithRepo} netapp/astra-agent-operator:${operatorTag}"
+
 # Pull images in parallel
 echo "Pulling images: ${imagesWithRepo}"
-echo "${imagesWithRepo}" | xargs -P4 -n1 docker pull
+echo "${imagesWithRepo}" | xargs -P3 -n1 docker pull
 
 # Save image to tar
 echo "Tar images..."
