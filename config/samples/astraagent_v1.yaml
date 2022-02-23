@@ -14,7 +14,7 @@ spec:
   imageRegistry:
     name: theotw
   astra:
-    token: nQeQPq065VWAq760PPULAizUDzrGweT3aCRR_-XA2q8=
-    clusterName: ipsprintdemo
-    accountId: 5831cf97-c52e-4185-ab83-db0fdd061c0e
+    token: MyAstraToken
+    clusterName: MyPrivateCluster
+    accountId: MyAstraAccountID
     acceptEULA: yes
