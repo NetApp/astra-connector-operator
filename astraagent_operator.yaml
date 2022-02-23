@@ -52,6 +52,8 @@ spec:
                     type: string
                   clusterName:
                     type: string
+                  oldAuth:
+                    type: boolean
                   token:
                     type: string
                   unregister:
@@ -450,7 +452,7 @@ spec:
         - --leader-elect
         command:
         - /manager
-        image: netapp/astra-agent-operator:1.0.202202231740
+        image: netapp/astra-agent-operator:1.0.202202232242
         livenessProbe:
           httpGet:
             path: /healthz
