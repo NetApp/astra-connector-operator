@@ -51,6 +51,8 @@ spec:
                     type: string
                   clusterName:
                     type: string
+                  oldAuth:
+                    type: boolean
                   token:
                     type: string
                   unregister:

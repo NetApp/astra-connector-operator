@@ -84,6 +84,14 @@ func UnregisterClient(m *v1.AstraAgent) error {
 }
 
 func generateAuthPayload(m *v1.AstraAgent) ([]byte, error) {
+	if m.Spec.Astra.OldAuth {
+		reqBodyBytes, err := json.Marshal(map[string]string{"authToken": m.Spec.Astra.Token})
+		if err != nil {
+			return nil, err
+		}
+		return reqBodyBytes, nil
+	}
+
 	authPayload, err := json.Marshal(map[string]string{
 		"userToken": m.Spec.Astra.Token,
 		"accountId": m.Spec.Astra.AccountID,

@@ -25,6 +25,7 @@ type Astra struct {
 	ClusterName string `json:"clusterName"`
 	AccountID   string `json:"accountId"`
 	AcceptEULA  bool   `json:"acceptEULA"`
+	OldAuth     bool   `json:"oldAuth,omitempty"`
 }
 
 //+kubebuilder:validation:Optional
