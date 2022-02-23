@@ -3,26 +3,26 @@
 Astra Agent Operator deploys and registers a private azure cluster with [NetApp Astra](https://cloud.netapp.com/astra)
 
 ### To deploy the operator
-####Create the namespace for the operator
+#### Create the namespace for the operator
 ```
 kubectl create ns astra-agent-operator
 ```
-####Apply the astraagent_operator.yaml file to the operator namespace
+#### Apply the astraagent_operator.yaml file to the operator namespace
 ```
 kubectl apply -f astraagent_operator.yaml -n astra-agent-operator
 ```
 ### Install the private cluster components
-####Create the namespace for the private cluster components
+#### Create the namespace for the private cluster components
 ```
 kubectl create ns astra-agent
 ```
-####Apply the AstraAgent CRD
+#### Apply the AstraAgent CRD
 
 Update the CRD with the right values. Refer to the table below for explanations of the CRD spec
 ```
 kubectl apply -f config/samples/astraagent_v1.yaml -n astra-agent
 ```
-####Check the AstraAgent status
+#### Check the AstraAgent status
 ```
 kubectl get astraagent astra-agent -n astra-agent
 NAME          REGISTERED   LOCATIONID
@@ -41,7 +41,7 @@ kubectl delete -f config/samples/astraagent_v1.yaml -n astra-agent
 kubectl delete -f astraagent_operator.yaml -n astra-agent-operator
 ```
 ## CRD
-####Sample CRD
+#### Sample CRD
 ```
 apiVersion: netapp.astraagent.com/v1
 kind: AstraAgent
