@@ -38,7 +38,7 @@ func (d *Deployer) GetDeploymentObject(m *v1.AstraAgent, ctx context.Context) (*
 	var containerImage string
 	var natssyncClientImage string
 	if m.Spec.ImageRegistry.Name != "" {
-		imageRegistry = m.Spec.EchoClient.Image
+		imageRegistry = m.Spec.ImageRegistry.Name
 	} else {
 		imageRegistry = common.DefaultImageRegistry
 	}

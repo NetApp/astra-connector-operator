@@ -41,7 +41,7 @@ func (n *Deployer) GetStatefulsetObject(m *v1.AstraAgent, ctx context.Context) (
 	var imageRegistry string
 	var containerImage string
 	if m.Spec.ImageRegistry.Name != "" && m.Spec.ImageRegistry.Name != common.DefaultImageRegistry {
-		imageRegistry = m.Spec.EchoClient.Image
+		imageRegistry = m.Spec.ImageRegistry.Name
 	} else {
 		imageRegistry = ""
 	}
