@@ -28,7 +28,13 @@ func NewHttpproxyClientDeployer() *Deployer {
 func (d *Deployer) GetDeploymentObject(m *v1.AstraAgent, ctx context.Context) (*appsv1.Deployment, error) {
 	log := ctrllog.FromContext(ctx)
 	ls := labelsForProxyClient(common.HttpProxyClientName)
-	replicas := int32(common.HttpProxyClientsize)
+	var replicas int32
+	if m.Spec.HttpProxyClient.Size > 1 {
+		replicas = m.Spec.HttpProxyClient.Size
+	} else {
+		replicas = common.HttpProxyClientsize
+	}
+	log.Info("HttpProxyClient replica size", "size", replicas)
 
 	var imageRegistry string
 	var containerImage string

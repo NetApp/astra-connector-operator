@@ -74,6 +74,9 @@ spec:
                 properties:
                   image:
                     type: string
+                  size:
+                    format: int32
+                    type: integer
                 type: object
               imageRegistry:
                 properties:
@@ -100,6 +103,9 @@ spec:
                     type: string
                   image:
                     type: string
+                  size:
+                    format: int32
+                    type: integer
                   skipTLSValidation:
                     type: boolean
                 type: object

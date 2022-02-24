@@ -11,6 +11,7 @@ import (
 //+kubebuilder:validation:Optional
 type HttpProxyClient struct {
 	Image string `json:"image,omitempty"`
+	Size  int32  `json:"size,omitempty"`
 }
 
 //+kubebuilder:validation:Optional
@@ -31,6 +32,7 @@ type Astra struct {
 //+kubebuilder:validation:Optional
 type NatssyncClient struct {
 	Image             string `json:"image,omitempty"`
+	Size              int32  `json:"size,omitempty"`
 	CloudBridgeURL    string `json:"cloud-bridge-url,omitempty"`
 	SkipTLSValidation bool   `json:"skipTLSValidation,omitempty"`
 	HostAlias         bool   `json:"hostalias,omitempty"`

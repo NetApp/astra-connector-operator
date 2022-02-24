@@ -52,10 +52,17 @@ func (d *Deployer) GetDeploymentObject(m *v1.AstraAgent, ctx context.Context) (*
 	natssyncClientImage = fmt.Sprintf("%s/%s", imageRegistry, containerImage)
 	log.Info("Using NatssyncClient image", "image", natssyncClientImage)
 	natssyncCloudBridgeURL := register.GetAstraHostURL(m, ctx)
-	replicas := int32(common.NatssyncClientSize)
 	keyStoreURLSplit := strings.Split(common.NatssyncClientKeystoreUrl, "://")
 	if len(keyStoreURLSplit) < 2 {
 		return nil, errors.New("invalid keyStoreURLSplit provided, format - configmap:///configmap-data")
+	}
+
+	var replicas int32
+	if m.Spec.NatssyncClient.Size > 1 {
+		replicas = m.Spec.NatssyncClient.Size
+	} else {
+		log.Info("Defaulting the NatssyncClient replica size", "size", common.NatssyncClientSize)
+		replicas = common.NatssyncClientSize
 	}
 
 	dep := &appsv1.Deployment{

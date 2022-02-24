@@ -27,15 +27,15 @@ func (r *AstraAgentReconciler) CreateDeployments(m *v1.AstraAgent, ctx context.C
 			log.Error(err, "Failed to create deployer")
 			return err
 		}
+		// Define a new deployment
+		dep, err := deployerObj.GetDeploymentObject(m, ctx)
+		if err != nil {
+			log.Error(err, "Failed to get Deployment object")
+			return err
+		}
 		log.Info("Finding Deployment", "Namespace", m.Namespace, "Name", deployment)
 		err = r.Get(ctx, types.NamespacedName{Name: deployment, Namespace: m.Namespace}, foundDep)
 		if err != nil && errors.IsNotFound(err) {
-			// Define a new deployment
-			dep, err := deployerObj.GetDeploymentObject(m, ctx)
-			if err != nil {
-				log.Error(err, "Failed to get Deployment object")
-				return err
-			}
 			// Set astraAgent instance as the owner and controller
 			err = ctrl.SetControllerReference(m, dep, r.Scheme)
 			if err != nil {
@@ -53,9 +53,9 @@ func (r *AstraAgentReconciler) CreateDeployments(m *v1.AstraAgent, ctx context.C
 		}
 
 		// Ensure the deployment size is the same as the spec
-		size := int32(common.NatssyncClientSize)
-		if foundDep.Spec.Replicas != nil && *foundDep.Spec.Replicas != size {
-			foundDep.Spec.Replicas = &size
+		size := dep.Spec.Replicas
+		if foundDep.Spec.Replicas != nil && *foundDep.Spec.Replicas != *size {
+			foundDep.Spec.Replicas = size
 			err = r.Update(ctx, foundDep)
 			if err != nil {
 				log.Error(err, "Failed to update Deployment", "Namespace", foundDep.Namespace, "Name", foundDep.Name)
