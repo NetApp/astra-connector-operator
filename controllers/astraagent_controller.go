@@ -194,7 +194,7 @@ func (r *AstraAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		natssyncClientStatus.Registered = "true"
 		natssyncClientStatus.LocationID = locationID
 
-		if astraAgent.Spec.Astra.Token == "" ||  astraAgent.Spec.Astra.AccountID == "" ||  astraAgent.Spec.Astra.ClusterName == "" {
+		if astraAgent.Spec.Astra.Token == "" || astraAgent.Spec.Astra.AccountID == "" || astraAgent.Spec.Astra.ClusterName == "" {
 			log.Info("Skipping cluster registration with Astra, incomplete Astra details provided Token/AccountID/ClusterName")
 		} else {
 			log.Info("Registering cluster with Astra")
@@ -207,7 +207,7 @@ func (r *AstraAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		}
 	} else {
 		if registered {
-			if astraAgent.Spec.Astra.Token == "" ||  astraAgent.Spec.Astra.AccountID == "" ||  astraAgent.Spec.Astra.ClusterName == "" {
+			if astraAgent.Spec.Astra.Token == "" || astraAgent.Spec.Astra.AccountID == "" || astraAgent.Spec.Astra.ClusterName == "" {
 				log.Info("Skipping cluster unregister with Astra, incomplete Astra details provided Token/AccountID/ClusterName")
 			} else {
 				log.Info("Unregistering the cluster with Astra")

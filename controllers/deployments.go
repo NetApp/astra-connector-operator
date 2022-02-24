@@ -6,6 +6,7 @@ package controllers
 
 import (
 	"context"
+	"reflect"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 
@@ -52,10 +53,10 @@ func (r *AstraAgentReconciler) CreateDeployments(m *v1.AstraAgent, ctx context.C
 			return err
 		}
 
-		// Ensure the deployment size is the same as the spec
-		size := dep.Spec.Replicas
-		if foundDep.Spec.Replicas != nil && *foundDep.Spec.Replicas != *size {
-			foundDep.Spec.Replicas = size
+		// Ensure the deployment is the same as the spec
+		if &foundDep.Spec != nil && !reflect.DeepEqual(foundDep.Spec, dep.Spec) {
+			foundDep.Spec = dep.Spec
+			log.Info("Updating the Deployment", "Namespace", foundDep.Namespace, "Name", foundDep.Name)
 			err = r.Update(ctx, foundDep)
 			if err != nil {
 				log.Error(err, "Failed to update Deployment", "Namespace", foundDep.Namespace, "Name", foundDep.Name)

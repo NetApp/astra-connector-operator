@@ -6,6 +6,8 @@ package controllers
 
 import (
 	"context"
+	"reflect"
+
 	v1 "github.com/NetApp/astraagent-operator/api/v1"
 	"github.com/NetApp/astraagent-operator/common"
 	"github.com/NetApp/astraagent-operator/deployer"
@@ -19,26 +21,22 @@ import (
 func (r *AstraAgentReconciler) CreateStatefulSets(m *v1.AstraAgent, ctx context.Context) error {
 	log := ctrllog.FromContext(ctx)
 	foundSet := &appsv1.StatefulSet{}
-
-	var replicaSize int32 = common.NatsDefaultSize
-	if m.Spec.Nats.Size > 2 {
-		replicaSize = m.Spec.Nats.Size
+	deployerObj, err := deployer.Factory("nats")
+	if err != nil {
+		log.Error(err, "Failed to create deployer")
+		return err
+	}
+	set, err := deployerObj.GetStatefulsetObject(m, ctx)
+	if err != nil {
+		log.Error(err, "Failed to get statefulset object")
+		return err
 	}
 
 	log.Info("Finding StatefulSet", "Namespace", m.Namespace, "Name", common.NatsName)
-	err := r.Get(ctx, types.NamespacedName{Name: common.NatsName, Namespace: m.Namespace}, foundSet)
+	err = r.Get(ctx, types.NamespacedName{Name: common.NatsName, Namespace: m.Namespace}, foundSet)
 	if err != nil && errors.IsNotFound(err) {
 		// Define a new statefulset
-		deployerObj, err := deployer.Factory("nats")
-		if err != nil {
-			log.Error(err, "Failed to create deployer")
-			return err
-		}
-		set, err := deployerObj.GetStatefulsetObject(m, ctx)
-		if err != nil {
-			log.Error(err, "Failed to get statefulset object")
-			return err
-		}
+
 		// Set astraAgent instance as the owner and controller
 		err = ctrl.SetControllerReference(m, set, r.Scheme)
 		if err != nil {
@@ -55,10 +53,10 @@ func (r *AstraAgentReconciler) CreateStatefulSets(m *v1.AstraAgent, ctx context.
 		return err
 	}
 
-	// Ensure the nats statefulset size is the same as the spec
-	natsSize := replicaSize
-	if foundSet.Spec.Replicas != nil && *foundSet.Spec.Replicas != natsSize {
-		foundSet.Spec.Replicas = &natsSize
+	// Ensure the nats statefulset is the same as the spec
+	if &foundSet.Spec != nil && !reflect.DeepEqual(foundSet.Spec, set.Spec) {
+		foundSet.Spec = set.Spec
+		log.Info("Updating the StatefulSet", "Namespace", foundSet.Namespace, "Name", foundSet.Name)
 		err = r.Update(ctx, foundSet)
 		if err != nil {
 			log.Error(err, "Failed to update StatefulSet", "Namespace", foundSet.Namespace, "Name", foundSet.Name)
