@@ -15,6 +15,7 @@ import (
 	"os"
 	"strings"
 	"syscall"
+	"time"
 )
 
 func CheckFatalErr(err error) {
@@ -23,23 +24,164 @@ func CheckFatalErr(err error) {
 	}
 }
 
-func getCreds(opts Options) (string, string, error) {
+func getDockerUsername() (string, error) {
 	reader := bufio.NewReader(os.Stdin)
-
-	fmt.Print("Enter Username: ")
+	fmt.Print("Docker username: ")
 	username, err := reader.ReadString('\n')
 	if err != nil {
-		return "", "", err
+		return "", err
 	}
+	return username, nil
+}
 
-	fmt.Print("Enter Password: ")
+func getDockerPw() (string, error) {
+	fmt.Print("Docker password: ")
 	bytePassword, err := term.ReadPassword(int(syscall.Stdin))
 	if err != nil {
-		return "", "", err
+		return "", nil
 	}
 
-	password := string(bytePassword)
-	return strings.TrimSpace(username), strings.TrimSpace(password), nil
+	return string(bytePassword), nil
+}
+
+func loadImageTar(dockerClient *client.Client, opts Options) ([]string, error) {
+	// We use system.OpenSequential to use sequential file access on Windows, avoiding
+	// depleting the standby list un-necessarily. On Linux, this equates to a regular os.Open.
+	file, err := system.OpenSequential(opts.ImageTar)
+	CheckFatalErr(err)
+	defer file.Close()
+
+	imageLoadResponse, err := dockerClient.ImageLoad(context.Background(), file, true)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if imageLoadResponse.Body == nil {
+		return nil, fmt.Errorf("docker load returned empty response")
+	}
+	if !imageLoadResponse.JSON {
+		return nil, fmt.Errorf("docker response is in unknown format")
+	}
+
+	var imageList []string
+	// Parse response, check for errors
+	scanner := bufio.NewScanner(imageLoadResponse.Body)
+	for scanner.Scan() {
+		imageResponseBody := DockerLoadResponse{}
+		fmt.Println(scanner.Text())
+		err := json.Unmarshal(scanner.Bytes(), &imageResponseBody)
+		CheckFatalErr(err)
+		fmt.Printf("Debug marshall: %v\n", imageResponseBody)
+
+		// Check response error
+		if imageResponseBody.Error != "" {
+			log.WithFields(log.Fields{
+				"error":       imageResponseBody.Error,
+				"errorDetail": imageResponseBody.ErrorDetail,
+			}).Fatal("Docker load error")
+		}
+
+		// Get loaded image names
+		imageName := strings.Split(strings.Trim(imageResponseBody.Stream, " \n"), ": ")[1]
+		imageList = append(imageList, imageName)
+		log.WithFields(log.Fields{
+			"image": imageName,
+		}).Info("Loaded image")
+	}
+	return imageList, nil
+}
+
+func tagImages(dockerClient *client.Client, images []string, repoPrefix string) ([]string, error) {
+	var imagesWithRepo []string
+	for _, image := range images {
+		newTag := fmt.Sprintf("%s/%s", repoPrefix, image)
+		log.WithFields(log.Fields{
+			"newTag":      newTag,
+			"sourceImage": image,
+		}).Info("Re-tag image")
+		err := dockerClient.ImageTag(context.Background(), image, newTag)
+		if err != nil {
+			return nil, err
+		}
+		imagesWithRepo = append(imagesWithRepo, newTag)
+	}
+	return imagesWithRepo, nil
+}
+
+func pushImages(dockerClient *client.Client, opts *Options, images []string) error {
+	if opts.ImageRepoUser == "" {
+		var err error
+		opts.ImageRepoUser, err = getDockerUsername()
+		if err != nil {
+			return err
+		}
+	}
+
+	if opts.ImageRepoPw == "" {
+		var err error
+		opts.ImageRepoPw, err = getDockerPw()
+		if err != nil {
+			return err
+		}
+	}
+
+	var authConfig = types.AuthConfig{
+		Username: opts.ImageRepoUser,
+		Password: opts.ImageRepoPw,
+	}
+	fmt.Printf("debug auth: %v\n", authConfig)
+	authConfigBytes, err := json.Marshal(authConfig)
+	if err != nil {
+		return err
+	}
+	authConfigEncoded := base64.URLEncoding.EncodeToString(authConfigBytes)
+	pushOpts := types.ImagePushOptions{RegistryAuth: authConfigEncoded, All: true}
+
+	for _, image := range images {
+		log.Info("Pushing image")
+		ctx, cancel := context.WithTimeout(context.Background(), time.Minute*10)
+		defer cancel()
+		reader, err := dockerClient.ImagePush(ctx, image, pushOpts)
+		defer reader.Close()
+		if err != nil {
+			return err
+		}
+		scanner := bufio.NewScanner(reader)
+		for scanner.Scan() {
+			response := DockerPushResponse{}
+			err := json.Unmarshal(scanner.Bytes(), &response)
+			if err != nil {
+				return err
+			}
+			if response.Error != "" {
+				log.WithFields(log.Fields{
+					"error":       response.Error,
+					"errorDetail": *response.ErrorDetail,
+				}).Error("Docker load error")
+				return fmt.Errorf("error loading images")
+			}
+			log.WithFields(log.Fields{
+				"status": response.Status,
+			}).Info("Pushing image...")
+		}
+	}
+	return nil
+}
+
+type ErrorDetail struct {
+	Message string `json:"message"`
+}
+
+type DockerPushResponse struct {
+	Status      string       `json:"status"`
+	Id          string       `json:"id"`
+	Error       string       `json:"error"`
+	ErrorDetail *ErrorDetail `json:"errorDetail"`
+}
+
+type DockerLoadResponse struct {
+	Stream      string       `json:"stream"`
+	Error       string       `json:"error"`
+	ErrorDetail *ErrorDetail `json:"errorDetail"`
 }
 
 type Options struct {
@@ -59,87 +201,24 @@ func main() {
 	_, err := flags.Parse(&opts)
 	CheckFatalErr(err)
 
-	client, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
-	CheckFatalErr(err)
-
-	if opts.ImageTar != "" {
-		// We use system.OpenSequential to use sequential file access on Windows, avoiding
-		// depleting the standby list un-necessarily. On Linux, this equates to a regular os.Open.
-		file, err := system.OpenSequential(opts.ImageTar)
+	if opts.ImageTar != "" && opts.ImageRepo != "" {
+		dockerClient, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 		CheckFatalErr(err)
-		defer file.Close()
-		imageLoadResponse, err := client.ImageLoad(context.Background(), file, true)
-		if err != nil {
-			log.Fatal(err)
-		}
-		if imageLoadResponse.Body == nil {
-			log.Fatal("Error: Docker load returned empty response")
-		}
-		if !imageLoadResponse.JSON {
-			log.Fatal("Error: Docker response is in unknown format")
-		}
 
-		scanner := bufio.NewScanner(imageLoadResponse.Body)
-		//var imageList []string
-		type imageResponseBody struct {
-			Stream      string `json:"stream"`
-			Error       string `json:"error"`
-			ErrorDetail struct {
-				Message string `json:"message"`
-			}
-		}
+		log.Info("Loading image tar")
+		loadedImages, err := loadImageTar(dockerClient, opts)
+		CheckFatalErr(err)
 
-		// Parse response, check for errors
-		imageNames := map[string]string{}
-		for scanner.Scan() {
-			imageResponseBody := imageResponseBody{}
-			fmt.Println(scanner.Text())
-			err := json.Unmarshal([]byte(scanner.Text()), &imageResponseBody)
-			CheckFatalErr(err)
-			fmt.Printf("Debug marshall: %v\n", imageResponseBody)
-			// Check response error
-			if imageResponseBody.Error != "" {
-				log.WithFields(log.Fields{
-					"error":       imageResponseBody.Error,
-					"errorDetail": imageResponseBody.ErrorDetail,
-				}).Fatal("Docker load error")
-			}
-			// Get loaded image names
-			imageName := strings.Split(strings.Trim(imageResponseBody.Stream, " \n"), ": ")
-			// Map originalImageName:newImageName
-			imageNames[imageName[1]] = fmt.Sprintf("%s/%s", opts.ImageRepo, imageName[1])
-		}
-		fmt.Printf("Image list: %v\n", imageNames)
+		log.Info("Tagging images")
+		taggedImages, err := tagImages(dockerClient, loadedImages, opts.ImageRepo)
+		CheckFatalErr(err)
 
-		var authConfig = types.AuthConfig{
-			Username: "",
-			Password: "",
-		}
-		authConfigBytes, _ := json.Marshal(authConfig)
-		authConfigEncoded := base64.URLEncoding.EncodeToString(authConfigBytes)
-		opts := types.ImagePushOptions{RegistryAuth: authConfigEncoded}
+		log.Info("Pushing images")
+		err = pushImages(dockerClient, &opts, taggedImages)
+		CheckFatalErr(err)
 
-		// Tag and push
-		for srcImageName, newImageName := range imageNames {
-			log.WithFields(log.Fields{
-				"newTag":      newImageName,
-				"sourceImage": srcImageName,
-			}).Info("Re-tag image")
-			err = client.ImageTag(context.Background(), srcImageName, newImageName)
-			CheckFatalErr(err)
-			log.Info("Pushing image")
-			reader, err := client.ImagePush(context.Background(), newImageName, opts)
-			var out []byte
-			_, err = reader.Read(out)
-			CheckFatalErr(err)
-			fmt.Printf("out: %s\n", string(out))
-			defer reader.Close()
-			CheckFatalErr(err)
-		}
-
-		// Push images
-
-		//edit yaml
 	}
+
+	//apply yaml
 
 }
