@@ -94,10 +94,12 @@ func tagImages(dockerClient *client.Client, images []string, repoPrefix string) 
 	var imagesWithRepo []string
 	for _, image := range images {
 		newTag := fmt.Sprintf("%s/%s", repoPrefix, image)
+
 		log.WithFields(log.Fields{
 			"newTag":      newTag,
 			"sourceImage": image,
 		}).Info("Re-tag image")
+		
 		err := dockerClient.ImageTag(context.Background(), image, newTag)
 		if err != nil {
 			return nil, err
@@ -128,7 +130,6 @@ func pushImages(dockerClient *client.Client, opts *Options, images []string) err
 		Username: opts.ImageRepoUser,
 		Password: opts.ImageRepoPw,
 	}
-	fmt.Printf("debug auth: %v\n", authConfig)
 	authConfigBytes, err := json.Marshal(authConfig)
 	if err != nil {
 		return err
@@ -138,13 +139,16 @@ func pushImages(dockerClient *client.Client, opts *Options, images []string) err
 
 	for _, image := range images {
 		log.Info("Pushing image")
+
 		ctx, cancel := context.WithTimeout(context.Background(), time.Minute*10)
 		defer cancel()
+
 		reader, err := dockerClient.ImagePush(ctx, image, pushOpts)
 		defer reader.Close()
 		if err != nil {
 			return err
 		}
+
 		scanner := bufio.NewScanner(reader)
 		for scanner.Scan() {
 			response := DockerPushResponse{}
@@ -152,6 +156,7 @@ func pushImages(dockerClient *client.Client, opts *Options, images []string) err
 			if err != nil {
 				return err
 			}
+
 			if response.Error != "" {
 				log.WithFields(log.Fields{
 					"error":       response.Error,
@@ -159,8 +164,10 @@ func pushImages(dockerClient *client.Client, opts *Options, images []string) err
 				}).Error("Docker load error")
 				return fmt.Errorf("error loading images")
 			}
+
 			log.WithFields(log.Fields{
 				"status": response.Status,
+				"id":     response.Id,
 			}).Info("Pushing image...")
 		}
 	}
