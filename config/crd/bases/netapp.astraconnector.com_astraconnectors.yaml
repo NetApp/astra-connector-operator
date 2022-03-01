@@ -6,27 +6,27 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.7.0
   creationTimestamp: null
-  name: astraagents.netapp.astraagent.com
+  name: astraconnectors.netapp.astraconnector.com
 spec:
-  group: netapp.astraagent.com
+  group: netapp.astraconnector.com
   names:
-    kind: AstraAgent
-    listKind: AstraAgentList
-    plural: astraagents
-    singular: astraagent
+    kind: AstraConnector
+    listKind: AstraConnectorList
+    plural: astraconnectors
+    singular: astraconnector
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
     - jsonPath: .status.natssync-client.registered
       name: Registered
       type: string
-    - jsonPath: .status.natssync-client.locationID
-      name: LocationID
+    - jsonPath: .status.natssync-client.bridgeID
+      name: BridgeID
       type: string
     name: v1
     schema:
       openAPIV3Schema:
-        description: AstraAgent is the Schema for the astraagents API
+        description: AstraConnector is the Schema for the astraconnectors API
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -41,7 +41,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: AstraAgentSpec defines the desired state of AstraAgent
+            description: AstraConnectorSpec defines the desired state of AstraConnector
             properties:
               astra:
                 properties:
@@ -113,17 +113,17 @@ spec:
             - astra
             type: object
           status:
-            description: AstraAgentStatus defines the observed state of AstraAgent
+            description: AstraConnectorStatus defines the observed state of AstraConnector
             properties:
               natssync-client:
                 description: NatssyncClientStatus defines the observed state of NatssyncClient
                 properties:
-                  locationID:
+                  bridgeID:
                     type: string
                   registered:
                     type: string
                 required:
-                - locationID
+                - bridgeID
                 - registered
                 type: object
               nodes:

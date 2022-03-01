@@ -19,7 +19,7 @@ import (
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-func (r *AstraAgentReconciler) CreateDeployments(m *v1.AstraAgent, ctx context.Context) error {
+func (r *AstraConnectorReconciler) CreateDeployments(m *v1.AstraConnector, ctx context.Context) error {
 	log := ctrllog.FromContext(ctx)
 	for _, deployment := range common.DeploymentsList {
 		foundDep := &appsv1.Deployment{}
@@ -37,7 +37,7 @@ func (r *AstraAgentReconciler) CreateDeployments(m *v1.AstraAgent, ctx context.C
 		log.Info("Finding Deployment", "Namespace", m.Namespace, "Name", deployment)
 		err = r.Get(ctx, types.NamespacedName{Name: deployment, Namespace: m.Namespace}, foundDep)
 		if err != nil && errors.IsNotFound(err) {
-			// Set astraAgent instance as the owner and controller
+			// Set AstraConnector instance as the owner and controller
 			err = ctrl.SetControllerReference(m, dep, r.Scheme)
 			if err != nil {
 				return err

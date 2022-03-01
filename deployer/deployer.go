@@ -15,11 +15,11 @@ import (
 )
 
 type Deployer interface {
-	GetDeploymentObject(m *v1.AstraAgent, ctx context.Context) (*appsv1.Deployment, error)
-	GetStatefulsetObject(m *v1.AstraAgent, ctx context.Context) (*appsv1.StatefulSet, error)
-	GetServiceObject(m *v1.AstraAgent, serviceName string) (*corev1.Service, error)
-	GetConfigMapObject(m *v1.AstraAgent) (*corev1.ConfigMap, error)
-	GetServiceAccountObject(m *v1.AstraAgent) (*corev1.ServiceAccount, error)
-	GetRoleObject(m *v1.AstraAgent) (*rbacv1.Role, error)
-	GetRoleBindingObject(m *v1.AstraAgent) (*rbacv1.RoleBinding, error)
+	GetDeploymentObject(m *v1.AstraConnector, ctx context.Context) (*appsv1.Deployment, error)
+	GetStatefulsetObject(m *v1.AstraConnector, ctx context.Context) (*appsv1.StatefulSet, error)
+	GetServiceObject(m *v1.AstraConnector, serviceName string) (*corev1.Service, error)
+	GetConfigMapObject(m *v1.AstraConnector) (*corev1.ConfigMap, error)
+	GetServiceAccountObject(m *v1.AstraConnector) (*corev1.ServiceAccount, error)
+	GetRoleObject(m *v1.AstraConnector) (*rbacv1.Role, error)
+	GetRoleBindingObject(m *v1.AstraConnector) (*rbacv1.RoleBinding, error)
 }

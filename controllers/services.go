@@ -6,6 +6,7 @@ package controllers
 
 import (
 	"context"
+
 	"github.com/NetApp/astraagent-operator/common"
 	"github.com/NetApp/astraagent-operator/deployer"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -17,7 +18,7 @@ import (
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-func (r *AstraAgentReconciler) CreateServices(m *v1.AstraAgent, ctx context.Context) error {
+func (r *AstraConnectorReconciler) CreateServices(m *v1.AstraConnector, ctx context.Context) error {
 	log := ctrllog.FromContext(ctx)
 	for serviceName, deployment := range common.ServicesList {
 		deployerObj, err := deployer.Factory(deployment)
@@ -35,7 +36,7 @@ func (r *AstraAgentReconciler) CreateServices(m *v1.AstraAgent, ctx context.Cont
 				log.Error(err, "Failed to get service object")
 				return err
 			}
-			// Set astraAgent instance as the owner and controller
+			// Set astraConnector instance as the owner and controller
 			err = ctrl.SetControllerReference(m, serv, r.Scheme)
 			if err != nil {
 				return err

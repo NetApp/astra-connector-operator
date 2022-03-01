@@ -9,7 +9,7 @@ fi
 
 parentDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 outputFilename=$1
-crdPath="${parentDir}/../config/samples/astraagent_v1.yaml"
+crdPath="${parentDir}/../config/samples/astraconnector_v1.yaml"
 repo="theotw"
 
 # Parse images from chart. 'yq' parses yaml, and then we sort and create space separated array
@@ -27,12 +27,12 @@ for image in "${images[@]}"; do
 done
 
 # Get operator-image
-operatorYamlPath="${parentDir}/../astraagent_operator.yaml"
-pattern=' +image: netapp\/astra-agent-operator:([^\n ]*)'
+operatorYamlPath="${parentDir}/../astraconnector_operator.yaml"
+pattern=' +image: netapp\/astra-connector-operator:([^\n ]*)'
 [[ "$(cat ${operatorYamlPath})" =~ ${pattern} ]]
 operatorTag="${BASH_REMATCH[1]}"
 # Add operator image to list of images
-imagesWithRepo+="${imagesWithRepo} netapp/astra-agent-operator:${operatorTag}"
+imagesWithRepo+="${imagesWithRepo} netapp/astra-connector-operator:${operatorTag}"
 
 # Pull images in parallel
 echo "Pulling images: ${imagesWithRepo}"

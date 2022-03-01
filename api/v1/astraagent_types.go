@@ -51,8 +51,8 @@ type ImageRegistry struct {
 	Secret string `json:"secret,omitempty"`
 }
 
-// AstraAgentSpec defines the desired state of AstraAgent
-type AstraAgentSpec struct {
+// AstraConnectorSpec defines the desired state of AstraConnector
+type AstraConnectorSpec struct {
 	NatssyncClient  NatssyncClient  `json:"natssync-client,omitempty"`
 	HttpProxyClient HttpProxyClient `json:"httpproxy-client,omitempty"`
 	EchoClient      EchoClient      `json:"echo-client,omitempty"`
@@ -61,8 +61,8 @@ type AstraAgentSpec struct {
 	ImageRegistry   ImageRegistry   `json:"imageRegistry,omitempty"`
 }
 
-// AstraAgentStatus defines the observed state of AstraAgent
-type AstraAgentStatus struct {
+// AstraConnectorStatus defines the observed state of AstraConnector
+type AstraConnectorStatus struct {
 	Nodes          []string             `json:"nodes"`
 	NatssyncClient NatssyncClientStatus `json:"natssync-client"`
 }
@@ -70,32 +70,32 @@ type AstraAgentStatus struct {
 // NatssyncClientStatus defines the observed state of NatssyncClient
 type NatssyncClientStatus struct {
 	Registered string `json:"registered"`
-	LocationID string `json:"locationID"`
+	BridgeID   string `json:"bridgeID"`
 }
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 //+kubebuilder:printcolumn:name="Registered",type=string,JSONPath=`.status.natssync-client.registered`
-//+kubebuilder:printcolumn:name="LocationID",type=string,JSONPath=`.status.natssync-client.locationID`
+//+kubebuilder:printcolumn:name="BridgeID",type=string,JSONPath=`.status.natssync-client.bridgeID`
 
-// AstraAgent is the Schema for the astraagents API
-type AstraAgent struct {
+// AstraConnector is the Schema for the astraconnectors API
+type AstraConnector struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   AstraAgentSpec   `json:"spec,omitempty"`
-	Status AstraAgentStatus `json:"status,omitempty"`
+	Spec   AstraConnectorSpec   `json:"spec,omitempty"`
+	Status AstraConnectorStatus `json:"status,omitempty"`
 }
 
 //+kubebuilder:object:root=true
 
-// AstraAgentList contains a list of AstraAgent
-type AstraAgentList struct {
+// AstraConnectorList contains a list of AstraConnector
+type AstraConnectorList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []AstraAgent `json:"items"`
+	Items           []AstraConnector `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&AstraAgent{}, &AstraAgentList{})
+	SchemeBuilder.Register(&AstraConnector{}, &AstraConnectorList{})
 }

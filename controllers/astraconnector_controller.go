@@ -29,15 +29,15 @@ import (
 	"github.com/NetApp/astraagent-operator/register"
 )
 
-// AstraAgentReconciler reconciles a AstraAgent object
-type AstraAgentReconciler struct {
+// AstraConnectorReconciler reconciles a AstraConnector object
+type AstraConnectorReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
 }
 
-//+kubebuilder:rbac:groups=netapp.astraagent.com,resources=astraagents,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=netapp.astraagent.com,resources=astraagents/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=netapp.astraagent.com,resources=astraagents/finalizers,verbs=update
+//+kubebuilder:rbac:groups=netapp.astraconnector.com,resources=astraconnectors,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=netapp.astraconnector.com,resources=astraconnectors/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=netapp.astraconnector.com,resources=astraconnectors/finalizers,verbs=update
 //+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=core,resources=pods,verbs=get;list;watch;create;update;patch;delete
@@ -47,50 +47,50 @@ type AstraAgentReconciler struct {
 //+kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=rolebindings,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=core,resources=serviceaccounts,verbs=get;list;watch;create;update;patch;delete
 
-func (r *AstraAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *AstraConnectorReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := ctrllog.FromContext(ctx)
 
-	// Fetch the AstraAgent instance
-	astraAgent := &v1.AstraAgent{}
-	err := r.Get(ctx, req.NamespacedName, astraAgent)
+	// Fetch the AstraConnector instance
+	astraConnector := &v1.AstraConnector{}
+	err := r.Get(ctx, req.NamespacedName, astraConnector)
 	if err != nil {
 		if k8serrors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 			// Return and don't requeue
-			log.Info("AstraAgent resource not found. Ignoring since object must be deleted")
+			log.Info("AstraConnector resource not found. Ignoring since object must be deleted")
 			return ctrl.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
-		log.Error(err, "Failed to get AstraAgent")
+		log.Error(err, "Failed to get AstraConnector")
 		return ctrl.Result{}, err
 	}
 
-	if !astraAgent.Spec.Astra.AcceptEULA {
+	if !astraConnector.Spec.Astra.AcceptEULA {
 		log.Info("End User License Agreement set to false, will not proceed with the install")
 		return ctrl.Result{}, nil
 	}
 
 	// name of our custom finalizer
-	finalizerName := "astraagent.com/finalizer"
+	finalizerName := "astraconnector.com/finalizer"
 	// examine DeletionTimestamp to determine if object is under deletion
-	if astraAgent.ObjectMeta.DeletionTimestamp.IsZero() {
+	if astraConnector.ObjectMeta.DeletionTimestamp.IsZero() {
 		// The object is not being deleted, so if it does not have our finalizer,
 		// then lets add the finalizer and update the object. This is equivalent
 		// registering our finalizer.
-		if !controllerutil.ContainsFinalizer(astraAgent, finalizerName) {
-			log.Info("Adding finalizer to AstraAgent instance", "finalizerName", finalizerName)
-			controllerutil.AddFinalizer(astraAgent, finalizerName)
-			if err := r.Update(ctx, astraAgent); err != nil {
+		if !controllerutil.ContainsFinalizer(astraConnector, finalizerName) {
+			log.Info("Adding finalizer to AstraConnector instance", "finalizerName", finalizerName)
+			controllerutil.AddFinalizer(astraConnector, finalizerName)
+			if err := r.Update(ctx, astraConnector); err != nil {
 				return ctrl.Result{}, err
 			}
 		}
 	} else {
 		// The object is being deleted
-		if controllerutil.ContainsFinalizer(astraAgent, finalizerName) {
+		if controllerutil.ContainsFinalizer(astraConnector, finalizerName) {
 			// our finalizer is present, so lets handle any external dependency
 			log.Info("Unregistering the cluster with Astra upon CRD delete")
-			err = register.RemoveLocationIDFromCloudExtension(astraAgent, ctx)
+			err = register.RemoveBridgeIDFromAstra(astraConnector, ctx)
 			if err != nil {
 				log.Error(err, "Failed to unregister the cluster with Astra, ignoring...")
 			} else {
@@ -98,7 +98,7 @@ func (r *AstraAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			}
 
 			log.Info("Unregistering natssync-client upon CRD delete")
-			err = register.UnregisterClient(astraAgent)
+			err = register.UnregisterClient(astraConnector)
 			if err != nil {
 				log.Error(err, "Failed to unregister natssync-client, ignoring...")
 			} else {
@@ -106,8 +106,8 @@ func (r *AstraAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			}
 
 			// remove our finalizer from the list and update it.
-			controllerutil.RemoveFinalizer(astraAgent, finalizerName)
-			if err := r.Update(ctx, astraAgent); err != nil {
+			controllerutil.RemoveFinalizer(astraConnector, finalizerName)
+			if err := r.Update(ctx, astraConnector); err != nil {
 				return ctrl.Result{}, err
 			}
 		}
@@ -116,43 +116,43 @@ func (r *AstraAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, nil
 	}
 
-	err = r.CreateServices(astraAgent, ctx)
+	err = r.CreateServices(astraConnector, ctx)
 	if err != nil {
 		log.Error(err, "Error creating services")
 		return ctrl.Result{}, err
 	}
 
-	err = r.CreateConfigMaps(astraAgent, ctx)
+	err = r.CreateConfigMaps(astraConnector, ctx)
 	if err != nil {
 		log.Error(err, "Error creating configmaps")
 		return ctrl.Result{}, err
 	}
 
-	err = r.CreateRoles(astraAgent, ctx)
+	err = r.CreateRoles(astraConnector, ctx)
 	if err != nil {
 		log.Error(err, "Error creating roles")
 		return ctrl.Result{}, err
 	}
 
-	err = r.CreateRoleBindings(astraAgent, ctx)
+	err = r.CreateRoleBindings(astraConnector, ctx)
 	if err != nil {
 		log.Error(err, "Error creating role bindings")
 		return ctrl.Result{}, err
 	}
 
-	err = r.CreateServiceAccounts(astraAgent, ctx)
+	err = r.CreateServiceAccounts(astraConnector, ctx)
 	if err != nil {
 		log.Error(err, "Error creating service accounts")
 		return ctrl.Result{}, err
 	}
 
-	err = r.CreateStatefulSets(astraAgent, ctx)
+	err = r.CreateStatefulSets(astraConnector, ctx)
 	if err != nil {
 		log.Error(err, "Error creating stateful sets")
 		return ctrl.Result{}, err
 	}
 
-	err = r.CreateDeployments(astraAgent, ctx)
+	err = r.CreateDeployments(astraConnector, ctx)
 	if err != nil {
 		log.Error(err, "Error creating deployments")
 		return ctrl.Result{}, err
@@ -161,16 +161,16 @@ func (r *AstraAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	registered := false
 	log.Info("Checking for natssync-client configmap")
 	foundCM := &corev1.ConfigMap{}
-	locationID := ""
-	err = r.Get(ctx, types.NamespacedName{Name: common.NatssyncClientConfigMapName, Namespace: astraAgent.Namespace}, foundCM)
+	bridgeID := ""
+	err = r.Get(ctx, types.NamespacedName{Name: common.NatssyncClientConfigMapName, Namespace: astraConnector.Namespace}, foundCM)
 	if len(foundCM.Data) != 0 {
 		registered = true
-		locationID, err = register.GetLocationIDFromConfigMap(foundCM.Data)
+		bridgeID, err = register.GetBridgeIDFromConfigMap(foundCM.Data)
 		if err != nil {
 			log.Error(err, "Failed to get the location ID from configmap")
 			return ctrl.Result{RequeueAfter: 1 * time.Minute}, err
 		}
-		if locationID == "" {
+		if bridgeID == "" {
 			log.Error(err, "Got an empty location ID from configmap")
 			return ctrl.Result{RequeueAfter: 1 * time.Minute}, err
 		}
@@ -178,40 +178,40 @@ func (r *AstraAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 	// RegisterClient
 	natssyncClientStatus := v1.NatssyncClientStatus{}
-	if !astraAgent.Spec.Astra.Unregister {
+	if !astraConnector.Spec.Astra.Unregister {
 		if registered {
-			log.Info("natssync-client already registered", "locationID", locationID)
+			log.Info("natssync-client already registered", "bridgeID", bridgeID)
 		} else {
 			log.Info("Registering natssync-client")
-			locationID, err = register.RegisterClient(astraAgent)
+			bridgeID, err = register.RegisterClient(astraConnector)
 			if err != nil {
 				log.Error(err, "Failed to register natssync-client")
 				return ctrl.Result{RequeueAfter: 1 * time.Minute}, err
 			}
 
-			log.Info("natssync-client locationID", "locationID", locationID)
+			log.Info("natssync-client BridgeID", "bridgeID", bridgeID)
 		}
 		natssyncClientStatus.Registered = "true"
-		natssyncClientStatus.LocationID = locationID
+		natssyncClientStatus.BridgeID = bridgeID
 
-		if astraAgent.Spec.Astra.Token == "" || astraAgent.Spec.Astra.AccountID == "" || astraAgent.Spec.Astra.ClusterName == "" {
+		if astraConnector.Spec.Astra.Token == "" || astraConnector.Spec.Astra.AccountID == "" || astraConnector.Spec.Astra.ClusterName == "" {
 			log.Info("Skipping cluster registration with Astra, incomplete Astra details provided Token/AccountID/ClusterName")
 		} else {
 			log.Info("Registering cluster with Astra")
-			err = register.AddLocationIDtoCloudExtension(astraAgent, locationID, ctx)
+			err = register.AddBridgeIDtoAstra(astraConnector, bridgeID, ctx)
 			if err != nil {
-				log.Error(err, "Failed to register locationID with Astra")
+				log.Error(err, "Failed to register BridgeID with Astra")
 				return ctrl.Result{RequeueAfter: 1 * time.Minute}, err
 			}
 			log.Info("Registered cluster with Astra")
 		}
 	} else {
 		if registered {
-			if astraAgent.Spec.Astra.Token == "" || astraAgent.Spec.Astra.AccountID == "" || astraAgent.Spec.Astra.ClusterName == "" {
+			if astraConnector.Spec.Astra.Token == "" || astraConnector.Spec.Astra.AccountID == "" || astraConnector.Spec.Astra.ClusterName == "" {
 				log.Info("Skipping cluster unregister with Astra, incomplete Astra details provided Token/AccountID/ClusterName")
 			} else {
 				log.Info("Unregistering the cluster with Astra")
-				err = register.RemoveLocationIDFromCloudExtension(astraAgent, ctx)
+				err = register.RemoveBridgeIDFromAstra(astraConnector, ctx)
 				if err != nil {
 					log.Error(err, "Failed to unregister the cluster with Astra")
 					return ctrl.Result{Requeue: true}, err
@@ -220,47 +220,46 @@ func (r *AstraAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			}
 
 			log.Info("Unregistering natssync-client")
-			err = register.UnregisterClient(astraAgent)
+			err = register.UnregisterClient(astraConnector)
 			if err != nil {
 				log.Error(err, "Failed to unregister natssync-client")
 				return ctrl.Result{Requeue: true}, err
 			}
-
-			natssyncClientStatus.Registered = "false"
-			natssyncClientStatus.LocationID = ""
 			log.Info("Unregistered natssync-client")
 		} else {
 			log.Info("Already unregistered with Astra")
 		}
+		natssyncClientStatus.Registered = "false"
+		natssyncClientStatus.BridgeID = ""
 	}
 
-	// Update the astraAgent status with the pod names
-	// List the pods for this astraAgent's deployment
+	// Update the astraConnector status with the pod names
+	// List the pods for this astraConnector's deployment
 	podList := &corev1.PodList{}
 	listOpts := []client.ListOption{
-		client.InNamespace(astraAgent.Namespace),
+		client.InNamespace(astraConnector.Namespace),
 	}
 	if err = r.List(ctx, podList, listOpts...); err != nil {
-		log.Error(err, "Failed to list pods", "Namespace", astraAgent.Namespace)
+		log.Error(err, "Failed to list pods", "Namespace", astraConnector.Namespace)
 		return ctrl.Result{}, err
 	}
 	podNames := getPodNames(podList.Items)
 
 	// Update status.Nodes if needed
-	if !reflect.DeepEqual(podNames, astraAgent.Status.Nodes) {
+	if !reflect.DeepEqual(podNames, astraConnector.Status.Nodes) {
 		log.Info("Updating the pod status")
-		astraAgent.Status.Nodes = podNames
-		err := r.Status().Update(ctx, astraAgent)
+		astraConnector.Status.Nodes = podNames
+		err := r.Status().Update(ctx, astraConnector)
 		if err != nil {
-			log.Error(err, "Failed to update astraAgent status")
+			log.Error(err, "Failed to update astraConnector status")
 			return ctrl.Result{}, err
 		}
 	}
 
-	if !reflect.DeepEqual(natssyncClientStatus, astraAgent.Status.NatssyncClient) {
+	if !reflect.DeepEqual(natssyncClientStatus, astraConnector.Status.NatssyncClient) {
 		log.Info("Updating the natssync-client status")
-		astraAgent.Status.NatssyncClient = natssyncClientStatus
-		err := r.Status().Update(ctx, astraAgent)
+		astraConnector.Status.NatssyncClient = natssyncClientStatus
+		err := r.Status().Update(ctx, astraConnector)
 		if err != nil {
 			log.Error(err, "Failed to update natssync-client status")
 			return ctrl.Result{}, err
@@ -271,9 +270,9 @@ func (r *AstraAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *AstraAgentReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *AstraConnectorReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&v1.AstraAgent{}).
+		For(&v1.AstraConnector{}).
 		Owns(&appsv1.Deployment{}).
 		Owns(&appsv1.StatefulSet{}).
 		Owns(&corev1.Service{}).
