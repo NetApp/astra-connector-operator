@@ -12,19 +12,11 @@ import (
 	"github.com/jessevdk/go-flags"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/term"
-	yamlv2 "gopkg.in/yaml.v2"
-	meta "k8s.io/apimachinery/pkg/api/meta"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime/serializer/yaml"
-	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/discovery"
-	"k8s.io/client-go/discovery/cached/memory"
-	"k8s.io/client-go/dynamic"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/restmapper"
-	"k8s.io/client-go/tools/clientcmd"
+	"gopkg.in/yaml.v2"
+	"io/ioutil"
 	"os"
+	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"syscall"
@@ -190,26 +182,33 @@ func pushImages(dockerClient *client.Client, opts *Options, images []string) err
 type OperatorConfig struct {
 	ApiVersion string `yaml:"apiVersion"`
 	Kind       string `yaml:"kind"`
-	Metadata   struct {
+
+	Metadata struct {
 		Name      string `yaml:"name"`
 		Namespace string `yaml:"namespace"`
 	} `yaml:"metadata"`
+
 	Spec struct {
 		NatssyncClient struct {
 			Image string `yaml:"image"`
 		} `yaml:"natssync-client,omitempty"`
+
 		HttpProxyClient struct {
 			Image string `yaml:"image"`
 		} `yaml:"httpproxy-client,omitempty"`
+
 		EchoClient struct {
 			Image string `yaml:"image"`
 		} `yaml:"echo-client,omitempty"`
+
 		Nats struct {
 			Image string `yaml:"image"`
 		} `yaml:"nats,omitempty"`
+
 		ImageRegistry struct {
 			Name string `yaml:"name"`
 		} `yaml:"imageRegistry,omitempty"`
+
 		Astra struct {
 			Token       string `yaml:"token"`
 			ClusterName string `yaml:"clusterName"`
@@ -219,57 +218,17 @@ type OperatorConfig struct {
 	} `yaml:"spec"`
 }
 
-func applyYaml(ctx context.Context, yamlData []byte, cfg *rest.Config) error {
-	var decUnstructured = yaml.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
+func createNamespace(ns string) (string, error) {
+	cmd := exec.Command("kubectl", "create", "ns", ns)
+	return runCmd(cmd)
+}
 
-	// 1. Prepare a RESTMapper to find GVR
-	dc, err := discovery.NewDiscoveryClientForConfig(cfg)
+func runCmd(cmd *exec.Cmd) (string, error) {
+	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return err
+		return string(output), fmt.Errorf("%s: %s", err, output)
 	}
-	mapper := restmapper.NewDeferredDiscoveryRESTMapper(memory.NewMemCacheClient(dc))
-
-	// 2. Prepare the dynamic client
-	dyn, err := dynamic.NewForConfig(cfg)
-	if err != nil {
-		return err
-	}
-
-	// 3. Decode YAML manifest into unstructured.Unstructured
-	obj := &unstructured.Unstructured{}
-	_, gvk, err := decUnstructured.Decode(yamlData, nil, obj)
-	if err != nil {
-		return err
-	}
-
-	// 4. Find GVR
-	mapping, err := mapper.RESTMapping(gvk.GroupKind(), gvk.Version)
-	if err != nil {
-		return err
-	}
-
-	// 5. Obtain REST interface for the GVR
-	var dr dynamic.ResourceInterface
-	if mapping.Scope.Name() == meta.RESTScopeNameNamespace {
-		// namespaced resources should specify the namespace
-		dr = dyn.Resource(mapping.Resource).Namespace(obj.GetNamespace())
-	} else {
-		// for cluster-wide resources
-		dr = dyn.Resource(mapping.Resource)
-	}
-
-	// 6. Marshal object into JSON
-	data, err := json.Marshal(obj)
-	if err != nil {
-		return err
-	}
-
-	// 7. Create  the object
-	//     types.ApplyPatchType indicates SSA.
-	//     FieldManager specifies the field owner ID.
-	_, err = dr.Patch(ctx, obj.GetName(), types.ApplyPatchType, data, metav1.PatchOptions{})
-
-	return err
+	return string(output), nil
 }
 
 type ErrorDetail struct {
@@ -296,14 +255,19 @@ type Options struct {
 	ImageRepoPw       string `short:"p" long:"repo-pw" required:"false" description:"Private Docker image repo URL" value-name:"PASSWORD"`
 	ClusterName       string `short:"c" long:"cluster-name" required:"true" description:"Private cluster name" value-name:"NAME"`
 	RegisterToken     string `short:"t" long:"token" required:"true" description:"Astra API token" value-name:"TOKEN"`
-	AcceptEula        bool   `short:"e" long:"accept-eula" required:"true" description:"Accept end user license agreement"`
+	AcceptEula        bool   `long:"accept-eula" required:"true" description:"Accept the End User License Agreement"`
 	AstraAccountId    string `short:"a" long:"account-id" required:"true" description:"Astra account ID" value-name:"ID"`
+	Namespace         string `long:"namespace" required:"false" default:"astra-connector" description:"Astra Connector namespace" value-name:"NAMESPACE"`
+	OperatorNamespace string `long:"operator-namespace" required:"false" default:"astra-connector-operator" description:"Astra Connector Operator namespace" value-name:"NAMESPACE"`
 	AstraUrl          string `short:"x" long:"astra-url" required:"false" default:"https://eap.astra.netapp.io" description:"Url to Astra. E.g. 'https://integration.astra.netapp.io'" value-name:"URL"`
 	SkipTlsValidation bool   `short:"z" long:"disable-tls" required:"false" description:"Disable TLS validation. TESTING ONLY."`
 }
 
 const (
-	NatsImageName string = "nats"
+	NatsImageName               = "nats"
+	ConnectorDefaultsConfigPath = "./astraconnector_defaults.yaml"
+	YamlOutputPath              = "./deployConfig.yaml"
+	OperatorYamlPath            = "./astraconnector_operator.yaml"
 )
 
 func main() {
@@ -311,6 +275,15 @@ func main() {
 	var opConfig OperatorConfig
 	_, err := flags.Parse(&opts)
 	checkFatalErr(err)
+
+	absPath, err := filepath.Abs(ConnectorDefaultsConfigPath)
+	checkFatalErr(err)
+	yamlFile, err := ioutil.ReadFile(absPath)
+	checkFatalErr(err)
+	err = yaml.Unmarshal(yamlFile, &opConfig)
+	checkFatalErr(err)
+	test, _ := yaml.Marshal(opConfig)
+	fmt.Printf("%s\n", test)
 
 	if opts.ImageTar != "" && opts.ImageRepo != "" {
 		dockerClient, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
@@ -324,9 +297,21 @@ func main() {
 		taggedImages, err := tagImages(dockerClient, loadedImages, opts.ImageRepo)
 		checkFatalErr(err)
 
-		log.Info("Pushing images")
-		err = pushImages(dockerClient, &opts, taggedImages)
-		checkFatalErr(err)
+		//todo: Fix the auth issue preventing this from succeeding
+		//log.Info("Pushing images")
+		//err = pushImages(dockerClient, &opts, taggedImages)
+		//checkFatalErr(err)
+
+		// This is a workaround until we can push using the docker package
+		for _, image := range taggedImages {
+			pushCmd := exec.Command("docker", "push", image)
+			output, err := pushCmd.CombinedOutput()
+			if err != nil {
+				msg := fmt.Sprintf(fmt.Sprint(err) + ": " + string(output))
+				log.Fatal(msg)
+			}
+			log.Info(string(output))
+		}
 
 		opConfig.Spec.ImageRegistry.Name = opts.ImageRepo
 
@@ -338,48 +323,45 @@ func main() {
 		}
 	}
 
-	opConfig.Spec.Astra.AccountId = opts.AstraAccountId
+	// Update yaml data
+	opConfig.Metadata.Namespace = opts.Namespace
 	opConfig.Spec.Astra.AcceptEula = strconv.FormatBool(opts.AcceptEula)
-	opConfig.Spec.Astra.Token = opts.RegisterToken
+	opConfig.Spec.Astra.AccountId = opts.AstraAccountId
 	opConfig.Spec.Astra.ClusterName = opts.ClusterName
-	opConfig.Metadata.Namespace = "pca" //todo move this
+	opConfig.Spec.Astra.Token = opts.RegisterToken
 
-	//wip:
+	fmt.Printf("DEBUG: %v\n", opConfig)
+	test2, _ := yaml.Marshal(opConfig)
+	fmt.Printf("\n%s\n", test2)
 
-	kubeconfigPath := os.Getenv("KUBECONFIG")
-	config, err := clientcmd.BuildConfigFromFlags(
-		"", kubeconfigPath,
-	)
-	//clientset := kubernetes.NewForConfigOrDie(config)
+	// Create namespaces
+	log.Info("Creating Astra Controller namespace")
+	output, err := createNamespace(opts.Namespace)
+	checkFatalErr(err)
+	log.Info(output)
 
-	data, err := yamlv2.Marshal(opConfig)
+	log.Info("Creating Astra Controller Operator namespace")
+	output, err = createNamespace(opts.OperatorNamespace)
+	checkFatalErr(err)
+	log.Info(output)
+
+	// Install Astra Controller Operator
+	operatorYamlPath, err := filepath.Abs(OperatorYamlPath)
+	applyCmd := exec.Command("kubectl", "apply", "-n", opts.OperatorNamespace, "-f", operatorYamlPath)
+	output, err = runCmd(applyCmd)
+	checkFatalErr(err)
+	log.Info(output)
+
+	// Write deployConfig.yaml file
+	yamlData, err := yaml.Marshal(opConfig)
+	yamlOutPath, err := filepath.Abs(YamlOutputPath)
+	checkFatalErr(err)
+	err = os.WriteFile(yamlOutPath, yamlData, 0644)
 	checkFatalErr(err)
 
-	//fmt.Println("Debug")
-	//enc := yamlv2.NewEncoder(os.Stdout)
-	//err = enc.Encode(string(data)) // debug
-	//checkFatalErr(err)
-
-	err = applyYaml(context.Background(), data, config)
+	// Install Astra Controller
+	applyCmd = exec.Command("kubectl", "apply", "-f", yamlOutPath)
+	output, err = runCmd(applyCmd)
 	checkFatalErr(err)
-
-	//decoder := scheme.Codecs.UniversalDeserializer()
-	//
-	//var obj runtime.Object
-	//var groupVersionKind *schema.GroupVersionKind
-	//data, _ := yaml.Marshal(opConfig)
-	//
-	//}
-	//
-	//u := &unstructured.Unstructured{}
-	//u.SetGroupVersionKind(schema.GroupVersionKind{
-	//	Group:   groupVersionKind.Group,
-	//	Kind:    groupVersionKind.Kind,
-	//	Version: groupVersionKind.Version,
-	//})
-	//_ = clientset.Get(context.Background(), client.ObjectKey{
-	//	Namespace: "namespace",
-	//	Name:      "name",
-	//}, u)
-
+	log.Info(output)
 }
