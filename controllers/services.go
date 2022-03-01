@@ -7,11 +7,11 @@ package controllers
 import (
 	"context"
 
-	"github.com/NetApp/astraagent-operator/common"
-	"github.com/NetApp/astraagent-operator/deployer"
+	"github.com/NetApp/astra-connector-operator/common"
+	"github.com/NetApp/astra-connector-operator/deployer"
 	ctrl "sigs.k8s.io/controller-runtime"
 
-	v1 "github.com/NetApp/astraagent-operator/api/v1"
+	v1 "github.com/NetApp/astra-connector-operator/api/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"

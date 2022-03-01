@@ -24,9 +24,9 @@ import (
 
 	"k8s.io/apimachinery/pkg/runtime"
 
-	v1 "github.com/NetApp/astraagent-operator/api/v1"
-	"github.com/NetApp/astraagent-operator/common"
-	"github.com/NetApp/astraagent-operator/register"
+	v1 "github.com/NetApp/astra-connector-operator/api/v1"
+	"github.com/NetApp/astra-connector-operator/common"
+	"github.com/NetApp/astra-connector-operator/register"
 )
 
 // AstraConnectorReconciler reconciles a AstraConnector object

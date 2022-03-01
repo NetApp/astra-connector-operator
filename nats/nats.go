@@ -7,11 +7,12 @@ package nats
 import (
 	"context"
 	"fmt"
-	"github.com/NetApp/astraagent-operator/common"
+
+	"github.com/NetApp/astra-connector-operator/common"
 
 	rbacv1 "k8s.io/api/rbac/v1"
 
-	v1 "github.com/NetApp/astraagent-operator/api/v1"
+	v1 "github.com/NetApp/astra-connector-operator/api/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

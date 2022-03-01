@@ -19,8 +19,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	v1 "github.com/NetApp/astraagent-operator/api/v1"
-	"github.com/NetApp/astraagent-operator/controllers"
+	v1 "github.com/NetApp/astra-connector-operator/api/v1"
+	"github.com/NetApp/astra-connector-operator/controllers"
 	//+kubebuilder:scaffold:imports
 )
 

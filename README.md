@@ -1,6 +1,6 @@
-# Astra Agent Operator 
+# Astra Connector Operator 
 
-Astra Agent Operator deploys and registers a private azure cluster with [NetApp Astra](https://cloud.netapp.com/astra)
+Astra Connector Operator deploys and registers a private azure cluster with [NetApp Astra](https://cloud.netapp.com/astra)
 
 ### To deploy the operator
 #### Create the namespace for the operator

@@ -8,14 +8,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/NetApp/astraagent-operator/register"
+	"github.com/NetApp/astra-connector-operator/register"
 
 	"strconv"
 	"strings"
 
-	v1 "github.com/NetApp/astraagent-operator/api/v1"
-	"github.com/NetApp/astraagent-operator/common"
-	"github.com/NetApp/astraagent-operator/nats"
+	v1 "github.com/NetApp/astra-connector-operator/api/v1"
+	"github.com/NetApp/astra-connector-operator/common"
+	"github.com/NetApp/astra-connector-operator/nats"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"

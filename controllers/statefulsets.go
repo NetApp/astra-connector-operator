@@ -8,9 +8,9 @@ import (
 	"context"
 	"reflect"
 
-	v1 "github.com/NetApp/astraagent-operator/api/v1"
-	"github.com/NetApp/astraagent-operator/common"
-	"github.com/NetApp/astraagent-operator/deployer"
+	v1 "github.com/NetApp/astra-connector-operator/api/v1"
+	"github.com/NetApp/astra-connector-operator/common"
+	"github.com/NetApp/astra-connector-operator/deployer"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
