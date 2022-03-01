@@ -6,19 +6,32 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"github.com/docker/docker/api/types"
+	dockerTypes "github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/system"
 	"github.com/jessevdk/go-flags"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/term"
+	yamlv2 "gopkg.in/yaml.v2"
+	meta "k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/serializer/yaml"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/discovery"
+	"k8s.io/client-go/discovery/cached/memory"
+	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/restmapper"
+	"k8s.io/client-go/tools/clientcmd"
 	"os"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
 )
 
-func CheckFatalErr(err error) {
+func checkFatalErr(err error) {
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -48,7 +61,7 @@ func loadImageTar(dockerClient *client.Client, opts Options) ([]string, error) {
 	// We use system.OpenSequential to use sequential file access on Windows, avoiding
 	// depleting the standby list un-necessarily. On Linux, this equates to a regular os.Open.
 	file, err := system.OpenSequential(opts.ImageTar)
-	CheckFatalErr(err)
+	checkFatalErr(err)
 	defer file.Close()
 
 	imageLoadResponse, err := dockerClient.ImageLoad(context.Background(), file, true)
@@ -69,7 +82,7 @@ func loadImageTar(dockerClient *client.Client, opts Options) ([]string, error) {
 		imageResponseBody := DockerLoadResponse{}
 		fmt.Println(scanner.Text())
 		err := json.Unmarshal(scanner.Bytes(), &imageResponseBody)
-		CheckFatalErr(err)
+		checkFatalErr(err)
 		fmt.Printf("Debug marshall: %v\n", imageResponseBody)
 
 		// Check response error
@@ -99,7 +112,7 @@ func tagImages(dockerClient *client.Client, images []string, repoPrefix string) 
 			"newTag":      newTag,
 			"sourceImage": image,
 		}).Info("Re-tag image")
-		
+
 		err := dockerClient.ImageTag(context.Background(), image, newTag)
 		if err != nil {
 			return nil, err
@@ -126,7 +139,7 @@ func pushImages(dockerClient *client.Client, opts *Options, images []string) err
 		}
 	}
 
-	var authConfig = types.AuthConfig{
+	var authConfig = dockerTypes.AuthConfig{
 		Username: opts.ImageRepoUser,
 		Password: opts.ImageRepoPw,
 	}
@@ -135,7 +148,7 @@ func pushImages(dockerClient *client.Client, opts *Options, images []string) err
 		return err
 	}
 	authConfigEncoded := base64.URLEncoding.EncodeToString(authConfigBytes)
-	pushOpts := types.ImagePushOptions{RegistryAuth: authConfigEncoded, All: true}
+	pushOpts := dockerTypes.ImagePushOptions{RegistryAuth: authConfigEncoded, All: true}
 
 	for _, image := range images {
 		log.Info("Pushing image")
@@ -174,6 +187,91 @@ func pushImages(dockerClient *client.Client, opts *Options, images []string) err
 	return nil
 }
 
+type OperatorConfig struct {
+	ApiVersion string `yaml:"apiVersion"`
+	Kind       string `yaml:"kind"`
+	Metadata   struct {
+		Name      string `yaml:"name"`
+		Namespace string `yaml:"namespace"`
+	} `yaml:"metadata"`
+	Spec struct {
+		NatssyncClient struct {
+			Image string `yaml:"image"`
+		} `yaml:"natssync-client,omitempty"`
+		HttpProxyClient struct {
+			Image string `yaml:"image"`
+		} `yaml:"httpproxy-client,omitempty"`
+		EchoClient struct {
+			Image string `yaml:"image"`
+		} `yaml:"echo-client,omitempty"`
+		Nats struct {
+			Image string `yaml:"image"`
+		} `yaml:"nats,omitempty"`
+		ImageRegistry struct {
+			Name string `yaml:"name"`
+		} `yaml:"imageRegistry,omitempty"`
+		Astra struct {
+			Token       string `yaml:"token"`
+			ClusterName string `yaml:"clusterName"`
+			AccountId   string `yaml:"accountId"`
+			AcceptEula  string `yaml:"acceptEULA"`
+		} `yaml:"astra"`
+	} `yaml:"spec"`
+}
+
+func applyYaml(ctx context.Context, yamlData []byte, cfg *rest.Config) error {
+	var decUnstructured = yaml.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
+
+	// 1. Prepare a RESTMapper to find GVR
+	dc, err := discovery.NewDiscoveryClientForConfig(cfg)
+	if err != nil {
+		return err
+	}
+	mapper := restmapper.NewDeferredDiscoveryRESTMapper(memory.NewMemCacheClient(dc))
+
+	// 2. Prepare the dynamic client
+	dyn, err := dynamic.NewForConfig(cfg)
+	if err != nil {
+		return err
+	}
+
+	// 3. Decode YAML manifest into unstructured.Unstructured
+	obj := &unstructured.Unstructured{}
+	_, gvk, err := decUnstructured.Decode(yamlData, nil, obj)
+	if err != nil {
+		return err
+	}
+
+	// 4. Find GVR
+	mapping, err := mapper.RESTMapping(gvk.GroupKind(), gvk.Version)
+	if err != nil {
+		return err
+	}
+
+	// 5. Obtain REST interface for the GVR
+	var dr dynamic.ResourceInterface
+	if mapping.Scope.Name() == meta.RESTScopeNameNamespace {
+		// namespaced resources should specify the namespace
+		dr = dyn.Resource(mapping.Resource).Namespace(obj.GetNamespace())
+	} else {
+		// for cluster-wide resources
+		dr = dyn.Resource(mapping.Resource)
+	}
+
+	// 6. Marshal object into JSON
+	data, err := json.Marshal(obj)
+	if err != nil {
+		return err
+	}
+
+	// 7. Create  the object
+	//     types.ApplyPatchType indicates SSA.
+	//     FieldManager specifies the field owner ID.
+	_, err = dr.Patch(ctx, obj.GetName(), types.ApplyPatchType, data, metav1.PatchOptions{})
+
+	return err
+}
+
 type ErrorDetail struct {
 	Message string `json:"message"`
 }
@@ -192,40 +290,96 @@ type DockerLoadResponse struct {
 }
 
 type Options struct {
-	ImageRepo     string `short:"r" long:"image-repo" required:"false" description:"Private Docker image repo URL" value-name:"URL"`
-	ImageTar      string `short:"i" long:"image-tar" required:"false" description:"Path to image tar" value-name:"PATH"`
-	ImageRepoUser string `short:"u" long:"repo-user" required:"false" description:"Private Docker image repo URL" value-name:"USER"`
-	ImageRepoPw   string `short:"p" long:"repo-pw" required:"false" description:"Private Docker image repo URL" value-name:"PASSWORD"`
-	//ClusterName       string `short:"c" long:"cluster-name" required:"true" description:"Private cluster name" value-name:"NAME"`
-	//RegisterToken     string `short:"t" long:"token" required:"true" description:"Astra API token" value-name:"TOKEN"`
-	//AstraAccountId    string `short:"a" long:"account-id" required:"true" description:"Astra account ID" value-name:"ID"`
+	ImageRepo         string `short:"r" long:"image-repo" required:"false" description:"Private Docker image repo URL" value-name:"URL"`
+	ImageTar          string `short:"i" long:"image-tar" required:"false" description:"Path to image tar" value-name:"PATH"`
+	ImageRepoUser     string `short:"u" long:"repo-user" required:"false" description:"Private Docker image repo URL" value-name:"USER"`
+	ImageRepoPw       string `short:"p" long:"repo-pw" required:"false" description:"Private Docker image repo URL" value-name:"PASSWORD"`
+	ClusterName       string `short:"c" long:"cluster-name" required:"true" description:"Private cluster name" value-name:"NAME"`
+	RegisterToken     string `short:"t" long:"token" required:"true" description:"Astra API token" value-name:"TOKEN"`
+	AcceptEula        bool   `short:"e" long:"accept-eula" required:"true" description:"Accept end user license agreement"`
+	AstraAccountId    string `short:"a" long:"account-id" required:"true" description:"Astra account ID" value-name:"ID"`
 	AstraUrl          string `short:"x" long:"astra-url" required:"false" default:"https://eap.astra.netapp.io" description:"Url to Astra. E.g. 'https://integration.astra.netapp.io'" value-name:"URL"`
 	SkipTlsValidation bool   `short:"z" long:"disable-tls" required:"false" description:"Disable TLS validation. TESTING ONLY."`
 }
 
+const (
+	NatsImageName string = "nats"
+)
+
 func main() {
 	var opts Options
+	var opConfig OperatorConfig
 	_, err := flags.Parse(&opts)
-	CheckFatalErr(err)
+	checkFatalErr(err)
 
 	if opts.ImageTar != "" && opts.ImageRepo != "" {
 		dockerClient, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
-		CheckFatalErr(err)
+		checkFatalErr(err)
 
 		log.Info("Loading image tar")
 		loadedImages, err := loadImageTar(dockerClient, opts)
-		CheckFatalErr(err)
+		checkFatalErr(err)
 
 		log.Info("Tagging images")
 		taggedImages, err := tagImages(dockerClient, loadedImages, opts.ImageRepo)
-		CheckFatalErr(err)
+		checkFatalErr(err)
 
 		log.Info("Pushing images")
 		err = pushImages(dockerClient, &opts, taggedImages)
-		CheckFatalErr(err)
+		checkFatalErr(err)
 
+		opConfig.Spec.ImageRegistry.Name = opts.ImageRepo
+
+		// Update nats image name. Other images use OperatorConfig.ImageRegistry.Name
+		for _, image := range taggedImages {
+			if strings.Contains(image, fmt.Sprintf("%s:", NatsImageName)) {
+				opConfig.Spec.Nats.Image = image
+			}
+		}
 	}
 
-	//apply yaml
+	opConfig.Spec.Astra.AccountId = opts.AstraAccountId
+	opConfig.Spec.Astra.AcceptEula = strconv.FormatBool(opts.AcceptEula)
+	opConfig.Spec.Astra.Token = opts.RegisterToken
+	opConfig.Spec.Astra.ClusterName = opts.ClusterName
+	opConfig.Metadata.Namespace = "pca" //todo move this
+
+	//wip:
+
+	kubeconfigPath := os.Getenv("KUBECONFIG")
+	config, err := clientcmd.BuildConfigFromFlags(
+		"", kubeconfigPath,
+	)
+	//clientset := kubernetes.NewForConfigOrDie(config)
+
+	data, err := yamlv2.Marshal(opConfig)
+	checkFatalErr(err)
+
+	//fmt.Println("Debug")
+	//enc := yamlv2.NewEncoder(os.Stdout)
+	//err = enc.Encode(string(data)) // debug
+	//checkFatalErr(err)
+
+	err = applyYaml(context.Background(), data, config)
+	checkFatalErr(err)
+
+	//decoder := scheme.Codecs.UniversalDeserializer()
+	//
+	//var obj runtime.Object
+	//var groupVersionKind *schema.GroupVersionKind
+	//data, _ := yaml.Marshal(opConfig)
+	//
+	//}
+	//
+	//u := &unstructured.Unstructured{}
+	//u.SetGroupVersionKind(schema.GroupVersionKind{
+	//	Group:   groupVersionKind.Group,
+	//	Kind:    groupVersionKind.Kind,
+	//	Version: groupVersionKind.Version,
+	//})
+	//_ = clientset.Get(context.Background(), client.ObjectKey{
+	//	Namespace: "namespace",
+	//	Name:      "name",
+	//}, u)
 
 }
