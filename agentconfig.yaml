@@ -1,0 +1,24 @@
+apiVersion: netapp.astraagent.com/v1
+kind: AstraAgent
+metadata:
+  name: astra-agent
+spec:
+  natssync-client:
+    image: natssync-client:0.9.202202170408
+  nats:
+    image: nats:2.6.1-alpine3.14
+  httpproxy-client:
+    image: httpproxylet:0.9.202202170408
+  echo-client:
+    image: echo-proxylet:0.9.202202170408
+  imageRegistry:
+    name: theotw
+
+  # Items below are required
+  astra:
+    clusterName: Name of the AKS cluster as seen in Azure Portal
+    token: API Token from the API Access page in Astra UI
+    accountId: Astra Account ID from the API Access page in Astra UI
+    #  Need to accept the EULA located at:
+    #  https://www.netapp.com/pdf.html?item=/media/14114-enduserlicenseagreementworldwide.pdf
+    acceptEULA: No
