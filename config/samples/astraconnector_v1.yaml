@@ -1,7 +1,7 @@
-apiVersion: netapp.astraagent.com/v1
-kind: AstraAgent
+apiVersion: netapp.astraconnector.com/v1
+kind: AstraConnector
 metadata:
-  name: astra-agent
+  name: astra-connector
 spec:
   natssync-client:
     image: natssync-client:0.9.202202170408

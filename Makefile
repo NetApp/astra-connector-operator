@@ -36,8 +36,8 @@ BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
 # This variable is used to construct full image tags for bundle and catalog images.
 #
 # For example, running 'make bundle-build bundle-push catalog-build catalog-push' will build and push both
-# astraagent.com/operator-bundle:$VERSION and astraagent.com/operator-catalog:$VERSION.
-IMAGE_TAG_BASE ?= netapp/astra-agent-operator
+# astraconnector.com/operator-bundle:$VERSION and astraconnector.com/operator-catalog:$VERSION.
+IMAGE_TAG_BASE ?= netapp/astra-connector-operator
 
 # BUNDLE_IMG defines the image:tag used for the bundle.
 # You can use it as an arg. (E.g make bundle-build BUNDLE_IMG=<some-registry>/<project-name-bundle>:<tag>)
@@ -121,7 +121,7 @@ uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified 
 generate-operator-yaml: generate manifests kustomize ## Generate controller yaml.
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 	cd ../..
-	$(KUSTOMIZE) build config/default > astraagent_operator.yaml
+	$(KUSTOMIZE) build config/default > astraconnector_operator.yaml
 
 deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
@@ -225,4 +225,4 @@ l1: manifests generate fmt vet envtest
 image-tar:
 	rm -rf ${OUTPUT_IMAGE_TAR_DIR}
 	mkdir -p ${OUTPUT_IMAGE_TAR_DIR}
-	$(SCRIPTS_DIR)/create-image-tar.sh ${OUTPUT_IMAGE_TAR_DIR}/astra-agent-images.tar
+	$(SCRIPTS_DIR)/create-image-tar.sh ${OUTPUT_IMAGE_TAR_DIR}/astra-connector-images.tar

@@ -6,6 +6,7 @@ package controllers
 
 import (
 	"context"
+
 	v1 "github.com/NetApp/astraagent-operator/api/v1"
 	"github.com/NetApp/astraagent-operator/common"
 	"github.com/NetApp/astraagent-operator/deployer"
@@ -16,7 +17,7 @@ import (
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-func (r *AstraAgentReconciler) CreateServiceAccounts(m *v1.AstraAgent, ctx context.Context) error {
+func (r *AstraConnectorReconciler) CreateServiceAccounts(m *v1.AstraConnector, ctx context.Context) error {
 	log := ctrllog.FromContext(ctx)
 	for saName, deploymentName := range common.ServiceAccountsList {
 		foundSA := &corev1.ServiceAccount{}
@@ -34,7 +35,7 @@ func (r *AstraAgentReconciler) CreateServiceAccounts(m *v1.AstraAgent, ctx conte
 				log.Error(err, "Failed to get service account object")
 				return err
 			}
-			// Set astraAgent instance as the owner and controller
+			// Set astraConnector instance as the owner and controller
 			err = ctrl.SetControllerReference(m, configMPSA, r.Scheme)
 			if err != nil {
 				return err

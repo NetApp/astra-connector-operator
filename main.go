@@ -59,7 +59,7 @@ func main() {
 		Port:                   9443,
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
-		LeaderElectionID:       "c3ec164e.astraagent.com",
+		LeaderElectionID:       "c3ec164e.astraconnector.com",
 		Namespace:              "",
 	})
 	if err != nil {
@@ -67,11 +67,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = (&controllers.AstraAgentReconciler{
+	if err = (&controllers.AstraConnectorReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "AstraAgent")
+		setupLog.Error(err, "unable to create controller", "controller", "AstraConnector")
 		os.Exit(1)
 	}
 	//+kubebuilder:scaffold:builder

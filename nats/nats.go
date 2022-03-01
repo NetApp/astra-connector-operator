@@ -25,7 +25,7 @@ func NewNatsDeployer() *Deployer {
 }
 
 // GetStatefulsetObject returns a NATS Statefulset object
-func (n *Deployer) GetStatefulsetObject(m *v1.AstraAgent, ctx context.Context) (*appsv1.StatefulSet, error) {
+func (n *Deployer) GetStatefulsetObject(m *v1.AstraConnector, ctx context.Context) (*appsv1.StatefulSet, error) {
 	log := ctrllog.FromContext(ctx)
 	ls := labelsForNats(common.NatsName)
 
@@ -156,7 +156,7 @@ func (n *Deployer) GetStatefulsetObject(m *v1.AstraAgent, ctx context.Context) (
 }
 
 // GetNatsClusterServiceObject returns a cluster Service object for Nats
-func (n *Deployer) GetNatsClusterServiceObject(m *v1.AstraAgent) (*corev1.Service, error) {
+func (n *Deployer) GetNatsClusterServiceObject(m *v1.AstraConnector) (*corev1.Service, error) {
 	ls := labelsForNats(common.NatsName)
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
@@ -195,7 +195,7 @@ func (n *Deployer) GetNatsClusterServiceObject(m *v1.AstraAgent) (*corev1.Servic
 }
 
 // GetConfigMapObject returns a ConfigMap object for nats
-func (n *Deployer) GetConfigMapObject(m *v1.AstraAgent) (*corev1.ConfigMap, error) {
+func (n *Deployer) GetConfigMapObject(m *v1.AstraConnector) (*corev1.ConfigMap, error) {
 	natsConf := "pid_file: \"/var/run/nats/nats.pid\"\nhttp: %d\n\ncluster {\n  port: %d\n  routes [\n    nats://nats-0.nats-cluster:%d\n    nats://nats-1.nats-cluster:%d\n    nats://nats-2.nats-cluster:%d\n  ]\n\n  cluster_advertise: $CLUSTER_ADVERTISE\n  connect_retries: 30\n}\n"
 	configMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
@@ -210,7 +210,7 @@ func (n *Deployer) GetConfigMapObject(m *v1.AstraAgent) (*corev1.ConfigMap, erro
 }
 
 // GetServiceAccountObject returns a ServiceAccount object for nats
-func (n *Deployer) GetServiceAccountObject(m *v1.AstraAgent) (*corev1.ServiceAccount, error) {
+func (n *Deployer) GetServiceAccountObject(m *v1.AstraConnector) (*corev1.ServiceAccount, error) {
 	sa := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      common.NatsServiceAccountName,
@@ -222,7 +222,7 @@ func (n *Deployer) GetServiceAccountObject(m *v1.AstraAgent) (*corev1.ServiceAcc
 }
 
 // GetServiceObject returns a Service object for nats
-func (n *Deployer) GetServiceObject(m *v1.AstraAgent, serviceName string) (*corev1.Service, error) {
+func (n *Deployer) GetServiceObject(m *v1.AstraConnector, serviceName string) (*corev1.Service, error) {
 	if serviceName == common.NatsName {
 		return n.GetNatsServiceObject(m)
 	} else if serviceName == common.NatsClusterServiceName {
@@ -232,7 +232,7 @@ func (n *Deployer) GetServiceObject(m *v1.AstraAgent, serviceName string) (*core
 }
 
 // GetNatsServiceObject returns a Service object for nats
-func (n *Deployer) GetNatsServiceObject(m *v1.AstraAgent) (*corev1.Service, error) {
+func (n *Deployer) GetNatsServiceObject(m *v1.AstraConnector) (*corev1.Service, error) {
 	ls := labelsForNats(common.NatsName)
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
@@ -259,20 +259,20 @@ func labelsForNats(name string) map[string]string {
 	return map[string]string{"app": name}
 }
 
-func (n *Deployer) GetDeploymentObject(m *v1.AstraAgent, ctx context.Context) (*appsv1.Deployment, error) {
+func (n *Deployer) GetDeploymentObject(m *v1.AstraConnector, ctx context.Context) (*appsv1.Deployment, error) {
 	return nil, fmt.Errorf("not implemented")
 }
 
-func (n *Deployer) GetRoleObject(m *v1.AstraAgent) (*rbacv1.Role, error) {
+func (n *Deployer) GetRoleObject(m *v1.AstraConnector) (*rbacv1.Role, error) {
 	return nil, fmt.Errorf("not implemented")
 }
 
-func (n *Deployer) GetRoleBindingObject(m *v1.AstraAgent) (*rbacv1.RoleBinding, error) {
+func (n *Deployer) GetRoleBindingObject(m *v1.AstraConnector) (*rbacv1.RoleBinding, error) {
 	return nil, fmt.Errorf("not implemented")
 }
 
 // GetNatsURL returns the nats URL
-func GetNatsURL(m *v1.AstraAgent) string {
+func GetNatsURL(m *v1.AstraConnector) string {
 	natsURL := fmt.Sprintf("nats://%s.%s:%d", common.NatsName, m.Namespace, common.NatsClientPort)
 	return natsURL
 }

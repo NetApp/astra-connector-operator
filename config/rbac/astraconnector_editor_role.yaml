@@ -1,13 +1,13 @@
-# permissions for end users to edit astraagents.
+# permissions for end users to edit astraconnectors.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: astraagent-editor-role
+  name: astraconnector-editor-role
 rules:
 - apiGroups:
-  - netapp.astraagent.com
+  - netapp.astraconnector.com
   resources:
-  - astraagents
+  - astraconnectors
   verbs:
   - create
   - delete
@@ -17,8 +17,8 @@ rules:
   - update
   - watch
 - apiGroups:
-  - netapp.astraagent.com
+  - netapp.astraconnector.com
   resources:
-  - astraagents/status
+  - astraconnectors/status
   verbs:
   - get

@@ -1,19 +1,19 @@
-domain: astraagent.com
+domain: astraconnector.com
 layout:
 - go.kubebuilder.io/v3
 plugins:
   manifests.sdk.operatorframework.io/v2: {}
   scorecard.sdk.operatorframework.io/v2: {}
-projectName: astraagent-operator
-repo: github.com/NetApp/astraagent-operator
+projectName: astraconnector-operator
+repo: github.com/NetApp/astraconnector-operator
 resources:
 - api:
     crdVersion: v1
     namespaced: true
   controller: true
-  domain: astraagent.com
-  group: netapp.astraagent.com
-  kind: AstraAgent
-  path: github.com/NetApp/astraagent-operator/api/v1
+  domain: astraconnector.com
+  group: netapp.astraconnector.com
+  kind: AstraConnector
+  path: github.com/NetApp/astraconnector-operator/api/v1
   version: v1
 version: "3"

@@ -79,9 +79,9 @@ rules:
   - update
   - watch
 - apiGroups:
-  - netapp.astraagent.com
+  - netapp.astraconnector.com
   resources:
-  - astraagents
+  - astraconnectors
   verbs:
   - create
   - delete
@@ -91,15 +91,15 @@ rules:
   - update
   - watch
 - apiGroups:
-  - netapp.astraagent.com
+  - netapp.astraconnector.com
   resources:
-  - astraagents/finalizers
+  - astraconnectors/finalizers
   verbs:
   - update
 - apiGroups:
-  - netapp.astraagent.com
+  - netapp.astraconnector.com
   resources:
-  - astraagents/status
+  - astraconnectors/status
   verbs:
   - get
   - patch

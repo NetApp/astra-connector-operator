@@ -18,7 +18,7 @@ import (
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-func (r *AstraAgentReconciler) CreateStatefulSets(m *v1.AstraAgent, ctx context.Context) error {
+func (r *AstraConnectorReconciler) CreateStatefulSets(m *v1.AstraConnector, ctx context.Context) error {
 	log := ctrllog.FromContext(ctx)
 	foundSet := &appsv1.StatefulSet{}
 	deployerObj, err := deployer.Factory("nats")
@@ -37,7 +37,7 @@ func (r *AstraAgentReconciler) CreateStatefulSets(m *v1.AstraAgent, ctx context.
 	if err != nil && errors.IsNotFound(err) {
 		// Define a new statefulset
 
-		// Set astraAgent instance as the owner and controller
+		// Set astraConnector instance as the owner and controller
 		err = ctrl.SetControllerReference(m, set, r.Scheme)
 		if err != nil {
 			return err

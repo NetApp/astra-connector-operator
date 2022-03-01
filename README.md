@@ -5,48 +5,48 @@ Astra Agent Operator deploys and registers a private azure cluster with [NetApp 
 ### To deploy the operator
 #### Create the namespace for the operator
 ```
-kubectl create ns astra-agent-operator
+kubectl create ns astra-connector-operator
 ```
-#### Apply the astraagent_operator.yaml file to the operator namespace
+#### Apply the astraconnector_operator.yaml file to the operator namespace
 ```
-kubectl apply -f astraagent_operator.yaml -n astra-agent-operator
+kubectl apply -f astraconnector_operator.yaml -n astra-connector-operator
 ```
 ### Install the private cluster components
 #### Create the namespace for the private cluster components
 ```
-kubectl create ns astra-agent
+kubectl create ns astra-connector
 ```
-#### Apply the AstraAgent CRD
+#### Apply the AstraConnector CRD
 
 Update the CRD with the right values. Refer to the table below for explanations of the CRD spec
 ```
-kubectl apply -f config/samples/astraagent_v1.yaml -n astra-agent
+kubectl apply -f config/samples/astraconnector_v1.yaml -n astra-connector
 ```
-#### Check the AstraAgent status
+#### Check the AstraConnector status
 ```
-kubectl get astraagent astra-agent -n astra-agent
-NAME          REGISTERED   LOCATIONID
-astra-agent   true         22b839aa-8b85-445a-85dd-0b1f53b5ea19
+kubectl get astraconnector astra-connector -n astra-connector
+NAME              REGISTERED   ASTRACONNECTORID
+astra-connector   true         22b839aa-8b85-445a-85dd-0b1f53b5ea19
 ```
 ### Uninstall the private cluster components
 - Unmanage the cluster from the Astra UI
-- Remove the AstraAgent CRD
+- Remove the AstraConnector CRD
 
 NOTE: Removing the CRD will also attempt to unregister the cluster with Astra
 ```
-kubectl delete -f config/samples/astraagent_v1.yaml -n astra-agent
+kubectl delete -f config/samples/astraconnector_v1.yaml -n astra-connector
 ```
 ### Uninstall the operator
 ```
-kubectl delete -f astraagent_operator.yaml -n astra-agent-operator
+kubectl delete -f astraconnector_operator.yaml -n astra-connector-operator
 ```
 ## CRD
 #### Sample CRD
 ```
-apiVersion: netapp.astraagent.com/v1
-kind: AstraAgent
+apiVersion: netapp.astraconnector.com/v1
+kind: AstraConnector
 metadata:
-  name: astra-agent
+  name: astra-connector
 spec:
   astra:
     token: <AstraApiToken>

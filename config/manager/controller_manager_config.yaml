@@ -8,4 +8,4 @@ webhook:
   port: 9443
 leaderElection:
   leaderElect: true
-  resourceName: c3ec164e.astraagent.com
+  resourceName: c3ec164e.astraconnector.com
