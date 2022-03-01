@@ -25,8 +25,8 @@ spec:
     - jsonPath: .status.natssync-client.registered
       name: Registered
       type: string
-    - jsonPath: .status.natssync-client.bridgeID
-      name: BridgeID
+    - jsonPath: .status.natssync-client.astraConnectorID
+      name: AstraConnectorID
       type: string
     name: v1
     schema:
@@ -119,12 +119,12 @@ spec:
               natssync-client:
                 description: NatssyncClientStatus defines the observed state of NatssyncClient
                 properties:
-                  bridgeID:
+                  astraConnectorID:
                     type: string
                   registered:
                     type: string
                 required:
-                - bridgeID
+                - astraConnectorID
                 - registered
                 type: object
               nodes:
@@ -458,7 +458,7 @@ spec:
         - --leader-elect
         command:
         - /manager
-        image: netapp/astra-agent-operator:1.0.202202242126
+        image: netapp/astra-connector-operator:latest
         livenessProbe:
           httpGet:
             path: /healthz

@@ -49,15 +49,15 @@ func RegisterClient(m *v1.AstraConnector) (string, error) {
 		errMsg := fmt.Sprintf("Unexpected registration status code: %d; %s", response.StatusCode, string(bodyBytes))
 		return "", errors.New(errMsg)
 	}
-	type BridgeID struct {
-		BridgeID string `json:"bridgeID"`
+	type AstraConnectorID struct {
+		AstraConnectorID string `json:"astraConnectorID"`
 	}
-	bridgeID := &BridgeID{}
-	err = json.NewDecoder(response.Body).Decode(bridgeID)
+	astraConnectorID := &AstraConnectorID{}
+	err = json.NewDecoder(response.Body).Decode(astraConnectorID)
 	if err != nil {
 		return "", err
 	}
-	return bridgeID.BridgeID, nil
+	return astraConnectorID.AstraConnectorID, nil
 }
 
 func UnregisterClient(m *v1.AstraConnector) error {
@@ -127,7 +127,7 @@ func getAstraHostFromURL(astraHostURL string) (string, error) {
 	return cloudBridgeURLSplit[1], nil
 }
 
-func AddBridgeIDtoAstra(m *v1.AstraConnector, bridgeID string, ctx context.Context) error {
+func AddConnectorIDtoAstra(m *v1.AstraConnector, astraConnectorID string, ctx context.Context) error {
 	log := ctrllog.FromContext(ctx)
 	setTlsValidation(m.Spec.NatssyncClient.SkipTLSValidation, ctx)
 
@@ -191,9 +191,9 @@ func AddBridgeIDtoAstra(m *v1.AstraConnector, bridgeID string, ctx context.Conte
 	}
 	log.Info("Found cluster ID", "clusterId", clusterId)
 
-	// Register the BridgeID with Astra
-	bridgeID = fmt.Sprintf("v1:%s", bridgeID)
-	err = RegisterBridgeID(astraHost, m.Spec.Astra.AccountID, m.Spec.Astra.Token, bridgeID, cloudID, clusterId, managedState, ctx)
+	// Register the astraConnectorID with Astra
+	astraConnectorID = fmt.Sprintf("v1:%s", astraConnectorID)
+	err = RegisterConnectorID(astraHost, m.Spec.Astra.AccountID, m.Spec.Astra.Token, astraConnectorID, cloudID, clusterId, managedState, ctx)
 	if err != nil {
 		log.Error(err, "Error registering location ID with Astra")
 		return err
@@ -201,7 +201,7 @@ func AddBridgeIDtoAstra(m *v1.AstraConnector, bridgeID string, ctx context.Conte
 	return nil
 }
 
-func RemoveBridgeIDFromAstra(m *v1.AstraConnector, ctx context.Context) error {
+func RemoveConnectorIDFromAstra(m *v1.AstraConnector, ctx context.Context) error {
 	log := ctrllog.FromContext(ctx)
 	setTlsValidation(m.Spec.NatssyncClient.SkipTLSValidation, ctx)
 
@@ -243,8 +243,8 @@ func RemoveBridgeIDFromAstra(m *v1.AstraConnector, ctx context.Context) error {
 	}
 	log.Info("Found cluster ID", "clusterId", clusterId)
 
-	// Unregister the BridgeID with Astra
-	err = RegisterBridgeID(astraHost, m.Spec.Astra.AccountID, m.Spec.Astra.Token, "", cloudID, clusterId, managedState, ctx)
+	// Unregister the astraConnectorID
+	err = RegisterConnectorID(astraHost, m.Spec.Astra.AccountID, m.Spec.Astra.Token, "", cloudID, clusterId, managedState, ctx)
 	if err != nil {
 		log.Error(err, "Error unregistering location ID with Astra")
 		return err
@@ -432,20 +432,20 @@ func GetCloudId(astraHost string, accountId string, token string, cloudType stri
 	return cloudId, nil
 }
 
-func RegisterBridgeID(astraCloudHost string, pcloudAccountId string, token string, bridgeID string, cloudId string, clusterId string, managedState string, ctx context.Context) error {
+func RegisterConnectorID(astraCloudHost string, pcloudAccountId string, token string, astraConnectorID string, cloudId string, clusterId string, managedState string, ctx context.Context) error {
 	log := ctrllog.FromContext(ctx)
 	timeout := time.Second * 30
 	success := false
 	timeExpire := time.Now().Add(timeout)
 	for time.Now().Before(timeExpire) {
-		response, err := PostBridgeID(astraCloudHost, pcloudAccountId, token, bridgeID, cloudId, clusterId, managedState, ctx)
+		response, err := PostConnectorID(astraCloudHost, pcloudAccountId, token, astraConnectorID, cloudId, clusterId, managedState, ctx)
 		if err != nil {
 			log.Error(err, "Error posting location ID")
 			time.Sleep(errorRetrySleep)
 			continue
 		}
 		if response.StatusCode == 200 { // Assuming the response code at this point
-			log.Info("successfully registered BridgeID with Astra", "BridgeID", bridgeID)
+			log.Info("successfully registered astraConnectorID", "astraConnectorID", astraConnectorID)
 			success = true
 			break
 		}
@@ -459,13 +459,13 @@ func RegisterBridgeID(astraCloudHost string, pcloudAccountId string, token strin
 	return nil
 }
 
-func PostBridgeID(astraCloudHost string, pcloudAccountId string, token string, bridgeID string, cloudId string, clusterId string, managedState string, ctx context.Context) (*http.Response, error) {
+func PostConnectorID(astraCloudHost string, pcloudAccountId string, token string, astraConnectorID string, cloudId string, clusterId string, managedState string, ctx context.Context) (*http.Response, error) {
 	log := ctrllog.FromContext(ctx)
 	clusterUrl := fmt.Sprintf("%s/accounts/%s/topology/v1/clouds/%s/clusters/%s", astraCloudHost, pcloudAccountId, cloudId, clusterId)
 	managedClusterUrl := fmt.Sprintf("%s/accounts/%s/topology/v1/managedClusters/%s", astraCloudHost, pcloudAccountId, clusterId)
 	registerUrl := clusterUrl
 	payLoad := map[string]string{
-		"privateRouteID": bridgeID,
+		"privateRouteID": astraConnectorID,
 		"version":        "1.1",
 		"type":           "application/astra-cluster",
 	}
@@ -667,7 +667,7 @@ func createCloud(astraHost string, m *v1.AstraConnector, ctx context.Context) (s
 	return cloudResp.ID, nil
 }
 
-func GetBridgeIDFromConfigMap(cmData map[string]string) (string, error) {
+func GetConnectorIDFromConfigMap(cmData map[string]string) (string, error) {
 	var serviceKeyDataString string
 	var serviceKeyData map[string]interface{}
 	for key := range cmData {

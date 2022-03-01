@@ -90,7 +90,7 @@ func (r *AstraConnectorReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		if controllerutil.ContainsFinalizer(astraConnector, finalizerName) {
 			// our finalizer is present, so lets handle any external dependency
 			log.Info("Unregistering the cluster with Astra upon CRD delete")
-			err = register.RemoveBridgeIDFromAstra(astraConnector, ctx)
+			err = register.RemoveConnectorIDFromAstra(astraConnector, ctx)
 			if err != nil {
 				log.Error(err, "Failed to unregister the cluster with Astra, ignoring...")
 			} else {
@@ -161,16 +161,16 @@ func (r *AstraConnectorReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	registered := false
 	log.Info("Checking for natssync-client configmap")
 	foundCM := &corev1.ConfigMap{}
-	bridgeID := ""
+	astraConnectorID := ""
 	err = r.Get(ctx, types.NamespacedName{Name: common.NatssyncClientConfigMapName, Namespace: astraConnector.Namespace}, foundCM)
 	if len(foundCM.Data) != 0 {
 		registered = true
-		bridgeID, err = register.GetBridgeIDFromConfigMap(foundCM.Data)
+		astraConnectorID, err = register.GetConnectorIDFromConfigMap(foundCM.Data)
 		if err != nil {
 			log.Error(err, "Failed to get the location ID from configmap")
 			return ctrl.Result{RequeueAfter: 1 * time.Minute}, err
 		}
-		if bridgeID == "" {
+		if astraConnectorID == "" {
 			log.Error(err, "Got an empty location ID from configmap")
 			return ctrl.Result{RequeueAfter: 1 * time.Minute}, err
 		}
@@ -180,27 +180,27 @@ func (r *AstraConnectorReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	natssyncClientStatus := v1.NatssyncClientStatus{}
 	if !astraConnector.Spec.Astra.Unregister {
 		if registered {
-			log.Info("natssync-client already registered", "bridgeID", bridgeID)
+			log.Info("natssync-client already registered", "astraConnectorID", astraConnectorID)
 		} else {
 			log.Info("Registering natssync-client")
-			bridgeID, err = register.RegisterClient(astraConnector)
+			astraConnectorID, err = register.RegisterClient(astraConnector)
 			if err != nil {
 				log.Error(err, "Failed to register natssync-client")
 				return ctrl.Result{RequeueAfter: 1 * time.Minute}, err
 			}
 
-			log.Info("natssync-client BridgeID", "bridgeID", bridgeID)
+			log.Info("natssync-client ConnectorID", "astraConnectorID", astraConnectorID)
 		}
 		natssyncClientStatus.Registered = "true"
-		natssyncClientStatus.BridgeID = bridgeID
+		natssyncClientStatus.AstraConnectorID = astraConnectorID
 
 		if astraConnector.Spec.Astra.Token == "" || astraConnector.Spec.Astra.AccountID == "" || astraConnector.Spec.Astra.ClusterName == "" {
 			log.Info("Skipping cluster registration with Astra, incomplete Astra details provided Token/AccountID/ClusterName")
 		} else {
 			log.Info("Registering cluster with Astra")
-			err = register.AddBridgeIDtoAstra(astraConnector, bridgeID, ctx)
+			err = register.AddConnectorIDtoAstra(astraConnector, astraConnectorID, ctx)
 			if err != nil {
-				log.Error(err, "Failed to register BridgeID with Astra")
+				log.Error(err, "Failed to register astraConnectorID")
 				return ctrl.Result{RequeueAfter: 1 * time.Minute}, err
 			}
 			log.Info("Registered cluster with Astra")
@@ -211,7 +211,7 @@ func (r *AstraConnectorReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 				log.Info("Skipping cluster unregister with Astra, incomplete Astra details provided Token/AccountID/ClusterName")
 			} else {
 				log.Info("Unregistering the cluster with Astra")
-				err = register.RemoveBridgeIDFromAstra(astraConnector, ctx)
+				err = register.RemoveConnectorIDFromAstra(astraConnector, ctx)
 				if err != nil {
 					log.Error(err, "Failed to unregister the cluster with Astra")
 					return ctrl.Result{Requeue: true}, err
@@ -230,7 +230,7 @@ func (r *AstraConnectorReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			log.Info("Already unregistered with Astra")
 		}
 		natssyncClientStatus.Registered = "false"
-		natssyncClientStatus.BridgeID = ""
+		natssyncClientStatus.AstraConnectorID = ""
 	}
 
 	// Update the astraConnector status with the pod names

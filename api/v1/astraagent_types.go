@@ -69,14 +69,14 @@ type AstraConnectorStatus struct {
 
 // NatssyncClientStatus defines the observed state of NatssyncClient
 type NatssyncClientStatus struct {
-	Registered string `json:"registered"`
-	BridgeID   string `json:"bridgeID"`
+	Registered       string `json:"registered"`
+	AstraConnectorID string `json:"astraConnectorID"`
 }
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 //+kubebuilder:printcolumn:name="Registered",type=string,JSONPath=`.status.natssync-client.registered`
-//+kubebuilder:printcolumn:name="BridgeID",type=string,JSONPath=`.status.natssync-client.bridgeID`
+//+kubebuilder:printcolumn:name="AstraConnectorID",type=string,JSONPath=`.status.natssync-client.astraConnectorID`
 
 // AstraConnector is the Schema for the astraconnectors API
 type AstraConnector struct {
