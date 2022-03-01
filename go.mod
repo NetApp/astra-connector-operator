@@ -1,4 +1,4 @@
-module github.com/NetApp/astraagent-operator
+module github.com/NetApp/astra-connector-operator
 
 go 1.16
 

@@ -18,11 +18,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/NetApp/astraagent-operator/common"
+	"github.com/NetApp/astra-connector-operator/common"
 
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
-	v1 "github.com/NetApp/astraagent-operator/api/v1"
+	v1 "github.com/NetApp/astra-connector-operator/api/v1"
 )
 
 const (

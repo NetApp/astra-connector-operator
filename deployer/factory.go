@@ -7,13 +7,13 @@ package deployer
 import (
 	"fmt"
 
-	"github.com/NetApp/astraagent-operator/common"
-	"github.com/NetApp/astraagent-operator/echo_client"
+	"github.com/NetApp/astra-connector-operator/common"
+	"github.com/NetApp/astra-connector-operator/echo_client"
 
-	"github.com/NetApp/astraagent-operator/httpproxy_client"
+	"github.com/NetApp/astra-connector-operator/httpproxy_client"
 
-	"github.com/NetApp/astraagent-operator/nats"
-	"github.com/NetApp/astraagent-operator/natssync_client"
+	"github.com/NetApp/astra-connector-operator/nats"
+	"github.com/NetApp/astra-connector-operator/natssync_client"
 )
 
 // Factory returns a deployer based on the deploymentName.
