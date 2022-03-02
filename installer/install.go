@@ -328,6 +328,32 @@ func main() {
 	connectorConfig.Spec.Astra.ClusterName = opts.ClusterName
 	connectorConfig.Spec.Astra.Token = opts.RegisterToken
 
+
+	// Create namespaces
+	log.Info("Creating Astra Controller namespace")
+	output, err := createNamespace(opts.Namespace)
+	checkFatalErr(err)
+	log.Info(output)
+
+	log.Info("Creating Astra Controller Operator namespace")
+	output, err = createNamespace(opts.OperatorNamespace)
+	checkFatalErr(err)
+	log.Info(output)
+
+	// Install Astra Controller Operator
+	operatorYamlPath, err := filepath.Abs(OperatorYamlPath)
+	applyCmd := exec.Command("kubectl", "apply", "-n", opts.OperatorNamespace, "-f", operatorYamlPath)
+	output, err = runCmd(applyCmd)
+	checkFatalErr(err)
+	log.Info(output)
+
+	// Write deployConfig.yaml file
+	yamlData, err := yaml.Marshal(connectorConfig)
+	yamlOutPath, err := filepath.Abs(YamlOutputPath)
+	checkFatalErr(err)
+	err = os.WriteFile(yamlOutPath, yamlData, 0644)
+	checkFatalErr(err)
+
 	// Log yaml
 	configBytes, err := yaml.Marshal(connectorConfig)
 	checkFatalErr(err)
@@ -337,6 +363,12 @@ func main() {
 	log.Info("Applying AstraConnector yaml")
 	log.Info(configStr)
 
-	log.Info("Astra Connector and Astra Connector Operator have been successfully configured")
+	// Install Astra Controller
+	applyCmd = exec.Command("kubectl", "apply", "-f", yamlOutPath)
+	output, err = runCmd(applyCmd)
+	checkFatalErr(err)
+	log.Info(output)
+
+	log.Info("Astra Connector and Astra Connector Operator have been successfully applied")
 	log.Info("Installation finishing in background")
 }
