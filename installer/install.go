@@ -85,7 +85,7 @@ func getPw(prompt string) (string, error) {
 	if err != nil {
 		return "", nil
 	}
-
+	fmt.Println()
 	return string(bytePassword), nil
 }
 
