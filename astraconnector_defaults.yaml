@@ -1,7 +1,7 @@
-apiVersion: netapp.astraagent.com/v1
-kind: AstraAgent
+apiVersion: netapp.astraconnector.com/v1
+kind: AstraConnector
 metadata:
-  name: astra-agent
+  name: astra-connector
 spec:
   natssync-client:
     image: natssync-client:0.9.202202170408
@@ -14,7 +14,7 @@ spec:
   imageRegistry:
     name: theotw
   astra:
-    token: nQeQPq065VWAq760PPULAizUDzrGweT3aCRR_-XA2q8=
-    clusterName: ipsprintdemo
-    accountId: 5831cf97-c52e-4185-ab83-db0fdd061c0e
+    token: MyAstraToken
+    clusterName: MyPrivateCluster
+    accountId: MyAstraAccountID
     acceptEULA: yes

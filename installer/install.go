@@ -17,11 +17,50 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strconv"
+	"regexp"
 	"strings"
-	"syscall"
 	"time"
+	"syscall"
 )
+
+type ConnectorConfig struct {
+	ApiVersion string `yaml:"apiVersion"`
+	Kind       string `yaml:"kind"`
+
+	Metadata struct {
+		Name      string `yaml:"name"`
+		Namespace string `yaml:"namespace"`
+	} `yaml:"metadata"`
+
+	Spec struct {
+		NatssyncClient struct {
+			Image string `yaml:"image"`
+		} `yaml:"natssync-client,omitempty"`
+
+		HttpProxyClient struct {
+			Image string `yaml:"image"`
+		} `yaml:"httpproxy-client,omitempty"`
+
+		EchoClient struct {
+			Image string `yaml:"image"`
+		} `yaml:"echo-client,omitempty"`
+
+		Nats struct {
+			Image string `yaml:"image"`
+		} `yaml:"nats,omitempty"`
+
+		ImageRegistry struct {
+			Name string `yaml:"name"`
+		} `yaml:"imageRegistry,omitempty"`
+
+		Astra struct {
+			Token       string `yaml:"token"`
+			ClusterName string `yaml:"clusterName"`
+			AccountId   string `yaml:"accountId"`
+			AcceptEula  bool `yaml:"acceptEULA"`
+		} `yaml:"astra"`
+	} `yaml:"spec"`
+}
 
 func checkFatalErr(err error) {
 	if err != nil {
@@ -72,10 +111,9 @@ func loadImageTar(dockerClient *client.Client, opts Options) ([]string, error) {
 	scanner := bufio.NewScanner(imageLoadResponse.Body)
 	for scanner.Scan() {
 		imageResponseBody := DockerLoadResponse{}
-		fmt.Println(scanner.Text())
+		log.Info(scanner.Text())
 		err := json.Unmarshal(scanner.Bytes(), &imageResponseBody)
 		checkFatalErr(err)
-		fmt.Printf("Debug marshall: %v\n", imageResponseBody)
 
 		// Check response error
 		if imageResponseBody.Error != "" {
@@ -98,7 +136,8 @@ func loadImageTar(dockerClient *client.Client, opts Options) ([]string, error) {
 func tagImages(dockerClient *client.Client, images []string, repoPrefix string) ([]string, error) {
 	var imagesWithRepo []string
 	for _, image := range images {
-		newTag := fmt.Sprintf("%s/%s", repoPrefix, image)
+		//todo: update operator to leave the repo in place)E.g. 'myPrivateRepo/asdf.com/theotw/echo-proxylet:1.2.3'
+		newTag := fmt.Sprintf("%s/%s", repoPrefix, strings.TrimPrefix(image, "theotw/"))
 
 		log.WithFields(log.Fields{
 			"newTag":      newTag,
@@ -179,45 +218,6 @@ func pushImages(dockerClient *client.Client, opts *Options, images []string) err
 	return nil
 }
 
-type OperatorConfig struct {
-	ApiVersion string `yaml:"apiVersion"`
-	Kind       string `yaml:"kind"`
-
-	Metadata struct {
-		Name      string `yaml:"name"`
-		Namespace string `yaml:"namespace"`
-	} `yaml:"metadata"`
-
-	Spec struct {
-		NatssyncClient struct {
-			Image string `yaml:"image"`
-		} `yaml:"natssync-client,omitempty"`
-
-		HttpProxyClient struct {
-			Image string `yaml:"image"`
-		} `yaml:"httpproxy-client,omitempty"`
-
-		EchoClient struct {
-			Image string `yaml:"image"`
-		} `yaml:"echo-client,omitempty"`
-
-		Nats struct {
-			Image string `yaml:"image"`
-		} `yaml:"nats,omitempty"`
-
-		ImageRegistry struct {
-			Name string `yaml:"name"`
-		} `yaml:"imageRegistry,omitempty"`
-
-		Astra struct {
-			Token       string `yaml:"token"`
-			ClusterName string `yaml:"clusterName"`
-			AccountId   string `yaml:"accountId"`
-			AcceptEula  string `yaml:"acceptEULA"`
-		} `yaml:"astra"`
-	} `yaml:"spec"`
-}
-
 func createNamespace(ns string) (string, error) {
 	cmd := exec.Command("kubectl", "create", "ns", ns)
 	return runCmd(cmd)
@@ -271,19 +271,24 @@ const (
 )
 
 func main() {
+	formatter := &log.TextFormatter{
+		FullTimestamp: true,
+	}
+	log.SetFormatter(formatter)
+
 	var opts Options
-	var opConfig OperatorConfig
+	var connectorConfig ConnectorConfig
 	_, err := flags.Parse(&opts)
 	checkFatalErr(err)
+
+	log.Info("Installing Astra Connector")
 
 	absPath, err := filepath.Abs(ConnectorDefaultsConfigPath)
 	checkFatalErr(err)
 	yamlFile, err := ioutil.ReadFile(absPath)
 	checkFatalErr(err)
-	err = yaml.Unmarshal(yamlFile, &opConfig)
+	err = yaml.Unmarshal(yamlFile, &connectorConfig)
 	checkFatalErr(err)
-	test, _ := yaml.Marshal(opConfig)
-	fmt.Printf("%s\n", test)
 
 	if opts.ImageTar != "" && opts.ImageRepo != "" {
 		dockerClient, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
@@ -313,55 +318,25 @@ func main() {
 			log.Info(string(output))
 		}
 
-		opConfig.Spec.ImageRegistry.Name = opts.ImageRepo
-
-		// Update nats image name. Other images use OperatorConfig.ImageRegistry.Name
-		for _, image := range taggedImages {
-			if strings.Contains(image, fmt.Sprintf("%s:", NatsImageName)) {
-				opConfig.Spec.Nats.Image = image
-			}
-		}
+		connectorConfig.Spec.ImageRegistry.Name = opts.ImageRepo
 	}
 
 	// Update yaml data
-	opConfig.Metadata.Namespace = opts.Namespace
-	opConfig.Spec.Astra.AcceptEula = strconv.FormatBool(opts.AcceptEula)
-	opConfig.Spec.Astra.AccountId = opts.AstraAccountId
-	opConfig.Spec.Astra.ClusterName = opts.ClusterName
-	opConfig.Spec.Astra.Token = opts.RegisterToken
-
-	fmt.Printf("DEBUG: %v\n", opConfig)
-	test2, _ := yaml.Marshal(opConfig)
-	fmt.Printf("\n%s\n", test2)
-
-	// Create namespaces
-	log.Info("Creating Astra Controller namespace")
-	output, err := createNamespace(opts.Namespace)
+	connectorConfig.Metadata.Namespace = opts.Namespace
+	connectorConfig.Spec.Astra.AcceptEula = opts.AcceptEula
+	connectorConfig.Spec.Astra.AccountId = opts.AstraAccountId
+	connectorConfig.Spec.Astra.ClusterName = opts.ClusterName
+	connectorConfig.Spec.Astra.Token = opts.RegisterToken
+	
+	// Log yaml
+	configBytes, err := yaml.Marshal(connectorConfig)
 	checkFatalErr(err)
-	log.Info(output)
+	configStr := string(configBytes)
+	regEx := regexp.MustCompile(`( +token:)(.*)`)
+	configStr = regEx.ReplaceAllString(configStr, "$1 *******")
+	log.Info("Applying AstraConnector yaml")
+	log.Info(configStr)
 
-	log.Info("Creating Astra Controller Operator namespace")
-	output, err = createNamespace(opts.OperatorNamespace)
-	checkFatalErr(err)
-	log.Info(output)
-
-	// Install Astra Controller Operator
-	operatorYamlPath, err := filepath.Abs(OperatorYamlPath)
-	applyCmd := exec.Command("kubectl", "apply", "-n", opts.OperatorNamespace, "-f", operatorYamlPath)
-	output, err = runCmd(applyCmd)
-	checkFatalErr(err)
-	log.Info(output)
-
-	// Write deployConfig.yaml file
-	yamlData, err := yaml.Marshal(opConfig)
-	yamlOutPath, err := filepath.Abs(YamlOutputPath)
-	checkFatalErr(err)
-	err = os.WriteFile(yamlOutPath, yamlData, 0644)
-	checkFatalErr(err)
-
-	// Install Astra Controller
-	applyCmd = exec.Command("kubectl", "apply", "-f", yamlOutPath)
-	output, err = runCmd(applyCmd)
-	checkFatalErr(err)
-	log.Info(output)
+	log.Info("Astra Connector and Astra Connector Operator have been successfully applied")
+	log.Info("Installation finishing in background")
 }
