@@ -1,5 +1,5 @@
-apiVersion: netapp.astraagent.com/v1
-kind: AstraAgent
+apiVersion: netapp.astraconnector.com/v1
+kind: AstraConnector
 metadata:
   name: astra-connector
 spec:

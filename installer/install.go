@@ -222,6 +222,7 @@ func tagImages(dockerClient *client.Client, images []string, repoPrefix string) 
 
 func createNamespace(ns string) (string, error) {
 	cmd := exec.Command("kubectl", "create", "ns", ns)
+	cmd.Env = os.Environ()
 	return runCmd(cmd)
 }
 
@@ -329,6 +330,7 @@ func main() {
 		// This is a workaround until we can push using the docker package
 		for _, image := range taggedImages {
 			pushCmd := exec.Command("docker", "push", image)
+			pushCmd.Env = os.Environ()
 			output, err := pushCmd.CombinedOutput()
 			if err != nil {
 				msg := fmt.Sprintf(fmt.Sprint(err) + ": " + string(output))
@@ -366,6 +368,7 @@ func main() {
 	// Install Astra Connector Operator
 	operatorYamlPath, err := filepath.Abs(OperatorYamlPath)
 	applyCmd := exec.Command("kubectl", "apply", "-n", ConnectorOperatorNamespace, "-f", operatorYamlPath)
+	applyCmd.Env = os.Environ()
 	output, err = runCmd(applyCmd)
 	checkFatalErr(err)
 	log.Info(output)
@@ -388,6 +391,7 @@ func main() {
 
 	// Install Astra Connector
 	applyCmd = exec.Command("kubectl", "apply", "-f", yamlOutPath)
+	applyCmd.Env = os.Environ()
 	output, err = runCmd(applyCmd)
 	checkFatalErr(err)
 	log.Info(output)
