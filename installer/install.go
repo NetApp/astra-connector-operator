@@ -5,12 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/docker/docker/client"
-	"github.com/docker/docker/pkg/system"
-	"github.com/jessevdk/go-flags"
-	log "github.com/sirupsen/logrus"
-	"golang.org/x/term"
-	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -18,6 +12,13 @@ import (
 	"regexp"
 	"strings"
 	"syscall"
+
+	"github.com/docker/docker/client"
+	"github.com/docker/docker/pkg/system"
+	"github.com/jessevdk/go-flags"
+	log "github.com/sirupsen/logrus"
+	"golang.org/x/term"
+	"gopkg.in/yaml.v2"
 )
 
 type ConnectorConfig struct {
@@ -31,11 +32,11 @@ type ConnectorConfig struct {
 
 	Spec struct {
 		NatssyncClient struct {
-			Image string `yaml:"image,omitempty"`
-			CloudBridgeUrl string `yaml:"cloud-bridge-url,omitempty"`
-			HostAliasIP string `yaml:"hostaliasIP,omitempty"`
-			HostAlias bool `yaml:"hostalias,omitempty"`
-			SkipTLSValidation bool `yaml:"skipTLSValidation,omitempty"`
+			Image             string `yaml:"image,omitempty"`
+			CloudBridgeUrl    string `yaml:"cloud-bridge-url,omitempty"`
+			HostAliasIP       string `yaml:"hostaliasIP,omitempty"`
+			HostAlias         bool   `yaml:"hostalias,omitempty"`
+			SkipTLSValidation bool   `yaml:"skipTLSValidation,omitempty"`
 		} `yaml:"natssync-client"`
 
 		HttpProxyClient struct {
@@ -58,7 +59,7 @@ type ConnectorConfig struct {
 			Token       string `yaml:"token"`
 			ClusterName string `yaml:"clusterName"`
 			AccountId   string `yaml:"accountId"`
-			AcceptEula  bool `yaml:"acceptEULA"`
+			AcceptEula  bool   `yaml:"acceptEULA"`
 		} `yaml:"astra"`
 	} `yaml:"spec"`
 }
@@ -252,19 +253,18 @@ type DockerLoadResponse struct {
 }
 
 type Options struct {
-	ImageRepo         string `short:"r" long:"image-repo" required:"false" description:"Private Docker image repo URL" value-name:"URL"`
-	ImageTar          string `short:"p" long:"image-tar" required:"false" description:"Path to image tar" value-name:"PATH"`
+	ImageRepo string `short:"r" long:"image-repo" required:"false" description:"Private Docker image repo URL" value-name:"URL"`
+	ImageTar  string `short:"p" long:"image-tar" required:"false" description:"Path to image tar" value-name:"PATH"`
 	//ImageRepoUser     string `long:"repo-user" required:"false" description:"Private Docker image repo URL" value-name:"USER"`
 	//ImageRepoPw       string `long:"repo-pw" required:"false" description:"Private Docker image repo URL" value-name:"PASSWORD"`
 	ClusterName       string `short:"c" long:"cluster-name" required:"true" description:"Private cluster name" value-name:"NAME"`
-	Token     		  string `short:"t" long:"token" required:"false" description:"Astra API token" value-name:"TOKEN"`
+	Token             string `short:"t" long:"token" required:"false" description:"Astra API token" value-name:"TOKEN"`
 	AcceptEula        bool   `long:"accept-eula" required:"true" description:"(flag) Accept End User License Agreement"`
 	AstraAccountId    string `short:"a" long:"account-id" required:"true" description:"Astra account ID" value-name:"ID"`
 	AstraUrl          string `short:"u" long:"astra-url" required:"false" default:"https://eap.astra.netapp.io" description:"Url to Astra. E.g. 'https://integration.astra.netapp.io'" value-name:"URL"`
 	SkipTlsValidation bool   `short:"z" long:"disable-tls" required:"false" description:"(flag) Disable TLS validation. TESTING ONLY."`
-	HostAliasIP string `long:"hostAliasIP" required:"false" description:"The IP of the Astra host. TESTING ONLY." value-name:"IP"`
-	HostAlias bool   `long:"hostAlias" required:"false" description:"(flag) Set to enable HostAliasIP. TESTING ONLY"`
-
+	HostAliasIP       string `long:"hostAliasIP" required:"false" description:"The IP of the Astra host. TESTING ONLY." value-name:"IP"`
+	HostAlias         bool   `long:"hostAlias" required:"false" description:"(flag) Set to enable HostAliasIP. TESTING ONLY"`
 }
 
 const (
@@ -272,7 +272,7 @@ const (
 	ConnectorDefaultsConfigPath = "./controllerconfig.yaml"
 	YamlOutputPath              = "./deployConfig.yaml"
 	OperatorYamlPath            = "./astraconnector_operator.yaml"
-	ConnectorNamespace 			= "astra-connector"
+	ConnectorNamespace          = "astra-connector"
 	ConnectorOperatorNamespace  = "astra-connector-operator"
 )
 
@@ -357,8 +357,7 @@ func main() {
 	connectorConfig.Spec.NatssyncClient.SkipTLSValidation = opts.SkipTlsValidation
 	connectorConfig.Spec.NatssyncClient.CloudBridgeUrl = opts.AstraUrl
 	connectorConfig.Spec.NatssyncClient.HostAliasIP = opts.HostAliasIP
-	connectorConfig.Spec.NatssyncClient.HostAlias  = opts.HostAlias
-
+	connectorConfig.Spec.NatssyncClient.HostAlias = opts.HostAlias
 
 	// Create namespaces
 	log.Info("Creating Astra Connector namespace")
