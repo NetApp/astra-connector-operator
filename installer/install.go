@@ -327,7 +327,7 @@ func main() {
 	connectorConfig.Spec.Astra.AccountId = opts.AstraAccountId
 	connectorConfig.Spec.Astra.ClusterName = opts.ClusterName
 	connectorConfig.Spec.Astra.Token = opts.RegisterToken
-	
+
 	// Log yaml
 	configBytes, err := yaml.Marshal(connectorConfig)
 	checkFatalErr(err)
@@ -337,6 +337,6 @@ func main() {
 	log.Info("Applying AstraConnector yaml")
 	log.Info(configStr)
 
-	log.Info("Astra Connector and Astra Connector Operator have been successfully applied")
+	log.Info("Astra Connector and Astra Connector Operator have been successfully configured")
 	log.Info("Installation finishing in background")
 }
