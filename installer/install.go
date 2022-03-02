@@ -79,8 +79,8 @@ func getDockerUsername() (string, error) {
 	return username, nil
 }
 
-func getDockerPw() (string, error) {
-	fmt.Print("Docker password: ")
+func getPw(prompt string) (string, error) {
+	fmt.Print(prompt)
 	bytePassword, err := term.ReadPassword(int(syscall.Stdin))
 	if err != nil {
 		return "", nil
@@ -257,7 +257,7 @@ type Options struct {
 	//ImageRepoUser     string `long:"repo-user" required:"false" description:"Private Docker image repo URL" value-name:"USER"`
 	//ImageRepoPw       string `long:"repo-pw" required:"false" description:"Private Docker image repo URL" value-name:"PASSWORD"`
 	ClusterName       string `short:"c" long:"cluster-name" required:"true" description:"Private cluster name" value-name:"NAME"`
-	Token     		  string `short:"t" long:"token" required:"true" description:"Astra API token" value-name:"TOKEN"`
+	Token     		  string `short:"t" long:"token" required:"false" description:"Astra API token" value-name:"TOKEN"`
 	AcceptEula        bool   `long:"accept-eula" required:"true" description:"(flag) Accept End User License Agreement"`
 	AstraAccountId    string `short:"a" long:"account-id" required:"true" description:"Astra account ID" value-name:"ID"`
 	AstraUrl          string `short:"u" long:"astra-url" required:"false" default:"https://eap.astra.netapp.io" description:"Url to Astra. E.g. 'https://integration.astra.netapp.io'" value-name:"URL"`
@@ -295,6 +295,12 @@ func main() {
 	checkFatalErr(err)
 	err = yaml.Unmarshal(yamlFile, &connectorConfig)
 	checkFatalErr(err)
+
+	// input check
+	if opts.Token == "" {
+		opts.Token, err = getPw("Enter Astra API token:")
+		checkFatalErr(err)
+	}
 
 	// input check
 	if opts.ImageTar != "" || opts.ImageRepo != "" {
