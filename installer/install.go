@@ -39,19 +39,19 @@ type ConnectorConfig struct {
 		} `yaml:"natssync-client"`
 
 		HttpProxyClient struct {
-			Image string `yaml:"image,omitempty""`
+			Image string `yaml:"image,omitempty"`
 		} `yaml:"httpproxy-client"`
 
 		EchoClient struct {
-			Image string `yaml:"image,omitempty""`
+			Image string `yaml:"image,omitempty"`
 		} `yaml:"echo-client"`
 
 		Nats struct {
-			Image string `yaml:"image,omitempty""`
+			Image string `yaml:"image,omitempty"`
 		} `yaml:"nats"`
 
 		ImageRegistry struct {
-			Name string `yaml:"name,omitempty""`
+			Name string `yaml:"name,omitempty"`
 		} `yaml:"imageRegistry"`
 
 		Astra struct {
