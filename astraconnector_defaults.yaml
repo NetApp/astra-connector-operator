@@ -18,3 +18,4 @@ spec:
     clusterName: MyPrivateCluster
     accountId: MyAstraAccountID
     acceptEULA: yes
+    

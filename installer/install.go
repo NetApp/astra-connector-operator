@@ -3,10 +3,8 @@ package main
 import (
 	"bufio"
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	dockerTypes "github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/system"
 	"github.com/jessevdk/go-flags"
@@ -19,7 +17,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
-	"time"
 	"syscall"
 )
 
@@ -34,24 +31,28 @@ type ConnectorConfig struct {
 
 	Spec struct {
 		NatssyncClient struct {
-			Image string `yaml:"image"`
-		} `yaml:"natssync-client,omitempty"`
+			Image string `yaml:"image,omitempty"`
+			CloudBridgeUrl string `yaml:"cloud-bridge-url,omitempty"`
+			HostAliasIP string `yaml:"hostaliasIP,omitempty"`
+			HostAlias bool `yaml:"hostalias,omitempty"`
+			SkipTLSValidation bool `yaml:"skipTLSValidation,omitempty"`
+		} `yaml:"natssync-client"`
 
 		HttpProxyClient struct {
-			Image string `yaml:"image"`
-		} `yaml:"httpproxy-client,omitempty"`
+			Image string `yaml:"image,omitempty""`
+		} `yaml:"httpproxy-client"`
 
 		EchoClient struct {
-			Image string `yaml:"image"`
-		} `yaml:"echo-client,omitempty"`
+			Image string `yaml:"image,omitempty""`
+		} `yaml:"echo-client"`
 
 		Nats struct {
-			Image string `yaml:"image"`
-		} `yaml:"nats,omitempty"`
+			Image string `yaml:"image,omitempty""`
+		} `yaml:"nats"`
 
 		ImageRegistry struct {
-			Name string `yaml:"name"`
-		} `yaml:"imageRegistry,omitempty"`
+			Name string `yaml:"name,omitempty""`
+		} `yaml:"imageRegistry"`
 
 		Astra struct {
 			Token       string `yaml:"token"`
@@ -153,70 +154,71 @@ func tagImages(dockerClient *client.Client, images []string, repoPrefix string) 
 	return imagesWithRepo, nil
 }
 
-func pushImages(dockerClient *client.Client, opts *Options, images []string) error {
-	if opts.ImageRepoUser == "" {
-		var err error
-		opts.ImageRepoUser, err = getDockerUsername()
-		if err != nil {
-			return err
-		}
-	}
-
-	if opts.ImageRepoPw == "" {
-		var err error
-		opts.ImageRepoPw, err = getDockerPw()
-		if err != nil {
-			return err
-		}
-	}
-
-	var authConfig = dockerTypes.AuthConfig{
-		Username: opts.ImageRepoUser,
-		Password: opts.ImageRepoPw,
-	}
-	authConfigBytes, err := json.Marshal(authConfig)
-	if err != nil {
-		return err
-	}
-	authConfigEncoded := base64.URLEncoding.EncodeToString(authConfigBytes)
-	pushOpts := dockerTypes.ImagePushOptions{RegistryAuth: authConfigEncoded, All: true}
-
-	for _, image := range images {
-		log.Info("Pushing image")
-
-		ctx, cancel := context.WithTimeout(context.Background(), time.Minute*10)
-		defer cancel()
-
-		reader, err := dockerClient.ImagePush(ctx, image, pushOpts)
-		defer reader.Close()
-		if err != nil {
-			return err
-		}
-
-		scanner := bufio.NewScanner(reader)
-		for scanner.Scan() {
-			response := DockerPushResponse{}
-			err := json.Unmarshal(scanner.Bytes(), &response)
-			if err != nil {
-				return err
-			}
-
-			if response.Error != "" {
-				log.WithFields(log.Fields{
-					"error":       response.Error,
-					"errorDetail": *response.ErrorDetail,
-				}).Error("Docker load error")
-				return fmt.Errorf("error loading images")
-			}
-
-			log.WithFields(log.Fields{
-				"status": response.Status,
-				"id":     response.Id,
-			}).Info("Pushing image...")
-		}
-	}
-	return nil
-}
+////todo: fix auth issue here so we can stop pushing via system call
+//func pushImages(dockerClient *client.Client, opts *Options, images []string) error {
+//	if opts.ImageRepoUser == "" {
+//		var err error
+//		opts.ImageRepoUser, err = getDockerUsername()
+//		if err != nil {
+//			return err
+//		}
+//	}
+//
+//	if opts.ImageRepoPw == "" {
+//		var err error
+//		opts.ImageRepoPw, err = getDockerPw()
+//		if err != nil {
+//			return err
+//		}
+//	}
+//
+//	var authConfig = dockerTypes.AuthConfig{
+//		Username: opts.ImageRepoUser,
+//		Password: opts.ImageRepoPw,
+//	}
+//	authConfigBytes, err := json.Marshal(authConfig)
+//	if err != nil {
+//		return err
+//	}
+//	authConfigEncoded := base64.URLEncoding.EncodeToString(authConfigBytes)
+//	pushOpts := dockerTypes.ImagePushOptions{RegistryAuth: authConfigEncoded, All: true}
+//
+//	for _, image := range images {
+//		log.Info("Pushing image")
+//
+//		ctx, cancel := context.WithTimeout(context.Background(), time.Minute*10)
+//		defer cancel()
+//
+//		reader, err := dockerClient.ImagePush(ctx, image, pushOpts)
+//		defer reader.Close()
+//		if err != nil {
+//			return err
+//		}
+//
+//		scanner := bufio.NewScanner(reader)
+//		for scanner.Scan() {
+//			response := DockerPushResponse{}
+//			err := json.Unmarshal(scanner.Bytes(), &response)
+//			if err != nil {
+//				return err
+//			}
+//
+//			if response.Error != "" {
+//				log.WithFields(log.Fields{
+//					"error":       response.Error,
+//					"errorDetail": *response.ErrorDetail,
+//				}).Error("Docker load error")
+//				return fmt.Errorf("error loading images")
+//			}
+//
+//			log.WithFields(log.Fields{
+//				"status": response.Status,
+//				"id":     response.Id,
+//			}).Info("Pushing image...")
+//		}
+//	}
+//	return nil
+//}
 
 func createNamespace(ns string) (string, error) {
 	cmd := exec.Command("kubectl", "create", "ns", ns)
@@ -251,16 +253,17 @@ type DockerLoadResponse struct {
 type Options struct {
 	ImageRepo         string `short:"r" long:"image-repo" required:"false" description:"Private Docker image repo URL" value-name:"URL"`
 	ImageTar          string `short:"i" long:"image-tar" required:"false" description:"Path to image tar" value-name:"PATH"`
-	ImageRepoUser     string `short:"u" long:"repo-user" required:"false" description:"Private Docker image repo URL" value-name:"USER"`
-	ImageRepoPw       string `short:"p" long:"repo-pw" required:"false" description:"Private Docker image repo URL" value-name:"PASSWORD"`
+	//ImageRepoUser     string `short:"u" long:"repo-user" required:"false" description:"Private Docker image repo URL" value-name:"USER"`
+	//ImageRepoPw       string `short:"p" long:"repo-pw" required:"false" description:"Private Docker image repo URL" value-name:"PASSWORD"`
 	ClusterName       string `short:"c" long:"cluster-name" required:"true" description:"Private cluster name" value-name:"NAME"`
-	RegisterToken     string `short:"t" long:"token" required:"true" description:"Astra API token" value-name:"TOKEN"`
+	Token     		  string `short:"t" long:"token" required:"true" description:"Astra API token" value-name:"TOKEN"`
 	AcceptEula        bool   `long:"accept-eula" required:"true" description:"Accept the End User License Agreement"`
 	AstraAccountId    string `short:"a" long:"account-id" required:"true" description:"Astra account ID" value-name:"ID"`
-	Namespace         string `long:"namespace" required:"false" default:"astra-connector" description:"Astra Connector namespace" value-name:"NAMESPACE"`
-	OperatorNamespace string `long:"operator-namespace" required:"false" default:"astra-connector-operator" description:"Astra Connector Operator namespace" value-name:"NAMESPACE"`
 	AstraUrl          string `short:"x" long:"astra-url" required:"false" default:"https://eap.astra.netapp.io" description:"Url to Astra. E.g. 'https://integration.astra.netapp.io'" value-name:"URL"`
 	SkipTlsValidation bool   `short:"z" long:"disable-tls" required:"false" description:"Disable TLS validation. TESTING ONLY."`
+	HostAliasIP string `long:"hostAliasIP" required:"false" description:"The IP of the Astra host. TESTING ONLY." value-name:"IP"`
+	HostAlias bool   `long:"hostAlias" required:"false" description:"Set to enable HostAliasIP. TESTING ONLY"`
+
 }
 
 const (
@@ -268,6 +271,8 @@ const (
 	ConnectorDefaultsConfigPath = "./astraconnector_defaults.yaml"
 	YamlOutputPath              = "./deployConfig.yaml"
 	OperatorYamlPath            = "./astraconnector_operator.yaml"
+	ConnectorNamespace 			= "astra-connector"
+	ConnectorOperatorNamespace  = "astra-connector-operator"
 )
 
 func main() {
@@ -322,27 +327,31 @@ func main() {
 	}
 
 	// Update yaml data
-	connectorConfig.Metadata.Namespace = opts.Namespace
+	connectorConfig.Metadata.Namespace = ConnectorNamespace
 	connectorConfig.Spec.Astra.AcceptEula = opts.AcceptEula
 	connectorConfig.Spec.Astra.AccountId = opts.AstraAccountId
 	connectorConfig.Spec.Astra.ClusterName = opts.ClusterName
-	connectorConfig.Spec.Astra.Token = opts.RegisterToken
+	connectorConfig.Spec.Astra.Token = opts.Token
+	connectorConfig.Spec.NatssyncClient.SkipTLSValidation = opts.SkipTlsValidation
+	connectorConfig.Spec.NatssyncClient.CloudBridgeUrl = opts.AstraUrl
+	connectorConfig.Spec.NatssyncClient.HostAliasIP = opts.HostAliasIP
+	connectorConfig.Spec.NatssyncClient.HostAlias  = opts.HostAlias
 
 
 	// Create namespaces
 	log.Info("Creating Astra Controller namespace")
-	output, err := createNamespace(opts.Namespace)
+	output, err := createNamespace(ConnectorNamespace)
 	checkFatalErr(err)
 	log.Info(output)
 
 	log.Info("Creating Astra Controller Operator namespace")
-	output, err = createNamespace(opts.OperatorNamespace)
+	output, err = createNamespace(ConnectorOperatorNamespace)
 	checkFatalErr(err)
 	log.Info(output)
 
 	// Install Astra Controller Operator
 	operatorYamlPath, err := filepath.Abs(OperatorYamlPath)
-	applyCmd := exec.Command("kubectl", "apply", "-n", opts.OperatorNamespace, "-f", operatorYamlPath)
+	applyCmd := exec.Command("kubectl", "apply", "-n", ConnectorOperatorNamespace, "-f", operatorYamlPath)
 	output, err = runCmd(applyCmd)
 	checkFatalErr(err)
 	log.Info(output)
@@ -359,7 +368,7 @@ func main() {
 	checkFatalErr(err)
 	configStr := string(configBytes)
 	regEx := regexp.MustCompile(`( +token:)(.*)`)
-	configStr = regEx.ReplaceAllString(configStr, "$1 *******")
+	configStr = regEx.ReplaceAllString(configStr, "$1 *******") // don't show token
 	log.Info("Applying AstraConnector yaml")
 	log.Info(configStr)
 
