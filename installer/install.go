@@ -252,17 +252,17 @@ type DockerLoadResponse struct {
 
 type Options struct {
 	ImageRepo         string `short:"r" long:"image-repo" required:"false" description:"Private Docker image repo URL" value-name:"URL"`
-	ImageTar          string `short:"i" long:"image-tar" required:"false" description:"Path to image tar" value-name:"PATH"`
-	//ImageRepoUser     string `short:"u" long:"repo-user" required:"false" description:"Private Docker image repo URL" value-name:"USER"`
-	//ImageRepoPw       string `short:"p" long:"repo-pw" required:"false" description:"Private Docker image repo URL" value-name:"PASSWORD"`
+	ImageTar          string `short:"p" long:"image-tar" required:"false" description:"Path to image tar" value-name:"PATH"`
+	//ImageRepoUser     string `long:"repo-user" required:"false" description:"Private Docker image repo URL" value-name:"USER"`
+	//ImageRepoPw       string `long:"repo-pw" required:"false" description:"Private Docker image repo URL" value-name:"PASSWORD"`
 	ClusterName       string `short:"c" long:"cluster-name" required:"true" description:"Private cluster name" value-name:"NAME"`
 	Token     		  string `short:"t" long:"token" required:"true" description:"Astra API token" value-name:"TOKEN"`
-	AcceptEula        bool   `long:"accept-eula" required:"true" description:"Accept the End User License Agreement"`
+	AcceptEula        bool   `long:"accept-eula" required:"true" description:"(flag) Accept End User License Agreement"`
 	AstraAccountId    string `short:"a" long:"account-id" required:"true" description:"Astra account ID" value-name:"ID"`
-	AstraUrl          string `short:"x" long:"astra-url" required:"false" default:"https://eap.astra.netapp.io" description:"Url to Astra. E.g. 'https://integration.astra.netapp.io'" value-name:"URL"`
-	SkipTlsValidation bool   `short:"z" long:"disable-tls" required:"false" description:"Disable TLS validation. TESTING ONLY."`
+	AstraUrl          string `short:"u" long:"astra-url" required:"false" default:"https://eap.astra.netapp.io" description:"Url to Astra. E.g. 'https://integration.astra.netapp.io'" value-name:"URL"`
+	SkipTlsValidation bool   `short:"z" long:"disable-tls" required:"false" description:"(flag) Disable TLS validation. TESTING ONLY."`
 	HostAliasIP string `long:"hostAliasIP" required:"false" description:"The IP of the Astra host. TESTING ONLY." value-name:"IP"`
-	HostAlias bool   `long:"hostAlias" required:"false" description:"Set to enable HostAliasIP. TESTING ONLY"`
+	HostAlias bool   `long:"hostAlias" required:"false" description:"(flag) Set to enable HostAliasIP. TESTING ONLY"`
 
 }
 
