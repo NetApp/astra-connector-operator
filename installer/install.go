@@ -268,7 +268,7 @@ type Options struct {
 
 const (
 	NatsImageName               = "nats"
-	ConnectorDefaultsConfigPath = "./agentconfig.yaml"
+	ConnectorDefaultsConfigPath = "./controllerconfig.yaml"
 	YamlOutputPath              = "./deployConfig.yaml"
 	OperatorYamlPath            = "./astraconnector_operator.yaml"
 	ConnectorNamespace 			= "astra-connector"
