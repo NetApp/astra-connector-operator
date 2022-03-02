@@ -5,6 +5,8 @@ MAKEFILE_DIR := $(shell echo "$(MAKEFILE_PATH)" | sed 's,/Makefile,,' )
 SCRIPTS_DIR := $(MAKEFILE_DIR)/scripts
 BUILD_DIR := $(MAKEFILE_DIR)/build
 OUTPUT_IMAGE_TAR_DIR := $(BUILD_DIR)/images
+INSTALL_DIR := $(MAKEFILE_DIR)/installer
+OUTPUT_INSTALL_EXE_DIR := $(BUILD_DIR)/install-exe
 
 # VERSION defines the project version for the bundle.
 # Update this value when you upgrade the version of your project.
@@ -226,3 +228,21 @@ image-tar:
 	rm -rf ${OUTPUT_IMAGE_TAR_DIR}
 	mkdir -p ${OUTPUT_IMAGE_TAR_DIR}
 	$(SCRIPTS_DIR)/create-image-tar.sh ${OUTPUT_IMAGE_TAR_DIR}/astra-connector-images.tar
+
+# Versioning vars
+BASE_VERSION := $(shell cat "${REGISTER_DIR}/version.txt")
+BUILD_DATE := $(shell date '+%Y%m%d%H%M')
+BUILD_VERSION := ${BASE_VERSION}.${BUILD_DATE}
+
+GOOS_LINUX=linux
+GOARCH_LINUX=amd64
+install-exe-linux-amd: export GOOS=${GOOS_LINUX}
+install-exe-linux-amd: export GOARCH=${GOARCH_LINUX}
+install-exe-linux-amd: export CGO_ENABLED=0
+install-exe-linux-amd: export GO111MODULE=on
+install-exe-linux-amd: install-exe
+
+install-exe:
+	rm -rf $(OUTPUT_INSTALL_EXE_DIR)
+	mkdir -p $(OUTPUT_INSTALL_EXE_DIR)
+	cd $(INSTALL_DIR) && go build -ldflags "-X github.com/NetApp/astra-connector-operator/installer/install.VERSION=${BUILD_VERSION}" -v -o ${OUTPUT_INSTALL_EXE_DIR}/install-${GOARCH}-${GOOS} ${INSTALL_DIR}/install.go
