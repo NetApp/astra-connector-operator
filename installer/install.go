@@ -295,6 +295,20 @@ func main() {
 	err = yaml.Unmarshal(yamlFile, &connectorConfig)
 	checkFatalErr(err)
 
+	// input check
+	if opts.ImageTar != "" || opts.ImageRepo != "" {
+		if !(opts.ImageTar != "" && opts.ImageRepo != "") {
+			log.Fatal("error: 'image-tar' and 'image-repo' options must be used together")
+		}
+	}
+
+	// input check
+	if opts.HostAlias {
+		if opts.HostAliasIP == "" {
+			log.Fatal("error: 'hostAliasIP' must be defined if the 'hostAlias' flag is set ")
+		}
+	}
+
 	if opts.ImageTar != "" && opts.ImageRepo != "" {
 		dockerClient, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 		checkFatalErr(err)
