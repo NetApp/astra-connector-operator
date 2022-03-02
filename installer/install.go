@@ -268,7 +268,7 @@ type Options struct {
 
 const (
 	NatsImageName               = "nats"
-	ConnectorDefaultsConfigPath = "./astraconnector_defaults.yaml"
+	ConnectorDefaultsConfigPath = "./agentconfig.yaml"
 	YamlOutputPath              = "./deployConfig.yaml"
 	OperatorYamlPath            = "./astraconnector_operator.yaml"
 	ConnectorNamespace 			= "astra-connector"
@@ -309,7 +309,7 @@ func main() {
 		}
 	}
 
-	if opts.ImageTar != "" && opts.ImageRepo != "" {
+	if opts.ImageTar != "" {
 		dockerClient, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 		checkFatalErr(err)
 
@@ -353,17 +353,17 @@ func main() {
 
 
 	// Create namespaces
-	log.Info("Creating Astra Controller namespace")
+	log.Info("Creating Astra Connector namespace")
 	output, err := createNamespace(ConnectorNamespace)
 	checkFatalErr(err)
 	log.Info(output)
 
-	log.Info("Creating Astra Controller Operator namespace")
+	log.Info("Creating Astra Connector Operator namespace")
 	output, err = createNamespace(ConnectorOperatorNamespace)
 	checkFatalErr(err)
 	log.Info(output)
 
-	// Install Astra Controller Operator
+	// Install Astra Connector Operator
 	operatorYamlPath, err := filepath.Abs(OperatorYamlPath)
 	applyCmd := exec.Command("kubectl", "apply", "-n", ConnectorOperatorNamespace, "-f", operatorYamlPath)
 	output, err = runCmd(applyCmd)
@@ -386,7 +386,7 @@ func main() {
 	log.Info("Applying AstraConnector yaml")
 	log.Info(configStr)
 
-	// Install Astra Controller
+	// Install Astra Connector
 	applyCmd = exec.Command("kubectl", "apply", "-f", yamlOutPath)
 	output, err = runCmd(applyCmd)
 	checkFatalErr(err)
