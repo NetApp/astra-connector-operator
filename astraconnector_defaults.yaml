@@ -17,4 +17,4 @@ spec:
     token: MyAstraToken
     clusterName: MyPrivateCluster
     accountId: MyAstraAccountID
-    acceptEULA: yes
+    acceptEULA: no
