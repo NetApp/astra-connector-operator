@@ -51,7 +51,7 @@ Use a service mesh to secure communications between pods
 ### Limit token usage for registration
 The API token used for registration is only used once, and is not used after registering the connector.
 If the token was created specifically for registering the connector, we recommend discarding it after registration is complete.
-The token is not use by the connector after registration.
+Discarding the token requires removing the token from the AstraConnector CRD, and revoking it from Astra.
 
 ### Use a NetworkPolicy
 Use a network policy to deny external communication to the pods in the connector namespace. The pods should only be making
