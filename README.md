@@ -40,6 +40,46 @@ kubectl delete -f config/samples/astraconnector_v1.yaml -n astra-connector
 ```
 kubectl delete -f astraconnector_operator.yaml -n astra-connector-operator
 ```
+
+## Security Best Practices
+### Use RBAC
+Use RBAC (Role Based Access Control) in Kubernetes to limit access to the connector namespace after deployment
+
+### Use a service mesh
+Use a service mesh to secure communications between pods
+
+### Limit token usage for registration
+The API token used for registration is only used once, and is not used after registering the connector.
+If the token was created specifically for registering the connector, we recommend discarding it after registration is complete.
+The token is not use by the connector after registration.
+
+### Use a NetworkPolicy
+Use a network policy to deny external communication to the pods in the connector namespace. The pods should only be making
+outbound communication.
+
+NOTE: A network policy requires a network policy controller to enforce the policy.
+
+Here is an example NetworkPolicy to limit the communication:
+```
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: astra-connector-network-policy
+  namespace: astra-connector-namespace
+spec:
+  policyTypes:
+  - Ingress
+  - Egress
+  // Only allow communication to pods from the connector namespace
+  ingress:
+  - from:
+    namespaceSelector:
+      name: astra-connector-operator
+  // Allow all outgoing communication
+  egress:
+  - {}
+```
+
 ## CRD
 #### Sample CRD
 ```
