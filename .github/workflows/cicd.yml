@@ -70,3 +70,8 @@ jobs:
           git add astraconnector_operator.yaml
           git commit -m "Auto updating the operator image tag" -n
           git push --set-upstream origin master
+          
+      - name: Build and Push Install Bundle
+        if: github.ref == 'refs/heads/add-operator-image-to-tar'
+        run: |
+          make install-bundle
