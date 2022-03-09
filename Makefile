@@ -231,7 +231,7 @@ image-tar:
 	$(SCRIPTS_DIR)/create-image-tar.sh ${OUTPUT_IMAGE_TAR_DIR}/astra-connector-images.tar
 
 # Versioning vars
-BASE_VERSION := $(shell cat "${REGISTER_DIR}/version.txt")
+BASE_VERSION := $(shell cat "${MAKEFILE_DIR}/version.txt")
 BUILD_DATE := $(shell date '+%Y%m%d%H%M')
 BUILD_VERSION := ${BASE_VERSION}.${BUILD_DATE}
 
