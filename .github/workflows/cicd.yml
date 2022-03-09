@@ -84,14 +84,20 @@ jobs:
 #          path: |
 #            build/astra-connector-*.tgz
 
+      - name: Get Version
+        id: vars
+        run: echo ::set-output name=version::$(cat VERSION)
+
+
       - name: Create Release
 #        if: github.ref == 'refs/heads/master'
         id: create_release
 #        uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VERSION: "v$(cat VERSION)"
+          VERSION: "v${{ steps.vars.outputs.version }}"
         run: |
+          echo ${{ steps.vars.outputs.version }}
           echo $VERSION
 #        with:
 #          tag_name: ${{ env.VERSION }}
