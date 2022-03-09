@@ -230,10 +230,6 @@ image-tar:
 	mkdir -p ${OUTPUT_IMAGE_TAR_DIR}
 	$(SCRIPTS_DIR)/create-image-tar.sh ${OUTPUT_IMAGE_TAR_DIR}/astra-connector-images.tar
 
-# Versioning vars
-BASE_VERSION := $(shell cat "${MAKEFILE_DIR}/version.txt")
-BUILD_DATE := $(shell date '+%Y%m%d%H%M')
-BUILD_VERSION := ${BASE_VERSION}.${BUILD_DATE}
 
 GOOS_LINUX=linux
 GOARCH_LINUX=amd64
@@ -246,7 +242,7 @@ install-exe-linux-amd: install-exe
 install-exe:
 	rm -rf $(OUTPUT_INSTALL_EXE_DIR)
 	mkdir -p $(OUTPUT_INSTALL_EXE_DIR)
-	cd $(INSTALL_DIR) && go build -ldflags "-X github.com/NetApp/astra-connector-operator/installer/install.VERSION=${BUILD_VERSION}" -v -o ${OUTPUT_INSTALL_EXE_DIR}/install-${GOARCH}-${GOOS} ${INSTALL_DIR}/install.go
+	cd $(INSTALL_DIR) && go build -ldflags "-X github.com/NetApp/astra-connector-operator/installer/install.VERSION=${VERSION}" -v -o ${OUTPUT_INSTALL_EXE_DIR}/install-${GOARCH}-${GOOS} ${INSTALL_DIR}/install.go
 
 bundle-base:
 	rm -rf $(BUILD_DIR)/*.tgz # Remove existing tgz bundles
@@ -257,4 +253,4 @@ bundle-base:
 
 
 install-bundle: image-tar install-exe-linux-amd bundle-base
-	cd $(INSTALL_BUNDLE_DIR) && tar -zcf $(BUILD_DIR)/astra-connector-${BUILD_VERSION}.tgz .
+	cd $(INSTALL_BUNDLE_DIR) && tar -zcf $(BUILD_DIR)/astra-connector-${VERSION}.tgz .
