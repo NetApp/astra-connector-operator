@@ -39,13 +39,13 @@ jobs:
 #          github_token: ${{ secrets.GITHUB_TOKEN }}
 #          files: out/*_report.xml
 #
-#      - name: Build Images
-#        run: |
-#          BASE_VERSION=$(cat version.txt)
-#          export VERSION=$BASE_VERSION.$(date -u '+%Y%m%d%H%M')
-#          echo $BASE_VERSION
-#          echo $VERSION
-#          echo $VERSION > VERSION
+      - name: Build Images
+        run: |
+          BASE_VERSION=$(cat version.txt)
+          export VERSION=$BASE_VERSION.$(date -u '+%Y%m%d%H%M')
+          echo $BASE_VERSION
+          echo $VERSION
+          echo $VERSION > VERSION
 #          make docker-build
 #
 #      - name: Deploy to DockerHub
