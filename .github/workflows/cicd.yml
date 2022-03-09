@@ -41,7 +41,7 @@ jobs:
 
       - name: Build Images
         run: |
-          echo github.ref
+          echo ${{ github.ref }}
           BASE_VERSION=$(cat version.txt)
           export VERSION=$BASE_VERSION.$(date -u '+%Y%m%d%H%M')
           echo $BASE_VERSION
