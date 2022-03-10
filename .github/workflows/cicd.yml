@@ -29,16 +29,16 @@ jobs:
               dep ensure
           fi
 
-#      - name: Unit / L1 Test
-#        run: make l1
-#
-#      - name: Publish Unit Test Results
-#        uses: EnricoMi/publish-unit-test-result-action@v1.6
-#        if: always()
-#        with:
-#          github_token: ${{ secrets.GITHUB_TOKEN }}
-#          files: out/*_report.xml
-#
+      - name: Unit / L1 Test
+        run: make l1
+
+      - name: Publish Unit Test Results
+        uses: EnricoMi/publish-unit-test-result-action@v1.6
+        if: always()
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          files: out/*_report.xml
+
       - name: Build Images
         run: |
           BASE_VERSION=$(cat version.txt)
@@ -46,43 +46,43 @@ jobs:
           echo $BASE_VERSION
           echo $VERSION
           echo $VERSION > VERSION
-#          make docker-build
-#
-#      - name: Deploy to DockerHub
+          make docker-build
+
+      - name: Deploy to DockerHub
+        if: github.ref == 'refs/heads/master'
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_PASSWORD: ${{ secrets.DOCKERHUB_PASSWORD }}
+        run: |
+          export VERSION=$(cat VERSION)
+          docker login -u $DOCKERHUB_USERNAME -p $DOCKERHUB_PASSWORD
+          make docker-push
+
+      - name: Update the operator image tag
+        if: github.ref == 'refs/heads/master'
+        run: |
+          export VERSION=$(cat VERSION)
+          make generate
+          make generate-operator-yaml
+          git config --global user.name ${{ secrets.ACTIONS_USER }}
+          git config --global user.email ${{ secrets.ACTIONS_EMAIL }}
+          git diff astraconnector_operator.yaml
+          git add astraconnector_operator.yaml
+          git commit -m "Auto updating the operator image tag" -n
+          git push --set-upstream origin master
+
+      - name: Build Install Bundle
 #        if: github.ref == 'refs/heads/master'
-#        env:
-#          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-#          DOCKERHUB_PASSWORD: ${{ secrets.DOCKERHUB_PASSWORD }}
-#        run: |
-#          export VERSION=$(cat VERSION)
-#          docker login -u $DOCKERHUB_USERNAME -p $DOCKERHUB_PASSWORD
-#          make docker-push
-#
-#      - name: Update the operator image tag
+        run: |
+          make install-bundle
+
+      - name: Archive Install Bundle
 #        if: github.ref == 'refs/heads/master'
-#        run: |
-#          export VERSION=$(cat VERSION)
-#          make generate
-#          make generate-operator-yaml
-#          git config --global user.name ${{ secrets.ACTIONS_USER }}
-#          git config --global user.email ${{ secrets.ACTIONS_EMAIL }}
-#          git diff astraconnector_operator.yaml
-#          git add astraconnector_operator.yaml
-#          git commit -m "Auto updating the operator image tag" -n
-#          git push --set-upstream origin master
-#
-#      - name: Build Install Bundle
-##        if: github.ref == 'refs/heads/master'
-#        run: |
-#          make install-bundle
-#
-#      - name: Archive Install Bundle
-##        if: github.ref == 'refs/heads/master'
-#        uses: actions/upload-artifact@v3
-#        with:
-#          name: install-bundle
-#          path: |
-#            build/astra-connector-*.tgz
+        uses: actions/upload-artifact@v3
+        with:
+          name: install-bundle
+          path: |
+            build/astra-connector-*.tgz
 
       - name: Get Version
         id: vars
@@ -116,7 +116,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
-          asset_path: ./my-artifact.tgz
-          asset_name: my-artifact.tgz
-          asset_content_type: application/zip
+          asset_path: ./build/astra-connector-*.tgz
+          asset_name: install-bundle
+          asset_content_type: application/x-tar
 
