@@ -250,6 +250,8 @@ bundle-base:
 	mkdir -p $(INSTALL_BUNDLE_DIR)
 	cp ${OUTPUT_INSTALL_EXE_DIR}/* $(INSTALL_BUNDLE_DIR)
 	cp ${OUTPUT_IMAGE_TAR_DIR}/astra-connector-images.tar $(INSTALL_BUNDLE_DIR)
+	cp ${MAKEFILE_DIR}/controllerconfig.yaml $(INSTALL_BUNDLE_DIR)/controllerconfig.yaml
+	cp ${MAKEFILE_DIR}/astraconnector_operator.yaml $(INSTALL_BUNDLE_DIR)/astraconnector_operator.yaml
 
 
 install-bundle: image-tar install-exe-linux-amd bundle-base
