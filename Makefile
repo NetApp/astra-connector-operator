@@ -242,7 +242,7 @@ install-exe-linux-amd: install-exe
 install-exe:
 	rm -rf $(OUTPUT_INSTALL_EXE_DIR)
 	mkdir -p $(OUTPUT_INSTALL_EXE_DIR)
-	cd $(INSTALL_DIR) && go build -ldflags "-X github.com/NetApp/astra-connector-operator/installer/install.VERSION=${VERSION}" -v -o ${OUTPUT_INSTALL_EXE_DIR}/install-${GOARCH}-${GOOS} ${INSTALL_DIR}/install.go
+	cd $(INSTALL_DIR) && go build -ldflags "-X github.com/NetApp/astra-connector-operator/installer/install.VERSION=${VERSION}" -v -o ${OUTPUT_INSTALL_EXE_DIR}/install-${VERSION}-${GOARCH}-${GOOS} ${INSTALL_DIR}/install.go
 
 bundle-base:
 	rm -rf $(BUILD_DIR)/*.tgz # Remove existing tgz bundles
