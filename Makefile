@@ -231,18 +231,16 @@ image-tar:
 	$(SCRIPTS_DIR)/create-image-tar.sh ${OUTPUT_IMAGE_TAR_DIR}/astra-connector-images.tar
 
 
-GOOS_LINUX=linux
-GOARCH_LINUX=amd64
-install-exe-linux-amd: export GOOS=${GOOS_LINUX}
-install-exe-linux-amd: export GOARCH=${GOARCH_LINUX}
-install-exe-linux-amd: export CGO_ENABLED=0
-install-exe-linux-amd: export GO111MODULE=on
-install-exe-linux-amd: install-exe
-
-install-exe:
+install-exes: export CGO_ENABLED=0
+install-exes: export GO111MODULE=on
+install-exes:
 	rm -rf $(OUTPUT_INSTALL_EXE_DIR)
 	mkdir -p $(OUTPUT_INSTALL_EXE_DIR)
-	cd $(INSTALL_DIR) && go build -ldflags "-X github.com/NetApp/astra-connector-operator/installer/install.VERSION=${VERSION}" -v -o ${OUTPUT_INSTALL_EXE_DIR}/install-${VERSION}-${GOARCH}-${GOOS} ${INSTALL_DIR}/install.go
+	cd $(INSTALL_DIR); \
+	export GOOS=linux; export GOARCH=amd64; go build -ldflags "-X github.com/NetApp/astra-connector-operator/installer/install.VERSION=${VERSION}" -v -o ${OUTPUT_INSTALL_EXE_DIR}/install_${VERSION}_$${GOARCH}_$${GOOS} ${INSTALL_DIR}/install.go; \
+	export GOOS=darwin; export GOARCH=amd64; go build -ldflags "-X github.com/NetApp/astra-connector-operator/installer/install.VERSION=${VERSION}" -v -o ${OUTPUT_INSTALL_EXE_DIR}/install_${VERSION}_$${GOARCH}_$${GOOS} ${INSTALL_DIR}/install.go; \
+	export GOOS=darwin; export GOARCH=arm64; go build -ldflags "-X github.com/NetApp/astra-connector-operator/installer/install.VERSION=${VERSION}" -v -o ${OUTPUT_INSTALL_EXE_DIR}/install_${VERSION}_$${GOARCH}_$${GOOS} ${INSTALL_DIR}/install.go; \
+	export GOOS=windows; export GOARCH=amd64; go build -ldflags "-X github.com/NetApp/astra-connector-operator/installer/install.VERSION=${VERSION}" -v -o ${OUTPUT_INSTALL_EXE_DIR}/install_${VERSION}_$${GOARCH}_$${GOOS}.exe ${INSTALL_DIR}/install.go
 
 bundle-base:
 	rm -rf $(BUILD_DIR)/*.tgz # Remove existing tgz bundles
@@ -254,5 +252,5 @@ bundle-base:
 	cp ${MAKEFILE_DIR}/astraconnector_operator.yaml $(INSTALL_BUNDLE_DIR)/astraconnector_operator.yaml
 
 
-install-bundle: image-tar install-exe-linux-amd bundle-base
+install-bundle: image-tar install-exes bundle-base
 	cd $(INSTALL_BUNDLE_DIR) && tar -zcf $(BUILD_DIR)/astra-connector-${VERSION}.tgz .
