@@ -10,7 +10,7 @@ on:
 
 jobs:
   build_and_test:
-    name: CICD tests
+    name: CICD
     runs-on: ubuntu-latest
     steps:
       - name: Set up Go 1.x
@@ -46,6 +46,7 @@ jobs:
           echo $BASE_VERSION
           echo $VERSION
           echo $VERSION > VERSION
+          echo ::set-output name=version::$(cat VERSION)
           make docker-build
 
       - name: Deploy to DockerHub
@@ -74,6 +75,7 @@ jobs:
       - name: Build Install Bundle
 #        if: github.ref == 'refs/heads/master'
         run: |
+          export VERSION=$(cat VERSION)
           make install-bundle
 
 #      - name: Archive Install Bundle
@@ -84,12 +86,10 @@ jobs:
 #          path: |
 #            build/astra-connector-*.tgz
 
-      - name: Get Version
-        id: vars
-        run:
-          echo ::set-output name=version::$(cat VERSION)
-          
-          echo ::set-output name=version::$(cat VERSION)
+#      - name: Get Version
+#        id: vars
+#        run:
+#          echo ::set-output name=version::$(cat VERSION)
 
 
       - name: Create Release
