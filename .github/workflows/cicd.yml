@@ -93,7 +93,7 @@ jobs:
         with:
           tag_name: ${{ env.TAG_VERSION }}
           release_name: Release ${{ env.TAG_VERSION }}
-          draft: true
+          draft: false
           prerelease: false
 
       - name: Upload Release Image Bundle
