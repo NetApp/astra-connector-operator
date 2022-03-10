@@ -100,8 +100,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG_VERSION: "v${{ steps.vars.outputs.version }}"
         with:
-          tag_name: $TAG_VERSION
-          release_name: Release $TAG_VERSION
+          tag_name: ${{ env.TAG_VERSION }}
+          release_name: Release ${{ env.TAG_VERSION }}
           draft: true
           prerelease: false
 
@@ -120,7 +120,7 @@ jobs:
           TAR_PATH: "./build/astra-connector-${{ steps.vars.outputs.version }}.tgz"
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
-          asset_path: $TAR_PATH
+          asset_path: ${{ env.TAR_PATH }}
           asset_name: install-bundle
           asset_content_type: application/x-tar
 
