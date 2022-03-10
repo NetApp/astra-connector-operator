@@ -46,7 +46,6 @@ jobs:
           echo $BASE_VERSION
           echo $VERSION
           echo $VERSION > VERSION
-          echo ::set-output name=version::$(cat VERSION)
           make docker-build
 
       - name: Deploy to DockerHub
@@ -86,10 +85,10 @@ jobs:
 #          path: |
 #            build/astra-connector-*.tgz
 
-#      - name: Get Version
-#        id: vars
-#        run:
-#          echo ::set-output name=version::$(cat VERSION)
+      - name: Get Version
+        id: vars
+        run:
+          echo ::set-output name=version::$(cat VERSION)
 
 
       - name: Create Release
