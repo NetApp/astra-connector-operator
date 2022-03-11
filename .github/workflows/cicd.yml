@@ -1,4 +1,4 @@
-name: Integration Tests
+name: CICD
 
 on:
   push:
@@ -10,7 +10,7 @@ on:
 
 jobs:
   build_and_test:
-    name: CICD tests
+    name: CICD
     runs-on: ubuntu-latest
     steps:
       - name: Set up Go 1.x
@@ -70,3 +70,43 @@ jobs:
           git add astraconnector_operator.yaml
           git commit -m "Auto updating the operator image tag" -n
           git push --set-upstream origin master
+
+      - name: Build Install Bundle
+        if: github.ref == 'refs/heads/master'
+        run: |
+          export VERSION=$(cat VERSION)
+          make install-bundle
+
+      - name: Get Version
+        if: github.ref == 'refs/heads/master'
+        id: vars
+        run:
+          echo ::set-output name=version::$(cat VERSION)
+
+      - name: Create Release
+        if: github.ref == 'refs/heads/master'
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG_VERSION: "v${{ steps.vars.outputs.version }}"
+        with:
+          tag_name: ${{ env.TAG_VERSION }}
+          release_name: Release ${{ env.TAG_VERSION }}
+          draft: false
+          prerelease: false
+
+      - name: Upload Release Image Bundle
+        if: github.ref == 'refs/heads/master'
+        id: upload-release-asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAR_PATH: "./build/astra-connector-${{ steps.vars.outputs.version }}.tgz"
+          ASSET_NAME: "install-bundle-${{ steps.vars.outputs.version }}.tgz"
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing its ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
+          asset_path: ${{ env.TAR_PATH }}
+          asset_name: ${{ env.ASSET_NAME }}
+          asset_content_type: application/x-tar
+

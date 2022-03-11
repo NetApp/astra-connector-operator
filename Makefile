@@ -7,6 +7,7 @@ BUILD_DIR := $(MAKEFILE_DIR)/build
 OUTPUT_IMAGE_TAR_DIR := $(BUILD_DIR)/images
 INSTALL_DIR := $(MAKEFILE_DIR)/installer
 OUTPUT_INSTALL_EXE_DIR := $(BUILD_DIR)/install-exe
+INSTALL_BUNDLE_DIR = $(BUILD_DIR)/install-bundle
 
 # VERSION defines the project version for the bundle.
 # Update this value when you upgrade the version of your project.
@@ -229,20 +230,27 @@ image-tar:
 	mkdir -p ${OUTPUT_IMAGE_TAR_DIR}
 	$(SCRIPTS_DIR)/create-image-tar.sh ${OUTPUT_IMAGE_TAR_DIR}/astra-connector-images.tar
 
-# Versioning vars
-BASE_VERSION := $(shell cat "${REGISTER_DIR}/version.txt")
-BUILD_DATE := $(shell date '+%Y%m%d%H%M')
-BUILD_VERSION := ${BASE_VERSION}.${BUILD_DATE}
 
-GOOS_LINUX=linux
-GOARCH_LINUX=amd64
-install-exe-linux-amd: export GOOS=${GOOS_LINUX}
-install-exe-linux-amd: export GOARCH=${GOARCH_LINUX}
-install-exe-linux-amd: export CGO_ENABLED=0
-install-exe-linux-amd: export GO111MODULE=on
-install-exe-linux-amd: install-exe
-
-install-exe:
+install-exes: export CGO_ENABLED=0
+install-exes: export GO111MODULE=on
+install-exes:
 	rm -rf $(OUTPUT_INSTALL_EXE_DIR)
 	mkdir -p $(OUTPUT_INSTALL_EXE_DIR)
-	cd $(INSTALL_DIR) && go build -ldflags "-X github.com/NetApp/astra-connector-operator/installer/install.VERSION=${BUILD_VERSION}" -v -o ${OUTPUT_INSTALL_EXE_DIR}/install-${GOARCH}-${GOOS} ${INSTALL_DIR}/install.go
+	cd $(INSTALL_DIR); \
+	export GOOS=linux; export GOARCH=amd64; go build -ldflags "-X github.com/NetApp/astra-connector-operator/installer/install.VERSION=${VERSION}" -v -o ${OUTPUT_INSTALL_EXE_DIR}/install_${VERSION}_$${GOARCH}_$${GOOS} ${INSTALL_DIR}/install.go; \
+	export GOOS=darwin; export GOARCH=amd64; go build -ldflags "-X github.com/NetApp/astra-connector-operator/installer/install.VERSION=${VERSION}" -v -o ${OUTPUT_INSTALL_EXE_DIR}/install_${VERSION}_$${GOARCH}_$${GOOS} ${INSTALL_DIR}/install.go; \
+	export GOOS=darwin; export GOARCH=arm64; go build -ldflags "-X github.com/NetApp/astra-connector-operator/installer/install.VERSION=${VERSION}" -v -o ${OUTPUT_INSTALL_EXE_DIR}/install_${VERSION}_$${GOARCH}_$${GOOS} ${INSTALL_DIR}/install.go; \
+	export GOOS=windows; export GOARCH=amd64; go build -ldflags "-X github.com/NetApp/astra-connector-operator/installer/install.VERSION=${VERSION}" -v -o ${OUTPUT_INSTALL_EXE_DIR}/install_${VERSION}_$${GOARCH}_$${GOOS}.exe ${INSTALL_DIR}/install.go
+
+bundle-base:
+	rm -rf $(BUILD_DIR)/*.tgz # Remove existing tgz bundles
+	rm -rf $(INSTALL_BUNDLE_DIR)
+	mkdir -p $(INSTALL_BUNDLE_DIR)
+	cp ${OUTPUT_INSTALL_EXE_DIR}/* $(INSTALL_BUNDLE_DIR)
+	cp ${OUTPUT_IMAGE_TAR_DIR}/astra-connector-images.tar $(INSTALL_BUNDLE_DIR)
+	cp ${MAKEFILE_DIR}/controllerconfig.yaml $(INSTALL_BUNDLE_DIR)/controllerconfig.yaml
+	cp ${MAKEFILE_DIR}/astraconnector_operator.yaml $(INSTALL_BUNDLE_DIR)/astraconnector_operator.yaml
+
+
+install-bundle: image-tar install-exes bundle-base
+	cd $(INSTALL_BUNDLE_DIR) && tar -zcf $(BUILD_DIR)/astra-connector-${VERSION}.tgz .
