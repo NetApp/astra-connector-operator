@@ -13,7 +13,7 @@ const (
 	NatssyncClientProtocol              = "TCP"
 	NatssyncClientKeystoreUrl           = "configmap:///configmap-data"
 	NatssyncClientDefaultImage          = "natssync-client:0.9.202202170408"
-	NatssyncClientDefaultCloudBridgeURL = "https://eap.astra.netapp.io"
+	NatssyncClientDefaultCloudBridgeURL = "https://staging.astra.netapp.io/"
 
 	NatsName               = "nats"
 	NatsClusterServiceName = "nats-cluster"
