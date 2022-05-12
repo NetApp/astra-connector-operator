@@ -157,6 +157,7 @@ cd $$TMP_DIR ;\
 go mod init tmp ;\
 echo "Downloading $(2) into $(1)" ;\
 export GOBIN=$(PROJECT_DIR)/bin ;\
+export GO111MODULE=off ;\
 go get $(2) ;\
 ls -ltra ;\
 rm -rf $$TMP_DIR ;\
