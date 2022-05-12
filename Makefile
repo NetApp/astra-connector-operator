@@ -151,12 +151,13 @@ PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
 define go-get-tool
 @[ -f $(1) ] || { \
 set -e ;\
-mkdir $(PROJECT_DIR)/bin ;\
+mkdir -p $(PROJECT_DIR)/bin ;\
 TMP_DIR=$$(mktemp -d) ;\
 cd $$TMP_DIR ;\
 go mod init tmp ;\
 echo "Downloading $(2) into $(1)" ;\
-GOBIN=$(PROJECT_DIR)/bin go get $(2) ;\
+export GOBIN=$(PROJECT_DIR)/bin ;\
+go get $(2) ;\
 ls -ltra ;\
 rm -rf $$TMP_DIR ;\
 cd $(PROJECT_DIR) ;\
