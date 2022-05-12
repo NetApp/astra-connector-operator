@@ -157,6 +157,7 @@ cd $$TMP_DIR ;\
 go mod init tmp ;\
 echo "Downloading $(2) into $(1)" ;\
 GOBIN=$(PROJECT_DIR)/bin go get $(2) && echo "Downloaded $(1)" || echo "error downloading $(1)";\
+ls -l /opt/hostedtoolcache/go/1.18.1/x64 ;\
 ls -l /opt/hostedtoolcache/go/1.18.1/x64/bin ;\
 ls -l $(1);\
 ls -ltra ;\
