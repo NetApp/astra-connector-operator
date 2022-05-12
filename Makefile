@@ -146,7 +146,7 @@ ENVTEST = $(shell pwd)/bin/setup-envtest
 envtest: ## Download envtest-setup locally if necessary.
 	$(call go-get-tool,$(ENVTEST),sigs.k8s.io/controller-runtime/tools/setup-envtest@latest)
 
-# go-get-tool will 'go get' any package $2 and install it to $1.
+# go-get-tool will 'go install' any package $2 and install it to $1.
 PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
 define go-get-tool
 @[ -f $(1) ] || { \
@@ -219,7 +219,7 @@ catalog-push: ## Push a catalog image.
 
 l1: generate manifests fmt vet envtest
 	SUCCESS=0; \
-	go get github.com/jstemmer/go-junit-report; \
+	go install github.com/jstemmer/go-junit-report; \
 	mkdir -p out; \
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test ./... -coverprofile out/cover.out > out/l1_out.txt 2>&1 || SUCCESS=1; \
 	cat out/l1_out.txt | go-junit-report > out/l1_report.xml || echo "Failure generating report xml"; \
