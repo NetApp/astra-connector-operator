@@ -159,6 +159,7 @@ GOBIN=$(PROJECT_DIR)/bin go get $(2) ;\
 rm -rf $$TMP_DIR ;\
 cd $(PROJECT_DIR) ;\
 pwd ;\
+mkdir $(PROJECT_DIR)/bin ;\
 echo "ls $(PROJECT_DIR)" ;\
 ls $(PROJECT_DIR);\
 echo "ls $(PROJECT_DIR)/bin" ;\
