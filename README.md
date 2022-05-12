@@ -121,7 +121,7 @@ The natssync-client CRD is a map of key/value pairs
 | CRD Spec          | Details       | Optional | Default |
 | ----------------- | ------------- |--------- | --------|
 | image   | natssync-client image | Yes | natssync-client:0.9.202202161623 |
-| cloud-bridge-url  | Astra URL  | Yes | https://integration.astra.netapp.io |
+| cloud-bridge-url  | Astra URL  | Yes | https://astra.netapp.io |
 | skipTLSValidation | Skip TLS Validation| Yes| false |
 | hostalias | Use a custom IP for the cloud bridge hostname| Yes | false |
 | hostaliasIP | IP to use for host alias | Yes if hostalias is false | |
