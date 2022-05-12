@@ -151,6 +151,7 @@ PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
 define go-get-tool
 @[ -f $(1) ] || { \
 set -e ;\
+mkdir $(PROJECT_DIR)/bin ;\
 TMP_DIR=$$(mktemp -d) ;\
 cd $$TMP_DIR ;\
 go mod init tmp ;\
@@ -159,7 +160,6 @@ GOBIN=$(PROJECT_DIR)/bin go get $(2) ;\
 rm -rf $$TMP_DIR ;\
 cd $(PROJECT_DIR) ;\
 pwd ;\
-mkdir $(PROJECT_DIR)/bin ;\
 echo "ls $(PROJECT_DIR)" ;\
 ls $(PROJECT_DIR);\
 echo "ls $(PROJECT_DIR)/bin" ;\
