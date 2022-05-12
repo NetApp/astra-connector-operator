@@ -217,9 +217,11 @@ catalog-build: opm ## Build a catalog image.
 catalog-push: ## Push a catalog image.
 	$(MAKE) docker-push IMG=$(CATALOG_IMG)
 
-JUNIT_REPORT = $(shell pwd)/bin/controller-gen
-l1: generate manifests fmt vet envtest
-    $(call go-get-tool,$(JUNIT_REPORT),github.com/jstemmer/go-junit-report@latest) ;\
+JUNIT_REPORT = $(shell pwd)/bin/go-junit-report
+go-junit-report: ## Download go-junit-report locally if necessary.
+	$(call go-get-tool,$(JUNIT_REPORT),github.com/jstemmer/go-junit-report@latest)
+
+l1: generate manifests fmt vet envtest go-junit-report
 	SUCCESS=0; \
 	mkdir -p out; \
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test ./... -coverprofile out/cover.out > out/l1_out.txt 2>&1 || SUCCESS=1; \
