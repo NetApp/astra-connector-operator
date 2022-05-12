@@ -157,7 +157,8 @@ go mod init tmp ;\
 echo "Downloading $(2) into $(1)" ;\
 GOBIN=$(PROJECT_DIR)/bin go get $(2) ;\
 rm -rf $$TMP_DIR ;\
-ls $(1);\
+echo "ls $$(dirname $1)" ;\
+ls $$(dirname $1);\
 }
 endef
 
