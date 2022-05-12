@@ -157,7 +157,9 @@ cd $$TMP_DIR ;\
 go mod init tmp ;\
 echo "Downloading $(2) into $(1)" ;\
 GOBIN=$(PROJECT_DIR)/bin go get $(2) ;\
-[ $? -ne 0 ] && echo "go get error" && exit 1;\
+if [ $? -ne 0 ]; then ;\
+echo "go get error" && exit 1;\
+fi ;\
 ls -ltra ;\
 rm -rf $$TMP_DIR ;\
 cd $(PROJECT_DIR) ;\
