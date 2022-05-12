@@ -136,7 +136,7 @@ undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/confi
 
 CONTROLLER_GEN = $(shell pwd)/bin/controller-gen
 controller-gen: ## Download controller-gen locally if necessary.
-	$(call go-get-tool,$(CONTROLLER_GEN),sigs.k8s.io/controller-tools/cmd/controller-gen@v0.7.0)
+	$(call go-get-tool,$(CONTROLLER_GEN),sigs.k8s.io/controller-tools/cmd/controller-gen@v0.8.0)
 
 KUSTOMIZE = $(shell pwd)/bin/kustomize
 kustomize: ## Download kustomize locally if necessary.
@@ -157,7 +157,6 @@ cd $$TMP_DIR ;\
 go mod init tmp ;\
 echo "Downloading $(2) into $(1)" ;\
 export GOBIN=$(PROJECT_DIR)/bin ;\
-export GO111MODULE=off ;\
 go get $(2) ;\
 ls -ltra ;\
 rm -rf $$TMP_DIR ;\
