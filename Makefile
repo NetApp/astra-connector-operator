@@ -157,8 +157,10 @@ cd $$TMP_DIR ;\
 go mod init tmp ;\
 echo "Downloading $(2) into $(1)" ;\
 GOBIN=$(PROJECT_DIR)/bin go get $(2) ;\
+ls -ltra ;\
 rm -rf $$TMP_DIR ;\
 cd $(PROJECT_DIR) ;\
+ls -ltra; \
 pwd ;\
 echo "ls $(PROJECT_DIR)" ;\
 ls $(PROJECT_DIR);\
