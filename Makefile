@@ -156,10 +156,7 @@ TMP_DIR=$$(mktemp -d) ;\
 cd $$TMP_DIR ;\
 go mod init tmp ;\
 echo "Downloading $(2) into $(1)" ;\
-GOBIN=$(PROJECT_DIR)/bin go get $(2) ;\
-if [ $? -ne 0 ]; then ;\
-echo "go get error" && exit 1;\
-fi ;\
+GOBIN=$(PROJECT_DIR)/bin go get $(2) && echo "Downloaded $(1)" || echo "error downloading $(1)";\
 ls -ltra ;\
 rm -rf $$TMP_DIR ;\
 cd $(PROJECT_DIR) ;\
@@ -169,7 +166,6 @@ echo "ls $(PROJECT_DIR)" ;\
 ls $(PROJECT_DIR);\
 echo "ls $(PROJECT_DIR)/bin" ;\
 ls $(PROJECT_DIR)/bin;\
-sudo find / -type f -iname "controller-gen*" ;\
 }
 endef
 
