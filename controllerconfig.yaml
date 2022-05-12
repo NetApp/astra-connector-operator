@@ -5,10 +5,12 @@ metadata:
 spec:
   natssync-client:
     image: natssync-client:0.9.202202170408
+    cloud-bridge-url: https://astra.netapp.io
   nats:
     image: nats:2.6.1-alpine3.14
   httpproxy-client:
     image: httpproxylet:0.9.202202170408
+
   echo-client:
     image: echo-proxylet:0.9.202202170408
   imageRegistry:
