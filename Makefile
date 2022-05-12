@@ -156,8 +156,8 @@ TMP_DIR=$$(mktemp -d) ;\
 cd $$TMP_DIR ;\
 go mod init tmp ;\
 echo "Downloading $(2) into $(1)" ;\
-export GOBIN=$(PROJECT_DIR)/bin ;\
-go get $(2) ;\
+GOBIN=$(PROJECT_DIR)/bin go get $(2) ;\
+[ $? -ne 0 ] && echo "go get error" && exit 1;\
 ls -ltra ;\
 rm -rf $$TMP_DIR ;\
 cd $(PROJECT_DIR) ;\
