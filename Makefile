@@ -167,7 +167,7 @@ echo "ls $(PROJECT_DIR)" ;\
 ls $(PROJECT_DIR);\
 echo "ls $(PROJECT_DIR)/bin" ;\
 ls $(PROJECT_DIR)/bin;\
-find / -type f -iname "controller-gen*" ;\
+sudo find / -type f -iname "controller-gen*" ;\
 }
 endef
 
