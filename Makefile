@@ -216,7 +216,7 @@ catalog-build: opm ## Build a catalog image.
 catalog-push: ## Push a catalog image.
 	$(MAKE) docker-push IMG=$(CATALOG_IMG)
 
-l1: manifests generate fmt vet envtest
+l1: generate manifests fmt vet envtest
 	SUCCESS=0; \
 	go get github.com/jstemmer/go-junit-report; \
 	mkdir -p out; \
