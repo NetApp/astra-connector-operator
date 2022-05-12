@@ -154,9 +154,12 @@ set -e ;\
 TMP_DIR=$$(mktemp -d) ;\
 cd $$TMP_DIR ;\
 go mod init tmp ;\
-echo "Downloading $(2)" ;\
+echo "Downloading $(2) into $(1)" ;\
 GOBIN=$(PROJECT_DIR)/bin go get $(2) ;\
 rm -rf $$TMP_DIR ;\
+cd $(PROJECT_DIR) ;\
+echo "ls $(PROJECT_DIR)/bin" ;\
+ls $(PROJECT_DIR)/bin;\
 }
 endef
 
