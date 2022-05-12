@@ -225,7 +225,7 @@ l1: generate manifests fmt vet envtest go-junit-report
 	SUCCESS=0; \
 	mkdir -p out; \
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test ./... -coverprofile out/cover.out > out/l1_out.txt 2>&1 || SUCCESS=1; \
-	cat out/l1_out.txt | go-junit-report > out/l1_report.xml || echo "Failure generating report xml"; \
+	cat out/l1_out.txt | $(PROJECT_DIR)/bin/go-junit-report > out/l1_report.xml || echo "Failure generating report xml"; \
 	cat out/l1_out.txt; \
 	exit $$SUCCESS;
 
