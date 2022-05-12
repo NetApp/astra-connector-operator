@@ -158,6 +158,9 @@ echo "Downloading $(2) into $(1)" ;\
 GOBIN=$(PROJECT_DIR)/bin go get $(2) ;\
 rm -rf $$TMP_DIR ;\
 cd $(PROJECT_DIR) ;\
+pwd ;\
+echo "ls $(PROJECT_DIR)" ;\
+ls $(PROJECT_DIR);\
 echo "ls $(PROJECT_DIR)/bin" ;\
 ls $(PROJECT_DIR)/bin;\
 }
