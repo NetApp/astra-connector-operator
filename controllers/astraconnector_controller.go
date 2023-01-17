@@ -207,16 +207,20 @@ func (r *AstraConnectorReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		}
 	} else {
 		if registered {
-			if astraConnector.Spec.Astra.Token == "" || astraConnector.Spec.Astra.AccountID == "" || astraConnector.Spec.Astra.ClusterName == "" {
-				log.Info("Skipping cluster unregister with Astra, incomplete Astra details provided Token/AccountID/ClusterName")
+			if astraConnector.Spec.Astra.Token == "" || astraConnector.Spec.Astra.AccountID == "" {
+				log.Info("Skipping cluster unregister with Astra, incomplete Astra details provided Token/AccountID")
 			} else {
-				log.Info("Unregistering the cluster with Astra")
-				err = register.RemoveConnectorIDFromAstra(astraConnector, ctx)
-				if err != nil {
-					log.Error(err, "Failed to unregister the cluster with Astra")
-					return ctrl.Result{Requeue: true}, err
+				if astraConnector.Spec.Astra.ClusterName != "" {
+					log.Info("Unregistering the cluster with Astra")
+					err = register.RemoveConnectorIDFromAstra(astraConnector, ctx)
+					if err != nil {
+						log.Error(err, "Failed to unregister the cluster with Astra")
+						return ctrl.Result{Requeue: true}, err
+					}
+					log.Info("Unregistered the cluster with Astra")
+				} else {
+					log.Info("Skipping unregistering the Astra cluster, no cluster name available")
 				}
-				log.Info("Unregistered the cluster with Astra")
 			}
 
 			log.Info("Unregistering natssync-client")

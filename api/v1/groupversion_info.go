@@ -3,8 +3,8 @@
  */
 
 // Package v1 contains API Schema definitions for the cache v1 API group
-//+kubebuilder:object:generate=true
-//+groupName=netapp.astraconnector.com
+// +kubebuilder:object:generate=true
+// +groupName=netapp.astraconnector.com
 package v1
 
 import (
