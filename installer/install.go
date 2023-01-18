@@ -257,8 +257,8 @@ type Options struct {
 	ImageTar  string `short:"p" long:"image-tar" required:"false" description:"Path to image tar" value-name:"PATH"`
 	//ImageRepoUser     string `long:"repo-user" required:"false" description:"Private Docker image repo URL" value-name:"USER"`
 	//ImageRepoPw       string `long:"repo-pw" required:"false" description:"Private Docker image repo URL" value-name:"PASSWORD"`
-	ClusterName       string `short:"c" long:"cluster-name" required:"true" description:"Private cluster name" value-name:"NAME"`
-	Token             string `short:"t" long:"token" required:"false" description:"Astra API token" value-name:"TOKEN"`
+	ClusterName       string `short:"c" long:"cluster-name" required:"false" description:"Private cluster name" value-name:"NAME"`
+	Token             string `short:"t" long:"token" required:"true" description:"Astra API token" value-name:"TOKEN"`
 	AcceptEula        bool   `long:"accept-eula" required:"true" description:"(flag) Accept End User License Agreement"`
 	AstraAccountId    string `short:"a" long:"account-id" required:"true" description:"Astra account ID" value-name:"ID"`
 	AstraUrl          string `short:"u" long:"astra-url" required:"false" default:"https://eap.astra.netapp.io" description:"Url to Astra. E.g. 'https://integration.astra.netapp.io'" value-name:"URL"`
