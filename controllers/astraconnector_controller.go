@@ -90,7 +90,7 @@ func (r *AstraConnectorReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		if controllerutil.ContainsFinalizer(astraConnector, finalizerName) {
 			// our finalizer is present, so lets handle any external dependency
 			log.Info("Unregistering the cluster with Astra upon CRD delete")
-			if astraConnector.Spec.Astra.ClusterName != "" && astraConnector.Spec.Astra.ClusterName != "private" {
+			if astraConnector.Spec.Astra.ClusterName != "" {
 				err = register.RemoveConnectorIDFromAstra(astraConnector, ctx)
 				if err != nil {
 					log.Error(err, "Failed to unregister the cluster with Astra, ignoring...")
@@ -196,7 +196,7 @@ func (r *AstraConnectorReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		natssyncClientStatus.Registered = "true"
 		natssyncClientStatus.AstraConnectorID = astraConnectorID
 
-		if astraConnector.Spec.Astra.Token == "" || astraConnector.Spec.Astra.AccountID == "" || astraConnector.Spec.Astra.ClusterName == "" || astraConnector.Spec.Astra.ClusterName == "private" {
+		if astraConnector.Spec.Astra.Token == "" || astraConnector.Spec.Astra.AccountID == "" || astraConnector.Spec.Astra.ClusterName == "" {
 			log.Info("Skipping cluster registration with Astra, incomplete Astra details provided Token/AccountID/ClusterName")
 		} else {
 			log.Info("Registering cluster with Astra")
@@ -212,7 +212,7 @@ func (r *AstraConnectorReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			if astraConnector.Spec.Astra.Token == "" || astraConnector.Spec.Astra.AccountID == "" {
 				log.Info("Skipping cluster unregister with Astra, incomplete Astra details provided Token/AccountID")
 			} else {
-				if astraConnector.Spec.Astra.ClusterName != "" && astraConnector.Spec.Astra.ClusterName != "private" {
+				if astraConnector.Spec.Astra.ClusterName != "" {
 					log.Info("Unregistering the cluster with Astra")
 					err = register.RemoveConnectorIDFromAstra(astraConnector, ctx)
 					if err != nil {
