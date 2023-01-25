@@ -55,8 +55,10 @@ jobs:
           DOCKERHUB_PASSWORD: ${{ secrets.DOCKERHUB_PASSWORD }}
         run: |
           export VERSION=$(cat VERSION)
+          export BASE_VERSION=$(cat version.txt)
           docker login -u $DOCKERHUB_USERNAME -p $DOCKERHUB_PASSWORD
           make docker-push
+          make docker-tag-base
 
       - name: Update the operator image tag
         if: github.ref == 'refs/heads/master'
