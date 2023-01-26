@@ -8,13 +8,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-//+kubebuilder:validation:Optional
+// +kubebuilder:validation:Optional
 type HttpProxyClient struct {
 	Image string `json:"image,omitempty"`
 	Size  int32  `json:"size,omitempty"`
 }
 
-//+kubebuilder:validation:Optional
+// +kubebuilder:validation:Optional
 type EchoClient struct {
 	Image string `json:"image,omitempty"`
 	Size  int32  `json:"size,omitempty"`
@@ -23,13 +23,13 @@ type EchoClient struct {
 type Astra struct {
 	Unregister  bool   `json:"unregister,omitempty"`
 	Token       string `json:"token,omitempty"`
-	ClusterName string `json:"clusterName"`
+	ClusterName string `json:"clusterName,omitempty"`
 	AccountID   string `json:"accountId"`
 	AcceptEULA  bool   `json:"acceptEULA"`
 	OldAuth     bool   `json:"oldAuth,omitempty"`
 }
 
-//+kubebuilder:validation:Optional
+// +kubebuilder:validation:Optional
 type NatssyncClient struct {
 	Image             string `json:"image,omitempty"`
 	Size              int32  `json:"size,omitempty"`
@@ -39,13 +39,13 @@ type NatssyncClient struct {
 	HostAliasIP       string `json:"hostaliasIP,omitempty"`
 }
 
-//+kubebuilder:validation:Optional
+// +kubebuilder:validation:Optional
 type Nats struct {
 	Size  int32  `json:"size,omitempty"`
 	Image string `json:"image,omitempty"`
 }
 
-//+kubebuilder:validation:Optional
+// +kubebuilder:validation:Optional
 type ImageRegistry struct {
 	Name   string `json:"name,omitempty"`
 	Secret string `json:"secret,omitempty"`

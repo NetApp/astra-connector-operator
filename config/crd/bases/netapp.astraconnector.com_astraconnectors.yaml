@@ -60,7 +60,6 @@ spec:
                 required:
                 - acceptEULA
                 - accountId
-                - clusterName
                 type: object
               echo-client:
                 properties:
