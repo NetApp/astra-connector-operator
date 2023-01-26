@@ -3,8 +3,7 @@ module github.com/NetApp/astra-connector-operator
 go 1.16
 
 require (
-	github.com/Microsoft/go-winio v0.5.2 // indirect
-	github.com/containerd/containerd v1.6.6 // indirect
+	github.com/containerd/containerd v1.6.12 // indirect
 	github.com/docker/distribution v2.8.0+incompatible // indirect
 	github.com/docker/docker v20.10.12+incompatible
 	github.com/jessevdk/go-flags v1.5.0
