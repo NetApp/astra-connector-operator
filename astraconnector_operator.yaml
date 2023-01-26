@@ -461,7 +461,7 @@ spec:
         - --leader-elect
         command:
         - /manager
-        image: netapp/astra-connector-operator:2.0
+        image: netapp/astra-connector-operator:2.0.202301261331
         livenessProbe:
           httpGet:
             path: /healthz
