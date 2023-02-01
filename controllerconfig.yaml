@@ -4,15 +4,15 @@ metadata:
   name: astra-connector
 spec:
   natssync-client:
-    image: natssync-client:0.9.202202170408
+    image: natssync-client:2.0
     cloud-bridge-url: https://astra.netapp.io
   nats:
     image: nats:2.6.1-alpine3.14
   httpproxy-client:
-    image: httpproxylet:0.9.202202170408
+    image: httpproxylet::2.0
 
   echo-client:
-    image: echo-proxylet:0.9.202202170408
+    image: echo-proxylet:2.0
   imageRegistry:
     name: theotw
 
