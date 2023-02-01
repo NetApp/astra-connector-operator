@@ -118,13 +118,13 @@ Natssync-Client talks to the Natssync-Server on Astra and ensures communication 
 
 The natssync-client CRD is a map of key/value pairs
 
-| CRD Spec          | Details       | Optional | Default |
-| ----------------- | ------------- |--------- | --------|
-| image   | natssync-client image | Yes | natssync-client:0.9.202202161623 |
-| cloud-bridge-url  | Astra URL  | Yes | https://astra.netapp.io |
-| skipTLSValidation | Skip TLS Validation| Yes| false |
-| hostalias | Use a custom IP for the cloud bridge hostname| Yes | false |
-| hostaliasIP | IP to use for host alias | Yes if hostalias is false | |
+| CRD Spec          | Details       | Optional | Default                             |
+| ----------------- | ------------- |--------- |-------------------------------------|
+| image   | natssync-client image | Yes | natssync-client:2.0 |
+| cloud-bridge-url  | Astra URL  | Yes | https://astra.netapp.io             |
+| skipTLSValidation | Skip TLS Validation| Yes| false                               |
+| hostalias | Use a custom IP for the cloud bridge hostname| Yes | false                               |
+| hostaliasIP | IP to use for host alias | Yes if hostalias is false |                                     |
 
 Example:
 ```
@@ -150,9 +150,9 @@ spec:
 ```
 
 ### [httpproxy-client](https://github.com/theotw/natssync)
-| CRD Spec | Details       | Optional | Default |
-| ---------| ------------- |--------- | --------|
-| image    | httpproxy-client image | Yes | httpproxylet:0.9.202202161623 |
+| CRD Spec | Details       | Optional | Default          |
+| ---------| ------------- |--------- |------------------|
+| image    | httpproxy-client image | Yes | httpproxylet:2.0 |
 
 Example:
 ```
@@ -162,10 +162,10 @@ spec:
         image: theotw/httpproxylet:0.9.202201132025
 ```
 ### [echo-client](https://github.com/theotw/natssync)
-| CRD Spec | Details       | Optional | Default |
-| ---------| ------------- |--------- | --------|
-| size     | Replica count for the echo-client deployment | Yes | 1 |
-| image    | echo-client image | Yes | echo-proxylet:0.9.202202161623 |
+| CRD Spec | Details       | Optional | Default           |
+| ---------| ------------- |--------- |-------------------|
+| size     | Replica count for the echo-client deployment | Yes | 1                 |
+| image    | echo-client image | Yes | echo-proxylet:2.0 |
 
 Example:
 ```
