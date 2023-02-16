@@ -449,7 +449,7 @@ spec:
         - --upstream=http://127.0.0.1:8080/
         - --logtostderr=true
         - --v=10
-        image: netapp/kube-rbac-proxy:v0.8.0
+        image: gcr.io/kubebuilder/kube-rbac-proxy:v0.8.0
         name: kube-rbac-proxy
         ports:
         - containerPort: 8443
@@ -461,7 +461,7 @@ spec:
         - --leader-elect
         command:
         - /manager
-        image: netapp/astra-connector-operator:2.0.202302012357
+        image: netapp/astra-connector-operator:2.0.202302161622
         livenessProbe:
           httpGet:
             path: /healthz
