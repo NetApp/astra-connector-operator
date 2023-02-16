@@ -9,7 +9,7 @@ spec:
   nats:
     image: nats:2.6.1-alpine3.14
   httpproxy-client:
-    image: httpproxylet::2.0
+    image: httpproxylet:2.0
 
   echo-client:
     image: echo-proxylet:2.0
@@ -18,7 +18,7 @@ spec:
 
   # Items below are required
   astra:
-    clusterName: Name of the AKS cluster as seen in Azure Portal
+    clusterName: Needed only for AKS clusters imported as AKS private. Otherwise remove it . Name of the AKS cluster as seen in Azure Portal
     token: API Token from the API Access page in Astra UI
     accountId: Astra Account ID from the API Access page in Astra UI
     #  Need to accept the EULA located at:
