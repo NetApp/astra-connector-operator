@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/NetApp/astra-connector-operator/common"
+	nats "github.com/nats-io/nats.go"
 
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
@@ -125,6 +126,36 @@ func getAstraHostFromURL(astraHostURL string) (string, error) {
 		return "", errors.New(errStr)
 	}
 	return cloudBridgeURLSplit[1], nil
+}
+
+// AddClusterToAstra sends a NATS mesage to Astra Control with enough cluster information to create a new persisted record
+func AddClusterToAstra(m *v1.AstraConnector, astraConnectorID string, ctx context.Context) error {
+	log := ctrllog.FromContext(ctx)
+
+	type Cluster struct {
+		AccountID        string `json:"accountID,omitempty"`
+		AstraConnectorID string `json:"astraConnectorID,omitempty"`
+		Name             string `json:"name,omitempty"`
+	}
+	name := "my-cluster" // ToDo: query this from the kube API
+
+	connection, err := nats.Connect("nats://nats.astra-connector:4222")
+	if err != nil {
+		log.Error(err, "Unable to connect to NATS")
+		return err
+	}
+
+	cluster := &Cluster{
+		AccountID:        m.Spec.Astra.AccountID,
+		AstraConnectorID: astraConnectorID,
+		Name:             name,
+	}
+	if message, err := json.Marshal(cluster); err != nil {
+		log.Error(err, "problem marshalling cluster message")
+	} else {
+		connection.Publish("natssyncmsg.cloud-master.newCluster", message)
+	}
+	return nil
 }
 
 func AddConnectorIDtoAstra(m *v1.AstraConnector, astraConnectorID string, ctx context.Context) error {

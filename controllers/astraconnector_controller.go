@@ -196,14 +196,23 @@ func (r *AstraConnectorReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		natssyncClientStatus.Registered = "true"
 		natssyncClientStatus.AstraConnectorID = astraConnectorID
 
-		if astraConnector.Spec.Astra.Token == "" || astraConnector.Spec.Astra.AccountID == "" || astraConnector.Spec.Astra.ClusterName == "" {
+		if astraConnector.Spec.Astra.Token == "" || astraConnector.Spec.Astra.AccountID == "" {
 			log.Info("Skipping cluster registration with Astra, incomplete Astra details provided Token/AccountID/ClusterName")
 		} else {
 			log.Info("Registering cluster with Astra")
-			err = register.AddConnectorIDtoAstra(astraConnector, astraConnectorID, ctx)
-			if err != nil {
-				log.Error(err, "Failed to register astraConnectorID")
-				return ctrl.Result{RequeueAfter: 1 * time.Minute}, err
+			// If clusterName is provided then we attempt to map it to some existing cluster record in Astra otherwise we register it as a new cluster
+			if astraConnector.Spec.Astra.ClusterName != "" {
+				err = register.AddConnectorIDtoAstra(astraConnector, astraConnectorID, ctx)
+				if err != nil {
+					log.Error(err, "Failed to register astraConnectorID")
+					return ctrl.Result{RequeueAfter: 1 * time.Minute}, err
+				}
+			} else {
+				err = register.AddClusterToAstra(astraConnector, astraConnectorID, ctx)
+				if err != nil {
+					log.Error(err, "Failed to register cluster in Astra")
+					return ctrl.Result{RequeueAfter: 1 * time.Minute}, err
+				}
 			}
 			log.Info("Registered cluster with Astra")
 		}
