@@ -114,6 +114,11 @@ spec:
           status:
             description: AstraConnectorStatus defines the observed state of AstraConnector
             properties:
+              astra:
+                properties:
+                  clusterID:
+                    type: string
+                type: object
               natssync-client:
                 description: NatssyncClientStatus defines the observed state of NatssyncClient
                 properties:
@@ -130,6 +135,7 @@ spec:
                   type: string
                 type: array
             required:
+            - astra
             - natssync-client
             - nodes
             type: object

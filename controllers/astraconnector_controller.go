@@ -208,11 +208,19 @@ func (r *AstraConnectorReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 					return ctrl.Result{RequeueAfter: 1 * time.Minute}, err
 				}
 			} else {
-				err = register.AddClusterToAstra(astraConnector, astraConnectorID, ctx)
+				clusterID, err := register.AddClusterToAstra(astraConnector, astraConnectorID, ctx)
 				if err != nil {
 					log.Error(err, "Failed to register cluster in Astra")
 					return ctrl.Result{RequeueAfter: 1 * time.Minute}, err
 				}
+				log.Info("Updating the astra status with clusterID")
+				astraConnector.Status.Astra.ClusterID = clusterID
+				err = r.Status().Update(ctx, astraConnector)
+				if err != nil {
+					log.Error(err, "Failed to update astraConnector status")
+					return ctrl.Result{}, err
+				}
+
 			}
 			log.Info("Registered cluster with Astra")
 		}
