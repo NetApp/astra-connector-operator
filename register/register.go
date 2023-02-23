@@ -159,9 +159,13 @@ func AddClusterToAstra(m *v1.AstraConnector, astraConnectorID string, ctx contex
 	} else {
 		connection.Publish("natssyncmsg.cloud-master.newCluster", message)
 		log.Info("newCluster message sent to Astra Control. Waiting for a ClusterID to be sent back.")
-		response, _ := connection.Request("natssyncmsg.cloud-master.newCluster", nil, time.Second)
-		clusterID = string(response.Data)
-		log.Info(fmt.Sprintf("Astra Control responded with new ClusterID %s", clusterID))
+		if response, err := connection.Request("natssyncmsg.cloud-master.newCluster", nil, time.Second); err != nil {
+			log.Error(err, "no response sent from Astra Control with cluster ID")
+			return "", err
+		} else {
+			clusterID = string(response.Data)
+			log.Info(fmt.Sprintf("Astra Control responded with new ClusterID %s", clusterID))
+		}
 	}
 	return clusterID, nil
 }
