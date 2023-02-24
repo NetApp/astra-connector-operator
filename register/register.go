@@ -158,17 +158,16 @@ func AddClusterToAstra(m *v1.AstraConnector, astraConnectorID string, ctx contex
 		return "", err
 	} else {
 		// This is our unique subject name for requested response to publish to
-		newClusterPublishSubject := "natssyncmsg.cloud-master.newCluster"
-		newClusterReplySubject := "natssyncmsg.*.clusterID"
+		clustersReplySubject := fmt.Sprintf("natssyncmsg.%s.clusterID", astraConnectorID)
 
-		// Create a subscription that listes for a single response
-		clusterIdSubscription, err := connection.SubscribeSync(newClusterReplySubject)
+		// Create a subscription that listens for a single response
+		clusterIdSubscription, err := connection.SubscribeSync(clustersReplySubject)
 		if err != nil {
 			log.Error(err, "error subscribing to clusterID response")
 		}
 
-		// Publish our cluster message to Astra Control including our newClusterReplySubject to respond on with our new clusterID
-		if err := connection.PublishRequest(newClusterPublishSubject, newClusterReplySubject, message); err != nil {
+		// Publish our cluster message to Astra Control including our clustersReplySubject to respond on with our new clusterID
+		if err := connection.PublishRequest("natssyncmsg.cloud-master.clusters", clustersReplySubject, message); err != nil {
 			log.Error(err, "error publishing new cluster to Astra Control")
 		}
 
@@ -176,7 +175,7 @@ func AddClusterToAstra(m *v1.AstraConnector, astraConnectorID string, ctx contex
 
 		// Read the response from Astra Control that should contain our cluster ID
 		if response, err := clusterIdSubscription.NextMsg(time.Second * 10); err != nil {
-			log.Error(err, "Astra Control did not response with a cluster ID within 10 seconds")
+			log.Error(err, "Astra Control did not respond with a cluster ID within 10 seconds")
 			return "", err
 		} else {
 			clusterID = string(response.Data)

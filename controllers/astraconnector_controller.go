@@ -213,12 +213,14 @@ func (r *AstraConnectorReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 					log.Error(err, "Failed to register cluster in Astra")
 					return ctrl.Result{RequeueAfter: 1 * time.Minute}, err
 				}
-				log.Info("Updating the astra status with clusterID")
-				astraConnector.Status.Astra.ClusterID = clusterID
-				err = r.Status().Update(ctx, astraConnector)
-				if err != nil {
-					log.Error(err, "Failed to update astraConnector status")
-					return ctrl.Result{}, err
+				if clusterID != astraConnector.Status.Astra.ClusterID {
+					log.Info("Updating the astra status with clusterID")
+					astraConnector.Status.Astra.ClusterID = clusterID
+					err = r.Status().Update(ctx, astraConnector)
+					if err != nil {
+						log.Error(err, "Failed to update astraConnector status")
+						return ctrl.Result{}, err
+					}
 				}
 
 			}
