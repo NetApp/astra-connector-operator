@@ -53,6 +53,8 @@ spec:
                     type: string
                   oldAuth:
                     type: boolean
+                  register:
+                    type: boolean
                   token:
                     type: string
                   unregister:

@@ -22,6 +22,7 @@ type EchoClient struct {
 
 type Astra struct {
 	Unregister  bool   `json:"unregister,omitempty"`
+	Register    bool   `json:"register,omitempty"`
 	Token       string `json:"token,omitempty"`
 	ClusterName string `json:"clusterName,omitempty"`
 	AccountID   string `json:"accountId"`

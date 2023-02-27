@@ -129,7 +129,7 @@ func getAstraHostFromURL(astraHostURL string) (string, error) {
 }
 
 // AddClusterToAstra sends a NATS mesage to Astra Control with enough cluster information to create a new persisted record
-func AddClusterToAstra(m *v1.AstraConnector, astraConnectorID string, ctx context.Context) (string, error) {
+func AddClusterToAstra(m *v1.AstraConnector, astraConnectorID, k8sServiceUUID string, ctx context.Context) (string, error) {
 	log := ctrllog.FromContext(ctx)
 
 	var clusterID string
@@ -138,9 +138,8 @@ func AddClusterToAstra(m *v1.AstraConnector, astraConnectorID string, ctx contex
 		AccountID        string `json:"accountID,omitempty"`
 		AstraConnectorID string `json:"astraConnectorID,omitempty"`
 		Name             string `json:"name,omitempty"`
-		// ToDo: query and set kube API service UUID for cluster uniqueness comparison in Astra Control
+		K8sServiceUUID   string `json:"k8sServiceUUID,omitempty"`
 	}
-	name := "my-cluster" // ToDo: query this from the kube API along with kube API service UUID for cluster uniqueness
 
 	connection, err := nats.Connect("nats://nats.astra-connector:4222")
 	if err != nil {
@@ -151,7 +150,8 @@ func AddClusterToAstra(m *v1.AstraConnector, astraConnectorID string, ctx contex
 	cluster := &Cluster{
 		AccountID:        m.Spec.Astra.AccountID,
 		AstraConnectorID: astraConnectorID,
-		Name:             name,
+		Name:             m.Spec.Astra.ClusterName,
+		K8sServiceUUID:   k8sServiceUUID,
 	}
 	if message, err := json.Marshal(cluster); err != nil {
 		log.Error(err, "problem marshalling cluster message")

@@ -6,6 +6,7 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"time"
 
@@ -196,19 +197,22 @@ func (r *AstraConnectorReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		natssyncClientStatus.Registered = "true"
 		natssyncClientStatus.AstraConnectorID = astraConnectorID
 
-		if astraConnector.Spec.Astra.Token == "" || astraConnector.Spec.Astra.AccountID == "" {
+		if astraConnector.Spec.Astra.Token == "" || astraConnector.Spec.Astra.AccountID == "" || astraConnector.Spec.Astra.ClusterName == "" {
 			log.Info("Skipping cluster registration with Astra, incomplete Astra details provided Token/AccountID/ClusterName")
 		} else {
 			log.Info("Registering cluster with Astra")
-			// If clusterName is provided then we attempt to map it to some existing cluster record in Astra otherwise we register it as a new cluster
-			if astraConnector.Spec.Astra.ClusterName != "" {
-				err = register.AddConnectorIDtoAstra(astraConnector, astraConnectorID, ctx)
+			// The register field tells us whether we are creating a new cluster record in Astra or modifying some existing one we discovered
+			if astraConnector.Spec.Astra.Register {
+				k8sService := &corev1.Service{}
+				err = r.Get(ctx, types.NamespacedName{Name: "kubernetes", Namespace: "default"}, k8sService)
 				if err != nil {
-					log.Error(err, "Failed to register astraConnectorID")
+					log.Error(err, "Failed to get kubernetes service from default namespace")
 					return ctrl.Result{RequeueAfter: 1 * time.Minute}, err
 				}
-			} else {
-				clusterID, err := register.AddClusterToAstra(astraConnector, astraConnectorID, ctx)
+				k8sServiceUUID := string(k8sService.ObjectMeta.UID)
+				log.Info(fmt.Sprintf("Kubernetes service UUID is %s", k8sServiceUUID))
+
+				clusterID, err := register.AddClusterToAstra(astraConnector, astraConnectorID, k8sServiceUUID, ctx)
 				if err != nil {
 					log.Error(err, "Failed to register cluster in Astra")
 					return ctrl.Result{RequeueAfter: 1 * time.Minute}, err
@@ -222,7 +226,12 @@ func (r *AstraConnectorReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 						return ctrl.Result{}, err
 					}
 				}
-
+			} else {
+				err = register.AddConnectorIDtoAstra(astraConnector, astraConnectorID, ctx)
+				if err != nil {
+					log.Error(err, "Failed to register astraConnectorID")
+					return ctrl.Result{RequeueAfter: 1 * time.Minute}, err
+				}
 			}
 			log.Info("Registered cluster with Astra")
 		}
