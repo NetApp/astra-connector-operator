@@ -24,9 +24,8 @@ kubectl apply -f config/samples/astraconnector_v1.yaml -n astra-connector
 ```
 #### Check the AstraConnector status
 ```
-kubectl get astraconnector astra-connector -n astra-connector
-NAME              REGISTERED   ASTRACONNECTORID
-astra-connector   true         22b839aa-8b85-445a-85dd-0b1f53b5ea19
+NAME              REGISTERED   ASTRACONNECTORID   STATUS
+astra-connector   false                           Updating Deployment astra-connector/echo-client
 ```
 ### Uninstall the private cluster components
 - Unmanage the cluster from the Astra UI
