@@ -18,7 +18,7 @@ import (
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-func (r *AstraConnectorReconciler) CreateServices(m *v1.AstraConnector, ctx context.Context) error {
+func (r *AstraConnectorReconciler) CreateServices(m *v1.AstraConnector, natssyncClientStatus v1.NatssyncClientStatus, ctx context.Context) error {
 	log := ctrllog.FromContext(ctx)
 	for serviceName, deployment := range common.ServicesList {
 		deployerObj, err := deployer.Factory(deployment)
@@ -41,7 +41,10 @@ func (r *AstraConnectorReconciler) CreateServices(m *v1.AstraConnector, ctx cont
 			if err != nil {
 				return err
 			}
-			log.Info("Creating a new Service", "Namespace", serv.Namespace, "Name", serv.Name)
+			statusMsg := "Creating Service " + serv.Namespace + "/" + serv.Name
+			log.Info(statusMsg)
+			natssyncClientStatus.Status = statusMsg
+			r.updateAstraConnectorStatus(ctx, m, natssyncClientStatus)
 			err = r.Create(ctx, serv)
 			if err != nil {
 				log.Error(err, "Failed to create new Service", "Namespace", serv.Namespace, "Name", serv.Name)

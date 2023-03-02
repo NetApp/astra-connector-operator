@@ -19,7 +19,7 @@ import (
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-func (r *AstraConnectorReconciler) CreateDeployments(m *v1.AstraConnector, ctx context.Context) error {
+func (r *AstraConnectorReconciler) CreateDeployments(m *v1.AstraConnector, natssyncClientStatus v1.NatssyncClientStatus, ctx context.Context) error {
 	log := ctrllog.FromContext(ctx)
 	for _, deployment := range common.DeploymentsList {
 		foundDep := &appsv1.Deployment{}
@@ -42,7 +42,10 @@ func (r *AstraConnectorReconciler) CreateDeployments(m *v1.AstraConnector, ctx c
 			if err != nil {
 				return err
 			}
-			log.Info("Creating a new Deployment", "Namespace", dep.Namespace, "Name", dep.Name)
+			statusMsg := "Creating Deployment " + dep.Namespace + "/" + dep.Name
+			log.Info(statusMsg)
+			natssyncClientStatus.Status = statusMsg
+			r.updateAstraConnectorStatus(ctx, m, natssyncClientStatus)
 			err = r.Create(ctx, dep)
 			if err != nil {
 				log.Error(err, "Failed to create new Deployment", "Namespace", dep.Namespace, "Name", dep.Name)
@@ -56,7 +59,10 @@ func (r *AstraConnectorReconciler) CreateDeployments(m *v1.AstraConnector, ctx c
 		// Ensure the deployment is the same as the spec
 		if &foundDep.Spec != nil && !reflect.DeepEqual(foundDep.Spec, dep.Spec) {
 			foundDep.Spec = dep.Spec
-			log.Info("Updating the Deployment", "Namespace", foundDep.Namespace, "Name", foundDep.Name)
+			statusMsg := "Updating Deployment " + foundDep.Namespace + "/" + foundDep.Name
+			log.Info(statusMsg)
+			natssyncClientStatus.Status = statusMsg
+			r.updateAstraConnectorStatus(ctx, m, natssyncClientStatus)
 			err = r.Update(ctx, foundDep)
 			if err != nil {
 				log.Error(err, "Failed to update Deployment", "Namespace", foundDep.Namespace, "Name", foundDep.Name)

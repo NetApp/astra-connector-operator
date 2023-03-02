@@ -71,12 +71,14 @@ type AstraConnectorStatus struct {
 type NatssyncClientStatus struct {
 	Registered       string `json:"registered"`
 	AstraConnectorID string `json:"astraConnectorID"`
+	Status           string `json:"status"`
 }
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 //+kubebuilder:printcolumn:name="Registered",type=string,JSONPath=`.status.natssync-client.registered`
 //+kubebuilder:printcolumn:name="AstraConnectorID",type=string,JSONPath=`.status.natssync-client.astraConnectorID`
+//+kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.natssync-client.status`
 
 // AstraConnector is the Schema for the astraconnectors API
 type AstraConnector struct {

@@ -17,7 +17,7 @@ import (
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-func (r *AstraConnectorReconciler) CreateRoleBindings(m *v1.AstraConnector, ctx context.Context) error {
+func (r *AstraConnectorReconciler) CreateRoleBindings(m *v1.AstraConnector, natssyncClientStatus v1.NatssyncClientStatus, ctx context.Context) error {
 	log := ctrllog.FromContext(ctx)
 	deployerObj, err := deployer.Factory("natssync-client")
 	if err != nil {
@@ -39,7 +39,10 @@ func (r *AstraConnectorReconciler) CreateRoleBindings(m *v1.AstraConnector, ctx 
 		if err != nil {
 			return err
 		}
-		log.Info("Creating a new RoleBinding", "Namespace", roleB.Namespace, "Name", roleB.Name)
+		statusMsg := "Creating RoleBinding " + roleB.Namespace + "/" + roleB.Name
+		log.Info(statusMsg)
+		natssyncClientStatus.Status = statusMsg
+		r.updateAstraConnectorStatus(ctx, m, natssyncClientStatus)
 		err = r.Create(ctx, roleB)
 		if err != nil {
 			log.Error(err, "Failed to create new RoleBinding", "Namespace", roleB.Namespace, "Name", roleB.Name)
