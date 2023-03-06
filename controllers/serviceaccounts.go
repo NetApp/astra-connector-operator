@@ -6,6 +6,7 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 
 	v1 "github.com/NetApp/astra-connector-operator/api/v1"
 	"github.com/NetApp/astra-connector-operator/common"
@@ -40,7 +41,7 @@ func (r *AstraConnectorReconciler) CreateServiceAccounts(m *v1.AstraConnector, n
 			if err != nil {
 				return err
 			}
-			statusMsg := "Creating ServiceAccount " + configMPSA.Namespace + "/" + configMPSA.Name
+			statusMsg := fmt.Sprintf(CreateServiceAccount, configMPSA.Namespace, configMPSA.Name)
 			log.Info(statusMsg)
 			natssyncClientStatus.Status = statusMsg
 			r.updateAstraConnectorStatus(ctx, m, natssyncClientStatus)

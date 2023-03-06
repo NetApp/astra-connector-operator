@@ -6,6 +6,7 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -42,7 +43,7 @@ func (r *AstraConnectorReconciler) CreateDeployments(m *v1.AstraConnector, natss
 			if err != nil {
 				return err
 			}
-			statusMsg := "Creating Deployment " + dep.Namespace + "/" + dep.Name
+			statusMsg := fmt.Sprintf(CreateDeployment, dep.Namespace, dep.Name)
 			log.Info(statusMsg)
 			natssyncClientStatus.Status = statusMsg
 			r.updateAstraConnectorStatus(ctx, m, natssyncClientStatus)
@@ -59,7 +60,7 @@ func (r *AstraConnectorReconciler) CreateDeployments(m *v1.AstraConnector, natss
 		// Ensure the deployment is the same as the spec
 		if &foundDep.Spec != nil && !reflect.DeepEqual(foundDep.Spec, dep.Spec) {
 			foundDep.Spec = dep.Spec
-			statusMsg := "Updating Deployment " + foundDep.Namespace + "/" + foundDep.Name
+			statusMsg := fmt.Sprintf(UpdateDeployment, foundDep.Namespace, foundDep.Name)
 			log.Info(statusMsg)
 			natssyncClientStatus.Status = statusMsg
 			r.updateAstraConnectorStatus(ctx, m, natssyncClientStatus)

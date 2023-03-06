@@ -6,6 +6,7 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 
 	v1 "github.com/NetApp/astra-connector-operator/api/v1"
 	"github.com/NetApp/astra-connector-operator/common"
@@ -40,7 +41,7 @@ func (r *AstraConnectorReconciler) CreateConfigMaps(m *v1.AstraConnector, natssy
 			if err != nil {
 				return err
 			}
-			statusMsg := "Creating ConfigMap " + configMP.Namespace + "/" + configMP.Name
+			statusMsg := fmt.Sprintf(CreateConfigMap, configMP.Namespace, configMP.Name)
 			log.Info(statusMsg)
 			natssyncClientStatus.Status = statusMsg
 			r.updateAstraConnectorStatus(ctx, m, natssyncClientStatus)

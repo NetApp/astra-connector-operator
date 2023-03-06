@@ -6,6 +6,7 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/NetApp/astra-connector-operator/common"
 	"github.com/NetApp/astra-connector-operator/deployer"
@@ -41,7 +42,7 @@ func (r *AstraConnectorReconciler) CreateServices(m *v1.AstraConnector, natssync
 			if err != nil {
 				return err
 			}
-			statusMsg := "Creating Service " + serv.Namespace + "/" + serv.Name
+			statusMsg := fmt.Sprintf(CreateService, serv.Namespace, serv.Name)
 			log.Info(statusMsg)
 			natssyncClientStatus.Status = statusMsg
 			r.updateAstraConnectorStatus(ctx, m, natssyncClientStatus)

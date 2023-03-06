@@ -6,6 +6,7 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 
 	v1 "github.com/NetApp/astra-connector-operator/api/v1"
 	"github.com/NetApp/astra-connector-operator/common"
@@ -39,7 +40,7 @@ func (r *AstraConnectorReconciler) CreateRoles(m *v1.AstraConnector, natssyncCli
 		if err != nil {
 			return err
 		}
-		statusMsg := "Creating Role " + configMPRole.Namespace + "/" + configMPRole.Name
+		statusMsg := fmt.Sprintf(CreateRole, configMPRole.Namespace, configMPRole.Name)
 		log.Info(statusMsg)
 		natssyncClientStatus.Status = statusMsg
 		r.updateAstraConnectorStatus(ctx, m, natssyncClientStatus)

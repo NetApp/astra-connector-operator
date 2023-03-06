@@ -6,6 +6,7 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 
 	v1 "github.com/NetApp/astra-connector-operator/api/v1"
@@ -42,7 +43,7 @@ func (r *AstraConnectorReconciler) CreateStatefulSets(m *v1.AstraConnector, nats
 		if err != nil {
 			return err
 		}
-		statusMsg := "Creating StatefulSet " + set.Namespace + "/" + set.Name
+		statusMsg := fmt.Sprintf(CreateStatefulSet, set.Namespace, set.Name)
 		log.Info(statusMsg)
 		natssyncClientStatus.Status = statusMsg
 		r.updateAstraConnectorStatus(ctx, m, natssyncClientStatus)
