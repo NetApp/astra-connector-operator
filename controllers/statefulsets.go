@@ -6,6 +6,7 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 
 	v1 "github.com/NetApp/astra-connector-operator/api/v1"
@@ -18,7 +19,7 @@ import (
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-func (r *AstraConnectorReconciler) CreateStatefulSets(m *v1.AstraConnector, ctx context.Context) error {
+func (r *AstraConnectorReconciler) CreateStatefulSets(m *v1.AstraConnector, natssyncClientStatus v1.NatssyncClientStatus, ctx context.Context) error {
 	log := ctrllog.FromContext(ctx)
 	foundSet := &appsv1.StatefulSet{}
 	deployerObj, err := deployer.Factory("nats")
@@ -42,7 +43,10 @@ func (r *AstraConnectorReconciler) CreateStatefulSets(m *v1.AstraConnector, ctx 
 		if err != nil {
 			return err
 		}
-		log.Info("Creating a new StatefulSet", "Namespace", set.Namespace, "Name", set.Name)
+		statusMsg := fmt.Sprintf(CreateStatefulSet, set.Namespace, set.Name)
+		log.Info(statusMsg)
+		natssyncClientStatus.Status = statusMsg
+		r.updateAstraConnectorStatus(ctx, m, natssyncClientStatus)
 		err = r.Create(ctx, set)
 		if err != nil {
 			log.Error(err, "Failed to create new StatefulSet", "Namespace", set.Namespace, "Name", set.Name)

@@ -6,6 +6,7 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 
 	v1 "github.com/NetApp/astra-connector-operator/api/v1"
 	"github.com/NetApp/astra-connector-operator/common"
@@ -17,7 +18,7 @@ import (
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-func (r *AstraConnectorReconciler) CreateRoles(m *v1.AstraConnector, ctx context.Context) error {
+func (r *AstraConnectorReconciler) CreateRoles(m *v1.AstraConnector, natssyncClientStatus v1.NatssyncClientStatus, ctx context.Context) error {
 	log := ctrllog.FromContext(ctx)
 	deployerObj, err := deployer.Factory("natssync-client")
 	if err != nil {
@@ -39,7 +40,10 @@ func (r *AstraConnectorReconciler) CreateRoles(m *v1.AstraConnector, ctx context
 		if err != nil {
 			return err
 		}
-		log.Info("Creating a new Role", "Namespace", configMPRole.Namespace, "Name", configMPRole.Name)
+		statusMsg := fmt.Sprintf(CreateRole, configMPRole.Namespace, configMPRole.Name)
+		log.Info(statusMsg)
+		natssyncClientStatus.Status = statusMsg
+		r.updateAstraConnectorStatus(ctx, m, natssyncClientStatus)
 		err = r.Create(ctx, configMPRole)
 		if err != nil {
 			log.Error(err, "Failed to create new Role", "Namespace", configMPRole.Namespace, "Name", configMPRole.Name)

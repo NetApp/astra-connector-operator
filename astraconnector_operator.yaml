@@ -28,6 +28,9 @@ spec:
     - jsonPath: .status.natssync-client.astraConnectorID
       name: AstraConnectorID
       type: string
+    - jsonPath: .status.natssync-client.status
+      name: Status
+      type: string
     name: v1
     schema:
       openAPIV3Schema:
@@ -126,9 +129,12 @@ spec:
                     type: string
                   registered:
                     type: string
+                  status:
+                    type: string
                 required:
                 - astraConnectorID
                 - registered
+                - status
                 type: object
               nodes:
                 items:

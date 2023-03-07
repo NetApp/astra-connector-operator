@@ -6,6 +6,7 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 
 	v1 "github.com/NetApp/astra-connector-operator/api/v1"
 	"github.com/NetApp/astra-connector-operator/common"
@@ -17,7 +18,7 @@ import (
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-func (r *AstraConnectorReconciler) CreateServiceAccounts(m *v1.AstraConnector, ctx context.Context) error {
+func (r *AstraConnectorReconciler) CreateServiceAccounts(m *v1.AstraConnector, natssyncClientStatus v1.NatssyncClientStatus, ctx context.Context) error {
 	log := ctrllog.FromContext(ctx)
 	for saName, deploymentName := range common.ServiceAccountsList {
 		foundSA := &corev1.ServiceAccount{}
@@ -40,7 +41,10 @@ func (r *AstraConnectorReconciler) CreateServiceAccounts(m *v1.AstraConnector, c
 			if err != nil {
 				return err
 			}
-			log.Info("Creating a new ServiceAccount", "Namespace", configMPSA.Namespace, "Name", configMPSA.Name)
+			statusMsg := fmt.Sprintf(CreateServiceAccount, configMPSA.Namespace, configMPSA.Name)
+			log.Info(statusMsg)
+			natssyncClientStatus.Status = statusMsg
+			r.updateAstraConnectorStatus(ctx, m, natssyncClientStatus)
 			err = r.Create(ctx, configMPSA)
 			if err != nil {
 				log.Error(err, "Failed to create new ServiceAccount", "Namespace", configMPSA.Namespace, "Name", configMPSA.Name)
