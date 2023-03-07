@@ -181,7 +181,7 @@ spec:
 | ------------- | ------------- | -------- |--------|
 | unregister    | Unregister the cluster with Astra | Yes | false |
 | token         | Astra API token of a user with an Owner Role| Yes | |
-| clusterName   | Name of the private AKS cluster | No | |
+| clusterName   | If and only if you are importing an AKS cluster that is marked in AKS as private, and not providing the K8S Config file to Astra, then you need the Name of the private AKS cluster.  Otherwise do not have this attribute, remove the line | Yes | empty|
 | accountId     | Astra account ID | No | |
 | acceptEULA    | End User License Agreement | No | no |
 
