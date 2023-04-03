@@ -24,6 +24,7 @@ kubectl apply -f config/samples/astraconnector_v1.yaml -n astra-connector
 ```
 #### Check the AstraConnector status
 ```
+» kubectl get astraconnector astra-connector -n astra-connector
 NAME              REGISTERED   ASTRACONNECTORID   STATUS
 astra-connector   false                           Updating Deployment astra-connector/echo-client
 ```

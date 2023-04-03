@@ -18,6 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -280,12 +281,7 @@ func (r *AstraConnectorReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		natssyncClientStatus.Status = UnregisterNSClient
 	}
 
-	err = r.updateAstraConnectorStatus(ctx, astraConnector, natssyncClientStatus)
-	if err != nil {
-		log.Error(err, "Error updating natsync-client status")
-		return ctrl.Result{}, err
-	}
-
+	_ = r.updateAstraConnectorStatus(ctx, astraConnector, natssyncClientStatus)
 	return ctrl.Result{}, nil
 }
 
@@ -303,15 +299,14 @@ func (r *AstraConnectorReconciler) updateAstraConnectorStatus(ctx context.Contex
 	}
 	podNames := getPodNames(podList.Items)
 
+	err := r.Get(ctx, types.NamespacedName{Name: astraConnector.Name, Namespace: astraConnector.Namespace}, astraConnector)
+	if err != nil {
+		return err
+	}
+
 	// Update status.Nodes if needed
 	if !reflect.DeepEqual(podNames, astraConnector.Status.Nodes) {
-		log.Info("Updating the pod status")
 		astraConnector.Status.Nodes = podNames
-		err := r.Status().Update(ctx, astraConnector)
-		if err != nil {
-			log.Error(err, "Failed to update astraConnector status")
-			return err
-		}
 	}
 
 	if !reflect.DeepEqual(natssyncClientStatus, astraConnector.Status.NatssyncClient) {
@@ -338,6 +333,7 @@ func (r *AstraConnectorReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&rbacv1.Role{}).
 		Owns(&rbacv1.RoleBinding{}).
 		WithOptions(controller.Options{MaxConcurrentReconciles: 1}).
+		WithEventFilter(predicate.GenerationChangedPredicate{}). // Avoid reconcile for status updates
 		Complete(r)
 }
 
