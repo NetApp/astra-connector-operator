@@ -4,15 +4,26 @@ go 1.16
 
 require (
 	github.com/Microsoft/go-winio v0.5.2 // indirect
-	github.com/containerd/containerd v1.6.6 // indirect
+	github.com/Microsoft/hcsshim v0.9.3 // indirect
+	github.com/cespare/xxhash/v2 v2.1.2 // indirect
+	github.com/containerd/continuity v0.2.2 // indirect
 	github.com/docker/distribution v2.8.0+incompatible // indirect
-	github.com/docker/docker v20.10.12+incompatible
+	github.com/docker/docker v20.10.24+incompatible
+	github.com/go-logr/logr v1.2.2 // indirect
+	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/jessevdk/go-flags v1.5.0
 	github.com/moby/sys/mount v0.3.1 // indirect
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.17.0
+	github.com/opencontainers/image-spec v1.0.3-0.20211202183452-c5a74bcca799 // indirect
+	github.com/prometheus/client_golang v1.11.1 // indirect
+	github.com/prometheus/common v0.30.0 // indirect
+	github.com/prometheus/procfs v0.7.3 // indirect
 	github.com/sirupsen/logrus v1.8.1
+	golang.org/x/net v0.0.0-20211216030914-fe4d6282115f // indirect
+	golang.org/x/sys v0.0.0-20220412211240-33da011f77ad // indirect
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211
+	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.23.0
 	k8s.io/apimachinery v0.23.4
