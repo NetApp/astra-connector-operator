@@ -50,7 +50,7 @@ func RegisterClient(m *v1.AstraConnector) (string, error) {
 		return "", errors.New(errMsg)
 	}
 	type AstraConnectorID struct {
-		AstraConnectorID string `json:"astraConnectorID"`
+		AstraConnectorID string `json:"locationID"`
 	}
 	astraConnectorID := &AstraConnectorID{}
 	err = json.NewDecoder(response.Body).Decode(astraConnectorID)
