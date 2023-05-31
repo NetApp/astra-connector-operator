@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Set variables
-RESOURCE="astraconnector_v1.yaml"
+RESOURCE="controllerconfig.yaml"
 OPERATOR_DEPLOY="astraconnector_operator.yaml"
 NAMESPACE="astra-connector-operator"
 

@@ -257,7 +257,6 @@ bundle-base:
 	cp ${OUTPUT_IMAGE_TAR_DIR}/astra-connector-images.tar $(INSTALL_BUNDLE_DIR)
 	cp ${MAKEFILE_DIR}/controllerconfig.yaml $(INSTALL_BUNDLE_DIR)/controllerconfig.yaml
 	cp ${MAKEFILE_DIR}/astraconnector_operator.yaml $(INSTALL_BUNDLE_DIR)/astraconnector_operator.yaml
-	cp ${MAKEFILE_DIR}/config/samples/astraconnector_v1.yaml $(INSTALL_BUNDLE_DIR)/astraconnector_v1.yaml
 	cp ${MAKEFILE_DIR}/hack/connector-deploy.sh $(INSTALL_BUNDLE_DIR)/connector-deploy.sh
 
 
