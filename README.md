@@ -1,4 +1,6 @@
 # Astra Connector Operator 
+## Information here is for Version 1 and 2 of the conenctor.  3 will be different
+
 
 Astra Connector Operator deploys and registers a private azure cluster with [NetApp Astra](https://cloud.netapp.com/astra)
 
@@ -184,4 +186,7 @@ spec:
 | clusterName   | If and only if you are importing an AKS cluster that is marked in AKS as private, and not providing the K8S Config file to Astra, then you need the Name of the private AKS cluster.  Otherwise do not have this attribute, remove the line | Yes | empty|
 | accountId     | Astra account ID | No | |
 | acceptEULA    | End User License Agreement | No | no |
+
+
+
 
