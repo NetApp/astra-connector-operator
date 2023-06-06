@@ -257,7 +257,14 @@ bundle-base:
 	cp ${OUTPUT_IMAGE_TAR_DIR}/astra-connector-images.tar $(INSTALL_BUNDLE_DIR)
 	cp ${MAKEFILE_DIR}/controllerconfig.yaml $(INSTALL_BUNDLE_DIR)/controllerconfig.yaml
 	cp ${MAKEFILE_DIR}/astraconnector_operator.yaml $(INSTALL_BUNDLE_DIR)/astraconnector_operator.yaml
+	cp ${MAKEFILE_DIR}/hack/connector-deploy.sh $(INSTALL_BUNDLE_DIR)/connector-deploy.sh
 
 
 install-bundle: image-tar install-exes bundle-base
 	cd $(INSTALL_BUNDLE_DIR) && tar -zcf $(BUILD_DIR)/astra-connector-${VERSION}.tgz .
+
+
+.PHONY: deploy-script
+deploy-script:
+	$(SCRIPTS_DIR)/connector-deploy.sh
+
