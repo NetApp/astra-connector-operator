@@ -262,3 +262,9 @@ bundle-base:
 
 install-bundle: image-tar install-exes bundle-base
 	cd $(INSTALL_BUNDLE_DIR) && tar -zcf $(BUILD_DIR)/astra-connector-${VERSION}.tgz .
+
+
+.PHONY: deploy-script
+deploy-script:
+	$(SCRIPTS_DIR)/connector-deploy.sh
+
