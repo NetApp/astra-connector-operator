@@ -1,6 +1,6 @@
-# Astra Connector Operator 
+# Astra Installer Operator 
 
-Astra Connector Operator deploys and registers a private azure cluster with [NetApp Astra](https://cloud.netapp.com/astra)
+Astra Installer Operator installs the pieces required for the agent architecture. This includes neptune, astra-connector, and trident.
 
 ### To deploy the operator
 #### Create the namespace for the operator
@@ -83,7 +83,7 @@ spec:
 ## CRD
 #### Sample CRD
 ```
-apiVersion: netapp.astraconnector.com/v1
+apiVersion: astra/v1
 kind: AstraConnector
 metadata:
   name: astra-connector
@@ -140,40 +140,6 @@ spec:
 | size       | Replica count for the nats statefulset | Yes | 2 |
 | image      | nats image | Yes | nats:2.6.1-alpine3.14 |
 
-Example:
-```
-spec:
-    ...
-    nats:
-        size: 3
-        image: nats:2.6.1-alpine3.14
-```
-
-### [httpproxy-client](https://github.com/theotw/natssync)
-| CRD Spec | Details       | Optional | Default          |
-| ---------| ------------- |--------- |------------------|
-| image    | httpproxy-client image | Yes | httpproxylet:2.0 |
-
-Example:
-```
-spec:
-    ...
-    httpproxy-client:
-        image: theotw/httpproxylet:0.9.202201132025
-```
-### [echo-client](https://github.com/theotw/natssync)
-| CRD Spec | Details       | Optional | Default           |
-| ---------| ------------- |--------- |-------------------|
-| size     | Replica count for the echo-client deployment | Yes | 1                 |
-| image    | echo-client image | Yes | echo-proxylet:2.0 |
-
-Example:
-```
-spec:
-    ...
-    echo-client:
-        size: 1
-        image: theotw/echo-proxylet:0.9.202201132025
 
 ```
 ### [astra](https://cloud.netapp.com/astra)

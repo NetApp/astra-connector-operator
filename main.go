@@ -1,11 +1,12 @@
 /*
- * Copyright (c) 2022. NetApp, Inc. All Rights Reserved.
+ * Copyright (c) 2023. NetApp, Inc. All Rights Reserved.
  */
 
 package main
 
 import (
 	"flag"
+	"fmt"
 	"os"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
@@ -19,32 +20,35 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	v1 "github.com/NetApp/astra-connector-operator/api/v1"
-	"github.com/NetApp/astra-connector-operator/controllers"
+	"github.com/NetApp-Polaris/astra-connector-operator/conf"
+	astrav1 "github.com/NetApp-Polaris/astra-connector-operator/details/operator-sdk/api/v1"
+	"github.com/NetApp-Polaris/astra-connector-operator/details/operator-sdk/controllers"
 	//+kubebuilder:scaffold:imports
 )
 
 var (
 	scheme   = runtime.NewScheme()
-	setupLog = ctrl.Log.WithName("setup")
+	setupLog = ctrl.Log.WithName("astra-connector-operator")
 )
 
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
-	utilruntime.Must(v1.AddToScheme(scheme))
+	utilruntime.Must(astrav1.AddToScheme(scheme))
+	utilruntime.Must(astrav1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
 func main() {
-	var metricsAddr string
+	host := conf.Config.Host()
+	metricsAddr := fmt.Sprintf("%v:%v", host, conf.Config.MetricsPort())   // :8080
+	probeAddr := fmt.Sprintf("%v:%v", host, conf.Config.HealthProbePort()) // :8081
 	var enableLeaderElection bool
-	var probeAddr string
-	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
-	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
-	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
-		"Enable leader election for controller manager. "+
-			"Enabling this will ensure there is only one active controller manager.")
+
+	flag.StringVar(&metricsAddr, "metrics-bind-address", metricsAddr, "The address the metric endpoint binds to.")
+	flag.StringVar(&probeAddr, "health-probe-bind-address", probeAddr, "The address the probe endpoint binds to.")
+	flag.BoolVar(&enableLeaderElection, "leader-elect", false, "Enable leader election for controller manager. Enabling this will ensure there is only one active controller manager.")
+
 	opts := zap.Options{
 		Development: true,
 	}
@@ -53,10 +57,12 @@ func main() {
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
+	conf.Config.LogCurrentConfig(setupLog, "AstraConnector operator runtime configuration")
+
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
 		MetricsBindAddress:     metricsAddr,
-		Port:                   9443,
+		Port:                   conf.Config.Port(), // :9443
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "c3ec164e.astraconnector.com",
@@ -67,15 +73,15 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = (&controllers.AstraConnectorReconciler{
+	if err = (&controllers.AstraConnectorController{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "AstraConnector")
 		os.Exit(1)
 	}
-	//+kubebuilder:scaffold:builder
 
+	//+kubebuilder:scaffold:builder
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
 		setupLog.Error(err, "unable to set up health check")
 		os.Exit(1)

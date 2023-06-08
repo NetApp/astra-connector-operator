@@ -39,7 +39,7 @@ BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
 # This variable is used to construct full image tags for bundle and catalog images.
 #
 # For example, running 'make bundle-build bundle-push catalog-build catalog-push' will build and push both
-# astraconnector.com/operator-bundle:$VERSION and astraconnector.com/operator-catalog:$VERSION.
+# netapp.io/operator-bundle:$VERSION and netapp.io/operator-catalog:$VERSION.
 IMAGE_TAG_BASE ?= netapp/astra-connector-operator
 
 # BUNDLE_IMG defines the image:tag used for the bundle.
@@ -85,10 +85,10 @@ help: ## Display this help.
 ##@ Development
 
 manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
-	$(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases
+	cd details/operator-sdk && $(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases
 
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
-	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
+	cd details/operator-sdk && $(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
 fmt: ## Run go fmt against code.
 	go fmt ./...
@@ -119,22 +119,22 @@ docker-push-base:
 ##@ Deployment
 
 install: manifests kustomize ## Install CRDs into the K8s cluster specified in ~/.kube/config.
-	$(KUSTOMIZE) build config/crd | kubectl apply -f -
+	cd details/operator-sdk && $(KUSTOMIZE) build config/crd | kubectl apply -f -
 
 uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified in ~/.kube/config.
-	$(KUSTOMIZE) build config/crd | kubectl delete -f -
+	cd details/operator-sdk && $(KUSTOMIZE) build config/crd | kubectl delete -f -
 
 generate-operator-yaml: generate manifests kustomize ## Generate controller yaml.
-	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
+	cd details/operator-sdk/config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 	cd ../..
-	$(KUSTOMIZE) build config/default > astraconnector_operator.yaml
+	cd details/operator-sdk && $(KUSTOMIZE) build config/default > astraconnector_operator.yaml
 
 deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
-	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
-	$(KUSTOMIZE) build config/default | kubectl apply -f -
+	cd details/operator-sdk/config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
+	cd details/operator-sdk && $(KUSTOMIZE) build config/default | kubectl apply -f -
 
 undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config.
-	$(KUSTOMIZE) build config/default | kubectl delete -f -
+	cd details/operator-sdk && $(KUSTOMIZE) build config/default | kubectl delete -f -
 
 
 CONTROLLER_GEN = $(shell pwd)/bin/controller-gen
@@ -167,8 +167,8 @@ endef
 .PHONY: bundle
 bundle: manifests kustomize ## Generate bundle manifests and metadata, then validate generated files.
 	operator-sdk generate kustomize manifests -q
-	cd config/manager && $(KUSTOMIZE) edit set image controller=$(IMG)
-	$(KUSTOMIZE) build config/manifests | operator-sdk generate bundle -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)
+	cd details/operator-sdk/config/manager && $(KUSTOMIZE) edit set image controller=$(IMG)
+	cd details/operator-sdk && $(KUSTOMIZE) build config/manifests | operator-sdk generate bundle -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)
 	operator-sdk bundle validate ./bundle
 
 .PHONY: bundle-build
@@ -235,7 +235,7 @@ l1: generate manifests fmt vet envtest go-junit-report
 image-tar:
 	rm -rf ${OUTPUT_IMAGE_TAR_DIR}
 	mkdir -p ${OUTPUT_IMAGE_TAR_DIR}
-	$(SCRIPTS_DIR)/create-image-tar.sh ${OUTPUT_IMAGE_TAR_DIR}/astra-connector-images.tar
+	$(SCRIPTS_DIR)/create-image-tar.sh ${OUTPUT_IMAGE_TAR_DIR}/astra-connector-operator-images.tar
 
 
 install-exes: export CGO_ENABLED=0
@@ -244,27 +244,20 @@ install-exes:
 	rm -rf $(OUTPUT_INSTALL_EXE_DIR)
 	mkdir -p $(OUTPUT_INSTALL_EXE_DIR)
 	cd $(INSTALL_DIR); \
-	export GOOS=linux; export GOARCH=amd64; go build -ldflags "-X github.com/NetApp/astra-connector-operator/installer/install.VERSION=${VERSION}" -v -o ${OUTPUT_INSTALL_EXE_DIR}/install_${VERSION}_$${GOARCH}_$${GOOS} ${INSTALL_DIR}/install.go; \
-	export GOOS=darwin; export GOARCH=amd64; go build -ldflags "-X github.com/NetApp/astra-connector-operator/installer/install.VERSION=${VERSION}" -v -o ${OUTPUT_INSTALL_EXE_DIR}/install_${VERSION}_$${GOARCH}_$${GOOS} ${INSTALL_DIR}/install.go; \
-	export GOOS=darwin; export GOARCH=arm64; go build -ldflags "-X github.com/NetApp/astra-connector-operator/installer/install.VERSION=${VERSION}" -v -o ${OUTPUT_INSTALL_EXE_DIR}/install_${VERSION}_$${GOARCH}_$${GOOS} ${INSTALL_DIR}/install.go; \
-	export GOOS=windows; export GOARCH=amd64; go build -ldflags "-X github.com/NetApp/astra-connector-operator/installer/install.VERSION=${VERSION}" -v -o ${OUTPUT_INSTALL_EXE_DIR}/install_${VERSION}_$${GOARCH}_$${GOOS}.exe ${INSTALL_DIR}/install.go
+	export GOOS=linux; export GOARCH=amd64; go build -ldflags "-X github.com/NetApp-Polaris/astra-connector-operator/installer/install.VERSION=${VERSION}" -v -o ${OUTPUT_INSTALL_EXE_DIR}/install_${VERSION}_$${GOARCH}_$${GOOS} ${INSTALL_DIR}/install.go; \
+	export GOOS=darwin; export GOARCH=amd64; go build -ldflags "-X github.com/NetApp-Polaris/astra-connector-operator/installer/install.VERSION=${VERSION}" -v -o ${OUTPUT_INSTALL_EXE_DIR}/install_${VERSION}_$${GOARCH}_$${GOOS} ${INSTALL_DIR}/install.go; \
+	export GOOS=darwin; export GOARCH=arm64; go build -ldflags "-X github.com/NetApp-Polaris/astra-connector-operator/installer/install.VERSION=${VERSION}" -v -o ${OUTPUT_INSTALL_EXE_DIR}/install_${VERSION}_$${GOARCH}_$${GOOS} ${INSTALL_DIR}/install.go; \
+	export GOOS=windows; export GOARCH=amd64; go build -ldflags "-X github.com/NetApp-Polaris/astra-connector-operator/installer/install.VERSION=${VERSION}" -v -o ${OUTPUT_INSTALL_EXE_DIR}/install_${VERSION}_$${GOARCH}_$${GOOS}.exe ${INSTALL_DIR}/install.go
 
 bundle-base:
 	rm -rf $(BUILD_DIR)/*.tgz # Remove existing tgz bundles
 	rm -rf $(INSTALL_BUNDLE_DIR)
 	mkdir -p $(INSTALL_BUNDLE_DIR)
 	cp ${OUTPUT_INSTALL_EXE_DIR}/* $(INSTALL_BUNDLE_DIR)
-	cp ${OUTPUT_IMAGE_TAR_DIR}/astra-connector-images.tar $(INSTALL_BUNDLE_DIR)
+	cp ${OUTPUT_IMAGE_TAR_DIR}/astra-connector-operator-images.tar $(INSTALL_BUNDLE_DIR)
 	cp ${MAKEFILE_DIR}/controllerconfig.yaml $(INSTALL_BUNDLE_DIR)/controllerconfig.yaml
 	cp ${MAKEFILE_DIR}/astraconnector_operator.yaml $(INSTALL_BUNDLE_DIR)/astraconnector_operator.yaml
-	cp $(SCRIPTS_DIR)/connector-deploy.sh $(INSTALL_BUNDLE_DIR)/connector-deploy.sh
 
 
 install-bundle: image-tar install-exes bundle-base
-	cd $(INSTALL_BUNDLE_DIR) && tar -zcf $(BUILD_DIR)/astra-connector-${VERSION}.tgz .
-
-
-.PHONY: deploy-script
-deploy-script:
-	$(SCRIPTS_DIR)/connector-deploy.sh
-
+	cd $(INSTALL_BUNDLE_DIR) && tar -zcf $(BUILD_DIR)/astra-connector-operator-${VERSION}.tgz .

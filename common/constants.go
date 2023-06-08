@@ -7,6 +7,10 @@ package common
 const (
 	DefaultImageRegistry = "theotw"
 
+	AstraConnectName  = "astraconnect"
+	AstraConnectSize  = 1
+	AstraConnectImage = "astra-connector:0.3"
+
 	NatssyncClientName                  = "natssync-client"
 	NatssyncClientSize                  = 1
 	NatssyncClientPort                  = 8080
@@ -28,41 +32,33 @@ const (
 	NatsDefaultSize        = 2
 	NatsDefaultImage       = "nats:2.6.1-alpine3.14"
 
-	HttpProxyClientName         = "httpproxy-client"
-	HttpProxyClientsize         = 1
-	HttpProxyClientDefaultImage = "httpproxylet:0.9.202202170408"
-
-	EchoClientName         = "echo-client"
-	EchoClientDefaultSize  = 1
-	EchoClientDefaultImage = "echo-proxylet:0.9.202202170408"
-
 	NatssyncClientConfigMapName               = "natssync-client-configmap"
 	NatssyncClientConfigMapRoleName           = "natssync-client-configmap-role"
 	NatssyncClientConfigMapRoleBindingName    = "natssync-client-configmap-rolebinding"
 	NatssyncClientConfigMapServiceAccountName = "natssync-client-configmap-serviceaccount"
 	NatssyncClientConfigMapVolumeName         = "natssync-client-configmap-volume"
 
+	NeptuneName                          = "neptune-controller-manager"
+	NeptuneLeaderElectionRoleName        = "neptune-leader-election-role"
+	NeptuneLeaderElectionRoleBindingName = "neptune-leader-election-rolebinding"
+	NeptuneClusterRoleName               = "neptune-manager-role"
+	NeptuneMetricServicePort             = 8443
+	NeptuneMetricServiceProtocol         = "TCP"
+
 	AstraDefaultCloudType = "Azure"
+	AstraPrivateCloudType = "private"
+	AstraPrivateCloudName = "private"
+
+	ConnectorRelayCapability   = "relayV1"
+	ConnectorWatcherCapability = "watcherV1"
+
+	AstraClustersAPIVersion        = "1.4"
+	AstraManagedClustersAPIVersion = "1.2"
 )
 
-// ServicesList - serviceName: deploymentName
-var ServicesList = map[string]string{
-	NatsName:               NatsName,
-	NatsClusterServiceName: NatsName,
-	NatssyncClientName:     NatssyncClientName,
+func GetConnectorCapabilities() []string {
+	return []string{
+		ConnectorRelayCapability,
+		ConnectorWatcherCapability,
+	}
 }
-
-// ConfigMapsList - configMapName: deploymentName
-var ConfigMapsList = map[string]string{
-	NatsConfigMapName:           NatsName,
-	NatssyncClientConfigMapName: NatssyncClientName,
-}
-
-// ServiceAccountsList - serviceAccountName: deploymentName
-var ServiceAccountsList = map[string]string{
-	NatssyncClientConfigMapServiceAccountName: NatssyncClientName,
-	NatsServiceAccountName:                    NatsName,
-}
-
-// DeploymentsList - deploymentNames
-var DeploymentsList = []string{NatssyncClientName, HttpProxyClientName, EchoClientName}

@@ -1,0 +1,20 @@
+# permissions for end users to view astraconnectors.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: astraconnector-viewer-role
+rules:
+- apiGroups:
+  - astra
+  resources:
+  - astraconnectors
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - astra
+  resources:
+  - astraconnectors/status
+  verbs:
+  - get

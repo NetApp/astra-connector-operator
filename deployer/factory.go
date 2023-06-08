@@ -6,30 +6,28 @@ package deployer
 
 import (
 	"fmt"
+	"github.com/NetApp-Polaris/astra-connector-operator/deployer/neptune"
 
-	"github.com/NetApp/astra-connector-operator/common"
-	"github.com/NetApp/astra-connector-operator/echo_client"
-
-	"github.com/NetApp/astra-connector-operator/httpproxy_client"
-
-	"github.com/NetApp/astra-connector-operator/nats"
-	"github.com/NetApp/astra-connector-operator/natssync_client"
+	"github.com/NetApp-Polaris/astra-connector-operator/common"
+	"github.com/NetApp-Polaris/astra-connector-operator/deployer/connector"
+	"github.com/NetApp-Polaris/astra-connector-operator/deployer/model"
 )
 
 // Factory returns a deployer based on the deploymentName.
 // An error will be returned if the provider is unsupported.
 func Factory(
 	deploymentName string,
-) (Deployer, error) {
+) (model.Deployer, error) {
 	switch deploymentName {
 	case common.NatsName:
-		return nats.NewNatsDeployer(), nil
+		return connector.NewNatsDeployer(), nil
 	case common.NatssyncClientName:
-		return natssync_client.NewNatssyncClientDeployer(), nil
-	case common.HttpProxyClientName:
-		return httpproxy_client.NewHttpproxyClientDeployer(), nil
-	case common.EchoClientName:
-		return echo_client.NewEchoClientDeployer(), nil
+		return connector.NewNatsSyncClientDeployer(), nil
+	case common.AstraConnectName:
+		return connector.NewAstraConnectorDeployer(), nil
+	case common.NeptuneName:
+		return neptune.NewNeptuneClientDeployer(), nil
+
 	default:
 		return nil, fmt.Errorf("unknown deployer %s", deploymentName)
 	}

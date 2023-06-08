@@ -1,26 +1,19 @@
-apiVersion: netapp.astraconnector.com/v1
+apiVersion: astra.netapp.io/v1
 kind: AstraConnector
 metadata:
-  name: astra-connector
+  name: astra-connector-operator
 spec:
-  natssync-client:
-    image: natssync-client:2.0
-    cloud-bridge-url: https://astra.netapp.io
-  nats:
-    image: nats:2.6.1-alpine3.14
-  httpproxy-client:
-    image: httpproxylet:2.0
-
-  echo-client:
-    image: echo-proxylet:2.0
+  connector:
+    natssync-client:
+      image: natssync-client:2.0
+      cloud-bridge-url: https://astra.netapp.io
+    nats:
+      image: nats:2.6.1-alpine3.14
+    astra:
+      token: API Token from the API Access page in Astra UI
+      accountId: Astra Account ID from the API Access page in Astra UI
+  neptune:
+    image: neptune:1.5
   imageRegistry:
-    name: theotw
+    name: docker.repo.eng.netapp.com/oscarr/neptune
 
-  # Items below are required
-  astra:
-    clusterName: Needed only for AKS clusters imported as AKS private. Otherwise remove it . Name of the AKS cluster as seen in Azure Portal
-    token: API Token from the API Access page in Astra UI
-    accountId: Astra Account ID from the API Access page in Astra UI
-    #  Need to accept the EULA located at:
-    #  https://www.netapp.com/pdf.html?item=/media/14114-enduserlicenseagreementworldwide.pdf
-    acceptEULA: No

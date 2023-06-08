@@ -1,3 +1,0 @@
-resources:
-- astraconnector_v1.yaml
-#+kubebuilder:scaffold:manifestskustomizesamples

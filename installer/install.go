@@ -39,14 +39,6 @@ type ConnectorConfig struct {
 			SkipTLSValidation bool   `yaml:"skipTLSValidation,omitempty"`
 		} `yaml:"natssync-client"`
 
-		HttpProxyClient struct {
-			Image string `yaml:"image,omitempty"`
-		} `yaml:"httpproxy-client"`
-
-		EchoClient struct {
-			Image string `yaml:"image,omitempty"`
-		} `yaml:"echo-client"`
-
 		Nats struct {
 			Image string `yaml:"image,omitempty"`
 		} `yaml:"nats"`
@@ -272,7 +264,7 @@ const (
 	ConnectorDefaultsConfigPath = "./controllerconfig.yaml"
 	YamlOutputPath              = "./deployConfig.yaml"
 	OperatorYamlPath            = "./astraconnector_operator.yaml"
-	ConnectorNamespace          = "astra-connector"
+	ConnectorNamespace          = "astra-connector-operator"
 	ConnectorOperatorNamespace  = "astra-connector-operator"
 )
 
