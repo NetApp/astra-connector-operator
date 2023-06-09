@@ -5,6 +5,7 @@ on:
     branches:
       - master
       - 'release-*'
+      - ASTRACTL-27293-updates-for-releae-branche
   pull_request:
     branches: '*'
   workflow_dispatch:
