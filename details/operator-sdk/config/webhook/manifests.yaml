@@ -42,7 +42,7 @@ webhooks:
       namespace: system
       path: /validate-astra-netapp-io-v1-astraconnector
   failurePolicy: Fail
-  name: vastraconnector.kb.io
+  name: astraconnector.kb.io
   rules:
   - apiGroups:
     - astra.netapp.io
