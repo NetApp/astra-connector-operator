@@ -60,7 +60,7 @@ jobs:
         run: |
           export VERSION=$(cat VERSION)
           echo $VERSION
-#          make docker-build
+          #          make docker-build
 
       - name: Push to DockerHub
         if: github.ref == 'refs/heads/master' || ${{ startsWith(github.ref, 'refs/heads/release-') }}
@@ -71,20 +71,20 @@ jobs:
           export VERSION=$(cat VERSION)
           echo "DBUG $VERSION"
           docker login -u $DOCKERHUB_USERNAME -p $DOCKERHUB_PASSWORD
-#          make docker-push
+          #          make docker-push
 
       - name: Update the operator image tag
         if: github.ref == 'refs/heads/master' || ${{ startsWith(github.ref, 'refs/heads/release-') }}
         run: |
           export VERSION=$(cat VERSION)
-#          git pull --rebase
+          #          git pull --rebase
           make generate-operator-yaml
           git config --global user.name ${{ secrets.ACTIONS_USER }}
           git config --global user.email ${{ secrets.ACTIONS_EMAIL }}
           git diff astraconnector_operator.yaml
-#          git add astraconnector_operator.yaml
-#          git commit -m "Auto updating the operator image tag" -n
-#          git push --set-upstream origin master
+          #          git add astraconnector_operator.yaml
+          #          git commit -m "Auto updating the operator image tag" -n
+          #          git push --set-upstream origin master
 
       - name: Build Install Bundle
         if: github.ref == 'refs/heads/master' || ${{ startsWith(github.ref, 'refs/heads/release-') }}
