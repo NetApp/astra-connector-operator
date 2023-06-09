@@ -68,7 +68,6 @@ jobs:
           DOCKERHUB_PASSWORD: ${{ secrets.DOCKERHUB_PASSWORD }}
         run: |
           export VERSION=$(cat VERSION)
-          echo "DBUG $VERSION"
           docker login -u $DOCKERHUB_USERNAME -p $DOCKERHUB_PASSWORD
           make docker-push
 
