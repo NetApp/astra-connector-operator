@@ -3,20 +3,18 @@ kind: AstraConnector
 metadata:
   name: astra-connector
 spec:
-  connector:
-    astra:
-      token: API Token from the API Access page in Astra UI
-      accountId: Astra Account ID from the API Access page in Astra UI
-      skipTLSValidation: true
-      clusterName: Name of your cluster
-    natssync-client:
-      cloud-bridge-url: https://integration.astra.netapp.io
-      hostalias: true
-      hostaliasIP: 10.193.60.80
-      image: natssync-client:2.0
-    nats:
-      image: nats:2.6.1-alpine3.14
+  astra:
+    token: Secret reference to API Token from the API Access page in Astra UI
+    accountId: Astra Account ID from the API Access page in Astra UI
+    skipTLSValidation: true
+    clusterName: Name of your cluster
+  natsSyncClient:
+    CloudBridgeURL: https://integration.astra.netapp.io
+    hostAliasIP: 10.193.60.80
+    image: natssync-client
+  nats:
+    image: nats
   neptune:
-    image: neptune:1.5
+    image: neptune
   imageRegistry:
     name: docker.repo.eng.netapp.com/oscarr/neptune

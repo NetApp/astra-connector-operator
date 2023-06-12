@@ -149,6 +149,10 @@ ENVTEST = $(shell pwd)/bin/setup-envtest
 envtest: ## Download envtest-setup locally if necessary.
 	$(call go-get-tool,$(ENVTEST),sigs.k8s.io/controller-runtime/tools/setup-envtest@latest)
 
+MOCKERY = $(shell pwd)/bin/mockery
+install-mockery: ## Download mockery locally if necessary: https://github.com/vektra/mockery
+	$(call go-get-tool,$(MOCKERY),github.com/vektra/mockery/v2@v2.19.0)
+
 # go-get-tool will 'go install' any package $2 and install it to $1.
 PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
 define go-get-tool
@@ -261,3 +265,12 @@ bundle-base:
 
 install-bundle: image-tar install-exes bundle-base
 	cd $(INSTALL_BUNDLE_DIR) && tar -zcf $(BUILD_DIR)/astra-connector-operator-${VERSION}.tgz .
+
+
+.PHONY: generate-mocks
+generate-mocks: install-mockery
+	./bin/mockery --all
+
+cov_dir:
+	@mkdir -p ${COV_DIR}
+	@chmod ${DIRPERMS} ${COV_DIR}
