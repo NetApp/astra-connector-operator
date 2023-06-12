@@ -7,6 +7,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 // log is for logging in this package.
@@ -37,24 +38,24 @@ func (ai *AstraConnector) Default() {
 var _ webhook.Validator = &AstraConnector{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (ai *AstraConnector) ValidateCreate() error {
+func (ai *AstraConnector) ValidateCreate() (admission.Warnings, error) {
 	astraConnectorLog.Info("validate create", "name", ai.Name)
 
 	// TODO return errors from below
 	_ = ai.ValidateCreateAstraConnector()
-	return nil
+	return nil, nil
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (ai *AstraConnector) ValidateUpdate(old runtime.Object) error {
+func (ai *AstraConnector) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
 	astraConnectorLog.Info("validate update", "name", ai.Name)
 
 	// TODO return errors from below
 	_ = ai.ValidateUpdateAstraConnector()
-	return nil
+	return nil, nil
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
-func (ai *AstraConnector) ValidateDelete() error {
-	return nil
+func (ai *AstraConnector) ValidateDelete() (admission.Warnings, error) {
+	return nil, nil
 }
