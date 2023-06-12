@@ -5,7 +5,7 @@
 package v1
 
 import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type Astra struct {
@@ -18,14 +18,12 @@ type Astra struct {
 	// +kubebuilder:validation:Optional
 	StorageClassName  string `json:"storageClassName"`
 	SkipTLSValidation bool   `json:"skipTLSValidation,omitempty"`
-	Token             string `json:"token,omitempty"`
+	TokenRef          string `json:"tokenRef,omitempty"`
 	Unregister        bool   `json:"unregister,omitempty"`
 }
 
-// +kubebuilder:validation:Optional
-
 type NatsSyncClient struct {
-	CloudBridgeURL string `json:"CloudBridgeURL,omitempty"`
+	CloudBridgeURL string `json:"cloudBridgeURL,omitempty"`
 	// +kubebuilder:validation:Optional
 	Image string `json:"image,omitempty"`
 	// +kubebuilder:validation:Optional
@@ -93,8 +91,8 @@ type ImageRegistry struct {
 
 // AstraConnector is the Schema for the astraconnectors API
 type AstraConnector struct {
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty"`
+	metaV1.TypeMeta   `json:",inline"`
+	metaV1.ObjectMeta `json:"metadata,omitempty"`
 
 	Spec   AstraConnectorSpec   `json:"spec,omitempty"`
 	Status AstraConnectorStatus `json:"status,omitempty"`
@@ -104,8 +102,8 @@ type AstraConnector struct {
 
 // AstraConnectorList contains a list of AstraConnector
 type AstraConnectorList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitempty"`
+	metaV1.TypeMeta `json:",inline"`
+	metaV1.ListMeta `json:"metadata,omitempty"`
 	Items           []AstraConnector `json:"items"`
 }
 

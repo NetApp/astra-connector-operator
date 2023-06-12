@@ -7,17 +7,17 @@ package common
 const (
 	DefaultImageRegistry = "theotw"
 
-	AstraConnectName  = "astraconnect"
-	AstraConnectSize  = 1
-	AstraConnectImage = "astra-connector:0.3"
+	AstraConnectName         = "astraconnect"
+	AstraConnectSize         = 1
+	AstraConnectDefaultImage = "astra-connector:0.3"
 
-	NatssyncClientName                  = "natssync-client"
-	NatssyncClientSize                  = 1
-	NatssyncClientPort                  = 8080
-	NatssyncClientProtocol              = "TCP"
-	NatssyncClientKeystoreUrl           = "configmap:///configmap-data"
-	NatssyncClientDefaultImage          = "natssync-client:0.9.202202170408"
-	NatssyncClientDefaultCloudBridgeURL = "https://astra.netapp.io"
+	NatsSyncClientName                  = "natssync-client"
+	NatsSyncClientSize                  = 1
+	NatsSyncClientPort                  = 8080
+	NatsSyncClientProtocol              = "TCP"
+	NatsSyncClientKeystoreUrl           = "configmap:///configmap-data"
+	NatsSyncClientDefaultImage          = "natssync-client:0.9.202202170408"
+	NatsSyncClientDefaultCloudBridgeURL = "https://astra.netapp.io"
 
 	NatsName               = "nats"
 	NatsClusterServiceName = "nats-cluster"
@@ -32,11 +32,11 @@ const (
 	NatsDefaultSize        = 2
 	NatsDefaultImage       = "nats:2.6.1-alpine3.14"
 
-	NatssyncClientConfigMapName               = "natssync-client-configmap"
-	NatssyncClientConfigMapRoleName           = "natssync-client-configmap-role"
-	NatssyncClientConfigMapRoleBindingName    = "natssync-client-configmap-rolebinding"
-	NatssyncClientConfigMapServiceAccountName = "natssync-client-configmap-serviceaccount"
-	NatssyncClientConfigMapVolumeName         = "natssync-client-configmap-volume"
+	NatsSyncClientConfigMapName               = "natssync-client-configmap"
+	NatsSyncClientConfigMapRoleName           = "natssync-client-configmap-role"
+	NatsSyncClientConfigMapRoleBindingName    = "natssync-client-configmap-rolebinding"
+	NatsSyncClientConfigMapServiceAccountName = "natssync-client-configmap-serviceaccount"
+	NatsSyncClientConfigMapVolumeName         = "natssync-client-configmap-volume"
 
 	NeptuneName                          = "neptune-controller-manager"
 	NeptuneLeaderElectionRoleName        = "neptune-leader-election-role"

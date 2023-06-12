@@ -44,7 +44,7 @@ func (d *AstraConnectDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx co
 	if m.Spec.AstraConnect.Image != "" {
 		containerImage = m.Spec.AstraConnect.Image
 	} else {
-		containerImage = common.AstraConnectImage
+		containerImage = common.AstraConnectDefaultImage
 	}
 
 	natssyncClientImage = fmt.Sprintf("%s/%s", imageRegistry, containerImage)
