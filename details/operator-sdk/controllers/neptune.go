@@ -5,21 +5,23 @@ import (
 	"context"
 	"embed"
 	"fmt"
-	"github.com/NetApp-Polaris/astra-connector-operator/deployer/neptune"
-	v1 "github.com/NetApp-Polaris/astra-connector-operator/details/operator-sdk/api/v1"
+
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/serializer/yaml"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
+
+	"github.com/NetApp-Polaris/astra-connector-operator/deployer/neptune"
+	v1 "github.com/NetApp-Polaris/astra-connector-operator/details/operator-sdk/api/v1"
 )
 
 //go:embed yaml/neptune_crds.yaml
 var f embed.FS
 
 func (r *AstraConnectorController) deployNeptune(ctx context.Context,
-	astraConnector *v1.AstraConnector, natssyncClientStatus *v1.NatssyncClientStatus) (ctrl.Result, error) {
+	astraConnector *v1.AstraConnector, natsSyncClientStatus *v1.NatsSyncClientStatus) (ctrl.Result, error) {
 	//// Install CRDs
 	// Ran into cluster scope issue
 	err := installCRDs(ctx, r)
@@ -29,7 +31,7 @@ func (r *AstraConnectorController) deployNeptune(ctx context.Context,
 
 	// Deploy Neptune
 	neptuneDeployer := neptune.NewNeptuneClientDeployer()
-	err = r.deployResources(ctx, neptuneDeployer, astraConnector, natssyncClientStatus)
+	err = r.deployResources(ctx, neptuneDeployer, astraConnector, natsSyncClientStatus)
 	if err != nil {
 		return ctrl.Result{}, err
 	}

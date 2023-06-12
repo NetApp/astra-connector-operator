@@ -30,39 +30,39 @@ func NewNatsSyncClientDeployer() model.Deployer {
 	return &NatsSyncClientDeployer{}
 }
 
-// GetDeploymentObjects returns a Natssync-client Deployment object
+// GetDeploymentObjects returns a NatsSyncClient Deployment object
 func (d *NatsSyncClientDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, error) {
 	log := ctrllog.FromContext(ctx)
-	ls := LabelsForNatssyncClient(common.NatssyncClientName)
+	ls := LabelsForNatsSyncClient(common.NatssyncClientName)
 
 	var imageRegistry string
 	var containerImage string
-	var natssyncClientImage string
+	var natsSyncClientImage string
 	if m.Spec.ImageRegistry.Name != "" {
 		imageRegistry = m.Spec.ImageRegistry.Name
 	} else {
 		imageRegistry = common.DefaultImageRegistry
 	}
 
-	if m.Spec.ConnectorSpec.NatssyncClient.Image != "" {
-		containerImage = m.Spec.ConnectorSpec.NatssyncClient.Image
+	if m.Spec.NatsSyncClient.Image != "" {
+		containerImage = m.Spec.NatsSyncClient.Image
 	} else {
 		containerImage = common.NatssyncClientDefaultImage
 	}
 
-	natssyncClientImage = fmt.Sprintf("%s/%s", imageRegistry, containerImage)
-	log.Info("Using NatssyncClient image", "image", natssyncClientImage)
-	natssyncCloudBridgeURL := register.GetAstraHostURL(m)
+	natsSyncClientImage = fmt.Sprintf("%s/%s", imageRegistry, containerImage)
+	log.Info("Using NatsSyncClient image", "image", natsSyncClientImage)
+	natsSyncCloudBridgeURL := register.GetAstraHostURL(m)
 	keyStoreURLSplit := strings.Split(common.NatssyncClientKeystoreUrl, "://")
 	if len(keyStoreURLSplit) < 2 {
 		return nil, errors.New("invalid keyStoreURLSplit provided, format - configmap:///configmap-data")
 	}
 
 	var replicas int32
-	if m.Spec.ConnectorSpec.NatssyncClient.Size > 1 {
-		replicas = m.Spec.ConnectorSpec.NatssyncClient.Size
+	if m.Spec.NatsSyncClient.Replicas > 1 {
+		replicas = m.Spec.NatsSyncClient.Replicas
 	} else {
-		log.Info("Defaulting the NatssyncClient replica size", "size", common.NatssyncClientSize)
+		log.Info("Defaulting the NatsSyncClient replica size", "size", common.NatssyncClientSize)
 		replicas = common.NatssyncClientSize
 	}
 
@@ -82,7 +82,7 @@ func (d *NatsSyncClientDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx 
 				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{{
-						Image: natssyncClientImage,
+						Image: natsSyncClientImage,
 						Name:  common.NatssyncClientName,
 						Env: []corev1.EnvVar{
 							{
@@ -91,7 +91,7 @@ func (d *NatsSyncClientDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx 
 							},
 							{
 								Name:  "CLOUD_BRIDGE_URL",
-								Value: natssyncCloudBridgeURL,
+								Value: natsSyncCloudBridgeURL,
 							},
 							{
 								Name:  "CONFIGMAP_NAME",
@@ -107,7 +107,7 @@ func (d *NatsSyncClientDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx 
 							},
 							{
 								Name:  "SKIP_TLS_VALIDATION",
-								Value: strconv.FormatBool(m.Spec.ConnectorSpec.Astra.SkipTLSValidation),
+								Value: strconv.FormatBool(m.Spec.Astra.SkipTLSValidation),
 							},
 						},
 						VolumeMounts: []corev1.VolumeMount{
@@ -135,14 +135,14 @@ func (d *NatsSyncClientDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx 
 		},
 	}
 
-	if m.Spec.ConnectorSpec.NatssyncClient.HostAlias {
-		hostNamesSplit := strings.Split(natssyncCloudBridgeURL, "://")
+	if m.Spec.NatsSyncClient.HostAliasIP != "" {
+		hostNamesSplit := strings.Split(natsSyncCloudBridgeURL, "://")
 		if len(hostNamesSplit) < 2 {
 			return nil, errors.New("invalid hostname provided, hostname format - https://hostname")
 		}
 		dep.Spec.Template.Spec.HostAliases = []corev1.HostAlias{
 			{
-				IP:        m.Spec.ConnectorSpec.NatssyncClient.HostAliasIP,
+				IP:        m.Spec.NatsSyncClient.HostAliasIP,
 				Hostnames: []string{hostNamesSplit[1]},
 			},
 		}
@@ -157,7 +157,7 @@ func (d *NatsSyncClientDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx 
 	return []client.Object{dep}, nil
 }
 
-// GetServiceObjects returns a Natssync-client Service object
+// GetServiceObjects returns a NatsSyncClient Service object
 func (d *NatsSyncClientDeployer) GetServiceObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, error) {
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
@@ -183,12 +183,12 @@ func (d *NatsSyncClientDeployer) GetServiceObjects(m *v1.AstraConnector, ctx con
 	return []client.Object{service}, nil
 }
 
-// LabelsForNatssyncClient returns the labels for selecting the NatssyncClient
-func LabelsForNatssyncClient(name string) map[string]string {
+// LabelsForNatsSyncClient returns the labels for selecting the NatsSyncClient
+func LabelsForNatsSyncClient(name string) map[string]string {
 	return map[string]string{"app": name}
 }
 
-// GetConfigMapObjects returns a ConfigMap object for NatssyncClient
+// GetConfigMapObjects returns a ConfigMap object for NatsSyncClient
 func (d *NatsSyncClientDeployer) GetConfigMapObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, error) {
 	configMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
@@ -199,7 +199,7 @@ func (d *NatsSyncClientDeployer) GetConfigMapObjects(m *v1.AstraConnector, ctx c
 	return []client.Object{configMap}, nil
 }
 
-// GetRoleObjects returns a ConfigMapRole object for NatssyncClient
+// GetRoleObjects returns a ConfigMapRole object for NatsSyncClient
 func (d *NatsSyncClientDeployer) GetRoleObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, error) {
 	configMapRole := &rbacv1.Role{
 		ObjectMeta: metav1.ObjectMeta{
@@ -217,7 +217,7 @@ func (d *NatsSyncClientDeployer) GetRoleObjects(m *v1.AstraConnector, ctx contex
 	return []client.Object{configMapRole}, nil
 }
 
-// GetRoleBindingObjects returns a Natssync-Client ConfigMapRoleBinding object
+// GetRoleBindingObjects returns a NatsSyncClient ConfigMapRoleBinding object
 func (d *NatsSyncClientDeployer) GetRoleBindingObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, error) {
 	configMapRoleBinding := &rbacv1.RoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
@@ -239,7 +239,7 @@ func (d *NatsSyncClientDeployer) GetRoleBindingObjects(m *v1.AstraConnector, ctx
 	return []client.Object{configMapRoleBinding}, nil
 }
 
-// GetServiceAccountObjects returns a ServiceAccount object for NatssyncClient
+// GetServiceAccountObjects returns a ServiceAccount object for NatsSyncClient
 func (d *NatsSyncClientDeployer) GetServiceAccountObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, error) {
 	sa := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{

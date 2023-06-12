@@ -18,14 +18,14 @@ import (
 )
 
 func (r *AstraConnectorController) deployConnector(ctx context.Context,
-	astraConnector *v1.AstraConnector, natssyncClientStatus *v1.NatssyncClientStatus) (ctrl.Result, error) {
+	astraConnector *v1.AstraConnector, natsSyncClientStatus *v1.NatsSyncClientStatus) (ctrl.Result, error) {
 	log := ctrllog.FromContext(ctx)
 	// k8sUtil := k8s.NewK8sUtil(ctx, r.Client, log)
 
 	// let's deploy Nats, NatsSyncClient and Astra Connector in that order
 	connectorDeployers := []model.Deployer{connector.NewNatsDeployer(), connector.NewNatsSyncClientDeployer(), connector.NewAstraConnectorDeployer()}
 	for _, deployer := range connectorDeployers {
-		err := r.deployResources(ctx, deployer, astraConnector, natssyncClientStatus)
+		err := r.deployResources(ctx, deployer, astraConnector, natsSyncClientStatus)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -34,7 +34,7 @@ func (r *AstraConnectorController) deployConnector(ctx context.Context,
 	// Let's register the cluster now
 	registerUtil := register.NewClusterRegisterUtil(astraConnector, &http.Client{}, r.Client, log, context.Background())
 	registered := false
-	log.Info("Checking for natssync-client configmap")
+	log.Info("Checking for natsSyncClient configmap")
 	foundCM := &corev1.ConfigMap{}
 	astraConnectorID := ""
 	err := r.Get(ctx, types.NamespacedName{Name: common.NatssyncClientConfigMapName, Namespace: astraConnector.Namespace}, foundCM)
@@ -43,69 +43,69 @@ func (r *AstraConnectorController) deployConnector(ctx context.Context,
 		astraConnectorID, err = registerUtil.GetConnectorIDFromConfigMap(foundCM.Data)
 		if err != nil {
 			log.Error(err, FailedLocationIDGet)
-			natssyncClientStatus.Status = FailedLocationIDGet
-			r.updateAstraConnectorStatus(ctx, astraConnector, *natssyncClientStatus)
+			natsSyncClientStatus.Status = FailedLocationIDGet
+			r.updateAstraConnectorStatus(ctx, astraConnector, *natsSyncClientStatus)
 			return ctrl.Result{RequeueAfter: 1 * time.Minute}, err
 		}
 		if astraConnectorID == "" {
 			log.Error(err, EmptyLocationIDGet)
-			natssyncClientStatus.Status = EmptyLocationIDGet
-			r.updateAstraConnectorStatus(ctx, astraConnector, *natssyncClientStatus)
+			natsSyncClientStatus.Status = EmptyLocationIDGet
+			r.updateAstraConnectorStatus(ctx, astraConnector, *natsSyncClientStatus)
 			return ctrl.Result{RequeueAfter: 1 * time.Minute}, err
 		}
 	}
 
 	// RegisterClient
-	if !astraConnector.Spec.ConnectorSpec.Astra.Unregister {
+	if !astraConnector.Spec.Astra.Unregister {
 		if registered {
-			log.Info("natssync-client already registered", "astraConnectorID", astraConnectorID)
+			log.Info("natsSyncClient already registered", "astraConnectorID", astraConnectorID)
 		} else {
-			log.Info("Registering natssync-client")
+			log.Info("Registering natsSyncClient")
 			astraConnectorID, err = registerUtil.RegisterNatsSyncClient()
 			if err != nil {
 				log.Error(err, FailedRegisterNSClient)
-				natssyncClientStatus.Status = FailedRegisterNSClient
-				r.updateAstraConnectorStatus(ctx, astraConnector, *natssyncClientStatus)
+				natsSyncClientStatus.Status = FailedRegisterNSClient
+				r.updateAstraConnectorStatus(ctx, astraConnector, *natsSyncClientStatus)
 				return ctrl.Result{RequeueAfter: 1 * time.Minute}, err
 			}
 
-			log.Info("natssync-client ConnectorID", "astraConnectorID", astraConnectorID)
+			log.Info("natsSyncClient ConnectorID", "astraConnectorID", astraConnectorID)
 		}
-		natssyncClientStatus.AstraConnectorID = astraConnectorID
-		natssyncClientStatus.Status = RegisterNSClient
+		natsSyncClientStatus.AstraConnectorID = astraConnectorID
+		natsSyncClientStatus.Status = RegisterNSClient
 
-		if astraConnector.Spec.ConnectorSpec.Astra.Token == "" || astraConnector.Spec.ConnectorSpec.Astra.AccountID == "" || astraConnector.Spec.ConnectorSpec.Astra.ClusterName == "" {
-			log.Info("Skipping cluster registration with Astra, incomplete Astra details provided Token/AccountID/ClusterName")
+		if astraConnector.Spec.Astra.Token == "" || astraConnector.Spec.Astra.AccountId == "" || astraConnector.Spec.Astra.ClusterName == "" {
+			log.Info("Skipping cluster registration with Astra, incomplete Astra details provided Token/AccountId/ClusterName")
 		} else {
 			log.Info("Registering cluster with Astra")
 			err = registerUtil.RegisterClusterWithAstra(astraConnectorID)
 			if err != nil {
 				log.Error(err, FailedConnectorIDAdd)
-				natssyncClientStatus.Status = FailedConnectorIDAdd
-				r.updateAstraConnectorStatus(ctx, astraConnector, *natssyncClientStatus)
+				natsSyncClientStatus.Status = FailedConnectorIDAdd
+				r.updateAstraConnectorStatus(ctx, astraConnector, *natsSyncClientStatus)
 				return ctrl.Result{RequeueAfter: 1 * time.Minute}, err
 			}
 			log.Info("Registered cluster with Astra")
 		}
-		natssyncClientStatus.Registered = "true"
-		natssyncClientStatus.Status = "Registered with Astra"
+		natsSyncClientStatus.Registered = "true"
+		natsSyncClientStatus.Status = "Registered with Astra"
 	} else {
 		if registered {
-			log.Info("Unregistering natssync-client")
+			log.Info("Unregistering natsSyncClient")
 			err = registerUtil.UnRegisterNatsSyncClient()
 			if err != nil {
 				log.Error(err, FailedUnRegisterNSClient)
-				natssyncClientStatus.Status = FailedUnRegisterNSClient
-				r.updateAstraConnectorStatus(ctx, astraConnector, *natssyncClientStatus)
+				natsSyncClientStatus.Status = FailedUnRegisterNSClient
+				r.updateAstraConnectorStatus(ctx, astraConnector, *natsSyncClientStatus)
 				return ctrl.Result{Requeue: true}, err
 			}
 			log.Info(UnregisterNSClient)
 		} else {
 			log.Info("Already unregistered with Astra")
 		}
-		natssyncClientStatus.Registered = "false"
-		natssyncClientStatus.AstraConnectorID = ""
-		natssyncClientStatus.Status = UnregisterNSClient
+		natsSyncClientStatus.Registered = "false"
+		natsSyncClientStatus.AstraConnectorID = ""
+		natsSyncClientStatus.Status = UnregisterNSClient
 	}
 
 	return ctrl.Result{}, nil

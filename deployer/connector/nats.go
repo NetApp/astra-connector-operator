@@ -7,6 +7,7 @@ package connector
 import (
 	"context"
 	"fmt"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/NetApp-Polaris/astra-connector-operator/deployer/model"
@@ -33,8 +34,8 @@ func (n *NatsDeployer) GetStatefulSetObjects(m *v1.AstraConnector, ctx context.C
 	ls := labelsForNats(common.NatsName)
 
 	var replicas int32
-	if m.Spec.ConnectorSpec.Nats.Size > 2 {
-		replicas = m.Spec.ConnectorSpec.Nats.Size
+	if m.Spec.Nats.Replicas > 2 {
+		replicas = m.Spec.Nats.Replicas
 	} else {
 		log.Info("Defaulting the Nats replica size", "size", common.NatsDefaultSize)
 		replicas = common.NatsDefaultSize
@@ -49,8 +50,8 @@ func (n *NatsDeployer) GetStatefulSetObjects(m *v1.AstraConnector, ctx context.C
 		imageRegistry = ""
 	}
 
-	if m.Spec.ConnectorSpec.Nats.Image != "" {
-		containerImage = m.Spec.ConnectorSpec.Nats.Image
+	if m.Spec.Nats.Image != "" {
+		containerImage = m.Spec.Nats.Image
 	} else {
 		containerImage = common.NatsDefaultImage
 	}

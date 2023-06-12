@@ -41,8 +41,8 @@ func (d *AstraConnectDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx co
 		imageRegistry = common.DefaultImageRegistry
 	}
 
-	if m.Spec.ConnectorSpec.AstraConnect.Image != "" {
-		containerImage = m.Spec.ConnectorSpec.AstraConnect.Image
+	if m.Spec.AstraConnect.Image != "" {
+		containerImage = m.Spec.AstraConnect.Image
 	} else {
 		containerImage = common.AstraConnectImage
 	}
@@ -52,8 +52,8 @@ func (d *AstraConnectDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx co
 
 	// TODO what is appropriate default size
 	var replicas int32
-	if m.Spec.ConnectorSpec.AstraConnect.Size > 1 {
-		replicas = m.Spec.ConnectorSpec.AstraConnect.Size
+	if m.Spec.AstraConnect.Replicas > 1 {
+		replicas = m.Spec.AstraConnect.Replicas
 	} else {
 		log.Info("Defaulting the Astra Connect replica size", "size", common.AstraConnectSize)
 		replicas = common.AstraConnectSize
@@ -111,7 +111,7 @@ func (d *AstraConnectDeployer) GetServiceObjects(m *v1.AstraConnector, ctx conte
 	return nil, nil
 }
 
-// LabelsForAstraConnectClients returns the labels for selecting the AstraConnectClient
+// LabelsForAstraConnectClient returns the labels for selecting the AstraConnectClient
 func LabelsForAstraConnectClient(name string) map[string]string {
 	return map[string]string{"type": name, "role": name}
 }
@@ -125,7 +125,7 @@ func (d *AstraConnectDeployer) GetConfigMapObjects(m *v1.AstraConnector, ctx con
 		},
 		Data: map[string]string{
 			"nats_url":            GetNatsURL(m),
-			"skip_tls_validation": strconv.FormatBool(m.Spec.ConnectorSpec.Astra.SkipTLSValidation),
+			"skip_tls_validation": strconv.FormatBool(m.Spec.Astra.SkipTLSValidation),
 		},
 	}
 	return []client.Object{configMap}, nil
