@@ -44,7 +44,6 @@ jobs:
       - name: Get the version (non-release branch)
         if: ${{ !startsWith(github.ref, 'refs/heads/release-') }}
         run: |
-          run: echo "branch=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" >> $GITHUB_OUTPUT
           export BRANCH_NAME=$(echo ${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}})
           export BUILD_VERSION=$(date +'%Y%m%d%H%M')-$BRANCH_NAME
           echo $BUILD_VERSION > VERSION
