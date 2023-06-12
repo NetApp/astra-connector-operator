@@ -84,20 +84,6 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 		// The object is being deleted
 		if controllerutil.ContainsFinalizer(astraConnector, finalizerName) {
 			registerUtil := register.NewClusterRegisterUtil(astraConnector, &http.Client{}, r.Client, log, context.Background())
-			// our finalizer is present, so lets handle any external dependency
-			// TODO: When deleting the instance of CR, we should not be unManaging and deleting the cluster
-			// TODO: resource from the Astra, as this would remove all the backups and everything
-			// TODO: Instead we only unregister the Nats Sync Client
-			//log.Info("Unregistering the cluster with Astra upon CRD delete")
-			//if astraConnector.Spec.ConnectorSpec.Astra.ClusterName != "" {
-			//	err = registerUtil.UnregisterClusterWithAstra()
-			//	if err != nil {
-			//		log.Error(err, "Failed to unregister the cluster with Astra, ignoring...")
-			//	} else {
-			//		log.Info("Unregistered the cluster with Astra upon CRD delete")
-			//	}
-			//}
-
 			log.Info("Unregistering natssync-client upon CRD delete")
 			err = registerUtil.UnRegisterNatsSyncClient()
 			if err != nil {

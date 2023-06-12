@@ -91,28 +91,6 @@ func (r *AstraConnectorController) deployConnector(ctx context.Context,
 		natssyncClientStatus.Status = "Registered with Astra"
 	} else {
 		if registered {
-			// TODO: When unregistering, we should not be unManaging and deleting the cluster
-			// TODO: resource from the Astra, as this would remove all the backups and everything
-			// TODO: Instead we only unregister the Nats Sync Client
-			//if astraConnector.Spec.ConnectorSpec.Astra.Token == "" || astraConnector.Spec.ConnectorSpec.Astra.AccountID == "" {
-			//	log.Info("Skipping cluster unregister with Astra, incomplete Astra details provided Token/AccountID")
-			//} else {
-			//	if astraConnector.Spec.ConnectorSpec.Astra.ClusterName != "" {
-			//		log.Info("Unregistering the cluster with Astra")
-			//		err = registerUtil.DeleteClusterFromAstra()
-			//		if err != nil {
-			//			log.Error(err, FailedConnectorIDRemove)
-			//			natssyncClientStatus.Status = FailedConnectorIDRemove
-			//			r.updateAstraConnectorStatus(ctx, astraConnector, natssyncClientStatus)
-			//			return ctrl.Result{Requeue: true}, err
-			//		}
-			//		natssyncClientStatus.Status = UnregisterFromAstra
-			//		log.Info(UnregisterFromAstra)
-			//	} else {
-			//		log.Info("Skipping unregistering the Astra cluster, no cluster name available")
-			//	}
-			//}
-
 			log.Info("Unregistering natssync-client")
 			err = registerUtil.UnRegisterNatsSyncClient()
 			if err != nil {
