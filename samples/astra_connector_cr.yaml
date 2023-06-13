@@ -1,0 +1,16 @@
+apiVersion: astra.netapp.io/v1
+kind: AstraConnector
+metadata:
+  name: astra-connector
+spec:
+  astra:
+    accountId: <ASTRA_ACCOUNT_ID>
+    clusterName: <NAME_OF_THE_CLUSTER>
+    skipTLSValidation: <BOOL_true_OR_false>
+    tokenRef: <SECRET_NAME_WITH_API_TOKEN>
+  natsSyncClient:
+    cloudBridgeURL: <ASTRA_HOST_URL>
+    hostAliasIP: <HOST_ALIAS_IP>
+    image: natssync-client:2.0
+  imageRegistry:
+    name: <DOCKER_REGISTRY>
