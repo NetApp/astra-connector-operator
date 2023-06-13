@@ -251,7 +251,3 @@ func (d *AstraConnectDeployer) GetRoleBindingObjects(m *v1.AstraConnector, ctx c
 func (d *AstraConnectDeployer) GetStatefulSetObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, error) {
 	return nil, nil
 }
-
-func (d *AstraConnectDeployer) GetClusterServiceObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, error) {
-	return nil, nil
-}
