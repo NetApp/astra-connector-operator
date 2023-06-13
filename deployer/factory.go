@@ -6,6 +6,7 @@ package deployer
 
 import (
 	"fmt"
+
 	"github.com/NetApp-Polaris/astra-connector-operator/deployer/neptune"
 
 	"github.com/NetApp-Polaris/astra-connector-operator/common"
@@ -21,7 +22,7 @@ func Factory(
 	switch deploymentName {
 	case common.NatsName:
 		return connector.NewNatsDeployer(), nil
-	case common.NatssyncClientName:
+	case common.NatsSyncClientName:
 		return connector.NewNatsSyncClientDeployer(), nil
 	case common.AstraConnectName:
 		return connector.NewAstraConnectorDeployer(), nil
