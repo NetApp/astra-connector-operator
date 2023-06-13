@@ -22,13 +22,13 @@ spec:
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
-    - jsonPath: .status.natssync-client.registered
+    - jsonPath: .status.natsSyncClient.registered
       name: Registered
       type: string
-    - jsonPath: .status.natssync-client.astraConnectorID
+    - jsonPath: .status.natsSyncClient.astraConnectorID
       name: AstraConnectorID
       type: string
-    - jsonPath: .status.natssync-client.status
+    - jsonPath: .status.natsSyncClient.status
       name: Status
       type: string
     name: v1
@@ -51,61 +51,32 @@ spec:
           spec:
             description: AstraConnectorSpec defines the desired state of AstraConnector
             properties:
-              connector:
+              astra:
                 properties:
-                  astra:
-                    properties:
-                      accountId:
-                        type: string
-                      cloudID:
-                        type: string
-                      clusterID:
-                        type: string
-                      clusterName:
-                        type: string
-                      skipTLSValidation:
-                        type: boolean
-                      storageClassName:
-                        type: string
-                      token:
-                        type: string
-                      unregister:
-                        type: boolean
-                    required:
-                    - accountId
-                    type: object
-                  astra-connect:
-                    properties:
-                      image:
-                        type: string
-                      size:
-                        format: int32
-                        type: integer
-                    type: object
-                  nats:
-                    properties:
-                      image:
-                        type: string
-                      size:
-                        format: int32
-                        type: integer
-                    type: object
-                  natssync-client:
-                    properties:
-                      cloud-bridge-url:
-                        type: string
-                      hostalias:
-                        type: boolean
-                      hostaliasIP:
-                        type: string
-                      image:
-                        type: string
-                      size:
-                        format: int32
-                        type: integer
-                    type: object
-                required:
-                - astra
+                  accountId:
+                    type: string
+                  cloudId:
+                    type: string
+                  clusterId:
+                    type: string
+                  clusterName:
+                    type: string
+                  skipTLSValidation:
+                    type: boolean
+                  storageClassName:
+                    type: string
+                  token:
+                    type: string
+                  unregister:
+                    type: boolean
+                type: object
+              astraConnect:
+                properties:
+                  image:
+                    type: string
+                  replicas:
+                    format: int32
+                    type: integer
                 type: object
               imageRegistry:
                 properties:
@@ -114,23 +85,40 @@ spec:
                   secret:
                     type: string
                 type: object
+              nats:
+                properties:
+                  image:
+                    type: string
+                  replicas:
+                    format: int32
+                    type: integer
+                type: object
+              natsSyncClient:
+                properties:
+                  CloudBridgeURL:
+                    type: string
+                  hostAliasIP:
+                    type: string
+                  image:
+                    type: string
+                  replicas:
+                    format: int32
+                    type: integer
+                type: object
               neptune:
                 properties:
                   image:
                     type: string
-                  size:
+                  replicas:
                     format: int32
                     type: integer
                 type: object
-            required:
-            - connector
-            - neptune
             type: object
           status:
             description: AstraConnectorStatus defines the observed state of AstraConnector
             properties:
-              natssync-client:
-                description: NatssyncClientStatus defines the observed state of NatssyncClient
+              natsSyncClient:
+                description: NatsSyncClientStatus defines the observed state of NatsSyncClient
                 properties:
                   astraConnectorID:
                     type: string
@@ -138,18 +126,11 @@ spec:
                     type: string
                   status:
                     type: string
-                required:
-                - astraConnectorID
-                - registered
-                - status
                 type: object
               nodes:
                 items:
                   type: string
                 type: array
-            required:
-            - natssync-client
-            - nodes
             type: object
         type: object
     served: true

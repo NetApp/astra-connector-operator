@@ -17,13 +17,13 @@ spec:
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
-    - jsonPath: .status.natssync-client.registered
+    - jsonPath: .status.natsSyncClient.registered
       name: Registered
       type: string
-    - jsonPath: .status.natssync-client.astraConnectorID
+    - jsonPath: .status.natsSyncClient.astraConnectorID
       name: AstraConnectorID
       type: string
-    - jsonPath: .status.natssync-client.status
+    - jsonPath: .status.natsSyncClient.status
       name: Status
       type: string
     name: v1
