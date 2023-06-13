@@ -62,8 +62,8 @@ func (d *NatsSyncClientDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx 
 	if m.Spec.NatsSyncClient.Replicas > 1 {
 		replicas = m.Spec.NatsSyncClient.Replicas
 	} else {
-		log.Info("Defaulting the NatsSyncClient replica size", "size", common.NatsSyncClientSize)
-		replicas = common.NatsSyncClientSize
+		log.Info("Defaulting the NatsSyncClient replica size", "size", common.NatsSyncClientDefaultReplicas)
+		replicas = common.NatsSyncClientDefaultReplicas
 	}
 
 	dep := &appsv1.Deployment{

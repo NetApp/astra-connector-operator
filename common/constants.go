@@ -7,12 +7,12 @@ package common
 const (
 	DefaultImageRegistry = "theotw"
 
-	AstraConnectName         = "astraconnect"
-	AstraConnectSize         = 1
-	AstraConnectDefaultImage = "astra-connector:0.3"
+	AstraConnectName            = "astraconnect"
+	AstraConnectDefaultReplicas = 1
+	AstraConnectDefaultImage    = "astra-connector:0.3"
 
 	NatsSyncClientName                  = "natssync-client"
-	NatsSyncClientSize                  = 1
+	NatsSyncClientDefaultReplicas       = 1
 	NatsSyncClientPort                  = 8080
 	NatsSyncClientProtocol              = "TCP"
 	NatsSyncClientKeystoreUrl           = "configmap:///configmap-data"
@@ -29,7 +29,7 @@ const (
 	NatsMonitorPort        = 8222
 	NatsMetricsPort        = 7777
 	NatsGatewaysPort       = 7522
-	NatsDefaultSize        = 2
+	NatsDefaultReplicas    = 2
 	NatsDefaultImage       = "nats:2.6.1-alpine3.14"
 
 	NatsSyncClientConfigMapName               = "natssync-client-configmap"
