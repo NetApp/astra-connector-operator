@@ -29,10 +29,10 @@ const (
 	FailedLocationIDGet = "Failed to get the locationID from ConfigMap"
 	EmptyLocationIDGet  = "Got an empty location ID from ConfigMap"
 
-	RegisterNSClient         = "Registered natssync-client"
-	FailedRegisterNSClient   = "Failed to register natssync-client"
-	UnregisterNSClient       = "Unregistered natssync-client"
-	FailedUnRegisterNSClient = "Failed to unregister natssync-client"
+	RegisterNSClient         = "Registered natsSyncClient"
+	FailedRegisterNSClient   = "Failed to register natsSyncClient"
+	UnregisterNSClient       = "Unregistered natsSyncClient"
+	FailedUnRegisterNSClient = "Failed to unregister natsSyncClient"
 
 	UnregisterFromAstra = "Unregistered the cluster with Astra"
 

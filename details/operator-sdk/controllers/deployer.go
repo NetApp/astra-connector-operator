@@ -3,12 +3,14 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"github.com/NetApp-Polaris/astra-connector-operator/deployer/model"
-	"github.com/NetApp-Polaris/astra-connector-operator/details/k8s"
-	installer "github.com/NetApp-Polaris/astra-connector-operator/details/operator-sdk/api/v1"
+
 	"github.com/pkg/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
+
+	"github.com/NetApp-Polaris/astra-connector-operator/deployer/model"
+	"github.com/NetApp-Polaris/astra-connector-operator/details/k8s"
+	installer "github.com/NetApp-Polaris/astra-connector-operator/details/operator-sdk/api/v1"
 )
 
 // getK8sResources of function type
@@ -33,7 +35,7 @@ var resourcesToDeploy = []createResourceParams{
 	{createMessage: CreateDeployment, errorMessage: ErrorCreateDeployments, getResource: model.Deployer.GetDeploymentObjects},
 }
 
-func (r *AstraConnectorController) deployResources(ctx context.Context, deployer model.Deployer, astraConnector *installer.AstraConnector, natssyncClientStatus *installer.NatssyncClientStatus) error {
+func (r *AstraConnectorController) deployResources(ctx context.Context, deployer model.Deployer, astraConnector *installer.AstraConnector, natsSyncClientStatus *installer.NatsSyncClientStatus) error {
 	log := ctrllog.FromContext(ctx)
 	k8sUtil := k8s.NewK8sUtil(r.Client)
 
@@ -49,15 +51,15 @@ func (r *AstraConnectorController) deployResources(ctx context.Context, deployer
 			key := client.ObjectKeyFromObject(kubeObject)
 			statusMsg := fmt.Sprintf(funcList.createMessage, key.Namespace, key.Name)
 			log.Info(statusMsg)
-			natssyncClientStatus.Status = statusMsg
-			_ = r.updateAstraConnectorStatus(ctx, astraConnector, *natssyncClientStatus)
+			natsSyncClientStatus.Status = statusMsg
+			_ = r.updateAstraConnectorStatus(ctx, astraConnector, *natsSyncClientStatus)
 
 			err := k8sUtil.CreateOrUpdateResource(ctx, kubeObject, astraConnector)
 			if err != nil {
 				statusMsg = fmt.Sprintf(funcList.errorMessage, key.Namespace, key.Name)
 				log.Info(statusMsg)
-				natssyncClientStatus.Status = statusMsg
-				_ = r.updateAstraConnectorStatus(ctx, astraConnector, *natssyncClientStatus)
+				natsSyncClientStatus.Status = statusMsg
+				_ = r.updateAstraConnectorStatus(ctx, astraConnector, *natsSyncClientStatus)
 				log.Error(err, statusMsg)
 				return errors.Wrapf(err, statusMsg)
 			} else {
