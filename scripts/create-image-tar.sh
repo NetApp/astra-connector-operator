@@ -28,7 +28,7 @@ done
 
 # Get operator-image
 operatorYamlPath="${parentDir}/../astraconnector_operator.yaml"
-pattern=' +image: netapp\/astra-connector-operator:([^\n ]*)'
+pattern=' +image: netapp\/astra-connector-operator:([^:\s]+)\s*'
 [[ "$(cat ${operatorYamlPath})" =~ ${pattern} ]]
 operatorTag="${BASH_REMATCH[1]}"
 # Add operator image to list of images
