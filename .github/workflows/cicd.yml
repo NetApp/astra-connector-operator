@@ -81,8 +81,10 @@ jobs:
           make generate-operator-yaml
           git config --global user.name ${{ secrets.ACTIONS_USER }}
           git config --global user.email ${{ secrets.ACTIONS_EMAIL }}
-          git diff astraconnector_operator.yaml
-          git add astraconnector_operator.yaml
+          git diff details/operator-sdk/astraconnector_operator.yaml
+          git diff details/operator-sdk/config/manager/kustomization.yaml
+          git add details/operator-sdk/astraconnector_operator.yaml
+          git add details/operator-sdk/config/manager/kustomization.yaml
           git commit -m "Auto updating the operator image tag" -n
           git push --set-upstream origin $BRANCH
 
