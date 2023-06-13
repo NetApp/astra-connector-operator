@@ -1,0 +1,20 @@
+# You can provide values in this file that will override the default values built into the astra-installer
+# application. This is essentially the same concept as using a dotenv file, but the format is yaml.
+
+# Config precedence (higher on the right): default values -> .config.yaml -> ENV variables
+
+# All ENV variables should be prefixed with ACOP
+# Keys in the .config.yaml file are not case-sensitive, but they are for ENV variables.
+
+# You can set host=localhost in your development environment, this allows the server to
+# start on the localhost instead of trying to open an external port, avoiding the annoying pop up
+# on Mac development environment when the controller app is started.
+host: "localhost"
+
+# If McAffee takes the default 8082 port that is used by the operator override it for your dev env here
+HealthProbePort: 8083
+
+# Enable/Disable features.
+FeatureFlags:
+   DeployNatsConnector: true
+   DeployNeptune: false
