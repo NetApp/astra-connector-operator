@@ -4,12 +4,12 @@ metadata:
   name: astra-connector
 spec:
   astra:
-    token: Secret reference to API Token from the API Access page in Astra UI
+    tokenRef: Secret reference to API Token from the API Access page in Astra UI
     accountId: Astra Account ID from the API Access page in Astra UI
     skipTLSValidation: true
     clusterName: Name of your cluster
   natsSyncClient:
-    CloudBridgeURL: https://integration.astra.netapp.io
+    cloudBridgeURL: https://integration.astra.netapp.io
     hostAliasIP: 10.193.60.80
     image: natssync-client
   nats:
