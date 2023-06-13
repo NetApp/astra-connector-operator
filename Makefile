@@ -112,10 +112,7 @@ docker-build: ## Build docker image with the manager.
 
 docker-push: ## Push docker image with the manager.
 	docker push ${IMG}
-docker-tag-base:
-	docker tag 	${IMG} ${IMAGE_TAG_BASE}:${BASE_VERSION}
-docker-push-base:
-	docker push ${IMAGE_TAG_BASE}:${BASE_VERSION}
+
 ##@ Deployment
 
 install: manifests kustomize ## Install CRDs into the K8s cluster specified in ~/.kube/config.
