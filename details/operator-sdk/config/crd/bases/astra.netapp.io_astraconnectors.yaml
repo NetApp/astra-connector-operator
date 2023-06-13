@@ -60,7 +60,7 @@ spec:
                     type: boolean
                   storageClassName:
                     type: string
-                  token:
+                  tokenRef:
                     type: string
                   unregister:
                     type: boolean
@@ -90,7 +90,7 @@ spec:
                 type: object
               natsSyncClient:
                 properties:
-                  CloudBridgeURL:
+                  cloudBridgeURL:
                     type: string
                   hostAliasIP:
                     type: string

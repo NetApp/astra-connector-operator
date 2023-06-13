@@ -37,7 +37,7 @@ func (r *AstraConnectorController) deployConnector(ctx context.Context,
 	log.Info("Checking for natsSyncClient configmap")
 	foundCM := &corev1.ConfigMap{}
 	astraConnectorID := ""
-	err := r.Get(ctx, types.NamespacedName{Name: common.NatssyncClientConfigMapName, Namespace: astraConnector.Namespace}, foundCM)
+	err := r.Get(ctx, types.NamespacedName{Name: common.NatsSyncClientConfigMapName, Namespace: astraConnector.Namespace}, foundCM)
 	if len(foundCM.Data) != 0 {
 		registered = true
 		astraConnectorID, err = registerUtil.GetConnectorIDFromConfigMap(foundCM.Data)
@@ -74,8 +74,8 @@ func (r *AstraConnectorController) deployConnector(ctx context.Context,
 		natsSyncClientStatus.AstraConnectorID = astraConnectorID
 		natsSyncClientStatus.Status = RegisterNSClient
 
-		if astraConnector.Spec.Astra.Token == "" || astraConnector.Spec.Astra.AccountId == "" || astraConnector.Spec.Astra.ClusterName == "" {
-			log.Info("Skipping cluster registration with Astra, incomplete Astra details provided Token/AccountId/ClusterName")
+		if astraConnector.Spec.Astra.TokenRef == "" || astraConnector.Spec.Astra.AccountId == "" || astraConnector.Spec.Astra.ClusterName == "" {
+			log.Info("Skipping cluster registration with Astra, incomplete Astra details provided TokenRef/AccountId/ClusterName")
 		} else {
 			log.Info("Registering cluster with Astra")
 			err = registerUtil.RegisterClusterWithAstra(astraConnectorID)

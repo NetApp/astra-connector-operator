@@ -65,7 +65,7 @@ spec:
                     type: boolean
                   storageClassName:
                     type: string
-                  token:
+                  tokenRef:
                     type: string
                   unregister:
                     type: boolean
@@ -95,7 +95,7 @@ spec:
                 type: object
               natsSyncClient:
                 properties:
-                  CloudBridgeURL:
+                  cloudBridgeURL:
                     type: string
                   hostAliasIP:
                     type: string
@@ -432,7 +432,7 @@ spec:
         - --leader-elect
         command:
         - /manager
-        image: netapp/astra-connector-operator:3.0.0
+        image: netapp/astra-connector-operator:3.0.1
         livenessProbe:
           httpGet:
             path: /healthz

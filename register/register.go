@@ -114,22 +114,27 @@ func (c clusterRegisterUtil) GetConnectorIDFromConfigMap(cmData map[string]strin
 
 // getNatsSyncClientRegistrationURL Returns NatsSyncClient Registration URL
 func (c clusterRegisterUtil) getNatsSyncClientRegistrationURL() string {
-	natsSyncClientURL := fmt.Sprintf("http://%s.%s:%d/bridge-client/1", common.NatssyncClientName, c.AstraConnector.Namespace, common.NatssyncClientPort)
+	natsSyncClientURL := fmt.Sprintf("http://%s.%s:%d/bridge-client/1", common.NatsSyncClientName, c.AstraConnector.Namespace, common.NatsSyncClientPort)
 	natsSyncClientRegisterURL := fmt.Sprintf("%s/register", natsSyncClientURL)
 	return natsSyncClientRegisterURL
 }
 
 // getNatsSyncClientUnregisterURL returns NatsSyncClient Unregister URL
 func (c clusterRegisterUtil) getNatsSyncClientUnregisterURL() string {
-	natsSyncClientURL := fmt.Sprintf("http://%s.%s:%d/bridge-client/1", common.NatssyncClientName, c.AstraConnector.Namespace, common.NatssyncClientPort)
+	natsSyncClientURL := fmt.Sprintf("http://%s.%s:%d/bridge-client/1", common.NatsSyncClientName, c.AstraConnector.Namespace, common.NatsSyncClientPort)
 	natsSyncClientRegisterURL := fmt.Sprintf("%s/unregister", natsSyncClientURL)
 	return natsSyncClientRegisterURL
 }
 
 // generateAuthPayload Returns the payload for authentication
 func (c clusterRegisterUtil) generateAuthPayload() ([]byte, error) {
+	apiToken, err := c.getAPITokenFromSecret(c.AstraConnector.Spec.Astra.TokenRef)
+	if err != nil {
+		return nil, err
+	}
+
 	authPayload, err := json.Marshal(map[string]string{
-		"userToken": c.AstraConnector.Spec.Astra.Token,
+		"userToken": apiToken,
 		"accountId": c.AstraConnector.Spec.Astra.AccountId,
 	})
 
@@ -213,7 +218,7 @@ func GetAstraHostURL(astraConnector *v1.AstraConnector) string {
 	if astraConnector.Spec.NatsSyncClient.CloudBridgeURL != "" {
 		astraHost = astraConnector.Spec.NatsSyncClient.CloudBridgeURL
 	} else {
-		astraHost = common.NatssyncClientDefaultCloudBridgeURL
+		astraHost = common.NatsSyncClientDefaultCloudBridgeURL
 	}
 
 	return astraHost
@@ -282,10 +287,10 @@ func (c clusterRegisterUtil) setHttpClient(disableTls bool, astraHost string) er
 	return nil
 }
 
-func (c clusterRegisterUtil) cloudExists(astraHost, cloudID string) bool {
+func (c clusterRegisterUtil) cloudExists(astraHost, cloudID, apiToken string) bool {
 	url := fmt.Sprintf("%s/accounts/%s/topology/v1/clouds/%s", astraHost, c.AstraConnector.Spec.Astra.AccountId, cloudID)
 
-	headerMap := HeaderMap{Authorization: fmt.Sprintf("Bearer %s", c.AstraConnector.Spec.Astra.Token)}
+	headerMap := HeaderMap{Authorization: fmt.Sprintf("Bearer %s", apiToken)}
 	response, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodGet, url, nil, headerMap)
 	defer cancel()
 
@@ -309,11 +314,11 @@ func (c clusterRegisterUtil) cloudExists(astraHost, cloudID string) bool {
 	return true
 }
 
-func (c clusterRegisterUtil) listClouds(astraHost string) (*http.Response, error) {
+func (c clusterRegisterUtil) listClouds(astraHost, apiToken string) (*http.Response, error) {
 	url := fmt.Sprintf("%s/accounts/%s/topology/v1/clouds", astraHost, c.AstraConnector.Spec.Astra.AccountId)
 
 	c.Log.Info("Getting clouds")
-	headerMap := HeaderMap{Authorization: fmt.Sprintf("Bearer %s", c.AstraConnector.Spec.Astra.Token)}
+	headerMap := HeaderMap{Authorization: fmt.Sprintf("Bearer %s", apiToken)}
 	response, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodGet, url, nil, headerMap)
 	defer cancel()
 
@@ -324,7 +329,7 @@ func (c clusterRegisterUtil) listClouds(astraHost string) (*http.Response, error
 	return response, nil
 }
 
-func (c clusterRegisterUtil) getCloudId(astraHost, cloudType string) (string, error) {
+func (c clusterRegisterUtil) getCloudId(astraHost, cloudType, apiToken string) (string, error) {
 	// TODO: This function assumes that only ONE cloud instance of a given cloud type would be present in the persistence.
 	// TODO: If we ever choose to support multiple cloud instances of type "private" this function wouldn't support that and an enhancement would be needed.
 
@@ -335,7 +340,7 @@ func (c clusterRegisterUtil) getCloudId(astraHost, cloudType string) (string, er
 
 	for time.Now().Before(timeExpire) {
 		var err error
-		response, err = c.listClouds(astraHost)
+		response, err = c.listClouds(astraHost, apiToken)
 		if err != nil {
 			c.Log.Error(err, "Error listing clouds")
 			time.Sleep(errorRetrySleep)
@@ -388,7 +393,7 @@ func (c clusterRegisterUtil) getCloudId(astraHost, cloudType string) (string, er
 	return cloudId, nil
 }
 
-func (c clusterRegisterUtil) createCloud(astraHost, cloudType string) (string, error) {
+func (c clusterRegisterUtil) createCloud(astraHost, cloudType, apiToken string) (string, error) {
 	url := fmt.Sprintf("%s/accounts/%s/topology/v1/clouds", astraHost, c.AstraConnector.Spec.Astra.AccountId)
 	payLoad := map[string]string{
 		"type":      "application/astra-cloud",
@@ -400,7 +405,7 @@ func (c clusterRegisterUtil) createCloud(astraHost, cloudType string) (string, e
 	reqBodyBytes, err := json.Marshal(payLoad)
 
 	c.Log.WithValues("cloudType", cloudType).Info("Creating cloud")
-	headerMap := HeaderMap{Authorization: fmt.Sprintf("Bearer %s", c.AstraConnector.Spec.Astra.Token)}
+	headerMap := HeaderMap{Authorization: fmt.Sprintf("Bearer %s", apiToken)}
 	response, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodPost, url, bytes.NewBuffer(reqBodyBytes), headerMap)
 	defer cancel()
 
@@ -423,14 +428,14 @@ func (c clusterRegisterUtil) createCloud(astraHost, cloudType string) (string, e
 	return cloudResp.ID, nil
 }
 
-func (c clusterRegisterUtil) getOrCreateCloud(astraHost, cloudType string) (string, error) {
+func (c clusterRegisterUtil) getOrCreateCloud(astraHost, cloudType, apiToken string) (string, error) {
 	// If a cloudId is specified in the CR Spec, validate its existence.
 	// If the provided cloudId is valid, return the same.
 	// If it is not a valid cloudId i.e., provided cloudId doesn't exist in the DB, return an error
 	cloudId := c.AstraConnector.Spec.Astra.CloudId
 	if cloudId != "" {
 		c.Log.WithValues("cloudID", cloudId).Info("Validating the provided CloudId")
-		if !c.cloudExists(astraHost, cloudId) {
+		if !c.cloudExists(astraHost, cloudId, apiToken) {
 			return "", errors.New("Invalid CloudId provided in the Spec : " + cloudId)
 		}
 
@@ -444,7 +449,7 @@ func (c clusterRegisterUtil) getOrCreateCloud(astraHost, cloudType string) (stri
 	// of the newly created cloud.
 	c.Log.WithValues("cloudType", cloudType).Info("Fetching Cloud Id")
 
-	cloudId, err := c.getCloudId(astraHost, cloudType)
+	cloudId, err := c.getCloudId(astraHost, cloudType, apiToken)
 	if err != nil {
 		c.Log.Error(err, "Error fetching cloud ID")
 		return "", err
@@ -452,7 +457,7 @@ func (c clusterRegisterUtil) getOrCreateCloud(astraHost, cloudType string) (stri
 
 	if cloudId == "" {
 		c.Log.Info("Cloud doesn't seem to exist, creating the cloud", "cloudType", cloudType)
-		cloudId, err = c.createCloud(astraHost, cloudType)
+		cloudId, err = c.createCloud(astraHost, cloudType, apiToken)
 		if err != nil {
 			c.Log.Error(err, "Failed to create cloud", "cloudType", cloudType)
 			return "", err
@@ -493,13 +498,13 @@ type ClusterInfo struct {
 }
 
 // getClusters Returns a list of existing clusters
-func (c clusterRegisterUtil) getClusters(astraHost, cloudId string) (GetClustersResponse, error) {
+func (c clusterRegisterUtil) getClusters(astraHost, cloudId, apiToken string) (GetClustersResponse, error) {
 	url := fmt.Sprintf("%s/accounts/%s/topology/v1/clouds/%s/clusters", astraHost, c.AstraConnector.Spec.Astra.AccountId, cloudId)
 	var clustersRespJson GetClustersResponse
 
 	c.Log.Info("Getting Clusters")
 
-	headerMap := HeaderMap{Authorization: fmt.Sprintf("Bearer %s", c.AstraConnector.Spec.Astra.Token)}
+	headerMap := HeaderMap{Authorization: fmt.Sprintf("Bearer %s", apiToken)}
 	clustersResp, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodGet, url, nil, headerMap)
 	defer cancel()
 
@@ -525,10 +530,10 @@ func (c clusterRegisterUtil) getClusters(astraHost, cloudId string) (GetClusters
 }
 
 // pollForClusterToBeInDesiredState Polls until a given cluster is in desired state (or until timeout)
-func (c clusterRegisterUtil) pollForClusterToBeInDesiredState(astraHost, cloudId, clusterId, desiredState string) error {
+func (c clusterRegisterUtil) pollForClusterToBeInDesiredState(astraHost, cloudId, clusterId, desiredState, apiToken string) error {
 	for i := 1; i <= getClusterPollCount; i++ {
 		time.Sleep(15 * time.Second)
-		getCluster, getClusterErr := c.getCluster(astraHost, cloudId, clusterId)
+		getCluster, getClusterErr := c.getCluster(astraHost, cloudId, clusterId, apiToken)
 
 		if getClusterErr != nil {
 			return errors.Wrap(getClusterErr, "error on get cluster")
@@ -542,11 +547,11 @@ func (c clusterRegisterUtil) pollForClusterToBeInDesiredState(astraHost, cloudId
 }
 
 // getCluster Returns the details of the given clusterID (if it exists)
-func (c clusterRegisterUtil) getCluster(astraHost, cloudId, clusterId string) (Cluster, error) {
+func (c clusterRegisterUtil) getCluster(astraHost, cloudId, clusterId, apiToken string) (Cluster, error) {
 	url := fmt.Sprintf("%s/accounts/%s/topology/v1/clouds/%s/clusters/%s", astraHost, c.AstraConnector.Spec.Astra.AccountId, cloudId, clusterId)
 	var clustersRespJson Cluster
 
-	headerMap := HeaderMap{Authorization: fmt.Sprintf("Bearer %s", c.AstraConnector.Spec.Astra.Token)}
+	headerMap := HeaderMap{Authorization: fmt.Sprintf("Bearer %s", apiToken)}
 	clustersResp, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodGet, url, nil, headerMap)
 	defer cancel()
 
@@ -572,7 +577,7 @@ func (c clusterRegisterUtil) getCluster(astraHost, cloudId, clusterId string) (C
 }
 
 // createCluster Creates a cluster with the provided details
-func (c clusterRegisterUtil) createCluster(astraHost, cloudId, astraConnectorId string) (ClusterInfo, error) {
+func (c clusterRegisterUtil) createCluster(astraHost, cloudId, astraConnectorId, apiToken string) (ClusterInfo, error) {
 	url := fmt.Sprintf("%s/accounts/%s/topology/v1/clouds/%s/clusters", astraHost, c.AstraConnector.Spec.Astra.AccountId, cloudId)
 	var clustersRespJson Cluster
 
@@ -585,7 +590,7 @@ func (c clusterRegisterUtil) createCluster(astraHost, cloudId, astraConnectorId 
 	}
 
 	clustersBodyJson, _ := json.Marshal(clustersBody)
-	headerMap := HeaderMap{Authorization: fmt.Sprintf("Bearer %s", c.AstraConnector.Spec.Astra.Token)}
+	headerMap := HeaderMap{Authorization: fmt.Sprintf("Bearer %s", apiToken)}
 	clustersResp, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodPost, url, bytes.NewBuffer(clustersBodyJson), headerMap)
 	defer cancel()
 
@@ -616,7 +621,7 @@ func (c clusterRegisterUtil) createCluster(astraHost, cloudId, astraConnectorId 
 		return ClusterInfo{ID: clustersRespJson.ID, ManagedState: clustersRespJson.ManagedState, Name: clustersRespJson.Name}, nil
 	}
 
-	err = c.pollForClusterToBeInDesiredState(astraHost, cloudId, clustersRespJson.ID, clusterUnManagedState)
+	err = c.pollForClusterToBeInDesiredState(astraHost, cloudId, clustersRespJson.ID, clusterUnManagedState, apiToken)
 	if err == nil {
 		c.Log.Info("Cluster added to Astra", "clusterId", clustersRespJson.ID)
 		return ClusterInfo{ID: clustersRespJson.ID, ManagedState: clustersRespJson.ManagedState, Name: clustersRespJson.Name}, nil
@@ -626,7 +631,7 @@ func (c clusterRegisterUtil) createCluster(astraHost, cloudId, astraConnectorId 
 }
 
 // updateCluster Updates an existing cluster with the provided details
-func (c clusterRegisterUtil) updateCluster(astraHost, cloudId, clusterId, astraConnectorId string) error {
+func (c clusterRegisterUtil) updateCluster(astraHost, cloudId, clusterId, astraConnectorId, apiToken string) error {
 	url := fmt.Sprintf("%s/accounts/%s/topology/v1/clouds/%s/clusters/%s", astraHost, c.AstraConnector.Spec.Astra.AccountId, cloudId, clusterId)
 
 	clustersBody := Cluster{
@@ -638,7 +643,7 @@ func (c clusterRegisterUtil) updateCluster(astraHost, cloudId, clusterId, astraC
 	}
 
 	clustersBodyJson, _ := json.Marshal(clustersBody)
-	headerMap := HeaderMap{Authorization: fmt.Sprintf("Bearer %s", c.AstraConnector.Spec.Astra.Token)}
+	headerMap := HeaderMap{Authorization: fmt.Sprintf("Bearer %s", apiToken)}
 	clustersResp, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodPut, url, bytes.NewBuffer(clustersBodyJson), headerMap)
 	defer cancel()
 
@@ -654,11 +659,11 @@ func (c clusterRegisterUtil) updateCluster(astraHost, cloudId, clusterId, astraC
 	return nil
 }
 
-func (c clusterRegisterUtil) createOrUpdateCluster(astraHost, cloudId, clusterId, astraConnectorId, clustersMethod string) (ClusterInfo, error) {
+func (c clusterRegisterUtil) createOrUpdateCluster(astraHost, cloudId, clusterId, astraConnectorId, clustersMethod, apiToken string) (ClusterInfo, error) {
 	if clustersMethod == http.MethodPut {
 		c.Log.WithValues("clusterId", clusterId).Info("Updating cluster")
 
-		err := c.updateCluster(astraHost, cloudId, clusterId, astraConnectorId)
+		err := c.updateCluster(astraHost, cloudId, clusterId, astraConnectorId, apiToken)
 		if err != nil {
 			return ClusterInfo{}, errors.Wrap(err, "error updating cluster")
 		}
@@ -669,7 +674,7 @@ func (c clusterRegisterUtil) createOrUpdateCluster(astraHost, cloudId, clusterId
 	if clustersMethod == http.MethodPost {
 		c.Log.Info("Creating Cluster")
 
-		clusterInfo, err := c.createCluster(astraHost, cloudId, astraConnectorId)
+		clusterInfo, err := c.createCluster(astraHost, cloudId, astraConnectorId, apiToken)
 		if err != nil {
 			return ClusterInfo{}, errors.Wrap(err, "error creating cluster")
 		}
@@ -691,13 +696,13 @@ type GetStorageClassResponse struct {
 	Items []StorageClass `json:"items"`
 }
 
-func (c clusterRegisterUtil) getStorageClass(astraHost, cloudId, clusterId string) (string, error) {
+func (c clusterRegisterUtil) getStorageClass(astraHost, cloudId, clusterId, apiToken string) (string, error) {
 	url := fmt.Sprintf("%s/accounts/%s/topology/v1/clouds/%s/clusters/%s/storageClasses", astraHost, c.AstraConnector.Spec.Astra.AccountId, cloudId, clusterId)
 	var storageClassesRespJson GetStorageClassResponse
 
 	c.Log.Info("Getting Storage Classes")
 
-	headerMap := HeaderMap{Authorization: fmt.Sprintf("Bearer %s", c.AstraConnector.Spec.Astra.Token)}
+	headerMap := HeaderMap{Authorization: fmt.Sprintf("Bearer %s", apiToken)}
 	storageClassesResp, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodGet, url, nil, headerMap)
 	defer cancel()
 
@@ -747,7 +752,7 @@ func (c clusterRegisterUtil) getStorageClass(astraHost, cloudId, clusterId strin
 }
 
 // updateManagedCluster Updates the persisted record of the given managed cluster
-func (c clusterRegisterUtil) updateManagedCluster(astraHost, clusterId, astraConnectorId string) error {
+func (c clusterRegisterUtil) updateManagedCluster(astraHost, clusterId, astraConnectorId, apiToken string) error {
 	url := fmt.Sprintf("%s/accounts/%s/topology/v1/managedClusters/%s", astraHost, c.AstraConnector.Spec.Astra.AccountId, clusterId)
 
 	manageClustersBody := Cluster{
@@ -758,7 +763,7 @@ func (c clusterRegisterUtil) updateManagedCluster(astraHost, clusterId, astraCon
 	}
 	manageClustersBodyJson, _ := json.Marshal(manageClustersBody)
 
-	headerMap := HeaderMap{Authorization: fmt.Sprintf("Bearer %s", c.AstraConnector.Spec.Astra.Token)}
+	headerMap := HeaderMap{Authorization: fmt.Sprintf("Bearer %s", apiToken)}
 	manageClustersResp, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodPut, url, bytes.NewBuffer(manageClustersBodyJson), headerMap)
 	defer cancel()
 
@@ -775,7 +780,7 @@ func (c clusterRegisterUtil) updateManagedCluster(astraHost, clusterId, astraCon
 }
 
 // createManagedCluster Transitions a cluster from unmanaged state to managed state
-func (c clusterRegisterUtil) createManagedCluster(astraHost, cloudId, clusterID, storageClass string) error {
+func (c clusterRegisterUtil) createManagedCluster(astraHost, cloudId, clusterID, storageClass, apiToken string) error {
 	url := fmt.Sprintf("%s/accounts/%s/topology/v1/managedClusters", astraHost, c.AstraConnector.Spec.Astra.AccountId)
 	var manageClustersRespJson Cluster
 
@@ -788,7 +793,7 @@ func (c clusterRegisterUtil) createManagedCluster(astraHost, cloudId, clusterID,
 	}
 	manageClustersBodyJson, _ := json.Marshal(manageClustersBody)
 
-	headerMap := HeaderMap{Authorization: fmt.Sprintf("Bearer %s", c.AstraConnector.Spec.Astra.Token)}
+	headerMap := HeaderMap{Authorization: fmt.Sprintf("Bearer %s", apiToken)}
 	manageClustersResp, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodPost, url, bytes.NewBuffer(manageClustersBodyJson), headerMap)
 	defer cancel()
 
@@ -815,7 +820,7 @@ func (c clusterRegisterUtil) createManagedCluster(astraHost, cloudId, clusterID,
 		return nil
 	}
 
-	err = c.pollForClusterToBeInDesiredState(astraHost, cloudId, clusterID, clusterManagedState)
+	err = c.pollForClusterToBeInDesiredState(astraHost, cloudId, clusterID, clusterManagedState, apiToken)
 	if err == nil {
 		return nil
 	}
@@ -823,11 +828,11 @@ func (c clusterRegisterUtil) createManagedCluster(astraHost, cloudId, clusterID,
 	return errors.New("cluster state not changed to managed")
 }
 
-func (c clusterRegisterUtil) createOrUpdateManagedCluster(astraHost, cloudId, clusterId, astraConnectorId, managedClustersMethod string) (ClusterInfo, error) {
+func (c clusterRegisterUtil) createOrUpdateManagedCluster(astraHost, cloudId, clusterId, astraConnectorId, managedClustersMethod, apiToken string) (ClusterInfo, error) {
 	if managedClustersMethod == http.MethodPut {
 		c.Log.Info("Updating Managed Cluster")
 
-		err := c.updateManagedCluster(astraHost, clusterId, astraConnectorId)
+		err := c.updateManagedCluster(astraHost, clusterId, astraConnectorId, apiToken)
 		if err != nil {
 			return ClusterInfo{}, errors.Wrap(err, "error updating managed cluster")
 		}
@@ -838,7 +843,7 @@ func (c clusterRegisterUtil) createOrUpdateManagedCluster(astraHost, cloudId, cl
 	if managedClustersMethod == http.MethodPost {
 		// Get a Storage Class to be used for managing a cluster
 		// TODO : Doing this only for POST, since PUT /managedClusters doesn't update storageClass
-		storageClass, err := c.getStorageClass(astraHost, cloudId, clusterId)
+		storageClass, err := c.getStorageClass(astraHost, cloudId, clusterId, apiToken)
 
 		if err != nil {
 			return ClusterInfo{}, err
@@ -846,7 +851,7 @@ func (c clusterRegisterUtil) createOrUpdateManagedCluster(astraHost, cloudId, cl
 
 		c.Log.Info("Creating Managed Cluster")
 
-		err = c.createManagedCluster(astraHost, cloudId, clusterId, storageClass)
+		err = c.createManagedCluster(astraHost, cloudId, clusterId, storageClass, apiToken)
 		if err != nil {
 			return ClusterInfo{}, errors.Wrap(err, "error creating managed cluster")
 		}
@@ -858,13 +863,13 @@ func (c clusterRegisterUtil) createOrUpdateManagedCluster(astraHost, cloudId, cl
 	return ClusterInfo{ID: clusterId}, nil
 }
 
-func (c clusterRegisterUtil) validateAndGetCluster(astraHost, cloudId string) (ClusterInfo, error) {
+func (c clusterRegisterUtil) validateAndGetCluster(astraHost, cloudId, apiToken string) (ClusterInfo, error) {
 	// If a clusterId is specified in the CR Spec, validate its existence.
 	// If the provided clusterId exists in the DB, return the details of that cluster, otherwise return an error
 	clusterId := c.AstraConnector.Spec.Astra.ClusterId
 	if clusterId != "" {
 		c.Log.WithValues("cloudID", cloudId, "clusterID", clusterId).Info("Validating the provided ClusterId")
-		getClusterResp, err := c.getCluster(astraHost, cloudId, clusterId)
+		getClusterResp, err := c.getCluster(astraHost, cloudId, clusterId, apiToken)
 		if err != nil {
 			return ClusterInfo{}, errors.Wrap(err, "error on get cluster")
 		}
@@ -889,7 +894,7 @@ func (c clusterRegisterUtil) validateAndGetCluster(astraHost, cloudId string) (C
 	c.Log.Info(fmt.Sprintf("Kubernetes service UUID is %s", k8sServiceUUID))
 
 	// Check whether a cluster exists with the above "k8sServiceUUID" as "apiServiceID"
-	getClustersResp, err := c.getClusters(astraHost, cloudId)
+	getClustersResp, err := c.getClusters(astraHost, cloudId, apiToken)
 	if err != nil {
 		return ClusterInfo{}, errors.Wrap(err, "error on get clusters")
 	}
@@ -907,6 +912,28 @@ func (c clusterRegisterUtil) validateAndGetCluster(astraHost, cloudId string) (C
 	return ClusterInfo{}, nil
 }
 
+// GetAPITokenFromSecret Gets Secret provided in the ACC Spec and returns api token string of the data in secret
+func (c clusterRegisterUtil) getAPITokenFromSecret(secretName string) (string, error) {
+	secret := &coreV1.Secret{}
+
+	err := c.K8sClient.Get(c.Ctx, types.NamespacedName{Name: secretName, Namespace: c.AstraConnector.Namespace}, secret)
+	if err != nil {
+		c.Log.WithValues("namespace", c.AstraConnector.Namespace, "secret", secretName).Error(err, "failed to get kubernetes secret")
+		return "", err
+	}
+
+	// Extract the value of the 'apiToken' key from the secret
+	apiToken, ok := secret.Data["apiToken"]
+	if !ok {
+		c.Log.WithValues("namespace", c.AstraConnector.Namespace, "secret", secretName).Error(err, "failed to extract apiToken key from secret")
+		return "", errors.New("failed to extract apiToken key from secret")
+	}
+
+	// Convert the value to a string
+	apiTokenStr := string(apiToken)
+	return apiTokenStr, nil
+}
+
 // RegisterClusterWithAstra Registers/Adds the cluster to Astra
 func (c clusterRegisterUtil) RegisterClusterWithAstra(astraConnectorId string) error {
 	astraHost := GetAstraHostURL(c.AstraConnector)
@@ -917,13 +944,23 @@ func (c clusterRegisterUtil) RegisterClusterWithAstra(astraConnectorId string) e
 		return err
 	}
 
+	// Extract the apiToken from the secret provided in the CR Spec via "tokenRef" field
+	// This is needed to make calls to the Astra
+	apiToken, err := c.getAPITokenFromSecret(c.AstraConnector.Spec.Astra.TokenRef)
+	if err != nil {
+		return err
+	}
+
+	// TODO remove
+	c.Log.Info("Secret " + apiToken)
+
 	// 1. Checks the existence of cloud in the system with the cloudId (if it was specified in the CR Spec)
 	//    If the CloudId was specified and the cloud exists in the system, the same cloudId is returned.
 	//    If the CloudId was specified and the cloud doesn't exist in the system, an error is returned.
 	// 2. If the CloudId was not specified in the CR Spec, checks whether a cloud of type "private"
 	//    exists in the system, if so returns the cloudId of the "private" cloud. Otherwise, a new cloud of
 	//    type "private" is created and the cloudId is returned.
-	cloudId, err := c.getOrCreateCloud(astraHost, common.AstraPrivateCloudType)
+	cloudId, err := c.getOrCreateCloud(astraHost, common.AstraPrivateCloudType, apiToken)
 	if err != nil {
 		return err
 	}
@@ -934,7 +971,7 @@ func (c clusterRegisterUtil) RegisterClusterWithAstra(astraConnectorId string) e
 	// 2. If the ClusterId was not specified in the CR Spec, checks the existence of a cluster in the system
 	//    with "K8s Service UUID" of the current cluster as "ApiServiceID" field value. If there exists such a record,
 	//    details related to that cluster will be returned. Otherwise, empty cluster details will be returned
-	clusterInfo, err := c.validateAndGetCluster(astraHost, cloudId)
+	clusterInfo, err := c.validateAndGetCluster(astraHost, cloudId, apiToken)
 	if err != nil {
 		return err
 	}
@@ -962,13 +999,13 @@ func (c clusterRegisterUtil) RegisterClusterWithAstra(astraConnectorId string) e
 	}
 
 	// Adding or Updating a Cluster based on the status from above
-	clusterInfo, err = c.createOrUpdateCluster(astraHost, cloudId, clusterInfo.ID, astraConnectorId, clustersMethod)
+	clusterInfo, err = c.createOrUpdateCluster(astraHost, cloudId, clusterInfo.ID, astraConnectorId, clustersMethod, apiToken)
 	if err != nil {
 		return err
 	}
 
 	// Adding or Updating Managed Cluster based on the status from above
-	clusterInfo, err = c.createOrUpdateManagedCluster(astraHost, cloudId, clusterInfo.ID, astraConnectorId, managedClustersMethod)
+	clusterInfo, err = c.createOrUpdateManagedCluster(astraHost, cloudId, clusterInfo.ID, astraConnectorId, managedClustersMethod, apiToken)
 	if err != nil {
 		return err
 	}

@@ -44,7 +44,7 @@ func (d *AstraConnectDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx co
 	if m.Spec.AstraConnect.Image != "" {
 		containerImage = m.Spec.AstraConnect.Image
 	} else {
-		containerImage = common.AstraConnectImage
+		containerImage = common.AstraConnectDefaultImage
 	}
 
 	natssyncClientImage = fmt.Sprintf("%s/%s", imageRegistry, containerImage)
@@ -55,8 +55,8 @@ func (d *AstraConnectDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx co
 	if m.Spec.AstraConnect.Replicas > 1 {
 		replicas = m.Spec.AstraConnect.Replicas
 	} else {
-		log.Info("Defaulting the Astra Connect replica size", "size", common.AstraConnectSize)
-		replicas = common.AstraConnectSize
+		log.Info("Defaulting the Astra Connect replica size", "size", common.AstraConnectDefaultReplicas)
+		replicas = common.AstraConnectDefaultReplicas
 	}
 
 	ref := &corev1.ConfigMapKeySelector{LocalObjectReference: corev1.LocalObjectReference{Name: common.AstraConnectName}, Key: "nats_url"}

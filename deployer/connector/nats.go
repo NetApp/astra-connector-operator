@@ -37,8 +37,8 @@ func (n *NatsDeployer) GetStatefulSetObjects(m *v1.AstraConnector, ctx context.C
 	if m.Spec.Nats.Replicas > 2 {
 		replicas = m.Spec.Nats.Replicas
 	} else {
-		log.Info("Defaulting the Nats replica size", "size", common.NatsDefaultSize)
-		replicas = common.NatsDefaultSize
+		log.Info("Defaulting the Nats replica size", "size", common.NatsDefaultReplicas)
+		replicas = common.NatsDefaultReplicas
 	}
 
 	var natsImage string
