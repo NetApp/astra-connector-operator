@@ -14,7 +14,6 @@ import (
 	"syscall"
 
 	"github.com/docker/docker/client"
-	"github.com/docker/docker/pkg/system"
 	"github.com/jessevdk/go-flags"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/term"
@@ -85,7 +84,7 @@ func getPw(prompt string) (string, error) {
 func loadImageTar(dockerClient *client.Client, opts Options) ([]string, error) {
 	// We use system.OpenSequential to use sequential file access on Windows, avoiding
 	// depleting the standby list un-necessarily. On Linux, this equates to a regular os.Open.
-	file, err := system.OpenSequential(opts.ImageTar)
+	file, err := os.Open(opts.ImageTar)
 	checkFatalErr(err)
 	defer file.Close()
 
