@@ -254,7 +254,6 @@ bundle-base:
 	cp ${OUTPUT_IMAGE_TAR_DIR}/astra-connector-operator-images.tar $(INSTALL_BUNDLE_DIR)
 	cp ${MAKEFILE_DIR}/controllerconfig.yaml $(INSTALL_BUNDLE_DIR)/controllerconfig.yaml
 	cp ${MAKEFILE_DIR}/details/operator-sdk/astraconnector_operator.yaml $(INSTALL_BUNDLE_DIR)/astraconnector_operator.yaml
-	cp ${MAKEFILE_DIR}/details/operator-sdk/config/manager/kustomization.yaml $(INSTALL_BUNDLE_DIR)/kustomization.yaml
 
 
 install-bundle: image-tar install-exes bundle-base
