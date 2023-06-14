@@ -3,7 +3,7 @@ name: CICD
 on:
   push:
     branches:
-      - absolute-path-to-build-dir
+      - main
       - 'release-*'
   pull_request:
     branches: '*'
