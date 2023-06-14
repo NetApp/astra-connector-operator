@@ -100,14 +100,6 @@ spec:
                     format: int32
                     type: integer
                 type: object
-              neptune:
-                properties:
-                  image:
-                    type: string
-                  replicas:
-                    format: int32
-                    type: integer
-                type: object
             type: object
           status:
             description: AstraConnectorStatus defines the observed state of AstraConnector

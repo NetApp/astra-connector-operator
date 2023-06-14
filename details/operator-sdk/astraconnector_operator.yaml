@@ -105,14 +105,6 @@ spec:
                     format: int32
                     type: integer
                 type: object
-              neptune:
-                properties:
-                  image:
-                    type: string
-                  replicas:
-                    format: int32
-                    type: integer
-                type: object
             type: object
           status:
             description: AstraConnectorStatus defines the observed state of AstraConnector
@@ -432,7 +424,7 @@ spec:
         - --leader-elect
         command:
         - /manager
-        image: netapp/astra-connector-operator:202306141855-main
+        image: netapp/astra-connector-operator:202306141157-main
         livenessProbe:
           httpGet:
             path: /healthz

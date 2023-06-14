@@ -46,20 +46,12 @@ type AstraConnect struct {
 	Replicas int32  `json:"replicas,omitempty"`
 }
 
-// +kubebuilder:validation:Optional
-
-type Neptune struct {
-	Image    string `json:"image,omitempty"`
-	Replicas int32  `json:"replicas,omitempty"`
-}
-
 // AstraConnectorSpec defines the desired state of AstraConnector
 type AstraConnectorSpec struct {
 	Astra          Astra          `json:"astra"`
 	NatsSyncClient NatsSyncClient `json:"natsSyncClient,omitempty"`
 	Nats           Nats           `json:"nats,omitempty"`
 	AstraConnect   AstraConnect   `json:"astraConnect,omitempty"`
-	Neptune        Neptune        `json:"neptune"`
 	ImageRegistry  ImageRegistry  `json:"imageRegistry,omitempty"`
 }
 
