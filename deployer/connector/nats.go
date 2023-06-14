@@ -245,29 +245,6 @@ func (n *NatsDeployer) GetServiceObjects(m *v1.AstraConnector, ctx context.Conte
 	return services, nil
 }
 
-// GetNatsServiceObjects returns a Service object for nats
-func (n *NatsDeployer) GetNatsServiceObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, error) {
-	ls := labelsForNats(common.NatsName)
-	service := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      common.NatsName,
-			Namespace: m.Namespace,
-			Labels:    ls,
-		},
-		Spec: corev1.ServiceSpec{
-			Type: corev1.ServiceTypeClusterIP,
-			Ports: []corev1.ServicePort{
-				{
-					Name: common.NatsName,
-					Port: common.NatsClientPort,
-				},
-			},
-			Selector: ls,
-		},
-	}
-	return []client.Object{service}, nil
-}
-
 // labelsForNats returns the labels for selecting the nats resources
 func labelsForNats(name string) map[string]string {
 	return map[string]string{"app": name}

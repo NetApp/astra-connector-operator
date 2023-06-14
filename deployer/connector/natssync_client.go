@@ -254,10 +254,6 @@ func (d *NatsSyncClientDeployer) GetStatefulSetObjects(m *v1.AstraConnector, ctx
 	return nil, nil
 }
 
-func (d *NatsSyncClientDeployer) GetClusterServiceObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, error) {
-	return nil, nil
-}
-
 func (d *NatsSyncClientDeployer) GetClusterRoleObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, error) {
 	return nil, nil
 }
