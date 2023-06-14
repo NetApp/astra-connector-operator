@@ -28,11 +28,10 @@ func TestAstraConnectGetDeploymentObjects(t *testing.T) {
 				Name:   "test-registry",
 				Secret: "test-secret",
 			},
-			ConnectorSpec: v1.ConnectorSpec{
-				AstraConnect: v1.AstraConnect{
-					Image: "test-image",
-					Size:  3,
-				},
+
+			AstraConnect: v1.AstraConnect{
+				Image:    "test-image",
+				Replicas: 3,
 			},
 		},
 	}
@@ -74,10 +73,8 @@ func TestAstraConnectGetDeploymentObjectsUsingDefaults(t *testing.T) {
 			Namespace: "test-namespace",
 		},
 		Spec: v1.AstraConnectorSpec{
-			ConnectorSpec: v1.ConnectorSpec{
-				AstraConnect: v1.AstraConnect{
-					Size: -3,
-				},
+			AstraConnect: v1.AstraConnect{
+				Replicas: -3,
 			},
 		},
 	}
@@ -119,11 +116,9 @@ func DummyAstraConnector() v1.AstraConnector {
 				Name:   "test-registry",
 				Secret: "test-secret",
 			},
-			ConnectorSpec: v1.ConnectorSpec{
-				AstraConnect: v1.AstraConnect{
-					Image: "test-image",
-					Size:  1,
-				},
+			AstraConnect: v1.AstraConnect{
+				Image:    "test-image",
+				Replicas: 1,
 			},
 		},
 	}
@@ -139,10 +134,8 @@ func TestAstraConnectGetConfigMapObjectsSkipTLSValidationTrue(t *testing.T) {
 			Namespace: "test-namespace",
 		},
 		Spec: v1.AstraConnectorSpec{
-			ConnectorSpec: v1.ConnectorSpec{
-				Astra: v1.Astra{
-					SkipTLSValidation: true,
-				},
+			Astra: v1.Astra{
+				SkipTLSValidation: true,
 			},
 		},
 	}
@@ -174,10 +167,8 @@ func TestAstraConnectGetConfigMapObjectsSkipTLSValidationFalse(t *testing.T) {
 			Namespace: "something",
 		},
 		Spec: v1.AstraConnectorSpec{
-			ConnectorSpec: v1.ConnectorSpec{
-				Astra: v1.Astra{
-					SkipTLSValidation: false,
-				},
+			Astra: v1.Astra{
+				SkipTLSValidation: false,
 			},
 		},
 	}

@@ -25,7 +25,7 @@ func TestFactory(t *testing.T) {
 		},
 		{
 			name:           "NatssyncClientName",
-			deploymentName: common.NatssyncClientName,
+			deploymentName: common.NatsSyncClientName,
 			expectedType:   &connector.NatsSyncClientDeployer{},
 			expectError:    false,
 		},
