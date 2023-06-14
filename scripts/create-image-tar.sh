@@ -14,6 +14,7 @@ repo="theotw"
 
 # Parse images from chart. 'yq' parses yaml, and then we sort and create space separated array
 images=($(cat ${crdPath} | yq "..|.image? | select(.)" | sort -u | tr "\n" " "))
+#images=($(cat ${crdPath} | yq e '. as $o | (.. | .image? // empty) | select(. != "")' | sort -u | tr "\n" " "))
 
 imagesWithRepo=""
 # Add the repo prefix to the image names
@@ -28,12 +29,14 @@ done
 
 # Get operator-image
 operatorYamlPath="${parentDir}/../details/operator-sdk/astraconnector_operator.yaml"
-pattern=' +image: netapp\/astra-connector-operator:([^:\s]+)\s*'
+pattern=' +image: netapp\/astra-connector-operator:([^ \t\n]+[^\s])'
 [[ "$(cat ${operatorYamlPath})" =~ ${pattern} ]]
 operatorTag="${BASH_REMATCH[1]}"
+echo "REMATCH: ${BASH_REMATCH[@]}"
 # Add operator image to list of images
 imagesWithRepo+="${imagesWithRepo} netapp/astra-connector-operator:${operatorTag}"
 
+echo "OP TAG: ${operatorTag}"
 # Pull images in parallel
 echo "Pulling images: ${imagesWithRepo}"
 echo "${imagesWithRepo}" | xargs -P3 -n1 docker pull
