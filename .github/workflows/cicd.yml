@@ -47,6 +47,7 @@ jobs:
           export BRANCH_NAME=$(echo ${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}})
           export BUILD_VERSION=$(date +'%Y%m%d%H%M')-$BRANCH_NAME
           echo $BUILD_VERSION > VERSION
+          echo $BRANCH_NAME > BRANCH
 
       - name: Get the version (release branch)
         if: ${{ startsWith(github.ref, 'refs/heads/release-') }}
@@ -75,14 +76,17 @@ jobs:
         if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-') }}
         run: |
           export VERSION=$(cat VERSION)
+          export BRANCH=$(cat BRANCH)
           git pull --rebase
           make generate-operator-yaml
           git config --global user.name ${{ secrets.ACTIONS_USER }}
           git config --global user.email ${{ secrets.ACTIONS_EMAIL }}
-          git diff astraconnector_operator.yaml
-          git add astraconnector_operator.yaml
+          git diff details/operator-sdk/astraconnector_operator.yaml
+          git diff details/operator-sdk/config/manager/kustomization.yaml
+          git add details/operator-sdk/astraconnector_operator.yaml
+          git add details/operator-sdk/config/manager/kustomization.yaml
           git commit -m "Auto updating the operator image tag" -n
-          git push --set-upstream origin main
+          git push --set-upstream origin $BRANCH
 
       - name: Build Install Bundle
         if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-') }}
