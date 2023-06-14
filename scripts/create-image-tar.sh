@@ -9,7 +9,7 @@ fi
 
 parentDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 outputFilename=$1
-crdPath="${parentDir}/../config/samples/astraconnector_v1.yaml"
+crdPath="${parentDir}/../details/operator-sdk/config/samples/astra_v1_astraconnector.yaml"
 repo="theotw"
 
 # Parse images from chart. 'yq' parses yaml, and then we sort and create space separated array
@@ -27,7 +27,7 @@ for image in "${images[@]}"; do
 done
 
 # Get operator-image
-operatorYamlPath="${parentDir}/../astraconnector_operator.yaml"
+operatorYamlPath="${parentDir}/../details/operator-sdk/astraconnector_operator.yaml"
 pattern=' +image: netapp\/astra-connector-operator:([^:\s]+)\s*'
 [[ "$(cat ${operatorYamlPath})" =~ ${pattern} ]]
 operatorTag="${BASH_REMATCH[1]}"
