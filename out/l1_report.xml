@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites>
+	<testsuite tests="0" failures="0" time="1.518" name="github.com/NetApp-Polaris/astra-connector-operator/details/k8s">
+		<properties>
+			<property name="go.version" value="go1.20.3"></property>
+			<property name="coverage.statements.pct" value="75.0"></property>
+		</properties>
+	</testsuite>
+	<testsuite tests="0" failures="0" time="1.451" name="github.com/NetApp-Polaris/astra-connector-operator/details/operator-sdk/controllers">
+		<properties>
+			<property name="go.version" value="go1.20.3"></property>
+			<property name="coverage.statements.pct" value="0.0"></property>
+		</properties>
+	</testsuite>
+</testsuites>
