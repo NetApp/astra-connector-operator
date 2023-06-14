@@ -14,7 +14,5 @@ spec:
     image: natssync-client:2.0
   nats:
     image: nats:2.6.1-alpine3.14
-  neptune:
-    image: neptune
   imageRegistry:
     name: docker.repo.eng.netapp.com/oscarr/neptune
