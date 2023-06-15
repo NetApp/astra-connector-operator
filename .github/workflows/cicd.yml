@@ -128,29 +128,29 @@ jobs:
           asset_content_type: application/x-tar
 
       - name: Upload astraconnector yaml
-          if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-') }}
-          id: upload-release-asset
-          uses: actions/upload-release-asset@v1
-          env:
-            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-            FILE_PATH: "./details/operator-sdk/config/samples/astra_v1_astraconnector.yaml"
-            ASSET_NAME: "astra_v1_astraconnector.yaml"
-          with:
-            upload_url: ${{ steps.create_release.outputs.upload_url }}
-            asset_path: ${{ env.FILE_PATH }}
-            asset_name: ${{ env.ASSET_NAME }}
-            asset_content_type: text/yaml
+        if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-') }}
+        id: upload-release-asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FILE_PATH: "./details/operator-sdk/config/samples/astra_v1_astraconnector.yaml"
+          ASSET_NAME: "astra_v1_astraconnector.yaml"
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ env.FILE_PATH }}
+          asset_name: ${{ env.ASSET_NAME }}
+          asset_content_type: text/yaml
 
       - name: Upload astraconnector_operator.yaml
-          if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-') }}
-          id: upload-release-asset
-          uses: actions/upload-release-asset@v1
-          env:
-            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-            FILE_PATH: "/details/operator-sdk/astraconnector_operator.yaml"
-            ASSET_NAME: "astraconnector_operator.yaml"
-          with:
-            upload_url: ${{ steps.create_release.outputs.upload_url }}
-            asset_path: ${{ env.FILE_PATH }}
-            asset_name: ${{ env.ASSET_NAME }}
-            asset_content_type: text/yaml
+        if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-') }}
+        id: upload-release-asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FILE_PATH: "/details/operator-sdk/astraconnector_operator.yaml"
+          ASSET_NAME: "astraconnector_operator.yaml"
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ env.FILE_PATH }}
+          asset_name: ${{ env.ASSET_NAME }}
+          asset_content_type: text/yaml
