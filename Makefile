@@ -254,10 +254,6 @@ bundle-base:
 	rm -rf $(BUILD_DIR)/*.tgz # Remove existing tgz bundles
 	rm -rf $(INSTALL_BUNDLE_DIR)
 	mkdir -p $(INSTALL_BUNDLE_DIR)
-	cp $(OUTPUT_INSTALL_EXE_DIR)/* $(INSTALL_BUNDLE_DIR)
-	cp $(OUTPUT_IMAGE_TAR_DIR)/astra-connector-operator-images.tar $(INSTALL_BUNDLE_DIR)
-	cp $(MAKEFILE_DIR)/details/operator-sdk/config/samples/astra_v1_astraconnector.yaml $(INSTALL_BUNDLE_DIR)/astra_v1_astraconnector.yaml
-	cp $(MAKEFILE_DIR)/details/operator-sdk/astraconnector_operator.yaml $(INSTALL_BUNDLE_DIR)/astraconnector_operator.yaml
 
 
 install-bundle: image-tar install-exes bundle-base
