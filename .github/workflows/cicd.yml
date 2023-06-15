@@ -146,7 +146,7 @@ jobs:
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          FILE_PATH: "/details/operator-sdk/astraconnector_operator.yaml"
+          FILE_PATH: "./details/operator-sdk/astraconnector_operator.yaml"
           ASSET_NAME: "astraconnector_operator.yaml"
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
