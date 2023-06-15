@@ -129,7 +129,7 @@ jobs:
 
       - name: Upload astraconnector yaml
         if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-') }}
-        id: upload-release-asset
+        id: upload-astraconnector-yaml
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -143,7 +143,7 @@ jobs:
 
       - name: Upload astraconnector_operator.yaml
         if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-') }}
-        id: upload-release-asset
+        id: upload-astraconnector-operator-yaml
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
