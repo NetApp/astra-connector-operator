@@ -258,8 +258,6 @@ bundle-base:
 
 install-bundle: image-tar install-exes bundle-base
 	cd $(INSTALL_BUNDLE_DIR) && tar -zcf $(BUILD_DIR)/astra-connector-operator-${VERSION}.tgz .
-	cp $(MAKEFILE_DIR)/details/operator-sdk/config/samples/astra_v1_astraconnector.yaml $(BUILD_DIR)/astra_v1_astraconnector.yaml
-	cp $(MAKEFILE_DIR)/details/operator-sdk/astraconnector_operator.yaml $(BUILD_DIR)/astraconnector_operator.yaml
 
 
 .PHONY: generate-mocks
