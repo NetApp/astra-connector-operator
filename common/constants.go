@@ -5,18 +5,18 @@
 package common
 
 const (
-	DefaultImageRegistry = "theotw"
+	DefaultImageRegistry = "docker.io"
 
 	AstraConnectName            = "astraconnect"
 	AstraConnectDefaultReplicas = 1
-	AstraConnectDefaultImage    = "astra-connector:0.3"
+	AstraConnectDefaultImage    = "netapp/astra-connector:1.0.202306162024"
 
 	NatsSyncClientName                  = "natssync-client"
 	NatsSyncClientDefaultReplicas       = 1
 	NatsSyncClientPort                  = 8080
 	NatsSyncClientProtocol              = "TCP"
 	NatsSyncClientKeystoreUrl           = "configmap:///configmap-data"
-	NatsSyncClientDefaultImage          = "natssync-client:0.9.202202170408"
+	NatsSyncClientDefaultImage          = "theotw/natssync-client:2.1.202305182124"
 	NatsSyncClientDefaultCloudBridgeURL = "https://astra.netapp.io"
 
 	NatsName               = "nats"
@@ -30,7 +30,7 @@ const (
 	NatsMetricsPort        = 7777
 	NatsGatewaysPort       = 7522
 	NatsDefaultReplicas    = 2
-	NatsDefaultImage       = "nats:2.6.1-alpine3.14"
+	NatsDefaultImage       = "nats:2.8.4-alpine3.15"
 
 	NatsSyncClientConfigMapName               = "natssync-client-configmap"
 	NatsSyncClientConfigMapRoleName           = "natssync-client-configmap-role"

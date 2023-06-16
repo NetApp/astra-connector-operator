@@ -94,7 +94,7 @@ func TestAstraConnectGetDeploymentObjectsUsingDefaults(t *testing.T) {
 	assert.Equal(t, common.AstraConnectName, deployment.Spec.Template.Spec.ServiceAccountName)
 
 	container := deployment.Spec.Template.Spec.Containers[0]
-	assert.Equal(t, "theotw/astra-connector:0.3", container.Image)
+	assert.Equal(t, "docker.io/netapp/astra-connector:1.0.202306162024", container.Image)
 	assert.Equal(t, common.AstraConnectName, container.Name)
 
 	assert.Equal(t, 2, len(container.Env))
