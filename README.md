@@ -1,45 +1,6 @@
 # Astra Installer Operator 
-
-Astra Installer Operator installs the pieces required for the agent architecture. This includes neptune, astra-connector, and trident.
-
-### To deploy the operator
-#### Create the namespace for the operator
-```
-kubectl create ns astra-connector-operator
-```
-#### Apply the astraconnector_operator.yaml file to the operator namespace
-```
-kubectl apply -f astraconnector_operator.yaml -n astra-connector-operator
-```
-### Install the private cluster components
-#### Create the namespace for the private cluster components
-```
-kubectl create ns astra-connector
-```
-#### Apply the AstraConnector CRD
-
-Update the CRD with the right values. Refer to the table below for explanations of the CRD spec
-```
-kubectl apply -f config/samples/astraconnector_v1.yaml -n astra-connector
-```
-#### Check the AstraConnector status
-```
-» kubectl get astraconnector astra-connector -n astra-connector
-NAME              REGISTERED   ASTRACONNECTORID   STATUS
-astra-connector   false                           Updating Deployment astra-connector/echo-client
-```
-### Uninstall the private cluster components
-- Unmanage the cluster from the Astra UI
-- Remove the AstraConnector CRD
-
-NOTE: Removing the CRD will also attempt to unregister the cluster with Astra
-```
-kubectl delete -f config/samples/astraconnector_v1.yaml -n astra-connector
-```
-### Uninstall the operator
-```
-kubectl delete -f astraconnector_operator.yaml -n astra-connector-operator
-```
+Please refer to this confluence for now
+https://confluence.ngage.netapp.com/display/POLARIS/Phase+1+%2823.07%29+Astra+Connector+Deployment+-+Non+VPN+Instructions
 
 ## Security Best Practices
 ### Use RBAC
