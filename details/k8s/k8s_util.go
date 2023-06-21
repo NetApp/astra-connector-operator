@@ -6,8 +6,10 @@ package k8s
 
 import (
 	"context"
+
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
+
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/client-go/discovery"
 	ctrl "sigs.k8s.io/controller-runtime"
