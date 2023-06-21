@@ -109,7 +109,7 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 	}
 
 	k8sUtil := k8s.NewK8sUtil(r.Client, log)
-	precheckClient := precheck.NewCheckClient(log, k8sUtil)
+	precheckClient := precheck.NewPrecheckClient(log, k8sUtil)
 	precheckClient.Run()
 
 	// deploy Neptune

@@ -28,3 +28,6 @@ deployConfig.yaml
 
 # build dir
 build/
+
+# Config file
+.config.yaml

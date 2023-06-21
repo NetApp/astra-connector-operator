@@ -15,7 +15,7 @@ type PrecheckClient struct {
 	log     logr.Logger
 }
 
-func NewCheckClient(log logr.Logger, k8sUtil k8s.K8sUtilInterface) *PrecheckClient {
+func NewPrecheckClient(log logr.Logger, k8sUtil k8s.K8sUtilInterface) *PrecheckClient {
 	return &PrecheckClient{
 		k8sUtil: k8sUtil,
 		log:     log,
