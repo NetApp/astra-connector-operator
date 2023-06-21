@@ -3,21 +3,25 @@
 package precheck
 
 import (
-	"context"
-	"github.com/NetApp-Polaris/astra-connector-operator/details/k8s"
 	"github.com/go-logr/logr"
+
+	"github.com/NetApp-Polaris/astra-connector-operator/details/k8s"
 )
 
 type SetWarning func(message string) error
 
 type PrecheckClient struct {
-	k8sUtil k8s.K8sUtil
+	k8sUtil k8s.K8sUtilInterface
 	log     logr.Logger
 }
 
-func NewCheckClient(ctx context.Context, log logr.Logger, k8sUtil k8s.K8sUtil) *PrecheckClient {
+func NewCheckClient(log logr.Logger, k8sUtil k8s.K8sUtilInterface) *PrecheckClient {
 	return &PrecheckClient{
 		k8sUtil: k8sUtil,
 		log:     log,
 	}
+}
+
+func (p *PrecheckClient) Run() {
+	p.RunK8sVersionCheck()
 }

@@ -4,6 +4,7 @@ package precheck
 
 import (
 	"fmt"
+
 	semver "github.com/hashicorp/go-version"
 )
 

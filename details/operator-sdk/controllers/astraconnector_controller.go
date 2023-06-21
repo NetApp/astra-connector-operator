@@ -6,6 +6,8 @@ package controllers
 
 import (
 	"context"
+	"github.com/NetApp-Polaris/astra-connector-operator/details/k8s"
+	"github.com/NetApp-Polaris/astra-connector-operator/details/k8s/precheck"
 	"net/http"
 	"reflect"
 
@@ -105,6 +107,10 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 		// Stop reconciliation as the item is being deleted
 		return ctrl.Result{}, nil
 	}
+
+	k8sUtil := k8s.NewK8sUtil(r.Client, log)
+	precheckClient := precheck.NewCheckClient(log, k8sUtil)
+	precheckClient.Run()
 
 	// deploy Neptune
 	if conf.Config.FeatureFlags().DeployNeptune() {
