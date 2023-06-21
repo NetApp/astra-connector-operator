@@ -28,3 +28,6 @@ deployConfig.yaml
 
 # build dir
 build/
+
+# Local Developer Files
+.config.yaml

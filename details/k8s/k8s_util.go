@@ -6,6 +6,7 @@ package k8s
 
 import (
 	"context"
+
 	rbacv1 "k8s.io/api/rbac/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -19,6 +20,7 @@ type K8sUtil struct {
 
 type K8sUtilInterface interface {
 	CreateOrUpdateResource(context.Context, client.Object, client.Object) error
+	DeleteResource(context.Context, client.Object) error
 }
 
 func NewK8sUtil(c client.Client) K8sUtilInterface {
@@ -47,6 +49,10 @@ func (r *K8sUtil) CreateOrUpdateResource(ctx context.Context, resource client.Ob
 	// Use the ctrl.CreateOrUpdate function with the MutateFn function
 	_, err := ctrl.CreateOrUpdate(ctx, r.Client, resource, mutateFn)
 	return err
+}
+
+func (r *K8sUtil) DeleteResource(ctx context.Context, resource client.Object) error {
+	return r.Client.Delete(ctx, resource)
 }
 
 func isNamespaceScoped(obj client.Object) bool {
