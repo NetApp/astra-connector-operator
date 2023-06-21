@@ -6,8 +6,6 @@ package controllers
 
 import (
 	"context"
-	"github.com/NetApp-Polaris/astra-connector-operator/details/k8s"
-	"github.com/NetApp-Polaris/astra-connector-operator/details/k8s/precheck"
 	"net/http"
 	"reflect"
 
@@ -26,6 +24,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"github.com/NetApp-Polaris/astra-connector-operator/conf"
+	"github.com/NetApp-Polaris/astra-connector-operator/details/k8s"
+	"github.com/NetApp-Polaris/astra-connector-operator/details/k8s/precheck"
 	v1 "github.com/NetApp-Polaris/astra-connector-operator/details/operator-sdk/api/v1"
 	"github.com/NetApp-Polaris/astra-connector-operator/register"
 )
