@@ -121,8 +121,8 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 			return connectorResults, err
 		}
 	}
-	// POST/PUT Managed Cluster
 
+	// POST/PUT Managed Cluster
 	_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
 	return ctrl.Result{}, nil
 }

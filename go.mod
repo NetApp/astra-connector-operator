@@ -6,6 +6,7 @@ require (
 	github.com/docker/docker v24.0.2+incompatible
 	github.com/go-logr/logr v1.2.4
 	github.com/go-logr/stdr v1.2.2
+	github.com/hashicorp/go-version v1.6.0
 	github.com/jessevdk/go-flags v1.5.0
 	github.com/onsi/ginkgo/v2 v2.10.0
 	github.com/onsi/gomega v1.27.7
