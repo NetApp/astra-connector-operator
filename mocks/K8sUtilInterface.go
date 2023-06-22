@@ -29,6 +29,20 @@ func (_m *K8sUtilInterface) CreateOrUpdateResource(_a0 context.Context, _a1 clie
 	return r0
 }
 
+// DeleteResource provides a mock function with given fields: _a0, _a1
+func (_m *K8sUtilInterface) DeleteResource(_a0 context.Context, _a1 client.Object) error {
+	ret := _m.Called(_a0, _a1)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, client.Object) error); ok {
+		r0 = rf(_a0, _a1)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // VersionGet provides a mock function with given fields:
 func (_m *K8sUtilInterface) VersionGet() (string, error) {
 	ret := _m.Called()
