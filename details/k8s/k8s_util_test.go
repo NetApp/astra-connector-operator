@@ -121,3 +121,46 @@ func TestCreateOrUpdateResource(t *testing.T) {
 		assert.Equal(t, clusterRole.Rules, updatedClusterRole.Rules)
 	})
 }
+
+func TestDeleteResource(t *testing.T) {
+	scheme := runtime.NewScheme()
+	_ = rbacv1.AddToScheme(scheme)
+
+	k8sUtil, k8sClient := createResourceHandlerWithFakeClient()
+
+	t.Run("create and delete cluster scoped resource", func(t *testing.T) {
+		clusterRole := &rbacv1.ClusterRole{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "test-cluster-role",
+			},
+		}
+
+		// Create and verify the resource
+		err := k8sUtil.CreateOrUpdateResource(ctx, clusterRole, nil)
+		assert.NoError(t, err)
+
+		var createdClusterRole rbacv1.ClusterRole
+		err = k8sClient.Get(ctx, client.ObjectKey{Name: clusterRole.Name}, &createdClusterRole)
+		assert.NoError(t, err)
+		assert.Equal(t, clusterRole.Name, createdClusterRole.Name)
+
+		// Delete and verify the resource
+		err = k8sUtil.DeleteResource(ctx, clusterRole)
+		assert.NoError(t, err)
+
+		err = k8sClient.Get(ctx, client.ObjectKey{Name: clusterRole.Name}, &createdClusterRole)
+		assert.EqualError(t, err, "clusterroles.rbac.authorization.k8s.io \"test-cluster-role\" not found")
+	})
+
+	t.Run("delete non-existing resource", func(t *testing.T) {
+		clusterRole := &rbacv1.ClusterRole{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "test-cluster-role",
+			},
+		}
+
+		// Delete and verify the resource
+		err := k8sUtil.DeleteResource(ctx, clusterRole)
+		assert.EqualError(t, err, "clusterroles.rbac.authorization.k8s.io \"test-cluster-role\" not found")
+	})
+}
