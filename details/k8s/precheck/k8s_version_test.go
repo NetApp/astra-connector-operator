@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/NetApp-Polaris/astra-connector-operator/details/k8s/precheck"
-	semver "github.com/hashicorp/go-version"
 )
 
 func TestIsSupported(t *testing.T) {
@@ -45,11 +44,10 @@ func TestIsSupported(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			log := testutil.CreateLoggerForTesting(t)
-			k8sVersion := semver.Must(semver.NewSemver(tc.k8sVersion))
 			mockK8sUtil := mocks.NewK8sUtilInterface(t)
 			precheckClient := precheck.NewPrecheckClient(log, mockK8sUtil)
 
-			mockK8sUtil.On("VersionGet").Return(k8sVersion, nil)
+			mockK8sUtil.On("VersionGet").Return(tc.k8sVersion, nil)
 
 			precheckClient.RunK8sVersionCheck()
 		})
