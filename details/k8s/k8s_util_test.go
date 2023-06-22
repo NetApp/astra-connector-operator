@@ -21,14 +21,15 @@ import (
 
 var ctx = context.Background()
 
-func createResourceHandlerWithFakeClient(initObjs ...client.Object) (k8s.K8sUtilInterface, client.Client) {
+func createResourceHandlerWithFakeClient(t *testing.T, initObjs ...client.Object) (k8s.K8sUtilInterface, client.Client) {
 	fakeClient := testutil.CreateFakeClient(initObjs...)
-	k8sUtil := k8s.NewK8sUtil(fakeClient)
+	log := testutil.CreateLoggerForTesting(t)
+	k8sUtil := k8s.NewK8sUtil(fakeClient, log)
 	return k8sUtil, fakeClient
 }
 
 func TestNewResourceHandler(t *testing.T) {
-	handler, _ := createResourceHandlerWithFakeClient()
+	handler, _ := createResourceHandlerWithFakeClient(t)
 
 	assert.NotNil(t, handler)
 }
@@ -37,7 +38,7 @@ func TestCreateOrUpdateResource(t *testing.T) {
 	scheme := runtime.NewScheme()
 	_ = rbacv1.AddToScheme(scheme)
 
-	k8sUtil, k8sClient := createResourceHandlerWithFakeClient()
+	k8sUtil, k8sClient := createResourceHandlerWithFakeClient(t)
 
 	t.Run("create namespace scoped resource", func(t *testing.T) {
 		role := &rbacv1.Role{
@@ -126,7 +127,7 @@ func TestDeleteResource(t *testing.T) {
 	scheme := runtime.NewScheme()
 	_ = rbacv1.AddToScheme(scheme)
 
-	k8sUtil, k8sClient := createResourceHandlerWithFakeClient()
+	k8sUtil, k8sClient := createResourceHandlerWithFakeClient(t)
 
 	t.Run("create and delete cluster scoped resource", func(t *testing.T) {
 		clusterRole := &rbacv1.ClusterRole{

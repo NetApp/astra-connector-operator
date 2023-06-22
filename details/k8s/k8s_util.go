@@ -7,7 +7,11 @@ package k8s
 import (
 	"context"
 
+	"github.com/go-logr/logr"
+	"github.com/pkg/errors"
+
 	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/client-go/discovery"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -16,15 +20,17 @@ import (
 
 type K8sUtil struct {
 	Client client.Client
+	log    logr.Logger
 }
 
 type K8sUtilInterface interface {
 	CreateOrUpdateResource(context.Context, client.Object, client.Object) error
 	DeleteResource(context.Context, client.Object) error
+	VersionGet() (string, error)
 }
 
-func NewK8sUtil(c client.Client) K8sUtilInterface {
-	return &K8sUtil{Client: c}
+func NewK8sUtil(c client.Client, log logr.Logger) K8sUtilInterface {
+	return &K8sUtil{Client: c, log: log}
 }
 
 // CreateOrUpdateResource creates a role, provided a namespace and name
@@ -62,4 +68,22 @@ func isNamespaceScoped(obj client.Object) bool {
 	default:
 		return true
 	}
+}
+
+// VersionGet returns the server version of the k8s cluster.
+func (r *K8sUtil) VersionGet() (string, error) {
+	restConfig, err := ctrl.GetConfig()
+	if err != nil {
+		return "", errors.Wrap(err, "error getting kubeconfig")
+	}
+	dClient, err := discovery.NewDiscoveryClientForConfig(restConfig)
+	if err != nil {
+		return "", errors.Wrap(err, "error creating discovery client")
+	}
+	versionInfo, err := dClient.ServerVersion()
+	if err != nil {
+		return "", errors.Wrap(err, "error getting server version")
+	}
+	r.log.V(3).Info("versionInfo", "versionInfo", versionInfo)
+	return versionInfo.GitVersion, nil
 }

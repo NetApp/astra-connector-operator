@@ -24,6 +24,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"github.com/NetApp-Polaris/astra-connector-operator/conf"
+	"github.com/NetApp-Polaris/astra-connector-operator/details/k8s"
+	"github.com/NetApp-Polaris/astra-connector-operator/details/k8s/precheck"
 	v1 "github.com/NetApp-Polaris/astra-connector-operator/details/operator-sdk/api/v1"
 	"github.com/NetApp-Polaris/astra-connector-operator/register"
 )
@@ -109,6 +111,10 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 		return ctrl.Result{}, nil
 	}
 
+	k8sUtil := k8s.NewK8sUtil(r.Client, log)
+	precheckClient := precheck.NewPrecheckClient(log, k8sUtil)
+	precheckClient.Run()
+
 	// deploy Neptune
 	if conf.Config.FeatureFlags().DeployNeptune() {
 		neptuneResult, err := r.deployNeptune(ctx, astraConnector, &natsSyncClientStatus)
@@ -124,8 +130,8 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 			return connectorResults, err
 		}
 	}
-	// POST/PUT Managed Cluster
 
+	// POST/PUT Managed Cluster
 	_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
 	return ctrl.Result{}, nil
 }

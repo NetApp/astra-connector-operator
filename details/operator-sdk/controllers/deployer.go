@@ -41,7 +41,7 @@ var resources = []createResourceParams{
 
 func (r *AstraConnectorController) deployResources(ctx context.Context, deployer model.Deployer, astraConnector *installer.AstraConnector, natsSyncClientStatus *installer.NatsSyncClientStatus) error {
 	log := ctrllog.FromContext(ctx)
-	k8sUtil := k8s.NewK8sUtil(r.Client)
+	k8sUtil := k8s.NewK8sUtil(r.Client, log)
 
 	for _, funcList := range resources {
 
@@ -77,7 +77,7 @@ func (r *AstraConnectorController) deployResources(ctx context.Context, deployer
 
 func (r *AstraConnectorController) deleteClusterScopedResources(ctx context.Context, deployer model.Deployer, astraConnector *installer.AstraConnector) {
 	log := ctrllog.FromContext(ctx)
-	k8sUtil := k8s.NewK8sUtil(r.Client)
+	k8sUtil := k8s.NewK8sUtil(r.Client, log)
 
 	for _, funcList := range resources {
 		if !funcList.clusterScope {

@@ -20,7 +20,6 @@ import (
 func (r *AstraConnectorController) deployConnector(ctx context.Context,
 	astraConnector *v1.AstraConnector, natsSyncClientStatus *v1.NatsSyncClientStatus) (ctrl.Result, error) {
 	log := ctrllog.FromContext(ctx)
-	// k8sUtil := k8s.NewK8sUtil(ctx, r.Client, log)
 
 	// let's deploy Nats, NatsSyncClient and Astra Connector in that order
 	connectorDeployers := getDeployers()
