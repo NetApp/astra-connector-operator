@@ -127,7 +127,7 @@ func TestDeleteResource(t *testing.T) {
 	scheme := runtime.NewScheme()
 	_ = rbacv1.AddToScheme(scheme)
 
-	k8sUtil, k8sClient := createResourceHandlerWithFakeClient()
+	k8sUtil, k8sClient := createResourceHandlerWithFakeClient(t)
 
 	t.Run("create and delete cluster scoped resource", func(t *testing.T) {
 		clusterRole := &rbacv1.ClusterRole{
