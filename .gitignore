@@ -29,5 +29,5 @@ deployConfig.yaml
 # build dir
 build/
 
-# Config file
+# Local Developer Files
 .config.yaml

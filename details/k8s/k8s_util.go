@@ -25,6 +25,7 @@ type K8sUtil struct {
 
 type K8sUtilInterface interface {
 	CreateOrUpdateResource(context.Context, client.Object, client.Object) error
+	DeleteResource(context.Context, client.Object) error
 	VersionGet() (string, error)
 }
 
@@ -54,6 +55,10 @@ func (r *K8sUtil) CreateOrUpdateResource(ctx context.Context, resource client.Ob
 	// Use the ctrl.CreateOrUpdate function with the MutateFn function
 	_, err := ctrl.CreateOrUpdate(ctx, r.Client, resource, mutateFn)
 	return err
+}
+
+func (r *K8sUtil) DeleteResource(ctx context.Context, resource client.Object) error {
+	return r.Client.Delete(ctx, resource)
 }
 
 func isNamespaceScoped(obj client.Object) bool {

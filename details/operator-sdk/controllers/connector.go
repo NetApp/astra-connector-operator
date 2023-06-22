@@ -22,7 +22,7 @@ func (r *AstraConnectorController) deployConnector(ctx context.Context,
 	log := ctrllog.FromContext(ctx)
 
 	// let's deploy Nats, NatsSyncClient and Astra Connector in that order
-	connectorDeployers := []model.Deployer{connector.NewNatsDeployer(), connector.NewNatsSyncClientDeployer(), connector.NewAstraConnectorDeployer()}
+	connectorDeployers := getDeployers()
 	for _, deployer := range connectorDeployers {
 		err := r.deployResources(ctx, deployer, astraConnector, natsSyncClientStatus)
 		if err != nil {
@@ -108,4 +108,15 @@ func (r *AstraConnectorController) deployConnector(ctx context.Context,
 	}
 
 	return ctrl.Result{}, nil
+}
+
+func getDeployers() []model.Deployer {
+	return []model.Deployer{connector.NewNatsDeployer(), connector.NewNatsSyncClientDeployer(), connector.NewAstraConnectorDeployer()}
+}
+
+func (r *AstraConnectorController) deleteConnectorClusterScopedResources(ctx context.Context, astraConnector *v1.AstraConnector) {
+	connectorDeployers := getDeployers()
+	for _, deployer := range connectorDeployers {
+		r.deleteClusterScopedResources(ctx, deployer, astraConnector)
+	}
 }

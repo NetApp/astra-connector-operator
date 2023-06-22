@@ -95,6 +95,9 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 				log.Info("Unregistered natsSyncClient upon CRD delete")
 			}
 
+			// delete any cluster scoped resources created by the operator
+			r.deleteConnectorClusterScopedResources(ctx, astraConnector)
+
 			// remove our finalizer from the list and update it.
 			controllerutil.RemoveFinalizer(astraConnector, finalizerName)
 			if err := r.Update(ctx, astraConnector); err != nil {
