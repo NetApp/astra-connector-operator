@@ -150,6 +150,10 @@ MOCKERY = $(shell pwd)/bin/mockery
 install-mockery: ## Download mockery locally if necessary: https://github.com/vektra/mockery
 	$(call go-get-tool,$(MOCKERY),github.com/vektra/mockery/v2@v2.19.0)
 
+GOLANGCI_LINT = $(shell pwd)/bin/golangci-lint
+install-golangci-lint: ## Download golangci-lint locally if necessary: https://github.com/golangci/golangci-lint
+	$(call go-get-tool,$(GOLANGCI_LINT),github.com/golangci/golangci-lint/cmd/golangci-lint@v1.47.3)
+
 # go-get-tool will 'go install' any package $2 and install it to $1.
 PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
 define go-get-tool
@@ -269,3 +273,11 @@ generate-mocks: install-mockery
 cov_dir:
 	@mkdir -p ${COV_DIR}
 	@chmod ${DIRPERMS} ${COV_DIR}
+
+.PHONY: l lint
+l:
+lint: fmt lint-go
+
+lint-go: fmt install-golangci-lint
+	$(GOLANGCI_LINT) cache status
+	$(GOLANGCI_LINT) run --timeout 20m --verbose --print-resources-usage
