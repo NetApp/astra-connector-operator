@@ -225,17 +225,8 @@ catalog-build: opm ## Build a catalog image.
 catalog-push: ## Push a catalog image.
 	$(MAKE) docker-push IMG=$(CATALOG_IMG)
 
-JUNIT_REPORT = $(shell pwd)/bin/go-junit-report
-go-junit-report: ## Download go-junit-report locally if necessary.
-	$(call go-get-tool,$(JUNIT_REPORT),github.com/jstemmer/go-junit-report@latest)
-
-l1: generate manifests fmt vet envtest go-junit-report
-	SUCCESS=0; \
-	mkdir -p out; \
-	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test ./... -coverprofile out/cover.out > out/l1_out.txt 2>&1 || SUCCESS=1; \
-	cat out/l1_out.txt | $(PROJECT_DIR)/bin/go-junit-report > out/l1_report.xml || echo "Failure generating report xml"; \
-	cat out/l1_out.txt; \
-	exit $$SUCCESS;
+test: generate manifests fmt vet envtest
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test ./... -coverprofile cover.out
 
 image-tar:
 	rm -rf ${OUTPUT_IMAGE_TAR_DIR}

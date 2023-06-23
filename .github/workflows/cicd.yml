@@ -32,40 +32,34 @@ jobs:
           export PATH=$PATH:$(go env GOPATH)/bin
           make lint
 
-  build_and_test:
-    name: CICD
+  unit:
+    name: Unit Test
     runs-on: ubuntu-latest
     steps:
-      - name: Set up Go 1.x
+      - name: Set up Go
         uses: actions/setup-go@v2
         with:
-          go-version: ^1.17
+          go-version: 1.19
 
-      - name: Check out code into the Go module directory
+      - name: Check out code
         uses: actions/checkout@v2
 
-      - name: Get dependencies
+      - name: Install depdendencies
         run: |
-          go get -v -t -d ./...
-          if [ -f Gopkg.toml ]; then
-              curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
-              dep ensure
-          fi
+          go install github.com/t-yuki/gocover-cobertura@latest
 
-      - name: Unit / L1 Test
-        run: make l1
+      # ToDo: run tests in /cmd directory
+      - name: Run tests
+        run: |
+          export PATH=$PATH:$(go env GOPATH)/bin
+          make test
+          gocover-cobertura < cover.out > cobertura-coverage.xml
 
-      - name: Publish Unit Test Results
-        uses: EnricoMi/publish-unit-test-result-action@v1.6
-        if: always()
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          files: out/*_report.xml
-
+      # ToDo: generate/merge coverage for tests in /cmd directory
       - name: Generate coverage report
         uses: irongut/CodeCoverageSummary@v1.3.0
         with:
-          filename: l1_out.xml
+          filename: cobertura-coverage.xml
           badge: true
           fail_below_min: true
           format: markdown
@@ -88,8 +82,29 @@ jobs:
           name: code-coverage
           path: |
             cover.out
-            l1_out.xml
+            cobertura-coverage.xml
+            code-coverage-results.md
           retention-days: 5
+
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Go 1.x
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.19
+
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v2
+
+      - name: Get dependencies
+        run: |
+          go get -v -t -d ./...
+          if [ -f Gopkg.toml ]; then
+              curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
+              dep ensure
+          fi
 
       - name: Get the version (non-release branch)
         if: ${{ !startsWith(github.ref, 'refs/heads/release-') }}
