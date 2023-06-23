@@ -150,6 +150,10 @@ MOCKERY = $(shell pwd)/bin/mockery
 install-mockery: ## Download mockery locally if necessary: https://github.com/vektra/mockery
 	$(call go-get-tool,$(MOCKERY),github.com/vektra/mockery/v2@v2.19.0)
 
+GOLANGCI_LINT = $(shell pwd)/bin/golangci-lint
+install-golangci-lint: ## Download golangci-lint locally if necessary: https://github.com/golangci/golangci-lint
+	$(call go-get-tool,$(GOLANGCI_LINT),github.com/golangci/golangci-lint/cmd/golangci-lint@v1.47.3)
+
 # go-get-tool will 'go install' any package $2 and install it to $1.
 PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
 define go-get-tool
@@ -221,17 +225,8 @@ catalog-build: opm ## Build a catalog image.
 catalog-push: ## Push a catalog image.
 	$(MAKE) docker-push IMG=$(CATALOG_IMG)
 
-JUNIT_REPORT = $(shell pwd)/bin/go-junit-report
-go-junit-report: ## Download go-junit-report locally if necessary.
-	$(call go-get-tool,$(JUNIT_REPORT),github.com/jstemmer/go-junit-report@latest)
-
-l1: generate manifests fmt vet envtest go-junit-report
-	SUCCESS=0; \
-	mkdir -p out; \
-	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test ./... -coverprofile out/cover.out > out/l1_out.txt 2>&1 || SUCCESS=1; \
-	cat out/l1_out.txt | $(PROJECT_DIR)/bin/go-junit-report > out/l1_report.xml || echo "Failure generating report xml"; \
-	cat out/l1_out.txt; \
-	exit $$SUCCESS;
+test: generate manifests fmt vet envtest
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test ./... -coverprofile cover.out
 
 image-tar:
 	rm -rf ${OUTPUT_IMAGE_TAR_DIR}
@@ -269,3 +264,11 @@ generate-mocks: install-mockery
 cov_dir:
 	@mkdir -p ${COV_DIR}
 	@chmod ${DIRPERMS} ${COV_DIR}
+
+.PHONY: l lint
+l:
+lint: fmt lint-go
+
+lint-go: fmt install-golangci-lint
+	$(GOLANGCI_LINT) cache status
+	$(GOLANGCI_LINT) run --timeout 20m --verbose --print-resources-usage

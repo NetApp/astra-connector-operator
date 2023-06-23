@@ -11,14 +11,89 @@ on:
     branches: '*'
 
 jobs:
-  build_and_test:
-    name: CICD
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.19
+
+      - name: Check out code
+        uses: actions/checkout@v2
+
+      - name: Install depdendencies
+        run: |
+          go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+
+      - name: Run Linters
+        run: |
+          export PATH=$PATH:$(go env GOPATH)/bin
+          make lint
+
+  unit:
+    name: Unit Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.19
+
+      - name: Check out code
+        uses: actions/checkout@v2
+
+      - name: Install depdendencies
+        run: |
+          go install github.com/t-yuki/gocover-cobertura@latest
+
+      # ToDo: run tests in /cmd directory
+      - name: Run tests
+        run: |
+          export PATH=$PATH:$(go env GOPATH)/bin
+          make test
+          gocover-cobertura < cover.out > cobertura-coverage.xml
+
+      # ToDo: generate/merge coverage for tests in /cmd directory
+      - name: Generate coverage report
+        uses: irongut/CodeCoverageSummary@v1.3.0
+        with:
+          filename: cobertura-coverage.xml
+          badge: true
+          fail_below_min: true
+          format: markdown
+          hide_complexity: true
+          indicators: false
+          output: both
+          thresholds: '47 80'
+
+      - name: Add coverage PR comment
+        uses: marocchino/sticky-pull-request-comment@v2
+        if: github.event_name == 'pull_request'
+        with:
+          recreate: true
+          path: code-coverage-results.md
+
+      - name: Upload coverage as artifacts
+        uses: actions/upload-artifact@v2
+        if: always()
+        with:
+          name: code-coverage
+          path: |
+            cover.out
+            cobertura-coverage.xml
+            code-coverage-results.md
+          retention-days: 5
+
+  build:
+    name: build
     runs-on: ubuntu-latest
     steps:
       - name: Set up Go 1.x
         uses: actions/setup-go@v2
         with:
-          go-version: ^1.17
+          go-version: 1.19
 
       - name: Check out code into the Go module directory
         uses: actions/checkout@v2
@@ -30,16 +105,6 @@ jobs:
               curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
               dep ensure
           fi
-
-      - name: Unit / L1 Test
-        run: make l1
-
-      - name: Publish Unit Test Results
-        uses: EnricoMi/publish-unit-test-result-action@v1.6
-        if: always()
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          files: out/*_report.xml
 
       - name: Get the version (non-release branch)
         if: ${{ !startsWith(github.ref, 'refs/heads/release-') }}
