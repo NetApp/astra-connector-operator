@@ -424,7 +424,7 @@ spec:
         - --leader-elect
         command:
         - /manager
-        image: netapp/astra-connector-operator:202306222144-main
+        image: netapp/astra-connector-operator:202306232010-main
         livenessProbe:
           httpGet:
             path: /healthz
@@ -440,11 +440,11 @@ spec:
           periodSeconds: 10
         resources:
           limits:
-            cpu: 300m
-            memory: 750Mi
+            cpu: 200m
+            memory: 100Mi
           requests:
             cpu: 100m
-            memory: 75Mi
+            memory: 20Mi
         securityContext:
           allowPrivilegeEscalation: false
       securityContext:
