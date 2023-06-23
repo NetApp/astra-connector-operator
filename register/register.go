@@ -951,9 +951,6 @@ func (c clusterRegisterUtil) RegisterClusterWithAstra(astraConnectorId string) e
 		return err
 	}
 
-	// TODO remove
-	c.Log.Info("Secret " + apiToken)
-
 	// 1. Checks the existence of cloud in the system with the cloudId (if it was specified in the CR Spec)
 	//    If the CloudId was specified and the cloud exists in the system, the same cloudId is returned.
 	//    If the CloudId was specified and the cloud doesn't exist in the system, an error is returned.
