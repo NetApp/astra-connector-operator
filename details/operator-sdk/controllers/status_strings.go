@@ -36,6 +36,6 @@ const (
 
 	UnregisterFromAstra = "Unregistered the cluster with Astra"
 
-	FailedConnectorIDAdd    = "Failed to add ConnectorID to Astra"
+	FailedConnectorIDAdd    = "Failed to add cluster to Astra"
 	FailedConnectorIDRemove = "Failed to remove the ConnectorID from Astra"
 )
