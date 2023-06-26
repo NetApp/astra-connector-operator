@@ -608,14 +608,15 @@ func (c clusterRegisterUtil) createCluster(astraHost, cloudId, astraConnectorId,
 		return ClusterInfo{}, errors.Wrap(err, "error on request post clusters")
 	}
 
-	if clustersResp.StatusCode != http.StatusCreated {
-		return ClusterInfo{}, errors.New("add cluster failed with: " + strconv.Itoa(clustersResp.StatusCode))
-	}
-
 	respBody, err := io.ReadAll(clustersResp.Body)
 	if err != nil {
 		c.Log.WithValues("response", string(respBody)).Error(err, "error reading response")
 		return ClusterInfo{}, errors.Wrap(err, "error reading response from post clusters")
+	}
+
+	if clustersResp.StatusCode != http.StatusCreated {
+		c.Log.WithValues("response", string(respBody)).Error(err, "error adding cluster")
+		return ClusterInfo{}, errors.New("add cluster failed with: " + strconv.Itoa(clustersResp.StatusCode))
 	}
 
 	err = json.Unmarshal(respBody, &clustersRespJson)
