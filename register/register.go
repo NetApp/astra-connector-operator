@@ -420,14 +420,15 @@ func (c clusterRegisterUtil) createCloud(astraHost, cloudType, apiToken string) 
 
 	respBody, err := c.readResponseBody(response)
 	if err != nil {
+		c.Log.WithValues("response", string(respBody)).Error(err, "error reading response")
 		return "", errors.Wrap(err, "error reading response")
 	}
 
 	cloudResp := &CloudResp{}
 	err = json.Unmarshal(respBody, &cloudResp)
 	if err != nil {
-		c.Log.Error(err, "error decoding response for cloud creation", "response", string(respBody))
-		return "", err
+		c.Log.WithValues("response", string(respBody)).Error(err, "error unmarshalling response")
+		return "", errors.Wrap(err, "error unmarshalling response")
 	}
 
 	if cloudResp.ID == "" {
