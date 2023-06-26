@@ -37,19 +37,22 @@ func (r *AstraConnectorController) deployConnector(ctx context.Context,
 	foundCM := &corev1.ConfigMap{}
 	astraConnectorID := ""
 	err := r.Get(ctx, types.NamespacedName{Name: common.NatsSyncClientConfigMapName, Namespace: astraConnector.Namespace}, foundCM)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
 	if len(foundCM.Data) != 0 {
 		registered = true
 		astraConnectorID, err = registerUtil.GetConnectorIDFromConfigMap(foundCM.Data)
 		if err != nil {
 			log.Error(err, FailedLocationIDGet)
 			natsSyncClientStatus.Status = FailedLocationIDGet
-			r.updateAstraConnectorStatus(ctx, astraConnector, *natsSyncClientStatus)
+			_ = r.updateAstraConnectorStatus(ctx, astraConnector, *natsSyncClientStatus)
 			return ctrl.Result{RequeueAfter: 1 * time.Minute}, err
 		}
 		if astraConnectorID == "" {
 			log.Error(err, EmptyLocationIDGet)
 			natsSyncClientStatus.Status = EmptyLocationIDGet
-			r.updateAstraConnectorStatus(ctx, astraConnector, *natsSyncClientStatus)
+			_ = r.updateAstraConnectorStatus(ctx, astraConnector, *natsSyncClientStatus)
 			return ctrl.Result{RequeueAfter: 1 * time.Minute}, err
 		}
 	}
@@ -64,7 +67,7 @@ func (r *AstraConnectorController) deployConnector(ctx context.Context,
 			if err != nil {
 				log.Error(err, FailedRegisterNSClient)
 				natsSyncClientStatus.Status = FailedRegisterNSClient
-				r.updateAstraConnectorStatus(ctx, astraConnector, *natsSyncClientStatus)
+				_ = r.updateAstraConnectorStatus(ctx, astraConnector, *natsSyncClientStatus)
 				return ctrl.Result{RequeueAfter: 1 * time.Minute}, err
 			}
 
@@ -81,7 +84,7 @@ func (r *AstraConnectorController) deployConnector(ctx context.Context,
 			if err != nil {
 				log.Error(err, FailedConnectorIDAdd)
 				natsSyncClientStatus.Status = FailedConnectorIDAdd
-				r.updateAstraConnectorStatus(ctx, astraConnector, *natsSyncClientStatus)
+				_ = r.updateAstraConnectorStatus(ctx, astraConnector, *natsSyncClientStatus)
 				return ctrl.Result{RequeueAfter: 1 * time.Minute}, err
 			}
 			log.Info("Registered cluster with Astra")
@@ -95,7 +98,7 @@ func (r *AstraConnectorController) deployConnector(ctx context.Context,
 			if err != nil {
 				log.Error(err, FailedUnRegisterNSClient)
 				natsSyncClientStatus.Status = FailedUnRegisterNSClient
-				r.updateAstraConnectorStatus(ctx, astraConnector, *natsSyncClientStatus)
+				_ = r.updateAstraConnectorStatus(ctx, astraConnector, *natsSyncClientStatus)
 				return ctrl.Result{Requeue: true}, err
 			}
 			log.Info(UnregisterNSClient)

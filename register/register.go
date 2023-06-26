@@ -403,6 +403,9 @@ func (c clusterRegisterUtil) createCloud(astraHost, cloudType, apiToken string) 
 	}
 
 	reqBodyBytes, err := json.Marshal(payLoad)
+	if err != nil {
+		return "", err
+	}
 
 	c.Log.WithValues("cloudType", cloudType).Info("Creating cloud")
 	headerMap := HeaderMap{Authorization: fmt.Sprintf("Bearer %s", apiToken)}

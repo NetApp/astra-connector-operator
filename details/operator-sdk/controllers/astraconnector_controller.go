@@ -62,7 +62,7 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 		// Error reading the object - requeue the request.
 		log.Error(err, FailedAstraConnectorGet)
 		natsSyncClientStatus.Status = FailedAstraConnectorGet
-		r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
+		_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
 		return ctrl.Result{}, err
 	}
 
@@ -78,7 +78,7 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 			controllerutil.AddFinalizer(astraConnector, finalizerName)
 			if err := r.Update(ctx, astraConnector); err != nil {
 				natsSyncClientStatus.Status = FailedFinalizerAdd
-				r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
+				_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
 				return ctrl.Result{}, err
 			}
 		}
@@ -102,7 +102,7 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 			controllerutil.RemoveFinalizer(astraConnector, finalizerName)
 			if err := r.Update(ctx, astraConnector); err != nil {
 				natsSyncClientStatus.Status = FailedFinalizerRemove
-				r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
+				_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
 				return ctrl.Result{}, err
 			}
 		}

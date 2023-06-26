@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -61,15 +60,15 @@ func checkFatalErr(err error) {
 	}
 }
 
-func getDockerUsername() (string, error) {
-	reader := bufio.NewReader(os.Stdin)
-	fmt.Print("Docker username: ")
-	username, err := reader.ReadString('\n')
-	if err != nil {
-		return "", err
-	}
-	return username, nil
-}
+//func getDockerUsername() (string, error) {
+//	reader := bufio.NewReader(os.Stdin)
+//	fmt.Print("Docker username: ")
+//	username, err := reader.ReadString('\n')
+//	if err != nil {
+//		return "", err
+//	}
+//	return username, nil
+//}
 
 func getPw(prompt string) (string, error) {
 	fmt.Print(prompt)
@@ -230,12 +229,12 @@ type ErrorDetail struct {
 	Message string `json:"message"`
 }
 
-type DockerPushResponse struct {
-	Status      string       `json:"status"`
-	Id          string       `json:"id"`
-	Error       string       `json:"error"`
-	ErrorDetail *ErrorDetail `json:"errorDetail"`
-}
+//type DockerPushResponse struct {
+//	Status      string       `json:"status"`
+//	Id          string       `json:"id"`
+//	Error       string       `json:"error"`
+//	ErrorDetail *ErrorDetail `json:"errorDetail"`
+//}
 
 type DockerLoadResponse struct {
 	Stream      string       `json:"stream"`
@@ -259,7 +258,6 @@ type Options struct {
 }
 
 const (
-	NatsImageName               = "nats"
 	ConnectorDefaultsConfigPath = "./controllerconfig.yaml"
 	YamlOutputPath              = "./deployConfig.yaml"
 	OperatorYamlPath            = "./astraconnector_operator.yaml"
@@ -282,7 +280,7 @@ func main() {
 
 	absPath, err := filepath.Abs(ConnectorDefaultsConfigPath)
 	checkFatalErr(err)
-	yamlFile, err := ioutil.ReadFile(absPath)
+	yamlFile, err := os.ReadFile(absPath)
 	checkFatalErr(err)
 	err = yaml.Unmarshal(yamlFile, &connectorConfig)
 	checkFatalErr(err)
@@ -363,6 +361,7 @@ func main() {
 
 	// Install Astra Connector Operator
 	operatorYamlPath, err := filepath.Abs(OperatorYamlPath)
+	checkFatalErr(err)
 	applyCmd := exec.Command("kubectl", "apply", "-n", ConnectorOperatorNamespace, "-f", operatorYamlPath)
 	applyCmd.Env = os.Environ()
 	output, err = runCmd(applyCmd)
@@ -371,6 +370,7 @@ func main() {
 
 	// Write deployConfig.yaml file
 	yamlData, err := yaml.Marshal(connectorConfig)
+	checkFatalErr(err)
 	yamlOutPath, err := filepath.Abs(YamlOutputPath)
 	checkFatalErr(err)
 	err = os.WriteFile(yamlOutPath, yamlData, 0644)
