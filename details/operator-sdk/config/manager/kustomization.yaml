@@ -13,4 +13,4 @@ kind: Kustomization
 images:
 - name: controller
   newName: netapp/astra-connector-operator
-  newTag: 202306242031-main
+  newTag: 202306261816-main

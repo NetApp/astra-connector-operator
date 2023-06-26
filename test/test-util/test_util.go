@@ -50,7 +50,7 @@ func CreateLoggerForTesting(t ...*testing.T) logr.Logger {
 func FindTestName(includeFullPkgPath bool) (string, error) {
 	// log := stdr.New(stdlog.New(os.Stderr, "FindTestName: ", stdlog.LstdFlags)) // For use in debugging this method
 	skip := 1 // Start at 1, because we know this method is not the Test Method
-	for true {
+	for {
 		pc, file, _, ok := runtime.Caller(skip)
 		if ok {
 			// log.Info("", "skip", skip, "file", file, "name", runtime.FuncForPC(pc).Name())
