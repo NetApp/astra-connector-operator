@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -281,7 +280,7 @@ func main() {
 
 	absPath, err := filepath.Abs(ConnectorDefaultsConfigPath)
 	checkFatalErr(err)
-	yamlFile, err := ioutil.ReadFile(absPath)
+	yamlFile, err := os.ReadFile(absPath)
 	checkFatalErr(err)
 	err = yaml.Unmarshal(yamlFile, &connectorConfig)
 	checkFatalErr(err)
@@ -371,6 +370,7 @@ func main() {
 
 	// Write deployConfig.yaml file
 	yamlData, err := yaml.Marshal(connectorConfig)
+	checkFatalErr(err)
 	yamlOutPath, err := filepath.Abs(YamlOutputPath)
 	checkFatalErr(err)
 	err = os.WriteFile(yamlOutPath, yamlData, 0644)

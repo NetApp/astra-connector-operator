@@ -37,6 +37,9 @@ func (r *AstraConnectorController) deployConnector(ctx context.Context,
 	foundCM := &corev1.ConfigMap{}
 	astraConnectorID := ""
 	err := r.Get(ctx, types.NamespacedName{Name: common.NatsSyncClientConfigMapName, Namespace: astraConnector.Namespace}, foundCM)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
 	if len(foundCM.Data) != 0 {
 		registered = true
 		astraConnectorID, err = registerUtil.GetConnectorIDFromConfigMap(foundCM.Data)
