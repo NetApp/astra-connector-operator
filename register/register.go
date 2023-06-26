@@ -421,11 +421,21 @@ func (c clusterRegisterUtil) createCloud(astraHost, cloudType, apiToken string) 
 		Name string `json:"name"`
 	}
 
-	cloudResp := &CloudResp{}
-	err = json.NewDecoder(response.Body).Decode(cloudResp)
+	respBody, err := c.readResponseBody(response)
 	if err != nil {
-		c.Log.Error(err, "error decoding response for cloud creation", "response", response.Body)
-		return "", err
+		c.Log.WithValues("response", string(respBody)).Error(err, "error reading response")
+		return "", errors.Wrap(err, "error reading response")
+	}
+
+	cloudResp := &CloudResp{}
+	err = json.Unmarshal(respBody, &cloudResp)
+	if err != nil {
+		c.Log.WithValues("response", string(respBody)).Error(err, "error unmarshalling response")
+		return "", errors.Wrap(err, "error unmarshalling response")
+	}
+
+	if cloudResp.ID == "" {
+		c.Log.WithValues("response", string(respBody)).Error(errors.New("got empty cloud id"), "invalid response")
 	}
 
 	return cloudResp.ID, nil
@@ -601,21 +611,25 @@ func (c clusterRegisterUtil) createCluster(astraHost, cloudId, astraConnectorId,
 		return ClusterInfo{}, errors.Wrap(err, "error on request post clusters")
 	}
 
-	if clustersResp.StatusCode != http.StatusCreated {
-		return ClusterInfo{}, errors.New("add cluster failed with: " + strconv.Itoa(clustersResp.StatusCode))
-	}
-
 	respBody, err := io.ReadAll(clustersResp.Body)
 	if err != nil {
+		c.Log.WithValues("response", string(respBody)).Error(err, "error reading response")
 		return ClusterInfo{}, errors.Wrap(err, "error reading response from post clusters")
+	}
+
+	if clustersResp.StatusCode != http.StatusCreated {
+		c.Log.WithValues("response", string(respBody)).Error(err, "error adding cluster")
+		return ClusterInfo{}, errors.New("add cluster failed with: " + strconv.Itoa(clustersResp.StatusCode))
 	}
 
 	err = json.Unmarshal(respBody, &clustersRespJson)
 	if err != nil {
+		c.Log.WithValues("response", string(respBody)).Error(err, "error unmarshalling response")
 		return ClusterInfo{}, errors.Wrap(err, "unmarshall error when parsing post clusters response")
 	}
 
 	if clustersRespJson.ID == "" {
+		c.Log.WithValues("response", string(respBody)).Error(errors.New("got empty cluster id"), "invalid response")
 		return ClusterInfo{}, errors.New("got empty id from post clusters response")
 	}
 
@@ -719,11 +733,13 @@ func (c clusterRegisterUtil) getStorageClass(astraHost, cloudId, clusterId, apiT
 
 	respBody, err := io.ReadAll(storageClassesResp.Body)
 	if err != nil {
+		c.Log.WithValues("response", string(respBody)).Error(err, "error reading response")
 		return "", errors.Wrap(err, "error reading response from get storage classes")
 	}
 
 	err = json.Unmarshal(respBody, &storageClassesRespJson)
 	if err != nil {
+		c.Log.WithValues("response", string(respBody)).Error(err, "error unmarshalling response")
 		return "", errors.Wrap(err, "unmarshall error when getting storage classes")
 	}
 
@@ -810,11 +826,13 @@ func (c clusterRegisterUtil) createManagedCluster(astraHost, cloudId, clusterID,
 
 	respBody, err := io.ReadAll(manageClustersResp.Body)
 	if err != nil {
+		c.Log.WithValues("response", string(respBody)).Error(err, "error reading response")
 		return errors.Wrap(err, "error reading response from post manage clusters")
 	}
 
 	err = json.Unmarshal(respBody, &manageClustersRespJson)
 	if err != nil {
+		c.Log.WithValues("response", string(respBody)).Error(err, "error unmarshalling response")
 		return errors.Wrap(err, "unmarshall error when parsing post manage clusters response")
 	}
 
