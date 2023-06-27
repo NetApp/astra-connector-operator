@@ -31,6 +31,7 @@ const (
 	NatsGatewaysPort       = 7522
 	NatsDefaultReplicas    = 2
 	NatsDefaultImage       = "nats:2.8.4-alpine3.15"
+	NatsMaxPayload         = 8388608
 
 	NatsSyncClientConfigMapName               = "natssync-client-configmap"
 	NatsSyncClientConfigMapRoleName           = "natssync-client-configmap-role"
