@@ -161,14 +161,14 @@ func (n *NatsDeployer) GetStatefulSetObjects(m *v1.AstraConnector, ctx context.C
 
 // GetConfigMapObjects returns a ConfigMap object for nats
 func (n *NatsDeployer) GetConfigMapObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, error) {
-	natsConf := "pid_file: \"/var/run/nats/nats.pid\"\nhttp: %d\n\ncluster {\n  port: %d\n  routes [\n    nats://nats-0.nats-cluster:%d\n    nats://nats-1.nats-cluster:%d\n    nats://nats-2.nats-cluster:%d\n  ]\n\n  cluster_advertise: $CLUSTER_ADVERTISE\n  connect_retries: 30\n}\n"
+	natsConf := "pid_file: \"/var/run/nats/nats.pid\"\nhttp: %d\nmax_payload: %d\n\ncluster {\n  port: %d\n  routes [\n    nats://nats-0.nats-cluster:%d\n    nats://nats-1.nats-cluster:%d\n    nats://nats-2.nats-cluster:%d\n  ]\n\n  cluster_advertise: $CLUSTER_ADVERTISE\n  connect_retries: 30\n}\n"
 	configMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: m.Namespace,
 			Name:      common.NatsConfigMapName,
 		},
 		Data: map[string]string{
-			"nats.conf": fmt.Sprintf(natsConf, common.NatsMonitorPort, common.NatsClusterPort, common.NatsClusterPort, common.NatsClusterPort, common.NatsClusterPort),
+			"nats.conf": fmt.Sprintf(natsConf, common.NatsMonitorPort, common.NatsMaxPayload, common.NatsClusterPort, common.NatsClusterPort, common.NatsClusterPort, common.NatsClusterPort),
 		},
 	}
 	return []client.Object{configMap}, nil
