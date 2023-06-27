@@ -6,8 +6,13 @@ package controllers
 
 import (
 	"context"
+	"fmt"
+	"github.com/go-logr/logr"
+	"github.com/pkg/errors"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 	"net/http"
 	"reflect"
+	"strings"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -63,6 +68,12 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 		log.Error(err, FailedAstraConnectorGet)
 		natsSyncClientStatus.Status = FailedAstraConnectorGet
 		_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
+		return ctrl.Result{}, err
+	}
+
+	// Validate AstraConnector CR for any errors
+	err = r.validateAstraConnector(*astraConnector, log)
+	if err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -202,4 +213,25 @@ func (r *AstraConnectorController) SetupWithManager(mgr ctrl.Manager) error {
 		WithOptions(controller.Options{MaxConcurrentReconciles: 1}).
 		WithEventFilter(predicate.GenerationChangedPredicate{}). // Avoid reconcile for status updates
 		Complete(r)
+}
+
+func (r *AstraConnectorController) validateAstraConnector(connector v1.AstraConnector, logger logr.Logger) error {
+	var validateErrors field.ErrorList
+
+	logger.V(3).Info("Validating Create AstraConnector")
+	validateErrors = connector.ValidateCreateAstraConnector()
+
+	var fieldErrors []string
+	for _, v := range validateErrors {
+		if v == nil {
+			continue
+		}
+		fieldErrors = append(fieldErrors, fmt.Sprintf("'%s' %s", v.Field, v.Detail))
+	}
+
+	if len(fieldErrors) == 0 {
+		return nil
+	}
+
+	return errors.New(fmt.Sprintf("Errors while validating AstraConnector CR: %s", strings.Join(fieldErrors, "; ")))
 }
