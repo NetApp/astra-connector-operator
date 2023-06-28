@@ -7,7 +7,6 @@ BUILD_DIR := $(MAKEFILE_DIR)/build
 OUTPUT_IMAGE_TAR_DIR := $(BUILD_DIR)/images
 INSTALL_DIR := $(MAKEFILE_DIR)/installer
 OUTPUT_INSTALL_EXE_DIR := $(BUILD_DIR)/install-exe
-INSTALL_BUNDLE_DIR = $(BUILD_DIR)/install-bundle
 
 # VERSION defines the project version for the bundle.
 # Update this value when you upgrade the version of your project.
@@ -121,11 +120,6 @@ install: manifests kustomize ## Install CRDs into the K8s cluster specified in ~
 uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified in ~/.kube/config.
 	cd details/operator-sdk && $(KUSTOMIZE) build config/crd | kubectl delete -f -
 
-generate-operator-yaml: generate manifests kustomize ## Generate controller yaml.
-	cd details/operator-sdk/config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
-	cd ../..
-	cd details/operator-sdk && $(KUSTOMIZE) build config/default > astraconnector_operator.yaml
-
 deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
 	cd details/operator-sdk/config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 	cd details/operator-sdk && $(KUSTOMIZE) build config/default | kubectl apply -f -
@@ -230,28 +224,14 @@ image-tar:
 	mkdir -p ${OUTPUT_IMAGE_TAR_DIR}
 	$(SCRIPTS_DIR)/create-image-tar.sh ${OUTPUT_IMAGE_TAR_DIR}/astra-connector-operator-images.tar
 
-
-install-exes: export CGO_ENABLED=0
-install-exes: export GO111MODULE=on
-install-exes:
-	rm -rf $(OUTPUT_INSTALL_EXE_DIR)
-	mkdir -p $(OUTPUT_INSTALL_EXE_DIR)
-	cd $(INSTALL_DIR); \
-	export GOOS=linux; export GOARCH=amd64; go build -ldflags "-X github.com/NetApp-Polaris/astra-connector-operator/installer/install.VERSION=${VERSION}" -v -o ${OUTPUT_INSTALL_EXE_DIR}/install_${VERSION}_$${GOARCH}_$${GOOS} ${INSTALL_DIR}/install.go; \
-	export GOOS=darwin; export GOARCH=amd64; go build -ldflags "-X github.com/NetApp-Polaris/astra-connector-operator/installer/install.VERSION=${VERSION}" -v -o ${OUTPUT_INSTALL_EXE_DIR}/install_${VERSION}_$${GOARCH}_$${GOOS} ${INSTALL_DIR}/install.go; \
-	export GOOS=darwin; export GOARCH=arm64; go build -ldflags "-X github.com/NetApp-Polaris/astra-connector-operator/installer/install.VERSION=${VERSION}" -v -o ${OUTPUT_INSTALL_EXE_DIR}/install_${VERSION}_$${GOARCH}_$${GOOS} ${INSTALL_DIR}/install.go; \
-	export GOOS=windows; export GOARCH=amd64; go build -ldflags "-X github.com/NetApp-Polaris/astra-connector-operator/installer/install.VERSION=${VERSION}" -v -o ${OUTPUT_INSTALL_EXE_DIR}/install_${VERSION}_$${GOARCH}_$${GOOS}.exe ${INSTALL_DIR}/install.go
-
-bundle-base:
-	rm -rf $(BUILD_DIR)/*.tgz # Remove existing tgz bundles
-	rm -rf $(INSTALL_BUNDLE_DIR)
-	mkdir -p $(INSTALL_BUNDLE_DIR)
-
-
-install-bundle: image-tar install-exes bundle-base
-	cd $(INSTALL_BUNDLE_DIR) && tar -zcf $(BUILD_DIR)/astra-connector-operator-${VERSION}.tgz .
+# Creates release containing versioned YAMLs
+release:
+	rm -rf build
+	mkdir build
+	cd details/operator-sdk/config/manager && $(KUSTOMIZE) edit set image controller=$(IMG)
+	cd details/operator-sdk && $(KUSTOMIZE) build config/default > $(BUILD_DIR)/astraconnector_operator.yaml
 	cp $(MAKEFILE_DIR)/details/operator-sdk/config/samples/astra_v1_astraconnector.yaml $(BUILD_DIR)/astra_v1_astraconnector.yaml
-	cp $(MAKEFILE_DIR)/details/operator-sdk/astraconnector_operator.yaml $(BUILD_DIR)/astraconnector_operator.yaml
+
 
 
 .PHONY: generate-mocks
