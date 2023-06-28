@@ -225,9 +225,6 @@ catalog-build: opm ## Build a catalog image.
 catalog-push: ## Push a catalog image.
 	$(MAKE) docker-push IMG=$(CATALOG_IMG)
 
-test: generate manifests fmt vet envtest
-	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test ./... -coverprofile cover.out
-
 image-tar:
 	rm -rf ${OUTPUT_IMAGE_TAR_DIR}
 	mkdir -p ${OUTPUT_IMAGE_TAR_DIR}
