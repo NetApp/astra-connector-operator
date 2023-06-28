@@ -7,12 +7,12 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"github.com/go-logr/logr"
-	"github.com/pkg/errors"
-	"k8s.io/apimachinery/pkg/util/validation/field"
 	"net/http"
 	"reflect"
 	"strings"
+
+	"github.com/go-logr/logr"
+	"github.com/pkg/errors"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -20,6 +20,7 @@ import (
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
