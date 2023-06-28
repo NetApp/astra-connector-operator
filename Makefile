@@ -225,14 +225,13 @@ image-tar:
 	$(SCRIPTS_DIR)/create-image-tar.sh ${OUTPUT_IMAGE_TAR_DIR}/astra-connector-operator-images.tar
 
 # Creates release containing versioned YAMLs
+.PHONY: release
 release:
 	rm -rf build
 	mkdir build
 	cd details/operator-sdk/config/manager && $(KUSTOMIZE) edit set image controller=$(IMG)
 	cd details/operator-sdk && $(KUSTOMIZE) build config/default > $(BUILD_DIR)/astraconnector_operator.yaml
 	cp $(MAKEFILE_DIR)/details/operator-sdk/config/samples/astra_v1_astraconnector.yaml $(BUILD_DIR)/astra_v1_astraconnector.yaml
-
-
 
 .PHONY: generate-mocks
 generate-mocks: install-mockery
