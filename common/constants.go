@@ -16,7 +16,7 @@ const (
 	NatsSyncClientPort                  = 8080
 	NatsSyncClientProtocol              = "TCP"
 	NatsSyncClientKeystoreUrl           = "configmap:///configmap-data"
-	NatsSyncClientDefaultImage          = "theotw/natssync-client:2.1.202305182124"
+	NatsSyncClientDefaultImage          = "theotw/natssync-client:2.1.202306281610"
 	NatsSyncClientDefaultCloudBridgeURL = "https://astra.netapp.io"
 
 	NatsName               = "nats"
