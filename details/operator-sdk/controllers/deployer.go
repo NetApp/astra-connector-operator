@@ -3,7 +3,10 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"github.com/go-logr/logr"
+	appsv1 "k8s.io/api/apps/v1"
 	"reflect"
+	"time"
 
 	"github.com/pkg/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -45,9 +48,12 @@ func (r *AstraConnectorController) deployResources(ctx context.Context, deployer
 
 	for _, funcList := range resources {
 
-		resourceList, _ := funcList.getResource(deployer, astraConnector, ctx)
+		resourceList, err := funcList.getResource(deployer, astraConnector, ctx)
 		if resourceList == nil {
 			continue
+		}
+		if err != nil {
+			return errors.Wrapf(err, "Unable to get resource")
 		}
 
 		for _, kubeObject := range resourceList {
@@ -58,15 +64,14 @@ func (r *AstraConnectorController) deployResources(ctx context.Context, deployer
 			natsSyncClientStatus.Status = statusMsg
 			_ = r.updateAstraConnectorStatus(ctx, astraConnector, *natsSyncClientStatus)
 
-			err := k8sUtil.CreateOrUpdateResource(ctx, kubeObject, astraConnector)
+			err = k8sUtil.CreateOrUpdateResource(ctx, kubeObject, astraConnector)
 			if err != nil {
-				statusMsg = fmt.Sprintf(funcList.errorMessage, key.Namespace, key.Name)
-				log.Info(statusMsg)
-				natsSyncClientStatus.Status = statusMsg
-				_ = r.updateAstraConnectorStatus(ctx, astraConnector, *natsSyncClientStatus)
-				log.Error(err, statusMsg)
-				return errors.Wrapf(err, statusMsg)
+				return r.formatError(ctx, astraConnector, log, funcList.errorMessage, key.Namespace, key.Name, err, natsSyncClientStatus)
 			} else {
+				err = r.waitForResourceReady(ctx, kubeObject)
+				if err != nil {
+					return r.formatError(ctx, astraConnector, log, funcList.errorMessage, key.Namespace, key.Name, err, natsSyncClientStatus)
+				}
 				log.Info("Successfully deployed resources")
 			}
 		}
@@ -104,4 +109,46 @@ func (r *AstraConnectorController) deleteClusterScopedResources(ctx context.Cont
 			log.WithValues("name", key.Name, "kind", objectKind).Info("Deleted resource")
 		}
 	}
+}
+
+func (r *AstraConnectorController) waitForResourceReady(ctx context.Context, kubeObject client.Object) error {
+	log := ctrllog.FromContext(ctx)
+	timeout := time.After(3 * time.Minute)
+	ticker := time.NewTicker(3 * time.Second)
+
+	for {
+		select {
+		case <-timeout:
+			return fmt.Errorf("timed out waiting for resource %s/%s to be ready", kubeObject.GetNamespace(), kubeObject.GetName())
+		case <-ticker.C:
+			err := r.Client.Get(ctx, client.ObjectKeyFromObject(kubeObject), kubeObject)
+			if err != nil {
+				log.Error(err, "Error getting resource", "namespace", kubeObject.GetNamespace(), "name", kubeObject.GetName())
+				continue
+			}
+
+			isReady := false
+			switch obj := kubeObject.(type) {
+			case *appsv1.Deployment:
+				isReady = obj.Status.ReadyReplicas == obj.Status.Replicas
+			default:
+				isReady = true
+			}
+
+			if isReady {
+				log.Info("Resource is ready", "namespace", kubeObject.GetNamespace(), "name", kubeObject.GetName())
+				return nil
+			}
+		}
+	}
+}
+
+func (r *AstraConnectorController) formatError(ctx context.Context, astraConnector *installer.AstraConnector,
+	log logr.Logger, errorMessage, namespace, name string, err error,
+	natsSyncClientStatus *installer.NatsSyncClientStatus) error {
+	statusMsg := fmt.Sprintf(errorMessage, namespace, name)
+	natsSyncClientStatus.Status = statusMsg
+	_ = r.updateAstraConnectorStatus(ctx, astraConnector, *natsSyncClientStatus)
+	log.Error(err, statusMsg)
+	return errors.Wrapf(err, statusMsg)
 }

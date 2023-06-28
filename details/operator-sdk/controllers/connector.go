@@ -26,7 +26,9 @@ func (r *AstraConnectorController) deployConnector(ctx context.Context,
 	for _, deployer := range connectorDeployers {
 		err := r.deployResources(ctx, deployer, astraConnector, natsSyncClientStatus)
 		if err != nil {
-			return ctrl.Result{}, err
+			// Failed deploying we want status to reflect that for at least 30 seconds before it's requeued so
+			// anyone watching can be informed
+			return ctrl.Result{RequeueAfter: 30 * time.Second}, err
 		}
 	}
 

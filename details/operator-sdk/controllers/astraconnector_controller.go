@@ -6,9 +6,6 @@ package controllers
 
 import (
 	"context"
-	"net/http"
-	"reflect"
-
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -16,6 +13,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/retry"
+	"net/http"
+	"reflect"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -127,7 +126,10 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 		// deploy Connector
 		connectorResults, err := r.deployConnector(ctx, astraConnector, &natsSyncClientStatus)
 		if err != nil {
-			return connectorResults, err
+			log.Error(err, "Error deploying resources")
+			// Note: Returning nil in error since we want to wait a minute for the requeue to happen
+			// non nil errors triggers the requeue right away
+			return connectorResults, nil
 		}
 	}
 
