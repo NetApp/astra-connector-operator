@@ -58,7 +58,6 @@ func (r *AstraConnectorController) deployResources(ctx context.Context, deployer
 		}
 
 		for _, kubeObject := range resourceList {
-
 			key := client.ObjectKeyFromObject(kubeObject)
 			statusMsg := fmt.Sprintf(funcList.createMessage, key.Namespace, key.Name)
 			log.Info(statusMsg)
@@ -117,6 +116,7 @@ func (r *AstraConnectorController) waitForResourceReady(ctx context.Context, kub
 	log := ctrllog.FromContext(ctx)
 	timeout := time.After(conf.Config.WaitDurationForResource()) // default is 2 mins
 	ticker := time.NewTicker(3 * time.Second)
+	originalSpec := astraConnector.Spec
 
 	for {
 		select {
@@ -127,7 +127,7 @@ func (r *AstraConnectorController) waitForResourceReady(ctx context.Context, kub
 		case <-ticker.C:
 			// First lets make sure controller isn't modified, this check allow us
 			// to respond faster when there is a cr spec change or deletion
-			if r.isControllerModified(ctx, astraConnector) {
+			if r.isControllerModified(ctx, astraConnector, originalSpec) {
 				return fmt.Errorf("controller updated, requeue to handle changes")
 			}
 
@@ -165,7 +165,8 @@ func (r *AstraConnectorController) formatError(ctx context.Context, astraConnect
 	return errors.Wrapf(err, statusMsg)
 }
 
-func (r *AstraConnectorController) isControllerModified(ctx context.Context, astraConnector *installer.AstraConnector) bool {
+func (r *AstraConnectorController) isControllerModified(ctx context.Context,
+	astraConnector *installer.AstraConnector, originalSpec installer.AstraConnectorSpec) bool {
 	log := ctrllog.FromContext(ctx)
 	// Fetch the AstraConnector instance
 	controllerKey := client.ObjectKeyFromObject(astraConnector)
@@ -181,7 +182,7 @@ func (r *AstraConnectorController) isControllerModified(ctx context.Context, ast
 		return true
 	}
 
-	if !reflect.DeepEqual(updatedAstraConnector.Spec, astraConnector.Spec) {
+	if !reflect.DeepEqual(updatedAstraConnector.Spec, originalSpec) {
 		log.Info("AstraConnector spec change, reconciler requeue")
 		return true
 	}
