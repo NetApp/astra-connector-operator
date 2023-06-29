@@ -226,7 +226,7 @@ image-tar:
 
 # Creates release containing versioned YAMLs
 .PHONY: release
-release:
+release: kustomize
 	rm -rf build
 	mkdir build
 	cd details/operator-sdk/config/manager && $(KUSTOMIZE) edit set image controller=$(IMG)
