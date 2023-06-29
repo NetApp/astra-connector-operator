@@ -28,6 +28,7 @@ func (r *AstraConnectorController) deployConnector(ctx context.Context,
 		if err != nil {
 			// Failed deploying we want status to reflect that for at least 30 seconds before it's requeued so
 			// anyone watching can be informed
+			log.V(3).Info("Requeue after 30 seconds, so that status reflects error")
 			return ctrl.Result{RequeueAfter: 30 * time.Second}, err
 		}
 	}

@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"github.com/NetApp-Polaris/astra-connector-operator/conf"
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	"reflect"
@@ -68,7 +69,9 @@ func (r *AstraConnectorController) deployResources(ctx context.Context, deployer
 			if err != nil {
 				return r.formatError(ctx, astraConnector, log, funcList.errorMessage, key.Namespace, key.Name, err, natsSyncClientStatus)
 			} else {
-				err = r.waitForResourceReady(ctx, kubeObject)
+				waitCtx, cancel := context.WithCancel(ctx)
+				defer cancel()
+				err = r.waitForResourceReady(waitCtx, kubeObject, astraConnector)
 				if err != nil {
 					return r.formatError(ctx, astraConnector, log, funcList.errorMessage, key.Namespace, key.Name, err, natsSyncClientStatus)
 				}
@@ -105,22 +108,29 @@ func (r *AstraConnectorController) deleteClusterScopedResources(ctx context.Cont
 				log.WithValues("name", key.Name, "kind", objectKind).Error(err, "error deleting resource")
 				return
 			}
-
 			log.WithValues("name", key.Name, "kind", objectKind).Info("Deleted resource")
 		}
 	}
 }
 
-func (r *AstraConnectorController) waitForResourceReady(ctx context.Context, kubeObject client.Object) error {
+func (r *AstraConnectorController) waitForResourceReady(ctx context.Context, kubeObject client.Object, astraConnector *installer.AstraConnector) error {
 	log := ctrllog.FromContext(ctx)
-	timeout := time.After(3 * time.Minute)
+	timeout := time.After(conf.Config.WaitDurationForResource()) // default is 2 mins
 	ticker := time.NewTicker(3 * time.Second)
 
 	for {
 		select {
+		case <-ctx.Done():
+			return fmt.Errorf("reconcile cancelled")
 		case <-timeout:
 			return fmt.Errorf("timed out waiting for resource %s/%s to be ready", kubeObject.GetNamespace(), kubeObject.GetName())
 		case <-ticker.C:
+			// First lets make sure controller isn't modified, this check allow us
+			// to respond faster when there is a cr spec change or deletion
+			if r.isControllerModified(ctx, astraConnector) {
+				return fmt.Errorf("controller updated, requeue to handle changes")
+			}
+
 			err := r.Client.Get(ctx, client.ObjectKeyFromObject(kubeObject), kubeObject)
 			if err != nil {
 				log.Error(err, "Error getting resource", "namespace", kubeObject.GetNamespace(), "name", kubeObject.GetName())
@@ -131,6 +141,8 @@ func (r *AstraConnectorController) waitForResourceReady(ctx context.Context, kub
 			switch obj := kubeObject.(type) {
 			case *appsv1.Deployment:
 				isReady = obj.Status.ReadyReplicas == obj.Status.Replicas
+			case *appsv1.StatefulSet:
+				isReady = obj.Status.ReadyReplicas == obj.Status.Replicas && obj.Status.CurrentReplicas == obj.Status.Replicas
 			default:
 				isReady = true
 			}
@@ -151,4 +163,27 @@ func (r *AstraConnectorController) formatError(ctx context.Context, astraConnect
 	_ = r.updateAstraConnectorStatus(ctx, astraConnector, *natsSyncClientStatus)
 	log.Error(err, statusMsg)
 	return errors.Wrapf(err, statusMsg)
+}
+
+func (r *AstraConnectorController) isControllerModified(ctx context.Context, astraConnector *installer.AstraConnector) bool {
+	log := ctrllog.FromContext(ctx)
+	// Fetch the AstraConnector instance
+	controllerKey := client.ObjectKeyFromObject(astraConnector)
+	updatedAstraConnector := &installer.AstraConnector{}
+	err := r.Get(ctx, controllerKey, updatedAstraConnector)
+	if err != nil {
+		log.Info("AstraConnector resource not found. Ignoring since object must be deleted")
+		return true
+	}
+
+	if updatedAstraConnector.GetDeletionTimestamp() != nil {
+		log.Info("AstraConnector marked for deletion, reconciler requeue")
+		return true
+	}
+
+	if !reflect.DeepEqual(updatedAstraConnector.Spec, astraConnector.Spec) {
+		log.Info("AstraConnector spec change, reconciler requeue")
+		return true
+	}
+	return false
 }
