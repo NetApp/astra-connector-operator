@@ -168,7 +168,7 @@ jobs:
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          FILE_PATH: "./details/operator-sdk/config/samples/astra_v1_astraconnector.yaml"
+          FILE_PATH: "./build/astra_v1_astraconnector.yaml"
           ASSET_NAME: "astra_v1_astraconnector.yaml"
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
@@ -182,7 +182,7 @@ jobs:
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          FILE_PATH: "./details/operator-sdk/astraconnector_operator.yaml"
+          FILE_PATH: "./build/astraconnector_operator.yaml"
           ASSET_NAME: "astraconnector_operator.yaml"
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
