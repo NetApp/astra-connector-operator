@@ -2,6 +2,7 @@ apiVersion: astra.netapp.io/v1
 kind: AstraConnector
 metadata:
   name: astra-connector
+  namespace:  astra-connector
 spec:
   astra:
     tokenRef: Secret reference to API Token from the API Access page in Astra UI
