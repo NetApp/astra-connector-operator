@@ -7,11 +7,10 @@ package deployer
 import (
 	"fmt"
 
-	"github.com/NetApp-Polaris/astra-connector-operator/deployer/neptune"
-
+	"github.com/NetApp-Polaris/astra-connector-operator/app/deployer/connector"
+	"github.com/NetApp-Polaris/astra-connector-operator/app/deployer/model"
+	"github.com/NetApp-Polaris/astra-connector-operator/app/deployer/neptune"
 	"github.com/NetApp-Polaris/astra-connector-operator/common"
-	"github.com/NetApp-Polaris/astra-connector-operator/deployer/connector"
-	"github.com/NetApp-Polaris/astra-connector-operator/deployer/model"
 )
 
 // Factory returns a deployer based on the deploymentName.
