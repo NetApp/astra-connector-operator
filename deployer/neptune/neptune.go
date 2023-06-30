@@ -92,7 +92,7 @@ func (n NeptuneClientDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx co
 								"--logtostderr=true",
 								"--v=0",
 							},
-							Image: "gcr.io/kubebuilder/kube-rbac-proxy:v0.13.1",
+							Image: "gcr.io/kubebuilder/kube-rbac-proxy:v0.14.1",
 							Name:  "kube-rbac-proxy",
 							Ports: []corev1.ContainerPort{
 								{

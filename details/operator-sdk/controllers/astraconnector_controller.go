@@ -139,7 +139,10 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 		// deploy Connector
 		connectorResults, err := r.deployConnector(ctx, astraConnector, &natsSyncClientStatus)
 		if err != nil {
-			return connectorResults, err
+			log.Error(err, "Error deploying resources")
+			// Note: Returning nil in error since we want to wait a minute for the requeue to happen
+			// non nil errors triggers the requeue right away
+			return connectorResults, nil
 		}
 	}
 
