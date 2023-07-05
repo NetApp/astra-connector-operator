@@ -5,7 +5,7 @@ package mocks
 import (
 	http "net/http"
 
-	register "github.com/NetApp-Polaris/astra-connector-operator/register"
+	register "github.com/NetApp-Polaris/astra-connector-operator/app/register"
 	mock "github.com/stretchr/testify/mock"
 
 	time "time"
