@@ -7,8 +7,8 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	"testing"
 
+	"github.com/NetApp-Polaris/astra-connector-operator/app/deployer/connector"
 	"github.com/NetApp-Polaris/astra-connector-operator/common"
-	"github.com/NetApp-Polaris/astra-connector-operator/deployer/connector"
 	v1 "github.com/NetApp-Polaris/astra-connector-operator/details/operator-sdk/api/v1"
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

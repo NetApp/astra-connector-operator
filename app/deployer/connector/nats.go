@@ -10,7 +10,7 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/NetApp-Polaris/astra-connector-operator/deployer/model"
+	"github.com/NetApp-Polaris/astra-connector-operator/app/deployer/model"
 
 	"github.com/NetApp-Polaris/astra-connector-operator/common"
 

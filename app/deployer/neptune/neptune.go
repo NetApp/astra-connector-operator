@@ -2,9 +2,7 @@ package neptune
 
 import (
 	"context"
-	"github.com/NetApp-Polaris/astra-connector-operator/common"
-	"github.com/NetApp-Polaris/astra-connector-operator/deployer/model"
-	v1 "github.com/NetApp-Polaris/astra-connector-operator/details/operator-sdk/api/v1"
+
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -13,6 +11,10 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/NetApp-Polaris/astra-connector-operator/app/deployer/model"
+	"github.com/NetApp-Polaris/astra-connector-operator/common"
+	v1 "github.com/NetApp-Polaris/astra-connector-operator/details/operator-sdk/api/v1"
 )
 
 type NeptuneClientDeployer struct{}

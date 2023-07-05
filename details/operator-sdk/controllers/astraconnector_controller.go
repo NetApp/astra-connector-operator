@@ -29,11 +29,11 @@ import (
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	"github.com/NetApp-Polaris/astra-connector-operator/conf"
+	"github.com/NetApp-Polaris/astra-connector-operator/app/conf"
+	"github.com/NetApp-Polaris/astra-connector-operator/app/register"
 	"github.com/NetApp-Polaris/astra-connector-operator/details/k8s"
 	"github.com/NetApp-Polaris/astra-connector-operator/details/k8s/precheck"
 	v1 "github.com/NetApp-Polaris/astra-connector-operator/details/operator-sdk/api/v1"
-	"github.com/NetApp-Polaris/astra-connector-operator/register"
 )
 
 // AstraConnectorController reconciles a AstraConnector object

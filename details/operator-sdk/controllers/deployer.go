@@ -3,7 +3,7 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"github.com/NetApp-Polaris/astra-connector-operator/conf"
+	"github.com/NetApp-Polaris/astra-connector-operator/app/conf"
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	"reflect"
@@ -13,7 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
-	"github.com/NetApp-Polaris/astra-connector-operator/deployer/model"
+	"github.com/NetApp-Polaris/astra-connector-operator/app/deployer/model"
 	"github.com/NetApp-Polaris/astra-connector-operator/details/k8s"
 	installer "github.com/NetApp-Polaris/astra-connector-operator/details/operator-sdk/api/v1"
 )

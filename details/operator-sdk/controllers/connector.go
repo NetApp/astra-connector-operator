@@ -10,11 +10,11 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
+	"github.com/NetApp-Polaris/astra-connector-operator/app/deployer/connector"
+	"github.com/NetApp-Polaris/astra-connector-operator/app/deployer/model"
+	"github.com/NetApp-Polaris/astra-connector-operator/app/register"
 	"github.com/NetApp-Polaris/astra-connector-operator/common"
-	"github.com/NetApp-Polaris/astra-connector-operator/deployer/connector"
-	"github.com/NetApp-Polaris/astra-connector-operator/deployer/model"
 	v1 "github.com/NetApp-Polaris/astra-connector-operator/details/operator-sdk/api/v1"
-	"github.com/NetApp-Polaris/astra-connector-operator/register"
 )
 
 func (r *AstraConnectorController) deployConnector(ctx context.Context,

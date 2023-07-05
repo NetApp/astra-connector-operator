@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/NetApp-Polaris/astra-connector-operator/deployer/neptune"
+	"github.com/NetApp-Polaris/astra-connector-operator/app/deployer/neptune"
 	v1 "github.com/NetApp-Polaris/astra-connector-operator/details/operator-sdk/api/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
