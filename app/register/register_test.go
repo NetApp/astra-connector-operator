@@ -20,9 +20,9 @@ import (
 	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/NetApp-Polaris/astra-connector-operator/app/register"
 	v1 "github.com/NetApp-Polaris/astra-connector-operator/details/operator-sdk/api/v1"
 	"github.com/NetApp-Polaris/astra-connector-operator/mocks"
-	"github.com/NetApp-Polaris/astra-connector-operator/register"
 	testutil "github.com/NetApp-Polaris/astra-connector-operator/test/test-util"
 )
 
