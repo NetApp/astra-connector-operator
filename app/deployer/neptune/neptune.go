@@ -94,7 +94,7 @@ func (n NeptuneClientDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx co
 								"--logtostderr=true",
 								"--v=0",
 							},
-							Image: "gcr.io/kubebuilder/kube-rbac-proxy:v0.14.1",
+							Image: "gcr.io/kubebuilder/kube-rbac-proxy:v0.13.1",
 							Name:  "kube-rbac-proxy",
 							Ports: []corev1.ContainerPort{
 								{
@@ -206,15 +206,24 @@ func (n NeptuneClientDeployer) GetServiceObjects(m *v1.AstraConnector, ctx conte
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "neptune-controller-manager-metrics-service",
 			Namespace: m.Namespace,
+			Labels: map[string]string{
+				"app.kubernetes.io/component":  "kube-rbac-proxy",
+				"app.kubernetes.io/created-by": "neptune",
+				"app.kubernetes.io/instance":   "controller-manager-metrics-service",
+				"app.kubernetes.io/managed-by": "kustomize",
+				"app.kubernetes.io/name":       "service",
+				"app.kubernetes.io/part-of":    "neptune",
+				"control-plane":                "controller-manager",
+			},
 		},
 		Spec: corev1.ServiceSpec{
 			Type: corev1.ServiceTypeClusterIP,
 			Ports: []corev1.ServicePort{
 				{
-					Name:     "https",
-					Port:     common.NeptuneMetricServicePort,
-					Protocol: common.NeptuneMetricServiceProtocol,
-					// TargetPort: "https", todo compiler does not like https as the targetPort
+					Name:       "https",
+					Port:       common.NeptuneMetricServicePort,
+					Protocol:   common.NeptuneMetricServiceProtocol,
+					TargetPort: intstr.FromString("https"),
 				},
 			},
 			Selector: map[string]string{
@@ -236,6 +245,14 @@ func (n NeptuneClientDeployer) GetServiceAccountObjects(m *v1.AstraConnector, ct
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      common.NeptuneName,
 			Namespace: m.Namespace,
+			Labels: map[string]string{
+				"app.kubernetes.io/component":  "rbac",
+				"app.kubernetes.io/created-by": "neptune",
+				"app.kubernetes.io/instance":   "leader-election-role",
+				"app.kubernetes.io/managed-by": "kustomize",
+				"app.kubernetes.io/name":       "serviceaccount",
+				"app.kubernetes.io/part-of":    "neptune",
+			},
 		},
 	}
 	return []client.Object{sa}, nil
@@ -247,6 +264,14 @@ func (n NeptuneClientDeployer) GetRoleObjects(m *v1.AstraConnector, ctx context.
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: m.Namespace,
 			Name:      common.NeptuneLeaderElectionRoleName,
+			Labels: map[string]string{
+				"app.kubernetes.io/component":  "rbac",
+				"app.kubernetes.io/created-by": "neptune",
+				"app.kubernetes.io/instance":   "leader-election-role",
+				"app.kubernetes.io/managed-by": "kustomize",
+				"app.kubernetes.io/name":       "role",
+				"app.kubernetes.io/part-of":    "neptune",
+			},
 		},
 		Rules: []rbacv1.PolicyRule{
 			{
@@ -281,18 +306,33 @@ func (n NeptuneClientDeployer) GetClusterRoleObjects(m *v1.AstraConnector, ctx c
 		Rules: []rbacv1.PolicyRule{
 			{
 				APIGroups: []string{""},
+				Resources: []string{"namespaces"},
+				Verbs:     []string{"create", "get", "list", "patch", "watch"},
+			},
+			{
+				APIGroups: []string{""},
 				Resources: []string{"persistentvolumeclaims"},
-				Verbs:     []string{"get", "list", "watch"},
+				Verbs:     []string{"create", "get", "list", "patch", "watch"},
 			},
 			{
 				APIGroups: []string{"batch"},
 				Resources: []string{"jobs"},
-				Verbs:     []string{"create", "delete", "get", "list", "update"},
+				Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
+			},
+			{
+				APIGroups: []string{"batch"},
+				Resources: []string{"jobs/finalizers"},
+				Verbs:     []string{"create", "update"},
+			},
+			{
+				APIGroups: []string{"batch"},
+				Resources: []string{"jobs/status"},
+				Verbs:     []string{"get"},
 			},
 			{
 				APIGroups: []string{"management.astra.netapp.io"},
 				Resources: []string{"applications"},
-				Verbs:     []string{"get", "list", "watch", "create", "update", "patch", "delete"},
+				Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
 			},
 			{
 				APIGroups: []string{"management.astra.netapp.io"},
@@ -336,6 +376,36 @@ func (n NeptuneClientDeployer) GetClusterRoleObjects(m *v1.AstraConnector, ctx c
 			},
 			{
 				APIGroups: []string{"management.astra.netapp.io"},
+				Resources: []string{"backupinplacerestores"},
+				Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
+			},
+			{
+				APIGroups: []string{"management.astra.netapp.io"},
+				Resources: []string{"backupinplacerestores/finalizers"},
+				Verbs:     []string{"update"},
+			},
+			{
+				APIGroups: []string{"management.astra.netapp.io"},
+				Resources: []string{"backupinplacerestores/status"},
+				Verbs:     []string{"get", "patch", "update"},
+			},
+			{
+				APIGroups: []string{"management.astra.netapp.io"},
+				Resources: []string{"backuprestores"},
+				Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
+			},
+			{
+				APIGroups: []string{"management.astra.netapp.io"},
+				Resources: []string{"backuprestores/finalizers"},
+				Verbs:     []string{"update"},
+			},
+			{
+				APIGroups: []string{"management.astra.netapp.io"},
+				Resources: []string{"backuprestores/status"},
+				Verbs:     []string{"get", "patch", "update"},
+			},
+			{
+				APIGroups: []string{"management.astra.netapp.io"},
 				Resources: []string{"backups"},
 				Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
 			},
@@ -351,17 +421,17 @@ func (n NeptuneClientDeployer) GetClusterRoleObjects(m *v1.AstraConnector, ctx c
 			},
 			{
 				APIGroups: []string{"management.astra.netapp.io"},
-				Resources: []string{"collections"},
+				Resources: []string{"disruptivebackups"},
 				Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
 			},
 			{
 				APIGroups: []string{"management.astra.netapp.io"},
-				Resources: []string{"collections/finalizers"},
+				Resources: []string{"disruptivebackups/finalizers"},
 				Verbs:     []string{"update"},
 			},
 			{
 				APIGroups: []string{"management.astra.netapp.io"},
-				Resources: []string{"collections/status"},
+				Resources: []string{"disruptivebackups/status"},
 				Verbs:     []string{"get", "patch", "update"},
 			},
 			{
@@ -411,6 +481,66 @@ func (n NeptuneClientDeployer) GetClusterRoleObjects(m *v1.AstraConnector, ctx c
 			},
 			{
 				APIGroups: []string{"management.astra.netapp.io"},
+				Resources: []string{"pvccopies"},
+				Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
+			},
+			{
+				APIGroups: []string{"management.astra.netapp.io"},
+				Resources: []string{"pvccopies/finalizers"},
+				Verbs:     []string{"update"},
+			},
+			{
+				APIGroups: []string{"management.astra.netapp.io"},
+				Resources: []string{"pvccopies/status"},
+				Verbs:     []string{"get", "patch", "update"},
+			},
+			{
+				APIGroups: []string{"management.astra.netapp.io"},
+				Resources: []string{"pvcerases"},
+				Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
+			},
+			{
+				APIGroups: []string{"management.astra.netapp.io"},
+				Resources: []string{"pvcerases/finalizers"},
+				Verbs:     []string{"update"},
+			},
+			{
+				APIGroups: []string{"management.astra.netapp.io"},
+				Resources: []string{"pvcerases/status"},
+				Verbs:     []string{"get", "patch", "update"},
+			},
+			{
+				APIGroups: []string{"management.astra.netapp.io"},
+				Resources: []string{"resourcebackups"},
+				Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
+			},
+			{
+				APIGroups: []string{"management.astra.netapp.io"},
+				Resources: []string{"resourcebackups/finalizers"},
+				Verbs:     []string{"update"},
+			},
+			{
+				APIGroups: []string{"management.astra.netapp.io"},
+				Resources: []string{"resourcebackups/status"},
+				Verbs:     []string{"get", "patch", "update"},
+			},
+			{
+				APIGroups: []string{"management.astra.netapp.io"},
+				Resources: []string{"resourcedeletes"},
+				Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
+			},
+			{
+				APIGroups: []string{"management.astra.netapp.io"},
+				Resources: []string{"resourcedeletes/finalizers"},
+				Verbs:     []string{"update"},
+			},
+			{
+				APIGroups: []string{"management.astra.netapp.io"},
+				Resources: []string{"resourcedeletes/status"},
+				Verbs:     []string{"get", "patch", "update"},
+			},
+			{
+				APIGroups: []string{"management.astra.netapp.io"},
 				Resources: []string{"resourcerestores"},
 				Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
 			},
@@ -456,17 +586,32 @@ func (n NeptuneClientDeployer) GetClusterRoleObjects(m *v1.AstraConnector, ctx c
 			},
 			{
 				APIGroups: []string{"management.astra.netapp.io"},
-				Resources: []string{"restores"},
+				Resources: []string{"schedules"},
 				Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
 			},
 			{
 				APIGroups: []string{"management.astra.netapp.io"},
-				Resources: []string{"restores/finalizers"},
+				Resources: []string{"schedules/finalizers"},
 				Verbs:     []string{"update"},
 			},
 			{
 				APIGroups: []string{"management.astra.netapp.io"},
-				Resources: []string{"restores/status"},
+				Resources: []string{"schedules/status"},
+				Verbs:     []string{"get", "patch", "update"},
+			},
+			{
+				APIGroups: []string{"management.astra.netapp.io"},
+				Resources: []string{"snapshotrestores"},
+				Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
+			},
+			{
+				APIGroups: []string{"management.astra.netapp.io"},
+				Resources: []string{"snapshotrestores/finalizers"},
+				Verbs:     []string{"update"},
+			},
+			{
+				APIGroups: []string{"management.astra.netapp.io"},
+				Resources: []string{"snapshotrestores/status"},
 				Verbs:     []string{"get", "patch", "update"},
 			},
 			{
@@ -486,6 +631,11 @@ func (n NeptuneClientDeployer) GetClusterRoleObjects(m *v1.AstraConnector, ctx c
 			},
 			{
 				APIGroups: []string{"snapshot.storage.k8s.io"},
+				Resources: []string{"volumesnapshotcontents"},
+				Verbs:     []string{"create", "get", "list", "patch", "watch"},
+			},
+			{
+				APIGroups: []string{"snapshot.storage.k8s.io"},
 				Resources: []string{"volumesnapshots"},
 				Verbs:     []string{"create", "get", "list", "patch", "watch"},
 			},
@@ -495,6 +645,14 @@ func (n NeptuneClientDeployer) GetClusterRoleObjects(m *v1.AstraConnector, ctx c
 	neptuneMetricsReaderCR := &rbacv1.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "neptune-metrics-reader",
+			Labels: map[string]string{
+				"app.kubernetes.io/component":  "kube-rbac-proxy",
+				"app.kubernetes.io/created-by": "neptune",
+				"app.kubernetes.io/instance":   "metrics-reader",
+				"app.kubernetes.io/managed-by": "kustomize",
+				"app.kubernetes.io/name":       "clusterrole",
+				"app.kubernetes.io/part-of":    "neptune",
+			},
 		},
 		Rules: []rbacv1.PolicyRule{
 			{
@@ -507,6 +665,14 @@ func (n NeptuneClientDeployer) GetClusterRoleObjects(m *v1.AstraConnector, ctx c
 	neptuneProxyCR := &rbacv1.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "neptune-proxy-role",
+			Labels: map[string]string{
+				"app.kubernetes.io/component":  "kube-rbac-proxy",
+				"app.kubernetes.io/created-by": "neptune",
+				"app.kubernetes.io/instance":   "proxy-role",
+				"app.kubernetes.io/managed-by": "kustomize",
+				"app.kubernetes.io/name":       "clusterrole",
+				"app.kubernetes.io/part-of":    "neptune",
+			},
 		},
 		Rules: []rbacv1.PolicyRule{
 			{
@@ -532,6 +698,14 @@ func (n NeptuneClientDeployer) GetRoleBindingObjects(m *v1.AstraConnector, ctx c
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: m.Namespace,
 			Name:      common.NeptuneLeaderElectionRoleBindingName,
+			Labels: map[string]string{
+				"app.kubernetes.io/component":  "rbac",
+				"app.kubernetes.io/created-by": "neptune",
+				"app.kubernetes.io/instance":   "leader-election-rolebinding",
+				"app.kubernetes.io/managed-by": "kustomize",
+				"app.kubernetes.io/name":       "rolebinding",
+				"app.kubernetes.io/part-of":    "neptune",
+			},
 		},
 		Subjects: []rbacv1.Subject{
 			{
@@ -554,6 +728,14 @@ func (n NeptuneClientDeployer) GetClusterRoleBindingObjects(m *v1.AstraConnector
 	neptuneManagerRB := &rbacv1.ClusterRoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "neptune-manager-rolebinding",
+			Labels: map[string]string{
+				"app.kubernetes.io/component":  "rbac",
+				"app.kubernetes.io/created-by": "neptune",
+				"app.kubernetes.io/instance":   "manager-rolebinding",
+				"app.kubernetes.io/managed-by": "kustomize",
+				"app.kubernetes.io/name":       "clusterrolebinding",
+				"app.kubernetes.io/part-of":    "neptune",
+			},
 		},
 		Subjects: []rbacv1.Subject{
 			{
@@ -572,6 +754,15 @@ func (n NeptuneClientDeployer) GetClusterRoleBindingObjects(m *v1.AstraConnector
 	neptuneProxyRB := &rbacv1.ClusterRoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "neptune-proxy-rolebinding",
+			Labels: map[string]string{
+				"app.kubernetes.io/component":  "kube-rbac-proxy",
+				"app.kubernetes.io/created-by": "neptune",
+				"app.kubernetes.io/instance":   "proxy-rolebinding",
+				"app.kubernetes.io/managed-by": "kustomize",
+				"app.kubernetes.io/name":       "clusterrolebinding",
+				"app.kubernetes.io/part-of":    "neptune",
+				"control-plane":                "controller-manager",
+			},
 		},
 		Subjects: []rbacv1.Subject{
 			{
