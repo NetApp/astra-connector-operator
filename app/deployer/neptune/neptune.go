@@ -131,7 +131,7 @@ func (n NeptuneClientDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx co
 							Command: []string{
 								"/manager",
 							},
-							Image: "controller:latest",
+							Image: "docker.repo.eng.netapp.com/oscarr/neptune/neptune:main-80",
 							LivenessProbe: &corev1.Probe{
 								ProbeHandler: corev1.ProbeHandler{
 									HTTPGet: &corev1.HTTPGetAction{
