@@ -1,0 +1,2033 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.11.1
+  creationTimestamp: null
+  name: applications.management.astra.netapp.io
+spec:
+  group: management.astra.netapp.io
+  names:
+    kind: Application
+    listKind: ApplicationList
+    plural: applications
+    singular: application
+  scope: Namespaced
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: Application is the Schema for the applications API
+          properties:
+            apiVersion:
+              description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+              type: string
+            kind:
+              description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+              type: string
+            metadata:
+              type: object
+            spec:
+              description: ApplicationSpec defines the desired state of Application
+              properties:
+                includedClusterScopedResources:
+                  description: IncludedClusterScopedResources is a list of cluster-scoped resource types to be included.
+                  items:
+                    properties:
+                      groupVersionKind:
+                        description: GroupVersionKind unambiguously identifies a kind
+                        properties:
+                          group:
+                            type: string
+                          kind:
+                            type: string
+                          version:
+                            type: string
+                        type: object
+                      labelSelector:
+                        type: string
+                    type: object
+                  type: array
+                includedNamespaces:
+                  description: IncludedNamespaces is a slice of namespaceSelectors to include in our app definition. If empty, all namespaces are included.
+                  items:
+                    properties:
+                      labelSelector:
+                        type: string
+                      namespace:
+                        type: string
+                    required:
+                      - namespace
+                    type: object
+                  nullable: true
+                  type: array
+              type: object
+            status:
+              description: ApplicationStatus defines the observed state of Application
+              properties:
+                collectionTimestamp:
+                  description: CollectionTimestamp records the time a backup was completed. Collection time is recorded even on failed backups. Collection time is recorded before uploading the backup object. The server's time is used for CollectionTimestamps
+                  format: date-time
+                  nullable: true
+                  type: string
+                protectionState:
+                  description: 'ProtectionState determines protection state of the app based upon different parameters The current logic for protectionState is as follows: Fully Protected: someScheduleIsActive && hasScheduleWithSuccessfulLastBackup Partially Protected: someScheduleIsActive || someSuccessfulBackupExists || someSuccessfulSnapshotExists Not Protected: default'
+                  type: string
+              type: object
+          type: object
+      served: true
+      storage: true
+      subresources:
+        status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.11.1
+  creationTimestamp: null
+  name: appvaults.management.astra.netapp.io
+spec:
+  group: management.astra.netapp.io
+  names:
+    kind: AppVault
+    listKind: AppVaultList
+    plural: appvaults
+    singular: appvault
+  scope: Namespaced
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: AppVault is the Schema for the appvaults API
+          properties:
+            apiVersion:
+              description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+              type: string
+            kind:
+              description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+              type: string
+            metadata:
+              type: object
+            spec:
+              description: AppVaultSpec defines the desired state of AppVault
+              properties:
+                prefix:
+                  description: Prefix is an optional path which will be prefixed to the names of all entities stored in the vault.
+                  type: string
+                providerConfig:
+                  additionalProperties:
+                    type: string
+                  description: ProviderConfig stores the configuration necessary to access the AppVault using the specified provider.
+                  type: object
+                providerType:
+                  description: ProviderType determines what provides the backup, e.g. S3 or FileSystem
+                  type: string
+                secretRef:
+                  type: string
+              required:
+                - providerConfig
+                - providerType
+              type: object
+            status:
+              description: AppVaultStatus defines the observed state of AppVault
+              properties:
+                state:
+                  type: string
+              type: object
+          type: object
+      served: true
+      storage: true
+      subresources:
+        status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.11.1
+  creationTimestamp: null
+  name: autosupportbundles.management.astra.netapp.io
+spec:
+  group: management.astra.netapp.io
+  names:
+    kind: AutoSupportBundle
+    listKind: AutoSupportBundleList
+    plural: autosupportbundles
+    singular: autosupportbundle
+  scope: Namespaced
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: AutoSupportBundle is the Schema for the autosupportbundles API
+          properties:
+            apiVersion:
+              description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+              type: string
+            kind:
+              description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+              type: string
+            metadata:
+              type: object
+            spec:
+              description: AutoSupportBundleSpec defines the desired state of AutoSupportBundle
+              properties:
+                foo:
+                  description: Foo is an example field of AutoSupportBundle. Edit autosupportbundle_types.go to remove/update
+                  type: string
+              type: object
+            status:
+              description: AutoSupportBundleStatus defines the observed state of AutoSupportBundle
+              type: object
+          type: object
+      served: true
+      storage: true
+      subresources:
+        status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.11.1
+  creationTimestamp: null
+  name: backupinplacerestores.management.astra.netapp.io
+spec:
+  group: management.astra.netapp.io
+  names:
+    kind: BackupInplaceRestore
+    listKind: BackupInplaceRestoreList
+    plural: backupinplacerestores
+    singular: backupinplacerestore
+  scope: Namespaced
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: BackupInplaceRestore is the Schema for the backupinplacerestores API
+          properties:
+            apiVersion:
+              description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+              type: string
+            kind:
+              description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+              type: string
+            metadata:
+              type: object
+            spec:
+              description: BackupInplaceRestoreSpec defines the desired state of BackupInplaceRestore
+              properties:
+                appArchivePath:
+                  description: AppArchivePath is the path inside AppVault where the snapshot contents are stored.
+                  type: string
+                appVaultRef:
+                  description: AppVaultRef is the reference to the AppVault where the snapshot contents are stored.
+                  type: string
+                namespaceMapping:
+                  description: NamespaceMapping is the mapping between source namespace to target namespace
+                  items:
+                    properties:
+                      source:
+                        description: Source  namespace of a single resource in the collection
+                        type: string
+                      target:
+                        description: Target namespace where the single resource will be cloned into
+                        type: string
+                    required:
+                      - source
+                      - target
+                    type: object
+                  type: array
+              type: object
+            status:
+              description: BackupInplaceRestoreStatus defines the observed state of BackupInplaceRestore
+              properties:
+                completionTimestamp:
+                  description: CompletionTimestamp records the time the Restore completed. The server's time is used for CompletionTimestamps
+                  format: date-time
+                  nullable: true
+                  type: string
+                progress:
+                  description: 'TODO: Revisit status to use conditions Used to internally track progress through backup restore'
+                  properties:
+                    namespaceCreationCompleted:
+                      type: boolean
+                    pvResetReclaimPolicyCompleted:
+                      type: boolean
+                    pvSetReclaimPolicyCompleted:
+                      type: boolean
+                    pvcCreationCompleted:
+                      type: boolean
+                    pvcDataRestoreCompleted:
+                      type: boolean
+                    resourceDeletionCompleted:
+                      type: boolean
+                    resourceRestoreCompleted:
+                      type: boolean
+                  type: object
+              required:
+                - progress
+              type: object
+          type: object
+      served: true
+      storage: true
+      subresources:
+        status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.11.1
+  creationTimestamp: null
+  name: backuprestores.management.astra.netapp.io
+spec:
+  group: management.astra.netapp.io
+  names:
+    kind: BackupRestore
+    listKind: BackupRestoreList
+    plural: backuprestores
+    singular: backuprestore
+  scope: Namespaced
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: BackupRestore is the Schema for the backuprestores API
+          properties:
+            apiVersion:
+              description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+              type: string
+            kind:
+              description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+              type: string
+            metadata:
+              type: object
+            spec:
+              description: BackupRestoreSpec defines the desired state of BackupRestore
+              properties:
+                appArchivePath:
+                  description: AppArchivePath is the path inside AppVault where the backup contents are stored.
+                  type: string
+                appVaultRef:
+                  description: AppVaultRef is the reference to the AppVault where the backup contents are stored.
+                  type: string
+                namespaceMapping:
+                  description: NamespaceMapping is the mapping between source namespace to target namespace
+                  items:
+                    properties:
+                      source:
+                        description: Source  namespace of a single resource in the collection
+                        type: string
+                      target:
+                        description: Target namespace where the single resource will be cloned into
+                        type: string
+                    required:
+                      - source
+                      - target
+                    type: object
+                  type: array
+              type: object
+            status:
+              description: BackupRestoreStatus defines the observed state of BackupRestore
+              properties:
+                completionTimestamp:
+                  description: CompletionTimestamp records the time the Restore completed. The server's time is used for CompletionTimestamps
+                  format: date-time
+                  nullable: true
+                  type: string
+                progress:
+                  description: Used to internally track progress through backup restore
+                  properties:
+                    namespaceCreationCompleted:
+                      type: boolean
+                    pvcCreationCompleted:
+                      type: boolean
+                    resourceRestoreCompleted:
+                      type: boolean
+                    volumeRestoreCompleted:
+                      type: boolean
+                  type: object
+              required:
+                - progress
+              type: object
+          type: object
+      served: true
+      storage: true
+      subresources:
+        status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.11.1
+  creationTimestamp: null
+  name: backups.management.astra.netapp.io
+spec:
+  group: management.astra.netapp.io
+  names:
+    kind: Backup
+    listKind: BackupList
+    plural: backups
+    singular: backup
+  scope: Namespaced
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: Backup is the Schema for the backups API
+          properties:
+            apiVersion:
+              description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+              type: string
+            kind:
+              description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+              type: string
+            metadata:
+              type: object
+            spec:
+              description: BackupSpec defines the desired state of Backup
+              properties:
+                appArchivePath:
+                  description: Path inside AppVault where the contents of this backup will go
+                  type: string
+                appVaultRef:
+                  description: Name of the AppVault to use as the target of the backup
+                  type: string
+                applicationRef:
+                  description: Name of the Application to back up
+                  type: string
+                snapshotRef:
+                  description: Name of the Snapshot to use as the source of the Backup. If not provided, a temporary Snapshot will be created and backed up
+                  type: string
+              required:
+                - appArchivePath
+                - appVaultRef
+                - applicationRef
+              type: object
+            status:
+              description: BackupStatus defines the observed state of Backup
+              properties:
+                completionTimestamp:
+                  description: CompletionTimestamp records the time the Backup completed. The server's time is used for CompletionTimestamps
+                  format: date-time
+                  nullable: true
+                  type: string
+                progress:
+                  description: Used to internally track progress through the backup
+                  properties:
+                    postBackupExecHooksRunCompleted:
+                      description: Set to true when the post-backup ExecHooksRun has completed (whether successful or failed)
+                      type: boolean
+                    postBackupExecHooksRunCreated:
+                      description: Set to true when the post-backup ExecHooksRun has been created
+                      type: boolean
+                    preBackupExecHooksRunCompleted:
+                      description: Set to true when the pre-backup ExecHooksRun has completed (whether successful or failed)
+                      type: boolean
+                    preBackupExecHooksRunCreated:
+                      description: Set to true when the pre-backup ExecHooksRun has been created
+                      type: boolean
+                    snapshotAppArchiveCopied:
+                      description: Set to true when the source snapshot's AppArchive has been successfully copied from the Snapshot AppVault into the Backup's AppVault
+                      type: boolean
+                    sourceSnapshotCompleted:
+                      description: Set to true when the source snapshot has been observed to be completed
+                      type: boolean
+                    sourceSnapshotExists:
+                      description: Set to true when the source snapshot has been confirmed to exist (whether created by the Backup or provided by the user)
+                      type: boolean
+                    volumeBackups:
+                      description: Progress of the individual volume backups, one for each VolumeSnapshot in the source Snapshot
+                      items:
+                        properties:
+                          completionTimestamp:
+                            description: CompletionTimestamp records the time the volume backup completed. The server's time is used for CompletionTimestamps
+                            format: date-time
+                            nullable: true
+                            type: string
+                          pvcUid:
+                            description: k8s UID of the source app PVC
+                            type: string
+                          resticRepositoryPath:
+                            description: Restic repository location (specified in the same format as the "-r" option of the restic CLI)
+                            type: string
+                          resticSnapshotID:
+                            description: ID of the Restic snapshot created to represent this backup
+                            type: string
+                          resticVolumeBackupCompleted:
+                            description: Set to true when the ResticVolumeBackup has completed successfully TODO move to dataMover sub-struct since this is Restic-specific
+                            type: boolean
+                          resticVolumeBackupCreated:
+                            description: Set to true when the ResticVolumeBackup for the VolumeSnapshot has been created TODO move to dataMover sub-struct since this is Restic-specific
+                            type: boolean
+                          sourceVolumeSnapshot:
+                            description: Namespaced name of the source VolumeSnapshot to be backed up
+                            properties:
+                              name:
+                                type: string
+                              namespace:
+                                type: string
+                            required:
+                              - name
+                              - namespace
+                            type: object
+                          volumeSnapshotContentCopyName:
+                            description: Name of the temporary copy of the volume snapshot content
+                            type: string
+                          volumeSnapshotCopied:
+                            description: Set to true when the volume snapshot has been copied into the neptune namespace TODO move to dataMover sub-struct since this is only needed for Restic and Kopia (not needed for SM-C)
+                            type: boolean
+                          volumeSnapshotCopyDeleted:
+                            description: Set to true when the volume snapshot copy in the neptune namespace has been deleted (note it may still be in Terminating state) TODO move to dataMover sub-struct since this is only needed for Restic and Kopia (not needed for SM-C)
+                            type: boolean
+                          volumeSnapshotCopyName:
+                            description: Name of the temporary copy of the volume snapshot in the neptune namespace
+                            type: string
+                          volumeSnapshotCopyReadyToUse:
+                            description: Set to true when the volume snapshot copy in the neptune namespace is ready to use TODO move to dataMover sub-struct since this is only needed for Restic and Kopia (not needed for SM-C)
+                            type: boolean
+                          volumeSnapshotCopyTerminated:
+                            description: Set to true when the volume snapshot copy in the neptune namespace has been fully terminated TODO move to dataMover sub-struct since this is only needed for Restic and Kopia (not needed for SM-C)
+                            type: boolean
+                        required:
+                          - resticVolumeBackupCompleted
+                          - resticVolumeBackupCreated
+                          - sourceVolumeSnapshot
+                          - volumeSnapshotContentCopyName
+                          - volumeSnapshotCopied
+                          - volumeSnapshotCopyDeleted
+                          - volumeSnapshotCopyName
+                          - volumeSnapshotCopyReadyToUse
+                          - volumeSnapshotCopyTerminated
+                        type: object
+                      type: array
+                    volumeBackupsCompleted:
+                      description: Set to true when all of the volume backups have been completed successfully
+                      type: boolean
+                  type: object
+                sourceSnapshotName:
+                  description: Name of the snapshot to used for this backup (will be either the SnapshotRef if provided in the Backup spec, or a temporary snapshot name if SnapshotRef was not provided)
+                  type: string
+              required:
+                - progress
+              type: object
+          type: object
+      served: true
+      storage: true
+      subresources:
+        status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.11.1
+  creationTimestamp: null
+  name: disruptivebackups.management.astra.netapp.io
+spec:
+  group: management.astra.netapp.io
+  names:
+    kind: DisruptiveBackup
+    listKind: DisruptiveBackupList
+    plural: disruptivebackups
+    singular: disruptivebackup
+  scope: Namespaced
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: DisruptiveBackup is the Schema for the disruptivebackups API
+          properties:
+            apiVersion:
+              description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+              type: string
+            kind:
+              description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+              type: string
+            metadata:
+              type: object
+            spec:
+              description: DisruptiveBackupSpec defines the desired state of DisruptiveBackup
+              properties:
+                appVaultRef:
+                  description: Name of the AppVault to use as the target of the backup
+                  type: string
+                applicationRef:
+                  description: Name of the Application to back up
+                  type: string
+              required:
+                - appVaultRef
+                - applicationRef
+              type: object
+            status:
+              description: DisruptiveBackupStatus defines the observed state of DisruptiveBackup
+              properties:
+                completionTimestamp:
+                  description: CompletionTimestamp is the server time when the DisruptiveBackup was completed.
+                  format: date-time
+                  nullable: true
+                  type: string
+              type: object
+          type: object
+      served: true
+      storage: true
+      subresources:
+        status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.11.1
+  creationTimestamp: null
+  name: exechooks.management.astra.netapp.io
+spec:
+  group: management.astra.netapp.io
+  names:
+    kind: ExecHook
+    listKind: ExecHookList
+    plural: exechooks
+    singular: exechook
+  scope: Namespaced
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: ExecHook is the Schema for the exechooks API
+          properties:
+            apiVersion:
+              description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+              type: string
+            kind:
+              description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+              type: string
+            metadata:
+              type: object
+            spec:
+              description: "ExecHookSpec defines the desired state of ExecHook It represents the ExecutionHook defined in Astra Nautilus. It is associated with one application. Its purpose is to define the hook source, arguments and what to execute the script against. It contains criteria to match against application containers It can be enabled/disabled It contains parameters to pass into the script In Nautilus the script (hook source) is stored separately from the execution hook but in Neptune these are combined \n This will require the sync process to update all Execution Hooks when the Hook Source is updated in Nautilus This will prevent a direct user of Neptune from having re-usable scripts"
+              properties:
+                action:
+                  description: 'Action String that indicates which action the execution hook will run for, assuming the match criteria are met. values: snapshot, backup, restore and failover'
+                  enum:
+                    - snapshot
+                    - backup
+                    - restore
+                    - failover
+                  type: string
+                applicationRef:
+                  description: ApplicationRef is the reference to the Application this exec hook is associated with
+                  type: string
+                arguments:
+                  description: Arguments Array of strings for the arguments to pass to the exec hook source when executing on the container
+                  items:
+                    type: string
+                  maxItems: 127
+                  minItems: 0
+                  type: array
+                enabled:
+                  default: true
+                  description: Enabled allows the execution hook to be enabled or disabled.  Disabled execution hooks are not executed regardless of matching criteria.
+                  type: boolean
+                hookSource:
+                  description: HookSource String containing the source of a shell script which will be executed on matching containers
+                  maxLength: 131072
+                  minLength: 0
+                  type: string
+                matchingCriteria:
+                  description: MatchingCriteria Array describing the match criteria for the execution hook to match against containers the hook will execute on
+                  items:
+                    properties:
+                      type:
+                        description: Type indicates the matching criteria type specified by MatchingCriteriaType
+                        type: string
+                      value:
+                        description: Value string containing a regex to match for the given match. Uses RE2 syntax described at https://golang.org/s/re2syntax
+                        type: string
+                    type: object
+                  maxItems: 10
+                  minItems: 0
+                  type: array
+                stage:
+                  description: 'Stage String that indicates at what stage during the action the hook will be executed, values: pre and post'
+                  enum:
+                    - pre
+                    - post
+                  type: string
+              required:
+                - action
+                - applicationRef
+                - hookSource
+                - stage
+              type: object
+            status:
+              description: ExecHookStatus defines the observed state of ExecHook
+              type: object
+          type: object
+      served: true
+      storage: true
+      subresources:
+        status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.11.1
+  creationTimestamp: null
+  name: exechooksruns.management.astra.netapp.io
+spec:
+  group: management.astra.netapp.io
+  names:
+    kind: ExecHooksRun
+    listKind: ExecHooksRunList
+    plural: exechooksruns
+    singular: exechooksrun
+  scope: Namespaced
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: ExecHooksRun is the Schema for the exechooksruns API
+          properties:
+            apiVersion:
+              description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+              type: string
+            kind:
+              description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+              type: string
+            metadata:
+              type: object
+            spec:
+              description: ExecHooksRunSpec defines the desired state of ExecHooksRun The ExecHooksRun exists to provide the results of running ExecHooks Action current operation being performed, possible values are snapshot, backup, restore and failover Stage the location within the action being performed, possible values are pre and post It will be responsible for getting all ExecHooks matching the application, stage and action It will be responsible for filtering the containers based on each ExecHook's matching criteria It will create an ExecHookJob for each matching container It will contain the results of each execution
+              properties:
+                action:
+                  description: Action The current action to run execution hooks for
+                  enum:
+                    - snapshot
+                    - backup
+                    - restore
+                    - failover
+                  type: string
+                appArchivePath:
+                  description: AppArchivePath The specific location in AppVault of the resourcebackup to retrieve pods and containers from
+                  type: string
+                appVaultRef:
+                  description: AppVaultRef The location of the resourcebackup to retrieve pods and containers from
+                  type: string
+                applicationRef:
+                  description: ApplicationRef is the reference to the Application to execute hooks against
+                  type: string
+                stage:
+                  description: Stage The current stage to run execution hooks for
+                  enum:
+                    - pre
+                    - post
+                  type: string
+              required:
+                - action
+                - appArchivePath
+                - appVaultRef
+                - applicationRef
+                - stage
+              type: object
+            status:
+              description: ExecHooksRunStatus defines the observed state of ExecHooksRun
+              properties:
+                completionTimestamp:
+                  description: CompletionTimestamp The time that the ExecutionHooksRun completed
+                  format: date-time
+                  type: string
+                matchingContainers:
+                  description: MatchingContainers The status of each ExecHook that was run on each container
+                  items:
+                    properties:
+                      completionTimestamp:
+                        description: CompletionTimestamp the time the exec hook run was finished regardless of failures
+                        format: date-time
+                        type: string
+                      containerName:
+                        description: ContainerName the name of the container the exec hook is run on
+                        type: string
+                      execHookRef:
+                        description: ExecHookRef reference to the ExecHook being run
+                        type: string
+                      failures:
+                        description: Failures list of failures that may occur when attempting to run the exec hook
+                        items:
+                          description: Failure - most of this data is used for posting events and notifications
+                          properties:
+                            error:
+                              description: Error if a golang error was produced during the process of running an exec hook
+                              type: string
+                            exitCode:
+                              description: ExitCode if the script was executed but returned a non-zero exit code it is captured here. Note that customers can define their own exit code with special meanings to them
+                              type: integer
+                            isExecError:
+                              description: IsExecError this indicates that the script itself returned an error vs an error in other parts of the process such as copying the script onto the container
+                              type: boolean
+                            isTimeout:
+                              description: IsTimeout indicates that the exec hook took too long and was abandoned, this is parity with Astra
+                              type: boolean
+                            stderr:
+                              description: Stderr the stderr captured when executing the script
+                              type: string
+                            timeoutMinutes:
+                              description: TimeoutMinutes indicates the amount of time that was given to the exec hook to run. In astra it is used for Activity/Event/Notification messages
+                              type: integer
+                          required:
+                            - isExecError
+                            - isTimeout
+                          type: object
+                        type: array
+                      jobName:
+                        description: JobName name of the job created to run an execution hook
+                        type: string
+                      namespace:
+                        description: Namespace the namespace from the target application where the container is located
+                        type: string
+                      podName:
+                        description: PodName the name of the pod where the exec hook will be run
+                        type: string
+                    required:
+                      - containerName
+                      - execHookRef
+                      - namespace
+                      - podName
+                    type: object
+                  type: array
+              type: object
+          type: object
+      served: true
+      storage: true
+      subresources:
+        status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.11.1
+  creationTimestamp: null
+  name: policies.management.astra.netapp.io
+spec:
+  group: management.astra.netapp.io
+  names:
+    kind: Policy
+    listKind: PolicyList
+    plural: policies
+    singular: policy
+  scope: Namespaced
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: Policy is the Schema for the policies API
+          properties:
+            apiVersion:
+              description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+              type: string
+            kind:
+              description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+              type: string
+            metadata:
+              type: object
+            spec:
+              description: PolicySpec defines the desired state of Policy
+              properties:
+                foo:
+                  description: Foo is an example field of Policy. Edit policy_types.go to remove/update
+                  type: string
+              type: object
+            status:
+              description: PolicyStatus defines the observed state of Policy
+              type: object
+          type: object
+      served: true
+      storage: true
+      subresources:
+        status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.11.1
+  creationTimestamp: null
+  name: pvccopies.management.astra.netapp.io
+spec:
+  group: management.astra.netapp.io
+  names:
+    kind: PvcCopy
+    listKind: PvcCopyList
+    plural: pvccopies
+    singular: pvccopy
+  scope: Namespaced
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: PvcCopy is the Schema for the pvccopies API
+          properties:
+            apiVersion:
+              description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+              type: string
+            kind:
+              description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+              type: string
+            metadata:
+              type: object
+            spec:
+              description: PvcCopySpec defines the desired state of PvcCopy
+              properties:
+                namespace:
+                  description: cluster namespace in which the source and target PVCs belong to
+                  type: string
+                sourcePVCRef:
+                  description: SourcePVCRef name of the source PVC where the data is copied from
+                  type: string
+                targetPVCRef:
+                  description: TargetPVCRef name of the target PVC where the data is copied into
+                  type: string
+              required:
+                - namespace
+                - sourcePVCRef
+                - targetPVCRef
+              type: object
+            status:
+              description: PvcCopyStatus defines the observed state of PvcCopy
+              properties:
+                completionTimestamp:
+                  description: CompletionTimestamp is the server time when the PvcErase is completed.
+                  format: date-time
+                  nullable: true
+                  type: string
+                conditions:
+                  description: Condition contains details for one aspect of the current state of this PvcErase job
+                  items:
+                    description: "Condition contains details for one aspect of the current state of this API Resource. --- This struct is intended for direct use as an array at the field path .status.conditions.  For example, \n type FooStatus struct{ // Represents the observations of a foo's current state. // Known .status.conditions.type are: \"Available\", \"Progressing\", and \"Degraded\" // +patchMergeKey=type // +patchStrategy=merge // +listType=map // +listMapKey=type Conditions []metav1.Condition `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\" protobuf:\"bytes,1,rep,name=conditions\"` \n // other fields }"
+                    properties:
+                      lastTransitionTime:
+                        description: lastTransitionTime is the last time the condition transitioned from one status to another. This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                        format: date-time
+                        type: string
+                      message:
+                        description: message is a human readable message indicating details about the transition. This may be an empty string.
+                        maxLength: 32768
+                        type: string
+                      observedGeneration:
+                        description: observedGeneration represents the .metadata.generation that the condition was set based upon. For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date with respect to the current state of the instance.
+                        format: int64
+                        minimum: 0
+                        type: integer
+                      reason:
+                        description: reason contains a programmatic identifier indicating the reason for the condition's last transition. Producers of specific condition types may define expected values and meanings for this field, and whether the values are considered a guaranteed API. The value should be a CamelCase string. This field may not be empty.
+                        maxLength: 1024
+                        minLength: 1
+                        pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                        type: string
+                      status:
+                        description: status of the condition, one of True, False, Unknown.
+                        enum:
+                          - "True"
+                          - "False"
+                          - Unknown
+                        type: string
+                      type:
+                        description: type of condition in CamelCase or in foo.example.com/CamelCase. --- Many .condition.type values are consistent across resources like Available, but because arbitrary conditions can be useful (see .node.status.conditions), the ability to deconflict is important. The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
+                        maxLength: 316
+                        pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                        type: string
+                    required:
+                      - lastTransitionTime
+                      - message
+                      - reason
+                      - status
+                      - type
+                    type: object
+                  type: array
+                  x-kubernetes-list-map-keys:
+                    - type
+                  x-kubernetes-list-type: map
+              type: object
+          type: object
+      served: true
+      storage: true
+      subresources:
+        status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.11.1
+  creationTimestamp: null
+  name: pvcerases.management.astra.netapp.io
+spec:
+  group: management.astra.netapp.io
+  names:
+    kind: PvcErase
+    listKind: PvcEraseList
+    plural: pvcerases
+    singular: pvcerase
+  scope: Namespaced
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: PvcErase is the Schema for the pvcerases API
+          properties:
+            apiVersion:
+              description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+              type: string
+            kind:
+              description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+              type: string
+            metadata:
+              type: object
+            spec:
+              description: PvcEraseSpec defines the desired state of PvcErase
+              properties:
+                pvcRef:
+                  description: PVCRef Config for the PVC to erase
+                  properties:
+                    name:
+                      type: string
+                    namespace:
+                      type: string
+                  required:
+                    - name
+                    - namespace
+                  type: object
+              required:
+                - pvcRef
+              type: object
+            status:
+              description: PvcEraseStatus defines the observed state of PvcErase
+              properties:
+                completionTimestamp:
+                  description: CompletionTimestamp is the server time when the PvcErase is completed.
+                  format: date-time
+                  nullable: true
+                  type: string
+                conditions:
+                  description: Condition contains details for one aspect of the current state of this PvcErase job
+                  items:
+                    description: "Condition contains details for one aspect of the current state of this API Resource. --- This struct is intended for direct use as an array at the field path .status.conditions.  For example, \n type FooStatus struct{ // Represents the observations of a foo's current state. // Known .status.conditions.type are: \"Available\", \"Progressing\", and \"Degraded\" // +patchMergeKey=type // +patchStrategy=merge // +listType=map // +listMapKey=type Conditions []metav1.Condition `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\" protobuf:\"bytes,1,rep,name=conditions\"` \n // other fields }"
+                    properties:
+                      lastTransitionTime:
+                        description: lastTransitionTime is the last time the condition transitioned from one status to another. This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                        format: date-time
+                        type: string
+                      message:
+                        description: message is a human readable message indicating details about the transition. This may be an empty string.
+                        maxLength: 32768
+                        type: string
+                      observedGeneration:
+                        description: observedGeneration represents the .metadata.generation that the condition was set based upon. For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date with respect to the current state of the instance.
+                        format: int64
+                        minimum: 0
+                        type: integer
+                      reason:
+                        description: reason contains a programmatic identifier indicating the reason for the condition's last transition. Producers of specific condition types may define expected values and meanings for this field, and whether the values are considered a guaranteed API. The value should be a CamelCase string. This field may not be empty.
+                        maxLength: 1024
+                        minLength: 1
+                        pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                        type: string
+                      status:
+                        description: status of the condition, one of True, False, Unknown.
+                        enum:
+                          - "True"
+                          - "False"
+                          - Unknown
+                        type: string
+                      type:
+                        description: type of condition in CamelCase or in foo.example.com/CamelCase. --- Many .condition.type values are consistent across resources like Available, but because arbitrary conditions can be useful (see .node.status.conditions), the ability to deconflict is important. The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
+                        maxLength: 316
+                        pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                        type: string
+                    required:
+                      - lastTransitionTime
+                      - message
+                      - reason
+                      - status
+                      - type
+                    type: object
+                  type: array
+                  x-kubernetes-list-map-keys:
+                    - type
+                  x-kubernetes-list-type: map
+              type: object
+          type: object
+      served: true
+      storage: true
+      subresources:
+        status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.11.1
+  creationTimestamp: null
+  name: resourcebackups.management.astra.netapp.io
+spec:
+  group: management.astra.netapp.io
+  names:
+    kind: ResourceBackup
+    listKind: ResourceBackupList
+    plural: resourcebackups
+    singular: resourcebackup
+  scope: Namespaced
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: ResourceBackup is the Schema for the resourcebackups API
+          properties:
+            apiVersion:
+              description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+              type: string
+            kind:
+              description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+              type: string
+            metadata:
+              type: object
+            spec:
+              description: ResourceBackupSpec defines the desired state of ResourceBackup
+              properties:
+                appArchivePath:
+                  description: AppArchivePath is the path inside AppVault where the contents of this resourcebackup will go.
+                  type: string
+                appVaultRef:
+                  description: AppVaultRef is the reference to the AppVault where the snapshot contents will go.
+                  type: string
+                applicationRef:
+                  description: ApplicationRef is the unique name of the application this resourcebackup is for.
+                  type: string
+              type: object
+            status:
+              description: ResourceBackupStatus defines the observed state of ResourceBackup
+              properties:
+                completionTimestamp:
+                  description: CompletionTimestamp is the server time when the resourcebackup was completed.
+                  format: date-time
+                  nullable: true
+                  type: string
+              type: object
+          type: object
+      served: true
+      storage: true
+      subresources:
+        status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.11.1
+  creationTimestamp: null
+  name: resourcedeletes.management.astra.netapp.io
+spec:
+  group: management.astra.netapp.io
+  names:
+    kind: ResourceDelete
+    listKind: ResourceDeleteList
+    plural: resourcedeletes
+    singular: resourcedelete
+  scope: Namespaced
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: ResourceDelete is the Schema for the resourcedeletes API
+          properties:
+            apiVersion:
+              description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+              type: string
+            kind:
+              description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+              type: string
+            metadata:
+              type: object
+            spec:
+              description: ResourceDeleteSpec defines the desired state of ResourceDelete
+              properties:
+                appArchivePath:
+                  description: AppArchivePath is the path inside AppVault where the contents of this collection will be read from.
+                  type: string
+                appVaultRef:
+                  description: AppVaultRef is the reference to the AppVault where the snapshot contents will be read from.
+                  type: string
+              type: object
+            status:
+              description: ResourceDeleteStatus defines the observed state of ResourceDelete
+              properties:
+                completionTimestamp:
+                  description: CompletionTimestamp is the server time when the ResourceDelete is completed.
+                  format: date-time
+                  nullable: true
+                  type: string
+                conditions:
+                  description: Condition contains details for one aspect of the current state of this ResourceDelete resource
+                  items:
+                    description: "Condition contains details for one aspect of the current state of this API Resource. --- This struct is intended for direct use as an array at the field path .status.conditions.  For example, \n type FooStatus struct{ // Represents the observations of a foo's current state. // Known .status.conditions.type are: \"Available\", \"Progressing\", and \"Degraded\" // +patchMergeKey=type // +patchStrategy=merge // +listType=map // +listMapKey=type Conditions []metav1.Condition `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\" protobuf:\"bytes,1,rep,name=conditions\"` \n // other fields }"
+                    properties:
+                      lastTransitionTime:
+                        description: lastTransitionTime is the last time the condition transitioned from one status to another. This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                        format: date-time
+                        type: string
+                      message:
+                        description: message is a human readable message indicating details about the transition. This may be an empty string.
+                        maxLength: 32768
+                        type: string
+                      observedGeneration:
+                        description: observedGeneration represents the .metadata.generation that the condition was set based upon. For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date with respect to the current state of the instance.
+                        format: int64
+                        minimum: 0
+                        type: integer
+                      reason:
+                        description: reason contains a programmatic identifier indicating the reason for the condition's last transition. Producers of specific condition types may define expected values and meanings for this field, and whether the values are considered a guaranteed API. The value should be a CamelCase string. This field may not be empty.
+                        maxLength: 1024
+                        minLength: 1
+                        pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                        type: string
+                      status:
+                        description: status of the condition, one of True, False, Unknown.
+                        enum:
+                          - "True"
+                          - "False"
+                          - Unknown
+                        type: string
+                      type:
+                        description: type of condition in CamelCase or in foo.example.com/CamelCase. --- Many .condition.type values are consistent across resources like Available, but because arbitrary conditions can be useful (see .node.status.conditions), the ability to deconflict is important. The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
+                        maxLength: 316
+                        pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                        type: string
+                    required:
+                      - lastTransitionTime
+                      - message
+                      - reason
+                      - status
+                      - type
+                    type: object
+                  type: array
+                  x-kubernetes-list-map-keys:
+                    - type
+                  x-kubernetes-list-type: map
+              type: object
+          type: object
+      served: true
+      storage: true
+      subresources:
+        status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.11.1
+  creationTimestamp: null
+  name: resourcerestores.management.astra.netapp.io
+spec:
+  group: management.astra.netapp.io
+  names:
+    kind: ResourceRestore
+    listKind: ResourceRestoreList
+    plural: resourcerestores
+    singular: resourcerestore
+  scope: Namespaced
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: ResourceRestore is the Schema for the resourcerestores API
+          properties:
+            apiVersion:
+              description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+              type: string
+            kind:
+              description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+              type: string
+            metadata:
+              type: object
+            spec:
+              description: ResourceRestoreSpec defines the desired state of ResourceRestore
+              properties:
+                appArchivePath:
+                  description: AppArchivePath is the path inside AppVault where the contents of this collection will be read from.
+                  type: string
+                appVaultRef:
+                  description: AppVaultRef is the reference to the AppVault where the snapshot contents will be read from.
+                  type: string
+                namespaceMapping:
+                  description: NamespaceMapping is the mapping between source namespace to target namespace
+                  items:
+                    properties:
+                      source:
+                        description: Source  namespace of a single resource in the collection
+                        type: string
+                      target:
+                        description: Target namespace where the single resource will be cloned into
+                        type: string
+                    required:
+                      - source
+                      - target
+                    type: object
+                  type: array
+              type: object
+            status:
+              description: ResourceRestoreStatus defines the observed state of ResourceRestore
+              properties:
+                completionTimestamp:
+                  description: CompletionTimestamp is the server time when the ResourceRestore is completed.
+                  format: date-time
+                  nullable: true
+                  type: string
+                conditions:
+                  description: Condition contains details for one aspect of the current state of this ResourceRestore resource
+                  items:
+                    description: "Condition contains details for one aspect of the current state of this API Resource. --- This struct is intended for direct use as an array at the field path .status.conditions.  For example, \n type FooStatus struct{ // Represents the observations of a foo's current state. // Known .status.conditions.type are: \"Available\", \"Progressing\", and \"Degraded\" // +patchMergeKey=type // +patchStrategy=merge // +listType=map // +listMapKey=type Conditions []metav1.Condition `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\" protobuf:\"bytes,1,rep,name=conditions\"` \n // other fields }"
+                    properties:
+                      lastTransitionTime:
+                        description: lastTransitionTime is the last time the condition transitioned from one status to another. This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                        format: date-time
+                        type: string
+                      message:
+                        description: message is a human readable message indicating details about the transition. This may be an empty string.
+                        maxLength: 32768
+                        type: string
+                      observedGeneration:
+                        description: observedGeneration represents the .metadata.generation that the condition was set based upon. For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date with respect to the current state of the instance.
+                        format: int64
+                        minimum: 0
+                        type: integer
+                      reason:
+                        description: reason contains a programmatic identifier indicating the reason for the condition's last transition. Producers of specific condition types may define expected values and meanings for this field, and whether the values are considered a guaranteed API. The value should be a CamelCase string. This field may not be empty.
+                        maxLength: 1024
+                        minLength: 1
+                        pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                        type: string
+                      status:
+                        description: status of the condition, one of True, False, Unknown.
+                        enum:
+                          - "True"
+                          - "False"
+                          - Unknown
+                        type: string
+                      type:
+                        description: type of condition in CamelCase or in foo.example.com/CamelCase. --- Many .condition.type values are consistent across resources like Available, but because arbitrary conditions can be useful (see .node.status.conditions), the ability to deconflict is important. The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
+                        maxLength: 316
+                        pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                        type: string
+                    required:
+                      - lastTransitionTime
+                      - message
+                      - reason
+                      - status
+                      - type
+                    type: object
+                  type: array
+                  x-kubernetes-list-map-keys:
+                    - type
+                  x-kubernetes-list-type: map
+              type: object
+          type: object
+      served: true
+      storage: true
+      subresources:
+        status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.11.1
+  creationTimestamp: null
+  name: resticvolumebackups.management.astra.netapp.io
+spec:
+  group: management.astra.netapp.io
+  names:
+    kind: ResticVolumeBackup
+    listKind: ResticVolumeBackupList
+    plural: resticvolumebackups
+    singular: resticvolumebackup
+  scope: Namespaced
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: ResticVolumeBackup is the Schema for the resticvolumebackups API
+          properties:
+            apiVersion:
+              description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+              type: string
+            kind:
+              description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+              type: string
+            metadata:
+              type: object
+            spec:
+              description: ResticVolumeBackupSpec defines the desired state of ResticVolumeBackup
+              properties:
+                clonePVC:
+                  description: Config for the temporary clone PVC that will be created to access the snapshot contents (if dataSource is a VolumeSnapshot)
+                  properties:
+                    metadata:
+                      properties:
+                        annotations:
+                          additionalProperties:
+                            type: string
+                          type: object
+                        labels:
+                          additionalProperties:
+                            type: string
+                          type: object
+                      type: object
+                    spec:
+                      properties:
+                        accessModes:
+                          items:
+                            type: string
+                          type: array
+                        resources:
+                          properties:
+                            limits:
+                              additionalProperties:
+                                anyOf:
+                                  - type: integer
+                                  - type: string
+                                pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                x-kubernetes-int-or-string: true
+                              description: ResourceList is a set of (resource name, quantity) pairs.
+                              type: object
+                            requests:
+                              additionalProperties:
+                                anyOf:
+                                  - type: integer
+                                  - type: string
+                                pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                x-kubernetes-int-or-string: true
+                              description: ResourceList is a set of (resource name, quantity) pairs.
+                              type: object
+                          type: object
+                        storageClassName:
+                          type: string
+                      type: object
+                  type: object
+                dataSourceRef:
+                  description: Reference to the PVC or VolumeSnapshot to use as the source of the backup
+                  properties:
+                    apiGroup:
+                      description: APIGroup is the group for the resource being referenced. If APIGroup is not specified, the specified Kind must be in the core API group. For any other third-party types, APIGroup is required.
+                      type: string
+                    kind:
+                      description: Kind is the type of resource being referenced
+                      type: string
+                    name:
+                      description: Name is the name of resource being referenced
+                      type: string
+                  required:
+                    - kind
+                    - name
+                  type: object
+                  x-kubernetes-map-type: atomic
+                resticEnv:
+                  description: Env vars to be provided to the restic CLI (including any required credentials)
+                  items:
+                    description: EnvVar represents an environment variable present in a Container.
+                    properties:
+                      name:
+                        description: Name of the environment variable. Must be a C_IDENTIFIER.
+                        type: string
+                      value:
+                        description: 'Variable references $(VAR_NAME) are expanded using the previously defined environment variables in the container and any service environment variables. If a variable cannot be resolved, the reference in the input string will be unchanged. Double $$ are reduced to a single $, which allows for escaping the $(VAR_NAME) syntax: i.e. "$$(VAR_NAME)" will produce the string literal "$(VAR_NAME)". Escaped references will never be expanded, regardless of whether the variable exists or not. Defaults to "".'
+                        type: string
+                      valueFrom:
+                        description: Source for the environment variable's value. Cannot be used if value is not empty.
+                        properties:
+                          configMapKeyRef:
+                            description: Selects a key of a ConfigMap.
+                            properties:
+                              key:
+                                description: The key to select.
+                                type: string
+                              name:
+                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names TODO: Add other useful fields. apiVersion, kind, uid?'
+                                type: string
+                              optional:
+                                description: Specify whether the ConfigMap or its key must be defined
+                                type: boolean
+                            required:
+                              - key
+                            type: object
+                            x-kubernetes-map-type: atomic
+                          fieldRef:
+                            description: 'Selects a field of the pod: supports metadata.name, metadata.namespace, `metadata.labels[''<KEY>'']`, `metadata.annotations[''<KEY>'']`, spec.nodeName, spec.serviceAccountName, status.hostIP, status.podIP, status.podIPs.'
+                            properties:
+                              apiVersion:
+                                description: Version of the schema the FieldPath is written in terms of, defaults to "v1".
+                                type: string
+                              fieldPath:
+                                description: Path of the field to select in the specified API version.
+                                type: string
+                            required:
+                              - fieldPath
+                            type: object
+                            x-kubernetes-map-type: atomic
+                          resourceFieldRef:
+                            description: 'Selects a resource of the container: only resources limits and requests (limits.cpu, limits.memory, limits.ephemeral-storage, requests.cpu, requests.memory and requests.ephemeral-storage) are currently supported.'
+                            properties:
+                              containerName:
+                                description: 'Container name: required for volumes, optional for env vars'
+                                type: string
+                              divisor:
+                                anyOf:
+                                  - type: integer
+                                  - type: string
+                                description: Specifies the output format of the exposed resources, defaults to "1"
+                                pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                x-kubernetes-int-or-string: true
+                              resource:
+                                description: 'Required: resource to select'
+                                type: string
+                            required:
+                              - resource
+                            type: object
+                            x-kubernetes-map-type: atomic
+                          secretKeyRef:
+                            description: Selects a key of a secret in the pod's namespace
+                            properties:
+                              key:
+                                description: The key of the secret to select from.  Must be a valid secret key.
+                                type: string
+                              name:
+                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names TODO: Add other useful fields. apiVersion, kind, uid?'
+                                type: string
+                              optional:
+                                description: Specify whether the Secret or its key must be defined
+                                type: boolean
+                            required:
+                              - key
+                            type: object
+                            x-kubernetes-map-type: atomic
+                        type: object
+                    required:
+                      - name
+                    type: object
+                  type: array
+                resticRepository:
+                  description: Restic repository location (specified in the same format as the "-r" option of the restic CLI)
+                  type: string
+              required:
+                - dataSourceRef
+                - resticEnv
+                - resticRepository
+              type: object
+            status:
+              description: ResticVolumeBackupStatus defines the observed state of ResticVolumeBackup
+              properties:
+                clonePVCName:
+                  description: Name of the temporary clone PVC created for Restic to copy from
+                  type: string
+                clonePvcCleanedUp:
+                  description: Indicates whether the temporary clone has been cleaned up
+                  type: boolean
+                resticJobCleanedUp:
+                  description: Indicates whether the Restic job has been cleaned up
+                  type: boolean
+                resticJobName:
+                  description: Name of the Job created to run Restic
+                  type: string
+                resticPVCName:
+                  description: Name of the PVC for Restic to copy from. Will be the clone PVC if dataSourceRef is a snapshot, or source PVC if dataSourceRef is a PVC
+                  type: string
+                resticSnapshotID:
+                  description: ID of the Restic snapshot created to represent this backup
+                  type: string
+              required:
+                - resticJobCleanedUp
+              type: object
+          type: object
+      served: true
+      storage: true
+      subresources:
+        status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.11.1
+  creationTimestamp: null
+  name: resticvolumerestores.management.astra.netapp.io
+spec:
+  group: management.astra.netapp.io
+  names:
+    kind: ResticVolumeRestore
+    listKind: ResticVolumeRestoreList
+    plural: resticvolumerestores
+    singular: resticvolumerestore
+  scope: Namespaced
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: ResticVolumeRestore is the Schema for the resticvolumerestores API
+          properties:
+            apiVersion:
+              description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+              type: string
+            kind:
+              description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+              type: string
+            metadata:
+              type: object
+            spec:
+              description: ResticVolumeRestoreSpec defines the desired state of ResticVolumeRestore
+              properties:
+                resticEnv:
+                  description: Env vars to be provided to the restic CLI (including any required credentials)
+                  items:
+                    description: EnvVar represents an environment variable present in a Container.
+                    properties:
+                      name:
+                        description: Name of the environment variable. Must be a C_IDENTIFIER.
+                        type: string
+                      value:
+                        description: 'Variable references $(VAR_NAME) are expanded using the previously defined environment variables in the container and any service environment variables. If a variable cannot be resolved, the reference in the input string will be unchanged. Double $$ are reduced to a single $, which allows for escaping the $(VAR_NAME) syntax: i.e. "$$(VAR_NAME)" will produce the string literal "$(VAR_NAME)". Escaped references will never be expanded, regardless of whether the variable exists or not. Defaults to "".'
+                        type: string
+                      valueFrom:
+                        description: Source for the environment variable's value. Cannot be used if value is not empty.
+                        properties:
+                          configMapKeyRef:
+                            description: Selects a key of a ConfigMap.
+                            properties:
+                              key:
+                                description: The key to select.
+                                type: string
+                              name:
+                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names TODO: Add other useful fields. apiVersion, kind, uid?'
+                                type: string
+                              optional:
+                                description: Specify whether the ConfigMap or its key must be defined
+                                type: boolean
+                            required:
+                              - key
+                            type: object
+                            x-kubernetes-map-type: atomic
+                          fieldRef:
+                            description: 'Selects a field of the pod: supports metadata.name, metadata.namespace, `metadata.labels[''<KEY>'']`, `metadata.annotations[''<KEY>'']`, spec.nodeName, spec.serviceAccountName, status.hostIP, status.podIP, status.podIPs.'
+                            properties:
+                              apiVersion:
+                                description: Version of the schema the FieldPath is written in terms of, defaults to "v1".
+                                type: string
+                              fieldPath:
+                                description: Path of the field to select in the specified API version.
+                                type: string
+                            required:
+                              - fieldPath
+                            type: object
+                            x-kubernetes-map-type: atomic
+                          resourceFieldRef:
+                            description: 'Selects a resource of the container: only resources limits and requests (limits.cpu, limits.memory, limits.ephemeral-storage, requests.cpu, requests.memory and requests.ephemeral-storage) are currently supported.'
+                            properties:
+                              containerName:
+                                description: 'Container name: required for volumes, optional for env vars'
+                                type: string
+                              divisor:
+                                anyOf:
+                                  - type: integer
+                                  - type: string
+                                description: Specifies the output format of the exposed resources, defaults to "1"
+                                pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                x-kubernetes-int-or-string: true
+                              resource:
+                                description: 'Required: resource to select'
+                                type: string
+                            required:
+                              - resource
+                            type: object
+                            x-kubernetes-map-type: atomic
+                          secretKeyRef:
+                            description: Selects a key of a secret in the pod's namespace
+                            properties:
+                              key:
+                                description: The key of the secret to select from.  Must be a valid secret key.
+                                type: string
+                              name:
+                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names TODO: Add other useful fields. apiVersion, kind, uid?'
+                                type: string
+                              optional:
+                                description: Specify whether the Secret or its key must be defined
+                                type: boolean
+                            required:
+                              - key
+                            type: object
+                            x-kubernetes-map-type: atomic
+                        type: object
+                    required:
+                      - name
+                    type: object
+                  type: array
+                resticRepository:
+                  description: Restic repository location (specified in the same format as the "-r" option of the restic CLI)
+                  type: string
+                resticSnapshotID:
+                  description: ID of the Restic snapshot that needs to be restored
+                  type: string
+                targetPVCRef:
+                  description: Config for the PVC to restore the restic snapshot into
+                  properties:
+                    name:
+                      type: string
+                    namespace:
+                      type: string
+                  required:
+                    - name
+                    - namespace
+                  type: object
+              required:
+                - resticEnv
+                - resticRepository
+                - resticSnapshotID
+                - targetPVCRef
+              type: object
+            status:
+              description: ResticVolumeRestoreStatus defines the observed state of ResticVolumeRestore
+              properties:
+                resticJobCleanedUp:
+                  description: Indicates whether the Restic job has been cleaned up
+                  type: boolean
+                resticJobInfo:
+                  description: Information about the restic job
+                  properties:
+                    bytesComplete:
+                      description: bytes of data copied into the volume so far
+                      format: int64
+                      type: integer
+                    name:
+                      type: string
+                    namespace:
+                      type: string
+                    status:
+                      description: status of the current restic restore
+                      type: string
+                  required:
+                    - bytesComplete
+                    - name
+                    - namespace
+                    - status
+                  type: object
+              required:
+                - resticJobCleanedUp
+              type: object
+          type: object
+      served: true
+      storage: true
+      subresources:
+        status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.11.1
+  creationTimestamp: null
+  name: restores.management.astra.netapp.io
+spec:
+  group: management.astra.netapp.io
+  names:
+    kind: Restore
+    listKind: RestoreList
+    plural: restores
+    singular: restore
+  scope: Namespaced
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: Restore is the Schema for the restores API
+          properties:
+            apiVersion:
+              description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+              type: string
+            kind:
+              description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+              type: string
+            metadata:
+              type: object
+            spec:
+              description: RestoreSpec defines the desired state of Restore
+              properties:
+                foo:
+                  description: Foo is an example field of Restore. Edit restore_types.go to remove/update
+                  type: string
+              type: object
+            status:
+              description: RestoreStatus defines the observed state of Restore
+              type: object
+          type: object
+      served: true
+      storage: true
+      subresources:
+        status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.11.1
+  creationTimestamp: null
+  name: schedules.management.astra.netapp.io
+spec:
+  group: management.astra.netapp.io
+  names:
+    kind: Schedule
+    listKind: ScheduleList
+    plural: schedules
+    singular: schedule
+  scope: Namespaced
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: Schedule is the Schema for the schedules API
+          properties:
+            apiVersion:
+              description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+              type: string
+            kind:
+              description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+              type: string
+            metadata:
+              type: object
+            spec:
+              description: ScheduleSpec defines the desired state of Schedule
+              properties:
+                appArchivePath:
+                  description: Path inside AppVault where the contents of this backup/snapshot will go
+                  type: string
+                appVaultRef:
+                  description: Name of the AppVault to use as the target of the backup/snapshot
+                  type: string
+                applicationRef:
+                  description: ApplicationRef is the reference to the Application.
+                  type: string
+                backupRetention:
+                  description: Indicates how many backups to retain. Zero indicates that no backups should be created.
+                  maxLength: 63
+                  minLength: 0
+                  pattern: ^(0|([1-9][0-9]*))$
+                  type: string
+                dayOfMonth:
+                  description: Numeric value indicating the day of the month (1-31) to execute the schedule. This field is only present if granularity is set to "monthly".
+                  pattern: ^([1-9]|[1-2][0-9]|[3][0-1])$
+                  type: string
+                dayOfWeek:
+                  description: Numeric value indicating the day of the week (0-7) to execute the schedule. This field is only present if granularity is set to "weekly".
+                  pattern: ^[0-7]$
+                  type: string
+                enabled:
+                  default: true
+                  description: Indicates if a schedule is active.
+                  type: boolean
+                granularity:
+                  description: Indicates the granularity of the schedule.
+                  enum:
+                    - hourly
+                    - daily
+                    - weekly
+                    - monthly
+                    - custom
+                  type: string
+                hour:
+                  description: Numeric value indicating the hour of the day (0 - 23) to execute the schedule. This field is present if granularity is set to "daily", "weekly", or "monthly".
+                  pattern: ^([0-9]|[1][0-9]|[2][0-3])$
+                  type: string
+                minute:
+                  description: Numeric value indicating the minute of the hour (0 - 59) to execute the schedule. This field is present if granularity is set to "hourly", "daily", "weekly", or "monthly".
+                  pattern: ^([0-9]|[1-5][0-9])$
+                  type: string
+                recurrenceRule:
+                  description: string containing an RFC-5545 Section 3.8.5.3. Recurrence Rule. For the DTSTART parameter, only UTC timestamps (denoted by the "Z" suffix) are supported, and only timestamps before the current time are supported. For the RECUR rule parts, "FREQ" and "INTERVAL" are the only rule parts supported. For the FREQ rule part, "MINUTELY" and "HOURLY" are the only values supported. This field is only present if granularity is set to "custom".
+                  type: string
+                replicate:
+                  default: false
+                  description: Indicates if the schedule should trigger AppMirror replication for each snapshot. Only takes effect if the application has an AppMirror relationship defined.
+                  type: boolean
+                snapshotRetention:
+                  description: Indicates how many snapshots to retain. Zero indicates that no snapshots should be created.
+                  maxLength: 63
+                  minLength: 0
+                  pattern: ^(0|([1-9][0-9]*))$
+                  type: string
+              required:
+                - appArchivePath
+                - appVaultRef
+                - backupRetention
+                - granularity
+                - snapshotRetention
+              type: object
+            status:
+              description: ScheduleStatus defines the observed state of Schedule
+              properties:
+                lastScheduleTime:
+                  format: date-time
+                  type: string
+              type: object
+          type: object
+      served: true
+      storage: true
+      subresources:
+        status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.11.1
+  creationTimestamp: null
+  name: snapshotrestores.management.astra.netapp.io
+spec:
+  group: management.astra.netapp.io
+  names:
+    kind: SnapshotRestore
+    listKind: SnapshotRestoreList
+    plural: snapshotrestores
+    singular: snapshotrestore
+  scope: Namespaced
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: SnapshotRestore is the Schema for the snapshotrestores API
+          properties:
+            apiVersion:
+              description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+              type: string
+            kind:
+              description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+              type: string
+            metadata:
+              type: object
+            spec:
+              description: SnapshotRestoreSpec defines the desired state of SnapshotRestore
+              properties:
+                appArchivePath:
+                  description: AppArchivePath is the path inside AppVault where the snapshot contents are stored.
+                  type: string
+                appVaultRef:
+                  description: AppVaultRef is the reference to the AppVault where the snapshot contents are stored.
+                  type: string
+                namespaceMapping:
+                  description: NamespaceMapping is the mapping between source namespace to target namespace
+                  items:
+                    properties:
+                      source:
+                        description: Source  namespace of a single resource in the collection
+                        type: string
+                      target:
+                        description: Target namespace where the single resource will be cloned into
+                        type: string
+                    required:
+                      - source
+                      - target
+                    type: object
+                  type: array
+              type: object
+            status:
+              description: SnapshotRestoreStatus defines the observed state of SnapshotRestore
+              properties:
+                completionTimestamp:
+                  description: CompletionTimestamp records the time the Restore completed. The server's time is used for CompletionTimestamps
+                  format: date-time
+                  nullable: true
+                  type: string
+                progress:
+                  description: Used to internally track progress through the snapshot restore
+                  properties:
+                    namespaceCreationCompleted:
+                      type: boolean
+                    pvcCreationCompleted:
+                      type: boolean
+                    resourceRestoreCompleted:
+                      type: boolean
+                  type: object
+              required:
+                - progress
+              type: object
+          type: object
+      served: true
+      storage: true
+      subresources:
+        status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.11.1
+  creationTimestamp: null
+  name: snapshots.management.astra.netapp.io
+spec:
+  group: management.astra.netapp.io
+  names:
+    kind: Snapshot
+    listKind: SnapshotList
+    plural: snapshots
+    singular: snapshot
+  scope: Namespaced
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: Snapshot is the Schema for the snapshots API
+          properties:
+            apiVersion:
+              description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+              type: string
+            kind:
+              description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+              type: string
+            metadata:
+              type: object
+            spec:
+              description: SnapshotSpec defines the desired state of Snapshot
+              properties:
+                ExecHookRunsPostSnapshotRef:
+                  description: ExecHookRunsPostSnapshotRef reference to the ExecHooksRun after snapshot complete
+                  type: string
+                ExecHookRunsPreSnapshotRef:
+                  description: ExecHookRunsPreSnapshotRef reference to the ExecHooksRun prior to snapshot
+                  type: string
+                appArchivePath:
+                  description: AppArchivePath is the path inside AppVault where the contents of this snapshot will go.
+                  type: string
+                appVaultRef:
+                  description: AppVaultRef is the reference to the AppVault where the snapshot contents will go.
+                  type: string
+                applicationRef:
+                  description: ApplicationRef is the reference to the Application being snapshotted.
+                  type: string
+              type: object
+            status:
+              description: SnapshotStatus defines the observed state of Snapshot
+              properties:
+                appArchivePath:
+                  description: AppArchivePath is the path where the snapshot was archived in the AppVault.
+                  type: string
+                completionTimestamp:
+                  description: CompletionTimestamp is the server time when the collection was completed.
+                  format: date-time
+                  nullable: true
+                  type: string
+              type: object
+          type: object
+      served: true
+      storage: true
+      subresources:
+        status: {}
+---
