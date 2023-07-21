@@ -2,6 +2,8 @@ package neptune
 
 import (
 	"context"
+	"fmt"
+	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -25,6 +27,25 @@ func NewNeptuneClientDeployer() model.Deployer {
 
 func (n NeptuneClientDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, error) {
 	var deps []client.Object
+	log := ctrllog.FromContext(ctx)
+
+	var imageRegistry string
+	var containerImage string
+	var neptuneImage string
+	if m.Spec.ImageRegistry.Name != "" {
+		imageRegistry = m.Spec.ImageRegistry.Name
+	} else {
+		imageRegistry = common.DefaultImageRegistry
+	}
+
+	if m.Spec.Neptune.Image != "" {
+		containerImage = m.Spec.Neptune.Image
+	} else {
+		containerImage = common.NeptuneDefaultImage
+	}
+
+	neptuneImage = fmt.Sprintf("%s/%s", imageRegistry, containerImage)
+	log.Info("Using Neptune image", "image", neptuneImage)
 
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -131,7 +152,7 @@ func (n NeptuneClientDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx co
 							Command: []string{
 								"/manager",
 							},
-							Image: "docker.repo.eng.netapp.com/oscarr/neptune/neptune:main-80",
+							Image: neptuneImage,
 							LivenessProbe: &corev1.Probe{
 								ProbeHandler: corev1.ProbeHandler{
 									HTTPGet: &corev1.HTTPGetAction{
