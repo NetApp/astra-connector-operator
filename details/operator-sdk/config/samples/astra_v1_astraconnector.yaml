@@ -12,5 +12,3 @@ spec:
   natsSyncClient:
     cloudBridgeURL: https://integration.astra.netapp.io
     hostAliasIP: 10.193.60.80
-  imageRegistry:
-    name: docker.repo.eng.netapp.com/oscarr/arch3.0
