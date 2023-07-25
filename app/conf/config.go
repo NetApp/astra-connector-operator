@@ -72,7 +72,7 @@ func DefaultConfiguration() *MutableConfiguration {
 		WaitDurationForResource: 2 * time.Minute,
 		FeatureFlags: featureFlags{
 			DeployNatsConnector: true,
-			DeployNeptune:       false,
+			DeployNeptune:       true,
 		},
 	}
 }
