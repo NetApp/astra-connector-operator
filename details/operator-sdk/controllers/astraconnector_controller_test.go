@@ -9,10 +9,13 @@ import (
 	v1 "github.com/NetApp-Polaris/astra-connector-operator/details/operator-sdk/api/v1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"time"
 )
 
 var _ = Describe("Astraconnector controller", func() {
@@ -69,6 +72,35 @@ var _ = Describe("Astraconnector controller", func() {
 				err = k8sClient.Create(ctx, connector)
 				Expect(err).To(Not(HaveOccurred()))
 			}
+
+			By("Checking if the custom resource was successfully created")
+			Eventually(func() error {
+				found := &v1.AstraConnector{}
+				return k8sClient.Get(ctx, typeNamespaceName, found)
+			}, time.Minute, time.Second).Should(Succeed())
+
+			By("Reconciling the custom resource created")
+			controller := &AstraConnectorController{
+				Client: k8sClient,
+				Scheme: k8sClient.Scheme(),
+			}
+
+			_, err = controller.Reconcile(ctx, reconcile.Request{
+				NamespacedName: typeNamespaceName,
+			})
+			Expect(err).To(Not(HaveOccurred()))
+
+			By("Checking if Deployment was successfully created in the reconciliation")
+			Eventually(func() error {
+				found := &appsv1.Deployment{}
+				return k8sClient.Get(ctx, typeNamespaceName, found)
+			}, time.Minute, time.Second).Should(Succeed())
+
+			By("Checking the latest Status Condition added to the AstraConnector instance")
+			Eventually(func() error {
+				// TODO
+				return nil
+			}, time.Minute, time.Second).Should(Succeed())
 		})
 	})
 })
