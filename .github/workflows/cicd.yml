@@ -66,7 +66,7 @@ jobs:
           hide_complexity: true
           indicators: false
           output: both
-          thresholds: '47 80'
+          thresholds: '50 80'
 
       - name: Add coverage PR comment
         uses: marocchino/sticky-pull-request-comment@v2
@@ -137,26 +137,11 @@ jobs:
           docker login -u $DOCKERHUB_USERNAME -p $DOCKERHUB_PASSWORD
           make docker-push
 
-      - name: Update the operator image tag
+      - name: Build Install YAMLs
         if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-') }}
         run: |
           export VERSION=$(cat VERSION)
-          export BRANCH=$(cat BRANCH)
-          make generate-operator-yaml
-          git config --global user.name ${{ secrets.ACTIONS_USER }}
-          git config --global user.email ${{ secrets.ACTIONS_EMAIL }}
-          git diff details/operator-sdk/astraconnector_operator.yaml
-          git diff details/operator-sdk/config/manager/kustomization.yaml
-          git add details/operator-sdk/astraconnector_operator.yaml
-          git add details/operator-sdk/config/manager/kustomization.yaml
-          git commit -m "Auto updating the operator image tag" -n
-          git push --set-upstream origin $BRANCH
-
-      - name: Build Install Bundle
-        if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-') }}
-        run: |
-          export VERSION=$(cat VERSION)
-          make install-bundle
+          make release
 
       - name: Get Version
         if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-') }}
@@ -177,27 +162,13 @@ jobs:
           draft: false
           prerelease: false
 
-      - name: Upload Release Image Bundle
-        if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-') }}
-        id: upload-release-asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAR_PATH: "./build/astra-connector-operator-${{ steps.vars.outputs.version }}.tgz"
-          ASSET_NAME: "install-bundle-${{ steps.vars.outputs.version }}.tgz"
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing its ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
-          asset_path: ${{ env.TAR_PATH }}
-          asset_name: ${{ env.ASSET_NAME }}
-          asset_content_type: application/x-tar
-
       - name: Upload astraconnector yaml
         if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-') }}
         id: upload-astraconnector-yaml
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          FILE_PATH: "./details/operator-sdk/config/samples/astra_v1_astraconnector.yaml"
+          FILE_PATH: "./build/astra_v1_astraconnector.yaml"
           ASSET_NAME: "astra_v1_astraconnector.yaml"
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
@@ -211,7 +182,7 @@ jobs:
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          FILE_PATH: "./details/operator-sdk/astraconnector_operator.yaml"
+          FILE_PATH: "./build/astraconnector_operator.yaml"
           ASSET_NAME: "astraconnector_operator.yaml"
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}

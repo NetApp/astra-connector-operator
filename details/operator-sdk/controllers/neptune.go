@@ -1,70 +1,28 @@
 package controllers
 
 import (
-	"bytes"
 	"context"
-	"embed"
-	"fmt"
+	"time"
 
-	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime/serializer/yaml"
-	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
-
-	"github.com/NetApp-Polaris/astra-connector-operator/deployer/neptune"
+	"github.com/NetApp-Polaris/astra-connector-operator/app/deployer/neptune"
 	v1 "github.com/NetApp-Polaris/astra-connector-operator/details/operator-sdk/api/v1"
+	ctrl "sigs.k8s.io/controller-runtime"
 )
-
-//go:embed yaml/neptune_crds.yaml
-var f embed.FS
 
 func (r *AstraConnectorController) deployNeptune(ctx context.Context,
 	astraConnector *v1.AstraConnector, natsSyncClientStatus *v1.NatsSyncClientStatus) (ctrl.Result, error) {
-	//// Install CRDs
-	// Ran into cluster scope issue
-	err := installCRDs(ctx, r)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
+
+	// TODO CRD will be installed as part of our crd install
+	// check if they are installed if not error here or maybe a pre-check
 
 	// Deploy Neptune
 	neptuneDeployer := neptune.NewNeptuneClientDeployer()
-	err = r.deployResources(ctx, neptuneDeployer, astraConnector, natsSyncClientStatus)
+	err := r.deployResources(ctx, neptuneDeployer, astraConnector, natsSyncClientStatus)
 	if err != nil {
-		return ctrl.Result{}, err
+		// Failed deploying we want status to reflect that for at least 30 seconds before it's requeued so
+		// anyone watching can be informed
+		return ctrl.Result{RequeueAfter: 30 * time.Second}, err
 	}
 
 	return ctrl.Result{}, nil
-}
-
-func installCRDs(ctx context.Context, r *AstraConnectorController) error {
-	log := ctrllog.FromContext(ctx)
-	yamlFile, err := f.ReadFile("yaml/neptune_crds.yaml")
-	if err != nil {
-		return err
-	}
-
-	// Decode the YAML file into unstructured objects.
-	dec := yaml.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
-	for _, rawObj := range bytes.Split(yamlFile, []byte("\n---\n")) {
-		if len(bytes.TrimSpace(rawObj)) == 0 {
-			continue
-		}
-		obj := &unstructured.Unstructured{}
-		_, _, err = dec.Decode(rawObj, nil, obj)
-		if err != nil {
-			return err
-		}
-
-		key := client.ObjectKeyFromObject(obj)
-		err = r.Client.Create(ctx, obj)
-		if errors.IsAlreadyExists(err) {
-			log.Info(fmt.Sprintf("CRD %s already exists\n", key.Name))
-		} else if err != nil {
-			return err
-		}
-	}
-	return nil
 }

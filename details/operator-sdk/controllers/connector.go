@@ -10,11 +10,11 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
+	"github.com/NetApp-Polaris/astra-connector-operator/app/deployer/connector"
+	"github.com/NetApp-Polaris/astra-connector-operator/app/deployer/model"
+	"github.com/NetApp-Polaris/astra-connector-operator/app/register"
 	"github.com/NetApp-Polaris/astra-connector-operator/common"
-	"github.com/NetApp-Polaris/astra-connector-operator/deployer/connector"
-	"github.com/NetApp-Polaris/astra-connector-operator/deployer/model"
 	v1 "github.com/NetApp-Polaris/astra-connector-operator/details/operator-sdk/api/v1"
-	"github.com/NetApp-Polaris/astra-connector-operator/register"
 )
 
 func (r *AstraConnectorController) deployConnector(ctx context.Context,
@@ -26,7 +26,10 @@ func (r *AstraConnectorController) deployConnector(ctx context.Context,
 	for _, deployer := range connectorDeployers {
 		err := r.deployResources(ctx, deployer, astraConnector, natsSyncClientStatus)
 		if err != nil {
-			return ctrl.Result{}, err
+			// Failed deploying we want status to reflect that for at least 30 seconds before it's requeued so
+			// anyone watching can be informed
+			log.V(3).Info("Requeue after 30 seconds, so that status reflects error")
+			return ctrl.Result{RequeueAfter: 30 * time.Second}, err
 		}
 	}
 

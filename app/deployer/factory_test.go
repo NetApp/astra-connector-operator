@@ -3,10 +3,10 @@ package deployer_test
 import (
 	"testing"
 
+	"github.com/NetApp-Polaris/astra-connector-operator/app/deployer"
+	"github.com/NetApp-Polaris/astra-connector-operator/app/deployer/connector"
+	"github.com/NetApp-Polaris/astra-connector-operator/app/deployer/neptune"
 	"github.com/NetApp-Polaris/astra-connector-operator/common"
-	"github.com/NetApp-Polaris/astra-connector-operator/deployer"
-	"github.com/NetApp-Polaris/astra-connector-operator/deployer/connector"
-	"github.com/NetApp-Polaris/astra-connector-operator/deployer/neptune"
 	"github.com/stretchr/testify/assert"
 )
 

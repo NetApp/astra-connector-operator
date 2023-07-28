@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
@@ -29,12 +30,13 @@ If you add or change a Config option, you must set it in 4 places (which is anno
  4. The toImmutableConfig() conversion constructor.
 */
 type ImmutableConfiguration struct {
-	host            string
-	appRoot         string
-	port            int
-	metricsPort     int
-	healthProbePort int
-	featureFlags    ImmutableFeatureFlags
+	host                    string
+	appRoot                 string
+	port                    int
+	metricsPort             int
+	healthProbePort         int
+	waitDurationForResource time.Duration
+	featureFlags            ImmutableFeatureFlags
 
 	// This is only stored to be able to log it at app start-up: Do not use this field it is not immutable
 	config *MutableConfiguration
@@ -49,10 +51,11 @@ type MutableConfiguration struct {
 	// Changing the ports should only be used for local development because actually changing the defaults on the deployed
 	// operator requires additional yaml changes. But we need a local development override because
 	// mcafee takes the default HealthPortProbe on Mac.
-	Port            int
-	MetricsPort     int
-	HealthProbePort int
-	FeatureFlags    featureFlags
+	Port                    int
+	MetricsPort             int
+	HealthProbePort         int
+	WaitDurationForResource time.Duration
+	FeatureFlags            featureFlags
 }
 
 // DefaultConfiguration Returns a MutableConfiguration that holds all the default values to be used,
@@ -61,11 +64,12 @@ func DefaultConfiguration() *MutableConfiguration {
 	applicationRoot := appRoot()
 
 	return &MutableConfiguration{
-		Host:            "", // operator-sdk uses empty string, so defaulting to empty string
-		AppRoot:         applicationRoot,
-		Port:            9443,
-		MetricsPort:     8080,
-		HealthProbePort: 8081,
+		Host:                    "", // operator-sdk uses empty string, so defaulting to empty string
+		AppRoot:                 applicationRoot,
+		Port:                    9443,
+		MetricsPort:             8080,
+		HealthProbePort:         8081,
+		WaitDurationForResource: 2 * time.Minute,
 		FeatureFlags: featureFlags{
 			DeployNatsConnector: true,
 			DeployNeptune:       false,
@@ -76,11 +80,12 @@ func DefaultConfiguration() *MutableConfiguration {
 // toImmutableConfig Creates an ImmutableConfiguration from a MutableConfiguration object.
 func toImmutableConfig(config *MutableConfiguration) *ImmutableConfiguration {
 	immutableConfig := &ImmutableConfiguration{
-		host:            config.Host,
-		appRoot:         config.AppRoot,
-		port:            config.Port,
-		metricsPort:     config.MetricsPort,
-		healthProbePort: config.HealthProbePort,
+		host:                    config.Host,
+		appRoot:                 config.AppRoot,
+		port:                    config.Port,
+		metricsPort:             config.MetricsPort,
+		healthProbePort:         config.HealthProbePort,
+		waitDurationForResource: config.WaitDurationForResource,
 		featureFlags: ImmutableFeatureFlags{
 			deployNatsConnector: config.FeatureFlags.DeployNatsConnector,
 			deployNeptune:       config.FeatureFlags.DeployNeptune,
@@ -114,6 +119,10 @@ func (i ImmutableConfiguration) MetricsPort() int {
 
 func (i ImmutableConfiguration) HealthProbePort() int {
 	return i.healthProbePort
+}
+
+func (i ImmutableConfiguration) WaitDurationForResource() time.Duration {
+	return i.waitDurationForResource
 }
 
 func (i ImmutableConfiguration) FeatureFlags() ImmutableFeatureFlags {

@@ -2,8 +2,8 @@ package connector_test
 
 import (
 	"context"
+	"github.com/NetApp-Polaris/astra-connector-operator/app/deployer/connector"
 	"github.com/NetApp-Polaris/astra-connector-operator/common"
-	"github.com/NetApp-Polaris/astra-connector-operator/deployer/connector"
 	v1 "github.com/NetApp-Polaris/astra-connector-operator/details/operator-sdk/api/v1"
 	"github.com/stretchr/testify/assert"
 	appsv1 "k8s.io/api/apps/v1"
@@ -68,7 +68,7 @@ func TestNatsSyncGetDeploymentObjectsDefault(t *testing.T) {
 	assert.True(t, ok)
 
 	assert.Equal(t, int32(1), *deployment.Spec.Replicas)
-	assert.Equal(t, "docker.io/theotw/natssync-client:2.1.202305182124", deployment.Spec.Template.Spec.Containers[0].Image)
+	assert.Equal(t, "netappdownloads.jfrog.io/docker-astra-control-staging/arch30/neptune/natssync-client:2.1.202306281610", deployment.Spec.Template.Spec.Containers[0].Image)
 	assert.Equal(t, "192.168.1.1", deployment.Spec.Template.Spec.HostAliases[0].IP)
 	assert.Nil(t, deployment.Spec.Template.Spec.ImagePullSecrets)
 	// TODO add more checks

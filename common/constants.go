@@ -5,18 +5,18 @@
 package common
 
 const (
-	DefaultImageRegistry = "docker.io"
+	DefaultImageRegistry = "netappdownloads.jfrog.io/docker-astra-control-staging/arch30/neptune"
 
 	AstraConnectName            = "astraconnect"
 	AstraConnectDefaultReplicas = 1
-	AstraConnectDefaultImage    = "netapp/astra-connector:1.0.202307282133"
+	AstraConnectDefaultImage    = "astra-connector:1.0.202307282133"
 
 	NatsSyncClientName                  = "natssync-client"
 	NatsSyncClientDefaultReplicas       = 1
 	NatsSyncClientPort                  = 8080
 	NatsSyncClientProtocol              = "TCP"
 	NatsSyncClientKeystoreUrl           = "configmap:///configmap-data"
-	NatsSyncClientDefaultImage          = "theotw/natssync-client:2.1.202305182124"
+	NatsSyncClientDefaultImage          = "natssync-client:2.1.202306281610"
 	NatsSyncClientDefaultCloudBridgeURL = "https://astra.netapp.io"
 
 	NatsName               = "nats"
@@ -30,8 +30,9 @@ const (
 	NatsMetricsPort        = 7777
 	NatsGatewaysPort       = 7522
 	NatsDefaultReplicas    = 2
-	NatsDefaultImage       = "nats:2.8.4-alpine3.15"
-	NatsMaxPayload         = 8388608
+	// NatsDefaultImage when changing default image push image to jfrog as well
+	NatsDefaultImage = "nats:2.8.4-alpine3.15"
+	NatsMaxPayload   = 8388608
 
 	NatsSyncClientConfigMapName               = "natssync-client-configmap"
 	NatsSyncClientConfigMapRoleName           = "natssync-client-configmap-role"
@@ -45,8 +46,8 @@ const (
 	NeptuneClusterRoleName               = "neptune-manager-role"
 	NeptuneMetricServicePort             = 8443
 	NeptuneMetricServiceProtocol         = "TCP"
+	NeptuneDefaultImage                  = "neptune:main-b65bdb9-July21"
 
-	AstraDefaultCloudType = "Azure"
 	AstraPrivateCloudType = "private"
 	AstraPrivateCloudName = "private"
 

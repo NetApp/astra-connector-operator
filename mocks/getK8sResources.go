@@ -9,7 +9,7 @@ import (
 
 	mock "github.com/stretchr/testify/mock"
 
-	model "github.com/NetApp-Polaris/astra-connector-operator/deployer/model"
+	model "github.com/NetApp-Polaris/astra-connector-operator/app/deployer/model"
 
 	v1 "github.com/NetApp-Polaris/astra-connector-operator/details/operator-sdk/api/v1"
 )
