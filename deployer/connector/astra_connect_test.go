@@ -95,9 +95,7 @@ func TestAstraConnectGetDeploymentObjectsUsingDefaults(t *testing.T) {
 
 	container := deployment.Spec.Template.Spec.Containers[0]
 	assert.Equal(t, "docker.io/netapp/astra-connector:1.0.202307282133", container.Image)
-
 	assert.Equal(t, common.AstraConnectName, container.Name)
-
 	assert.Equal(t, 2, len(container.Env))
 	assert.Equal(t, "NATS_SERVER_URL", container.Env[0].Name)
 	assert.Equal(t, "LOG_LEVEL", container.Env[1].Name)
