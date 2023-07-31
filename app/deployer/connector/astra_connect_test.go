@@ -54,7 +54,7 @@ func TestAstraConnectGetDeploymentObjects(t *testing.T) {
 	assert.Equal(t, "test-registry/test-image", container.Image)
 	assert.Equal(t, common.AstraConnectName, container.Name)
 
-	assert.Equal(t, 2, len(container.Env))
+	assert.Equal(t, 4, len(container.Env))
 	assert.Equal(t, "NATS_SERVER_URL", container.Env[0].Name)
 	assert.Equal(t, "LOG_LEVEL", container.Env[1].Name)
 	assert.Equal(t, "trace", container.Env[1].Value)
@@ -94,9 +94,9 @@ func TestAstraConnectGetDeploymentObjectsUsingDefaults(t *testing.T) {
 	assert.Equal(t, common.AstraConnectName, deployment.Spec.Template.Spec.ServiceAccountName)
 
 	container := deployment.Spec.Template.Spec.Containers[0]
-	assert.Equal(t, "netappdownloads.jfrog.io/docker-astra-control-staging/arch30/neptune/astra-connector:1.0.202307282133", container.Image)
+	assert.Equal(t, "netappdownloads.jfrog.io/docker-astra-control-staging/arch30/neptune/astra-connector:1.0.202307311828", container.Image)
 	assert.Equal(t, common.AstraConnectName, container.Name)
-	assert.Equal(t, 2, len(container.Env))
+	assert.Equal(t, 4, len(container.Env))
 	assert.Equal(t, "NATS_SERVER_URL", container.Env[0].Name)
 	assert.Equal(t, "LOG_LEVEL", container.Env[1].Name)
 	assert.Equal(t, "trace", container.Env[1].Value)
