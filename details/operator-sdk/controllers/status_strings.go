@@ -34,6 +34,7 @@ const (
 	UnregisterNSClient       = "Unregistered natsSyncClient"
 	FailedUnRegisterNSClient = "Failed to unregister natsSyncClient"
 
+	DeployedComponents  = "Deployed all the connector components"
 	UnregisterFromAstra = "Unregistered the cluster with Astra"
 
 	FailedConnectorIDAdd    = "Failed to add cluster to Astra"

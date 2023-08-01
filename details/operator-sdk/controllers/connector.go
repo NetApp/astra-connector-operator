@@ -66,6 +66,8 @@ func (r *AstraConnectorController) deployConnector(ctx context.Context,
 		// Check the feature flag first
 		if conf.Config.FeatureFlags().SkipAstraRegistration() {
 			log.Info("Skipping Nats and Astra registration, feature flag set to not register")
+			natsSyncClientStatus.Status = DeployedComponents
+			_ = r.updateAstraConnectorStatus(ctx, astraConnector, *natsSyncClientStatus)
 			return ctrl.Result{}, nil
 		}
 
