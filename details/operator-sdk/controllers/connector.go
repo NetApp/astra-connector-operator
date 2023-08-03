@@ -10,6 +10,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
+	"github.com/NetApp-Polaris/astra-connector-operator/app/conf"
 	"github.com/NetApp-Polaris/astra-connector-operator/app/deployer/connector"
 	"github.com/NetApp-Polaris/astra-connector-operator/app/deployer/model"
 	"github.com/NetApp-Polaris/astra-connector-operator/app/register"
@@ -62,6 +63,14 @@ func (r *AstraConnectorController) deployConnector(ctx context.Context,
 
 	// RegisterClient
 	if !astraConnector.Spec.Astra.Unregister {
+		// Check the feature flag first
+		if conf.Config.FeatureFlags().SkipAstraRegistration() {
+			log.Info("Skipping Nats and Astra registration, feature flag set to not register")
+			natsSyncClientStatus.Status = DeployedComponents
+			_ = r.updateAstraConnectorStatus(ctx, astraConnector, *natsSyncClientStatus)
+			return ctrl.Result{}, nil
+		}
+
 		if registered {
 			log.Info("natsSyncClient already registered", "astraConnectorID", astraConnectorID)
 		} else {

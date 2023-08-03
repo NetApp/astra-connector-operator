@@ -18,3 +18,4 @@ HealthProbePort: 8083
 FeatureFlags:
    DeployNatsConnector: true
    DeployNeptune: false
+   SkipAstraRegistration: false
