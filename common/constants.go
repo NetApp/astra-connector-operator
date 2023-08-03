@@ -4,6 +4,8 @@
 
 package common
 
+import "github.com/NetApp-Polaris/astra-connector-operator/app/conf"
+
 const (
 	DefaultImageRegistry = "netappdownloads.jfrog.io/docker-astra-control-staging/arch30/neptune"
 
@@ -51,6 +53,7 @@ const (
 	AstraPrivateCloudType = "private"
 	AstraPrivateCloudName = "private"
 
+	ConnectorNeptuneCapability = "neptuneV1"
 	ConnectorRelayCapability   = "relayV1"
 	ConnectorWatcherCapability = "watcherV1"
 
@@ -59,8 +62,13 @@ const (
 )
 
 func GetConnectorCapabilities() []string {
-	return []string{
+	capabilities := []string{
 		ConnectorRelayCapability,
 		ConnectorWatcherCapability,
 	}
+
+	if conf.Config.FeatureFlags().DeployNeptune() {
+		capabilities = append(capabilities, ConnectorNeptuneCapability)
+	}
+	return capabilities
 }
