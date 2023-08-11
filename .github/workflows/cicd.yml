@@ -147,8 +147,10 @@ jobs:
         if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-') }}
         run: |
           export VERSION=$(cat VERSION)
-          export MANIFEST_FILEPATH=./default-image-manifest-$VERSION.manifest
+          export MANIFEST_FILENAME=default-image-manifest-$VERSION.manifest
+          export MANIFEST_FILEPATH=./$MANIFEST_FILENAME
           echo "MANIFEST_FILEPATH=$MANIFEST_FILEPATH" >> $GITHUB_ENV
+          echo "MANIFEST_FILENAME=$MANIFEST_FILENAME" >> $GITHUB_ENV
           go run scripts/create_default_images_manifest.go $MANIFEST_FILEPATH
           cat $MANIFEST_FILEPATH
 
@@ -192,9 +194,11 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           FILE_PATH: ${{ env.MANIFEST_FILEPATH }}
+          ASSET_NAME: ${{ env.MANIFEST_FILENAME }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ${{ env.FILE_PATH }}
+          asset_name: ${{ env.ASSET_NAME }}
           asset_content_type: text/plain
 
       - name: Upload astraconnector_operator.yaml
