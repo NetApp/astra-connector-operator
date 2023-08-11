@@ -147,7 +147,7 @@ jobs:
         if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-') }}
         run: |
           export VERSION=$(cat VERSION)
-          export MANIFEST_FILEPATH=./default-image-manifest-$VERSION.txt
+          export MANIFEST_FILEPATH=./default-image-manifest-$VERSION.manifest
           echo "MANIFEST_FILEPATH=$MANIFEST_FILEPATH" >> $GITHUB_ENV
           go run scripts/create_default_images_manifest.go $MANIFEST_FILEPATH
 
