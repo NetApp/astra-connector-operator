@@ -143,6 +143,15 @@ jobs:
           export VERSION=$(cat VERSION)
           make release
 
+      - name: Build default-image manifest file
+        if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-') }}
+        run: |
+          export VERSION=$(cat VERSION)
+          export MANIFEST_FILEPATH=./default-image-manifest-$VERSION.manifest
+          echo "MANIFEST_FILEPATH=$MANIFEST_FILEPATH" >> $GITHUB_ENV
+          go run scripts/create_default_images_manifest.go $MANIFEST_FILEPATH
+          cat $MANIFEST_FILEPATH
+
       - name: Get Version
         if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-') }}
         id: vars
@@ -175,6 +184,18 @@ jobs:
           asset_path: ${{ env.FILE_PATH }}
           asset_name: ${{ env.ASSET_NAME }}
           asset_content_type: text/yaml
+
+      - name: Upload default-image manifest
+        if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-') }}
+        id: upload-manifest
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FILE_PATH: ${{ env.MANIFEST_FILEPATH }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ env.FILE_PATH }}
+          asset_content_type: text/plain
 
       - name: Upload astraconnector_operator.yaml
         if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-') }}
