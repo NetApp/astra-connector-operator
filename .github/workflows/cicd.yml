@@ -144,12 +144,13 @@ jobs:
           make release
 
       - name: Build default-image manifest file
-        if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-') }}
+        if: ${{ github.ref == 'refs/heads/main' || github.ref == 'ASTRACTL-27664-add-default-image-manifest' || startsWith(github.ref, 'refs/heads/release-') }}
         run: |
           export VERSION=$(cat VERSION)
           export MANIFEST_FILEPATH=./default-image-manifest-$VERSION.manifest
           echo "MANIFEST_FILEPATH=$MANIFEST_FILEPATH" >> $GITHUB_ENV
           go run scripts/create_default_images_manifest.go $MANIFEST_FILEPATH
+          cat $MANIFEST_FILEPATH
 
       - name: Get Version
         if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-') }}
