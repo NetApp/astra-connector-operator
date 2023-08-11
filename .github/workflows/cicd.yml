@@ -144,7 +144,7 @@ jobs:
           make release
 
       - name: Build default-image manifest file
-#        if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-') }}
+        if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-') }}
         run: |
           export VERSION=$(cat VERSION)
           export MANIFEST_FILEPATH=./default-image-manifest-$VERSION.manifest
