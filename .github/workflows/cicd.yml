@@ -147,7 +147,7 @@ jobs:
         if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-') }}
         run: |
           export VERSION=$(cat VERSION)
-          export MANIFEST_FILENAME=default-image-manifest-$VERSION.manifest
+          export MANIFEST_FILENAME=default-images-$VERSION.manifest
           export MANIFEST_FILEPATH=./$MANIFEST_FILENAME
           echo "MANIFEST_FILEPATH=$MANIFEST_FILEPATH" >> $GITHUB_ENV
           echo "MANIFEST_FILENAME=$MANIFEST_FILENAME" >> $GITHUB_ENV
