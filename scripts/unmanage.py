@@ -15,6 +15,14 @@ class UnmanageUtil:
     def remove_cluster(self, cloud_id: str, cluster_id: str) -> None:
         try:
             url = f"{self.astra_url}/accounts/{self.account_id}/topology/v1" \
+                  f"/managedClusters/{cluster_id}"
+            self.log.info("Unmanaging Cluster", extra={"clusterID": cluster_id})
+            headers = {"Authorization": f"Bearer {self.token}"}
+
+            response = requests.delete(url, headers=headers, verify=False)
+            response.raise_for_status()
+
+            url = f"{self.astra_url}/accounts/{self.account_id}/topology/v1" \
                   f"/clouds/{cloud_id}/clusters/{cluster_id}"
             self.log.info("Removing Cluster", extra={"clusterID": cluster_id})
             headers = {"Authorization": f"Bearer {self.token}"}
