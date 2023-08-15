@@ -5,21 +5,21 @@ import requests
 
 
 class UnmanageUtil:
-    def __init__(self, log, astra_host, account_id, token, cluster_name):
+    def __init__(self, log, astra_url, account_id, token, cluster_name):
         self.log = log
-        self.astra_host = astra_host
+        self.astra_url = astra_url
         self.account_id = account_id
         self.token = token
         self.cluster_name = cluster_name
 
     def remove_cluster(self, cloud_id: str, cluster_id: str) -> None:
         try:
-            url = f"{self.astra_host}/accounts/{self.account_id}/topology/v1" \
+            url = f"{self.astra_url}/accounts/{self.account_id}/topology/v1" \
                   f"/clouds/{cloud_id}/clusters/{cluster_id}"
             self.log.info("Removing Cluster", extra={"clusterID": cluster_id})
             headers = {"Authorization": f"Bearer {self.token}"}
 
-            response = requests.delete(url, headers=headers)
+            response = requests.delete(url, headers=headers, verify=False)
             response.raise_for_status()
 
         except (requests.exceptions.RequestException, json.JSONDecodeError, KeyError) as err:
@@ -37,13 +37,13 @@ class UnmanageUtil:
             raise err
 
     def list_clouds(self) -> requests.Response:
-        url = f"{self.astra_host}/accounts/{self.account_id}/topology/v1/clouds"
+        url = f"{self.astra_url}/accounts/{self.account_id}/topology/v1/clouds"
 
         self.log.info("Getting clouds")
         return do_get_request(url, self.token)
 
     def get_clusters(self, cloud_id: str) -> dict:
-        url = f"{self.astra_host}/accounts/{self.account_id}/topology/v1/clouds/{cloud_id}/clusters"
+        url = f"{self.astra_url}/accounts/{self.account_id}/topology/v1/clouds/{cloud_id}/clusters"
 
         self.log.info("Getting clusters")
         resp = do_get_request(url, self.token)
@@ -73,7 +73,7 @@ def do_get_request(url, token) -> requests.Response:
         "Authorization": f"Bearer {token}"
     }
 
-    response = requests.get(url, headers=headers)
+    response = requests.get(url, headers=headers, verify=False)
     response.raise_for_status()
     return response
 
@@ -84,15 +84,15 @@ def setup_logging():
     return logging.getLogger()
 
 
-def main(astra_host, account_id, token, cluster_name):
-    print(f"Using Cloud Bridge Host: {astra_host}")
+def main(astra_url, account_id, token, cluster_name):
+    print(f"Using Cloud Bridge Host: {astra_url}")
     print(f"Using Account ID: {account_id}")
 
     log = setup_logging()
-    util = UnmanageUtil(log, astra_host, account_id, token, cluster_name)
+    util = UnmanageUtil(log, astra_url, account_id, token, cluster_name)
 
     cloud_id = util.get_cloud_id()
-    clusters_resp = util.get_clusters(account_id)
+    clusters_resp = util.get_clusters(cloud_id)
     cluster_id = util.process_clusters(clusters_resp)
 
     util.remove_cluster(cloud_id, cluster_id)
@@ -101,9 +101,9 @@ def main(astra_host, account_id, token, cluster_name):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Unmanage Astra Conncetor")
     parser.add_argument(
-        "--astraHost",
-        default="astra.netapp.io",
-        help="Host for the Cloud Bridge (default: astra.netapp.io)",
+        "--astraUrl",
+        default="https://astra.netapp.io",
+        help="Host for the Cloud Bridge (default: https://astra.netapp.io)",
     )
     parser.add_argument(
         "--accountId",
@@ -119,4 +119,4 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
-    main(args.astraHost, args.accountId, args.authToken, args.clusterName)
+    main(args.astraUrl, args.accountId, args.authToken, args.clusterName)
