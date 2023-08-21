@@ -68,7 +68,7 @@ func TestNatsSyncGetDeploymentObjectsDefault(t *testing.T) {
 	assert.True(t, ok)
 
 	assert.Equal(t, int32(1), *deployment.Spec.Replicas)
-	assert.Equal(t, "netappdownloads.jfrog.io/docker-astra-control-staging/arch30/neptune/natssync-client:2.1.202306281610", deployment.Spec.Template.Spec.Containers[0].Image)
+	assert.Equal(t, "netappdownloads.jfrog.io/docker-astra-control-staging/arch30/neptune/natssync-client:2.1.202308161939", deployment.Spec.Template.Spec.Containers[0].Image)
 	assert.Equal(t, "192.168.1.1", deployment.Spec.Template.Spec.HostAliases[0].IP)
 	assert.Nil(t, deployment.Spec.Template.Spec.ImagePullSecrets)
 	// TODO add more checks

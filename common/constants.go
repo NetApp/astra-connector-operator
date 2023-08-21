@@ -11,14 +11,14 @@ const (
 
 	AstraConnectName            = "astraconnect"
 	AstraConnectDefaultReplicas = 1
-	AstraConnectDefaultImage    = "astra-connector:1.0.202307311828"
+	AstraConnectDefaultImage    = "astra-connector:1.0.202308162238"
 
 	NatsSyncClientName                  = "natssync-client"
 	NatsSyncClientDefaultReplicas       = 1
 	NatsSyncClientPort                  = 8080
 	NatsSyncClientProtocol              = "TCP"
 	NatsSyncClientKeystoreUrl           = "configmap:///configmap-data"
-	NatsSyncClientDefaultImage          = "natssync-client:2.1.202306281610"
+	NatsSyncClientDefaultImage          = "natssync-client:2.1.202308161939"
 	NatsSyncClientDefaultCloudBridgeURL = "https://astra.netapp.io"
 
 	NatsName               = "nats"
