@@ -16,7 +16,7 @@ func (r *AstraConnectorController) deployNeptune(ctx context.Context,
 	// check if they are installed if not error here or maybe a pre-check
 
 	// Deploy Neptune
-	neptuneDeployer := neptune.NewNeptuneClientDeployer()
+	neptuneDeployer := neptune.NewNeptuneClientDeployerV2()
 	err := r.deployResources(ctx, neptuneDeployer, astraConnector, natsSyncClientStatus)
 	if err != nil {
 		// Failed deploying we want status to reflect that for at least 30 seconds before it's requeued so
