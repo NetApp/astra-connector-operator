@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
+	"strings"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -152,6 +153,7 @@ func (n NeptuneClientDeployerV2) GetDeploymentObjects(m *v1.AstraConnector, ctx 
 								"/manager",
 							},
 							Image: neptuneImage,
+							Env:   getNeptuneEnvVars(imageRegistry, containerImage, m.Spec.ImageRegistry.Secret),
 							LivenessProbe: &corev1.Probe{
 								ProbeHandler: corev1.ProbeHandler{
 									HTTPGet: &corev1.HTTPGetAction{
@@ -213,6 +215,50 @@ func (n NeptuneClientDeployerV2) GetDeploymentObjects(m *v1.AstraConnector, ctx 
 
 	deps = append(deps, deployment)
 	return deps, nil
+}
+
+func getNeptuneEnvVars(imageRegistry, containerImage, pullSecret string) []corev1.EnvVar {
+	var envVars []corev1.EnvVar
+
+	//DefaultImageRegistry := "netappdownloads.jfrog.io/docker-astra-control-staging/arch30/neptune"
+	// would look like this after split
+	// NEPTUNE_REGISTRY = netappdownloads.jfrog.io
+	// NEPTUNE_REPOSITORY = docker-astra-control-staging/arch30/neptune
+	splitImageReg := strings.SplitN(imageRegistry, "/", 2)
+	splitImageName := strings.SplitN(containerImage, ":", 2)
+
+	if len(splitImageReg) < 2 {
+		envVars = append(envVars, corev1.EnvVar{
+			Name:  "NEPTUNE_REGISTRY",
+			Value: imageRegistry,
+		})
+	} else {
+		envVars = append(envVars, corev1.EnvVar{
+			Name:  "NEPTUNE_REGISTRY",
+			Value: splitImageReg[0],
+		})
+
+		envVars = append(envVars, corev1.EnvVar{
+			Name:  "NEPTUNE_REPOSITORY",
+			Value: splitImageReg[1],
+		})
+	}
+
+	if len(splitImageName) == 2 {
+		envVars = append(envVars, corev1.EnvVar{
+			Name:  "NEPTUNE_TAG",
+			Value: splitImageName[1],
+		})
+	}
+
+	if pullSecret != "" {
+		envVars = append(envVars, corev1.EnvVar{
+			Name:  "NEPTUNE_SECRET",
+			Value: pullSecret,
+		})
+	}
+
+	return envVars
 }
 
 func (n NeptuneClientDeployerV2) GetStatefulSetObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, error) {
