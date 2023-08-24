@@ -2558,71 +2558,16 @@ rules:
       - patch
 ---
 apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  creationTimestamp: null
-  name: neptune-exechook
-rules:
-  - apiGroups:
-      - ""
-    resources:
-      - pods/exec
-    verbs:
-      - create
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
+kind: Role
 metadata:
   creationTimestamp: null
   name: neptune-manager-role
+  namespace: neptune-system
 rules:
   - apiGroups:
-      - ""
+      - '*'
     resources:
-      - namespaces
-    verbs:
-      - create
-      - get
-      - list
-      - patch
-      - watch
-  - apiGroups:
-      - ""
-    resources:
-      - persistentvolume
-    verbs:
-      - get
-      - list
-  - apiGroups:
-      - ""
-    resources:
-      - persistentvolumeclaims
-    verbs:
-      - create
-      - get
-      - list
-      - patch
-      - watch
-  - apiGroups:
-      - ""
-    resources:
-      - pods
-    verbs:
-      - delete
-      - get
-      - list
-      - update
-  - apiGroups:
-      - ""
-    resources:
-      - pods/finalizers
-    verbs:
-      - delete
-      - update
-  - apiGroups:
-      - batch
-    resources:
-      - jobs
+      - configmaps
     verbs:
       - create
       - delete
@@ -2631,20 +2576,6 @@ rules:
       - patch
       - update
       - watch
-  - apiGroups:
-      - batch
-    resources:
-      - jobs/finalizers
-    verbs:
-      - create
-      - delete
-      - update
-  - apiGroups:
-      - batch
-    resources:
-      - jobs/status
-    verbs:
-      - get
   - apiGroups:
       - management.astra.netapp.io
     resources:
@@ -2804,32 +2735,6 @@ rules:
   - apiGroups:
       - management.astra.netapp.io
     resources:
-      - backuprestores
-    verbs:
-      - create
-      - delete
-      - get
-      - list
-      - patch
-      - update
-      - watch
-  - apiGroups:
-      - management.astra.netapp.io
-    resources:
-      - backuprestores/finalizers
-    verbs:
-      - update
-  - apiGroups:
-      - management.astra.netapp.io
-    resources:
-      - backuprestores/status
-    verbs:
-      - get
-      - patch
-      - update
-  - apiGroups:
-      - management.astra.netapp.io
-    resources:
       - backups
     verbs:
       - create
@@ -2875,58 +2780,6 @@ rules:
       - management.astra.netapp.io
     resources:
       - disruptivebackups/status
-    verbs:
-      - get
-      - patch
-      - update
-  - apiGroups:
-      - management.astra.netapp.io
-    resources:
-      - exechooks
-    verbs:
-      - create
-      - delete
-      - get
-      - list
-      - patch
-      - update
-      - watch
-  - apiGroups:
-      - management.astra.netapp.io
-    resources:
-      - exechooks/finalizers
-    verbs:
-      - update
-  - apiGroups:
-      - management.astra.netapp.io
-    resources:
-      - exechooks/status
-    verbs:
-      - get
-      - patch
-      - update
-  - apiGroups:
-      - management.astra.netapp.io
-    resources:
-      - exechooksruns
-    verbs:
-      - create
-      - delete
-      - get
-      - list
-      - patch
-      - update
-      - watch
-  - apiGroups:
-      - management.astra.netapp.io
-    resources:
-      - exechooksruns/finalizers
-    verbs:
-      - update
-  - apiGroups:
-      - management.astra.netapp.io
-    resources:
-      - exechooksruns/status
     verbs:
       - get
       - patch
@@ -3015,78 +2868,39 @@ rules:
       - resourcebackups
     verbs:
       - create
-      - delete
       - get
       - list
-      - patch
-      - update
       - watch
-  - apiGroups:
-      - management.astra.netapp.io
-    resources:
-      - resourcebackups/finalizers
-    verbs:
-      - update
   - apiGroups:
       - management.astra.netapp.io
     resources:
       - resourcebackups/status
     verbs:
       - get
-      - patch
-      - update
   - apiGroups:
       - management.astra.netapp.io
     resources:
       - resourcedeletes
     verbs:
       - create
-      - delete
       - get
       - list
-      - patch
-      - update
       - watch
-  - apiGroups:
-      - management.astra.netapp.io
-    resources:
-      - resourcedeletes/finalizers
-    verbs:
-      - update
-  - apiGroups:
-      - management.astra.netapp.io
-    resources:
-      - resourcedeletes/status
-    verbs:
-      - get
-      - patch
-      - update
   - apiGroups:
       - management.astra.netapp.io
     resources:
       - resourcerestores
     verbs:
       - create
-      - delete
       - get
       - list
-      - patch
-      - update
       - watch
-  - apiGroups:
-      - management.astra.netapp.io
-    resources:
-      - resourcerestores/finalizers
-    verbs:
-      - update
   - apiGroups:
       - management.astra.netapp.io
     resources:
       - resourcerestores/status
     verbs:
       - get
-      - patch
-      - update
   - apiGroups:
       - management.astra.netapp.io
     resources:
@@ -3119,26 +2933,9 @@ rules:
       - resticvolumerestores
     verbs:
       - create
-      - delete
       - get
       - list
-      - patch
-      - update
       - watch
-  - apiGroups:
-      - management.astra.netapp.io
-    resources:
-      - resticvolumerestores/finalizers
-    verbs:
-      - update
-  - apiGroups:
-      - management.astra.netapp.io
-    resources:
-      - resticvolumerestores/status
-    verbs:
-      - get
-      - patch
-      - update
   - apiGroups:
       - management.astra.netapp.io
     resources:
@@ -3239,6 +3036,289 @@ rules:
       - management.astra.netapp.io
     resources:
       - snapshots/status
+    verbs:
+      - get
+      - patch
+      - update
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: neptune-exechook
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - pods/exec
+    verbs:
+      - create
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: neptune-manager-role
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - namespaces
+    verbs:
+      - create
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - persistentvolume
+    verbs:
+      - get
+      - list
+  - apiGroups:
+      - ""
+    resources:
+      - persistentvolumeclaims
+    verbs:
+      - create
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - persistentvolumes
+    verbs:
+      - create
+      - get
+      - list
+      - update
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - pods
+    verbs:
+      - delete
+      - get
+      - list
+      - update
+  - apiGroups:
+      - ""
+    resources:
+      - pods/finalizers
+    verbs:
+      - delete
+      - update
+  - apiGroups:
+      - batch
+    resources:
+      - jobs
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - batch
+    resources:
+      - jobs/finalizers
+    verbs:
+      - create
+      - delete
+      - update
+  - apiGroups:
+      - batch
+    resources:
+      - jobs/status
+    verbs:
+      - get
+  - apiGroups:
+      - management.astra.netapp.io
+    resources:
+      - backuprestores
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - management.astra.netapp.io
+    resources:
+      - backuprestores/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - management.astra.netapp.io
+    resources:
+      - backuprestores/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - management.astra.netapp.io
+    resources:
+      - exechooks
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - management.astra.netapp.io
+    resources:
+      - exechooks/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - management.astra.netapp.io
+    resources:
+      - exechooks/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - management.astra.netapp.io
+    resources:
+      - exechooksruns
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - management.astra.netapp.io
+    resources:
+      - exechooksruns/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - management.astra.netapp.io
+    resources:
+      - exechooksruns/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - management.astra.netapp.io
+    resources:
+      - resourcebackups
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - management.astra.netapp.io
+    resources:
+      - resourcebackups/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - management.astra.netapp.io
+    resources:
+      - resourcebackups/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - management.astra.netapp.io
+    resources:
+      - resourcedeletes
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - management.astra.netapp.io
+    resources:
+      - resourcedeletes/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - management.astra.netapp.io
+    resources:
+      - resourcedeletes/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - management.astra.netapp.io
+    resources:
+      - resourcerestores
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - management.astra.netapp.io
+    resources:
+      - resourcerestores/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - management.astra.netapp.io
+    resources:
+      - resourcerestores/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - management.astra.netapp.io
+    resources:
+      - resticvolumerestores
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - management.astra.netapp.io
+    resources:
+      - resticvolumerestores/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - management.astra.netapp.io
+    resources:
+      - resticvolumerestores/status
     verbs:
       - get
       - patch
@@ -3383,6 +3463,27 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
   name: neptune-leader-election-role
+subjects:
+  - kind: ServiceAccount
+    name: neptune-controller-manager
+    namespace: neptune-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  labels:
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: neptune
+    app.kubernetes.io/instance: manager-rolebinding
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: rolebinding
+    app.kubernetes.io/part-of: neptune
+  name: neptune-manager-rolebinding
+  namespace: neptune-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: neptune-manager-role
 subjects:
   - kind: ServiceAccount
     name: neptune-controller-manager
