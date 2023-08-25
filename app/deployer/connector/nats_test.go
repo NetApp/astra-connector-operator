@@ -96,7 +96,7 @@ func TestNatsGetConfigMapObjects(t *testing.T) {
 	// Todo Add assertions for the expected values in the ConfigMap object
 	assert.Equal(t, common.NatsConfigMapName, configMap.Name)
 	assert.Equal(t, m.Namespace, configMap.Namespace)
-	data := map[string]string{"nats.conf": "pid_file: \"/var/run/nats/nats.pid\"\nhttp: 8222\nmax_payload: 8388608\n\ncluster {\n  port: 6222\n  routes [\n    nats://nats-0.nats-cluster:6222\n    nats://nats-1.nats-cluster:6222\n    nats://nats-2.nats-cluster:6222\n  ]\n\n  cluster_advertise: $CLUSTER_ADVERTISE\n  connect_retries: 30\n}\n"}
+	data := map[string]string{"nats.conf": "pid_file: \"/var/run/nats/nats.pid\"\nhttp: 8222\nmax_payload: 8388608\n\ncluster {\n  port: 6222\n  routes [\n    nats://nats-0.nats-cluster:6222\n    nats://nats-1.nats-cluster:6222\n    ]\n\n  cluster_advertise: $CLUSTER_ADVERTISE\n  connect_retries: 30\n}\n"}
 	assert.Equal(t, data, configMap.Data)
 }
 
