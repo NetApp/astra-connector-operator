@@ -7,6 +7,7 @@ package connector
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -161,14 +162,35 @@ func (n *NatsDeployer) GetStatefulSetObjects(m *v1.AstraConnector, ctx context.C
 
 // GetConfigMapObjects returns a ConfigMap object for nats
 func (n *NatsDeployer) GetConfigMapObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, error) {
-	natsConf := "pid_file: \"/var/run/nats/nats.pid\"\nhttp: %d\nmax_payload: %d\n\ncluster {\n  port: %d\n  routes [\n    nats://nats-0.nats-cluster:%d\n    nats://nats-1.nats-cluster:%d\n    nats://nats-2.nats-cluster:%d\n  ]\n\n  cluster_advertise: $CLUSTER_ADVERTISE\n  connect_retries: 30\n}\n"
+	log := ctrllog.FromContext(ctx)
+
+	routes := make([]string, 0)
+	var index int32
+	index = 0
+	var replicas int32
+	if m.Spec.Nats.Replicas > 2 {
+		replicas = m.Spec.Nats.Replicas
+	} else {
+		log.Info("Defaulting the Nats replica size", "size", common.NatsDefaultReplicas)
+		replicas = common.NatsDefaultReplicas
+	}
+
+	for index < replicas {
+		rt := fmt.Sprintf("\n    nats://nats-%d.nats-cluster:%d", index, common.NatsClusterPort)
+		routes = append(routes, rt)
+		index += 1
+	}
+	routes[len(routes)-1] += "\n    "
+	routeConfig := strings.Join(routes, "")
+
+	natsConf := "pid_file: \"/var/run/nats/nats.pid\"\nhttp: %d\nmax_payload: %d\n\ncluster {\n  port: %d\n  routes [%s]\n\n  cluster_advertise: $CLUSTER_ADVERTISE\n  connect_retries: 30\n}\n"
 	configMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: m.Namespace,
 			Name:      common.NatsConfigMapName,
 		},
 		Data: map[string]string{
-			"nats.conf": fmt.Sprintf(natsConf, common.NatsMonitorPort, common.NatsMaxPayload, common.NatsClusterPort, common.NatsClusterPort, common.NatsClusterPort, common.NatsClusterPort),
+			"nats.conf": fmt.Sprintf(natsConf, common.NatsMonitorPort, common.NatsMaxPayload, common.NatsClusterPort, routeConfig),
 		},
 	}
 	return []client.Object{configMap}, nil
