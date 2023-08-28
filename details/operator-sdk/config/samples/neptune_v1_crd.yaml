@@ -562,6 +562,9 @@ spec:
                 applicationRef:
                   description: Name of the Application to back up
                   type: string
+                reclaimPolicy:
+                  description: ReclaimPolicy defines what happens to a backup when released from its claim. Valid options are Retain, Delete (default).
+                  type: string
                 snapshotRef:
                   description: Name of the Snapshot to use as the source of the Backup. If not provided, a temporary Snapshot will be created and backed up
                   type: string
@@ -1526,6 +1529,51 @@ spec:
                   x-kubernetes-list-map-keys:
                     - type
                   x-kubernetes-list-type: map
+              type: object
+          type: object
+      served: true
+      storage: true
+      subresources:
+        status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.11.1
+  creationTimestamp: null
+  name: resourcesummaryuploads.management.astra.netapp.io
+spec:
+  group: management.astra.netapp.io
+  names:
+    kind: ResourceSummaryUpload
+    listKind: ResourceSummaryUploadList
+    plural: resourcesummaryuploads
+    singular: resourcesummaryupload
+  scope: Namespaced
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: ResourceSummaryUpload is the Schema for the resourcesummaryuploads API
+          properties:
+            apiVersion:
+              description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+              type: string
+            kind:
+              description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+              type: string
+            metadata:
+              type: object
+            spec:
+              description: ResourceSummaryUploadSpec defines the desired state of ResourceSummaryUpload
+              properties:
+                foo:
+                  description: Foo is an example field of ResourceSummaryUpload. Edit resourcesummaryupload_types.go to remove/update
+                  type: string
+              type: object
+            status:
+              description: ResourceSummaryUploadStatus defines the observed state of ResourceSummaryUpload
               type: object
           type: object
       served: true
@@ -2512,6 +2560,18 @@ metadata:
   name: neptune-resourcerestore
   namespace: neptune-system
 ---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: neptune
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: serviceaccount
+    app.kubernetes.io/part-of: neptune
+  name: neptune-resourcesummaryupload
+  namespace: neptune-system
+---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
@@ -3042,6 +3102,21 @@ rules:
       - update
 ---
 apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  creationTimestamp: null
+  name: neptune-resourcesummaryupload
+  namespace: neptune-system
+rules:
+  - apiGroups:
+      - '*'
+    resources:
+      - secrets
+    verbs:
+      - get
+      - list
+---
+apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   creationTimestamp: null
@@ -3300,6 +3375,32 @@ rules:
   - apiGroups:
       - management.astra.netapp.io
     resources:
+      - resourcesummaryuploads
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - management.astra.netapp.io
+    resources:
+      - resourcesummaryuploads/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - management.astra.netapp.io
+    resources:
+      - resourcesummaryuploads/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - management.astra.netapp.io
+    resources:
       - resticvolumerestores
     verbs:
       - create
@@ -3446,6 +3547,18 @@ rules:
       - list
       - patch
       - update
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: neptune-resourcesummaryupload
+rules:
+  - nonResourceURLs:
+      - '*'
+    verbs:
+      - get
+      - list
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
@@ -3603,6 +3716,25 @@ roleRef:
 subjects:
   - kind: ServiceAccount
     name: neptune-resourcerestore
+    namespace: neptune-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: neptune
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: serviceaccount
+    app.kubernetes.io/part-of: neptune
+  name: neptune-resourcesummaryupload
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: neptune-resourcesummaryupload
+subjects:
+  - kind: ServiceAccount
+    name: neptune-resourcesummaryupload
     namespace: neptune-system
 ---
 apiVersion: v1
