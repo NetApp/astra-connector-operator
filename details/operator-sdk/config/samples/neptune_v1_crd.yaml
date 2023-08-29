@@ -170,12 +170,85 @@ spec:
             spec:
               description: AppMirrorUpdateSpec defines the desired state of AppMirrorUpdate
               properties:
-                foo:
-                  description: Foo is an example field of AppMirrorUpdate. Edit appmirrorupdate_types.go to remove/update
+                applicationRef:
+                  description: Name of the Application
                   type: string
+                destinationAppVaultRef:
+                  description: Name of the DestinationAppVault
+                  type: string
+                sourceAppArchivePath:
+                  description: Name of the source app archive path
+                  type: string
+                sourceAppVaultRef:
+                  description: Name of the SourceAppVault
+                  type: string
+              required:
+                - applicationRef
+                - destinationAppVaultRef
+                - sourceAppArchivePath
+                - sourceAppVaultRef
               type: object
             status:
               description: AppMirrorUpdateStatus defines the observed state of AppMirrorUpdate
+              properties:
+                completionTimestamp:
+                  description: CompletionTimestamp records the time the AppMirrorUpdate completed. The server's time is used for CompletionTimestamps
+                  format: date-time
+                  nullable: true
+                  type: string
+                conditions:
+                  description: Each Condition contains details for one aspect of the current state of the AppMirrorUpdate.
+                  items:
+                    description: "Condition contains details for one aspect of the current state of this API Resource. --- This struct is intended for direct use as an array at the field path .status.conditions.  For example, \n type FooStatus struct{ // Represents the observations of a foo's current state. // Known .status.conditions.type are: \"Available\", \"Progressing\", and \"Degraded\" // +patchMergeKey=type // +patchStrategy=merge // +listType=map // +listMapKey=type Conditions []metav1.Condition `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\" protobuf:\"bytes,1,rep,name=conditions\"` \n // other fields }"
+                    properties:
+                      lastTransitionTime:
+                        description: lastTransitionTime is the last time the condition transitioned from one status to another. This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                        format: date-time
+                        type: string
+                      message:
+                        description: message is a human readable message indicating details about the transition. This may be an empty string.
+                        maxLength: 32768
+                        type: string
+                      observedGeneration:
+                        description: observedGeneration represents the .metadata.generation that the condition was set based upon. For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date with respect to the current state of the instance.
+                        format: int64
+                        minimum: 0
+                        type: integer
+                      reason:
+                        description: reason contains a programmatic identifier indicating the reason for the condition's last transition. Producers of specific condition types may define expected values and meanings for this field, and whether the values are considered a guaranteed API. The value should be a CamelCase string. This field may not be empty.
+                        maxLength: 1024
+                        minLength: 1
+                        pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                        type: string
+                      status:
+                        description: status of the condition, one of True, False, Unknown.
+                        enum:
+                          - "True"
+                          - "False"
+                          - Unknown
+                        type: string
+                      type:
+                        description: type of condition in CamelCase or in foo.example.com/CamelCase. --- Many .condition.type values are consistent across resources like Available, but because arbitrary conditions can be useful (see .node.status.conditions), the ability to deconflict is important. The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
+                        maxLength: 316
+                        pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                        type: string
+                    required:
+                      - lastTransitionTime
+                      - message
+                      - reason
+                      - status
+                      - type
+                    type: object
+                  type: array
+                error:
+                  description: Error indicates the most recent error that has occurred. The error may not be permanent, so progress may continue after temporarily seeing an error.
+                  type: string
+                state:
+                  description: State indicates a high level summary of the AppMirrorUpdate's state
+                  type: string
+              required:
+                - conditions
+                - state
               type: object
           type: object
       served: true
@@ -553,9 +626,6 @@ spec:
             spec:
               description: BackupSpec defines the desired state of Backup
               properties:
-                appArchivePath:
-                  description: Path inside AppVault where the contents of this backup will go
-                  type: string
                 appVaultRef:
                   description: Name of the AppVault to use as the target of the backup
                   type: string
@@ -933,6 +1003,9 @@ spec:
                   description: CompletionTimestamp The time that the ExecutionHooksRun completed
                   format: date-time
                   type: string
+                delayComplete:
+                  description: DelayComplete set to true when exec hooks run has determined it no longer needs to delay, either because the wait time has expired or all pods have become ready
+                  type: boolean
                 matchingContainers:
                   description: MatchingContainers The status of each ExecHook that was run on each container
                   items:
@@ -1597,7 +1670,14 @@ spec:
     singular: resticvolumebackup
   scope: Namespaced
   versions:
-    - name: v1alpha1
+    - additionalPrinterColumns:
+        - jsonPath: .status.state
+          name: State
+          type: string
+        - jsonPath: .status.error
+          name: Error
+          type: string
+      name: v1alpha1
       schema:
         openAPIV3Schema:
           description: ResticVolumeBackup is the Schema for the resticvolumebackups API
@@ -1773,12 +1853,58 @@ spec:
                 clonePVCName:
                   description: Name of the temporary clone PVC created for Restic to copy from
                   type: string
-                clonePvcCleanedUp:
-                  description: Indicates whether the temporary clone has been cleaned up
-                  type: boolean
-                resticJobCleanedUp:
-                  description: Indicates whether the Restic job has been cleaned up
-                  type: boolean
+                completionTimestamp:
+                  description: CompletionTimestamp records the time the ResticVolumeBackup completed. The server's time is used for CompletionTimestamps
+                  format: date-time
+                  nullable: true
+                  type: string
+                conditions:
+                  description: Each Condition contains details for one aspect of the current state of the ResticVolumeBackup.
+                  items:
+                    description: "Condition contains details for one aspect of the current state of this API Resource. --- This struct is intended for direct use as an array at the field path .status.conditions.  For example, \n type FooStatus struct{ // Represents the observations of a foo's current state. // Known .status.conditions.type are: \"Available\", \"Progressing\", and \"Degraded\" // +patchMergeKey=type // +patchStrategy=merge // +listType=map // +listMapKey=type Conditions []metav1.Condition `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\" protobuf:\"bytes,1,rep,name=conditions\"` \n // other fields }"
+                    properties:
+                      lastTransitionTime:
+                        description: lastTransitionTime is the last time the condition transitioned from one status to another. This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                        format: date-time
+                        type: string
+                      message:
+                        description: message is a human readable message indicating details about the transition. This may be an empty string.
+                        maxLength: 32768
+                        type: string
+                      observedGeneration:
+                        description: observedGeneration represents the .metadata.generation that the condition was set based upon. For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date with respect to the current state of the instance.
+                        format: int64
+                        minimum: 0
+                        type: integer
+                      reason:
+                        description: reason contains a programmatic identifier indicating the reason for the condition's last transition. Producers of specific condition types may define expected values and meanings for this field, and whether the values are considered a guaranteed API. The value should be a CamelCase string. This field may not be empty.
+                        maxLength: 1024
+                        minLength: 1
+                        pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                        type: string
+                      status:
+                        description: status of the condition, one of True, False, Unknown.
+                        enum:
+                          - "True"
+                          - "False"
+                          - Unknown
+                        type: string
+                      type:
+                        description: type of condition in CamelCase or in foo.example.com/CamelCase. --- Many .condition.type values are consistent across resources like Available, but because arbitrary conditions can be useful (see .node.status.conditions), the ability to deconflict is important. The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
+                        maxLength: 316
+                        pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                        type: string
+                    required:
+                      - lastTransitionTime
+                      - message
+                      - reason
+                      - status
+                      - type
+                    type: object
+                  type: array
+                error:
+                  description: Error indicates the most recent error that has occurred. The error may not be permanent, so progress may continue after temporarily seeing an error.
+                  type: string
                 resticJobName:
                   description: Name of the Job created to run Restic
                   type: string
@@ -1788,8 +1914,12 @@ spec:
                 resticSnapshotID:
                   description: ID of the Restic snapshot created to represent this backup
                   type: string
+                state:
+                  description: State indicates a high level summary of the ResticVolumeBackup's state
+                  type: string
               required:
-                - resticJobCleanedUp
+                - conditions
+                - state
               type: object
           type: object
       served: true
@@ -2424,9 +2554,6 @@ spec:
                   type: string
                 ExecHookRunsPreSnapshotRef:
                   description: ExecHookRunsPreSnapshotRef reference to the ExecHooksRun prior to snapshot
-                  type: string
-                appArchivePath:
-                  description: AppArchivePath is the path inside AppVault where the contents of this snapshot will go.
                   type: string
                 appVaultRef:
                   description: AppVaultRef is the reference to the AppVault where the snapshot contents will go.
