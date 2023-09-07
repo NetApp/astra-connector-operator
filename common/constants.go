@@ -48,7 +48,7 @@ const (
 	NeptuneClusterRoleName               = "neptune-manager-role"
 	NeptuneMetricServicePort             = 8443
 	NeptuneMetricServiceProtocol         = "TCP"
-	NeptuneDefaultImage                  = "controller:380465b"
+	NeptuneDefaultImage                  = "controller:5fc4e2e"
 
 	AstraPrivateCloudType = "private"
 	AstraPrivateCloudName = "private"
