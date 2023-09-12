@@ -3465,6 +3465,7 @@ rules:
       - persistentvolumeclaims
     verbs:
       - create
+      - delete
       - get
       - list
       - patch
@@ -3496,6 +3497,13 @@ rules:
     verbs:
       - delete
       - update
+  - apiGroups:
+      - ""
+    resources:
+      - pods/log
+    verbs:
+      - get
+      - list
   - apiGroups:
       - batch
     resources:
@@ -3762,9 +3770,18 @@ rules:
       - volumesnapshots
     verbs:
       - create
+      - delete
       - get
       - list
       - patch
+      - watch
+  - apiGroups:
+      - storage.k8s.io
+    resources:
+      - storageclasses
+    verbs:
+      - get
+      - list
       - watch
 ---
 apiVersion: rbac.authorization.k8s.io/v1
