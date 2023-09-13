@@ -219,8 +219,8 @@ jobs:
           asset_name: ${{ env.ASSET_NAME }}
           asset_content_type: text/yaml
 
-      - name: Upload artifact
-        id: upload-astraconnector-operator-yaml
+      - name: Upload neptune.yaml
+        id: neptune-yaml
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
