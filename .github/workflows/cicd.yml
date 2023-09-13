@@ -141,6 +141,9 @@ jobs:
     name: Release
     runs-on: ubuntu-latest
     steps:
+      - name: Check out code
+        uses: actions/checkout@v2
+
       - name: Generate Install YAMLs
         run: |
           export VERSION=$(cat VERSION)
