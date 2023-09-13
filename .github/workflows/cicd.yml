@@ -143,6 +143,12 @@ jobs:
           export VERSION=$(cat VERSION)
           make release
 
+      - name: Download neptune release
+        run: |
+          curl -H "Authorization: token ${TOKEN}" -s https://api.github.com/repos/NetApp-Polaris/neptune/releases/latest | grep "neptune.*yaml" | cut -d : -f 2,3 | tr -d \" | wget -qi -
+        env:
+          TOKEN: ${{ secrets.PAT }}
+
       - name: Build default-image manifest file
         if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-') }}
         run: |
@@ -209,6 +215,20 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           FILE_PATH: "./build/astraconnector_operator.yaml"
           ASSET_NAME: "astraconnector_operator.yaml"
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ env.FILE_PATH }}
+          asset_name: ${{ env.ASSET_NAME }}
+          asset_content_type: text/yaml
+
+      - name: Upload artifact
+        if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-') }}
+        id: upload-astraconnector-operator-yaml
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FILE_PATH: "neptune.yaml"
+          ASSET_NAME: "neptune.yaml"
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ${{ env.FILE_PATH }}
