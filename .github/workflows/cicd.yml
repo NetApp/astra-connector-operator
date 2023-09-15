@@ -145,11 +145,13 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Generate Install YAMLs
+        if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-') }}
         run: |
           export VERSION=$(cat VERSION)
           make release
 
       - name: Build default-image manifest file
+        if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-') }}
         run: |
           export VERSION=$(cat VERSION)
           export MANIFEST_FILENAME=default-images-$VERSION.manifest
@@ -166,6 +168,7 @@ jobs:
           echo ::set-output name=version::$(cat VERSION)
 
       - name: Create Release
+        if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-') }}
         id: create_release
         uses: actions/create-release@v1
         env:
@@ -178,6 +181,7 @@ jobs:
           prerelease: false
 
       - name: Upload astraconnector yaml
+        if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-') }}
         id: upload-astraconnector-yaml
         uses: actions/upload-release-asset@v1
         env:
@@ -191,6 +195,7 @@ jobs:
           asset_content_type: text/yaml
 
       - name: Upload default-image manifest
+        if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-') }}
         id: upload-manifest
         uses: actions/upload-release-asset@v1
         env:
@@ -204,6 +209,7 @@ jobs:
           asset_content_type: text/plain
 
       - name: Upload astraconnector_operator.yaml
+        if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-') }}
         id: upload-astraconnector-operator-yaml
         uses: actions/upload-release-asset@v1
         env:
