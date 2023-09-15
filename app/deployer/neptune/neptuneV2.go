@@ -1,9 +1,14 @@
+/*
+ * Copyright (c) 2023. NetApp, Inc. All Rights Reserved.
+ */
+
 package neptune
 
 import (
 	"context"
 	"fmt"
-	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
+	"github.com/pkg/errors"
+	"os"
 	"strings"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -13,6 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/NetApp-Polaris/astra-connector-operator/app/deployer/model"
 	"github.com/NetApp-Polaris/astra-connector-operator/common"
@@ -41,7 +47,12 @@ func (n NeptuneClientDeployerV2) GetDeploymentObjects(m *v1.AstraConnector, ctx 
 	if m.Spec.Neptune.Image != "" {
 		containerImage = m.Spec.Neptune.Image
 	} else {
-		containerImage = common.NeptuneDefaultImage
+		imageBytes, err := os.ReadFile("/common/neptune_image_tag.txt")
+		if err != nil {
+			return nil, errors.Wrap(err, "error reading neptune image tag")
+		}
+
+		containerImage = string(imageBytes)
 	}
 
 	neptuneImage = fmt.Sprintf("%s/%s", imageRegistry, containerImage)
