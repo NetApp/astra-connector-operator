@@ -6,6 +6,7 @@ import (
 	"github.com/NetApp-Polaris/astra-connector-operator/app/conf"
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
+	"os/exec"
 	"reflect"
 	"time"
 
@@ -46,6 +47,16 @@ var resources = []createResourceParams{
 func (r *AstraConnectorController) deployResources(ctx context.Context, deployer model.Deployer, astraConnector *installer.AstraConnector, natsSyncClientStatus *installer.NatsSyncClientStatus) error {
 	log := ctrllog.FromContext(ctx)
 	k8sUtil := k8s.NewK8sUtil(r.Client, log)
+
+	// Creating Neptune CRDs, RoleBindings, and other resources from a file in my local file system
+	cmd := exec.Command("kubectl", "apply", "-f", "/details/operator-sdk/config/samples/neptune.yaml")
+
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return errors.Wrapf(err, "cmd.Run() failed when attempting to deploy Neptune resources")
+	}
+
+	log.Info("combined out:\n%s\n", string(out))
 
 	for _, funcList := range resources {
 
