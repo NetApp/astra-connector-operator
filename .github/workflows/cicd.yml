@@ -149,12 +149,6 @@ jobs:
           export VERSION=$(cat VERSION)
           make release
 
-      - name: Download neptune release
-        run: |
-          curl -H "Authorization: token ${TOKEN}" -s https://api.github.com/repos/NetApp-Polaris/neptune/releases/latest | grep "neptune.*yaml" | cut -d : -f 2,3 | tr -d \" | wget -qi -
-        env:
-          TOKEN: ${{ secrets.PAT }}
-
       - name: Build default-image manifest file
         run: |
           export VERSION=$(cat VERSION)
