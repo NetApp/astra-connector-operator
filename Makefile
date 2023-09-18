@@ -231,6 +231,8 @@ release: kustomize
 	mkdir build
 	cd details/operator-sdk/config/manager && $(KUSTOMIZE) edit set image controller=$(IMG)
 	cd details/operator-sdk && $(KUSTOMIZE) build config/default > $(BUILD_DIR)/astra_v1_astraconnector.yaml
+	cat $(MAKEFILE_DIR)/details/operator-sdk/config/samples/neptune_v1_crd.yaml $(BUILD_DIR)/only_astraconnector_operator.yaml > $(BUILD_DIR)/astraconnector_operator.yaml
+	cp $(MAKEFILE_DIR)/details/operator-sdk/config/samples/astra_v1_astraconnector.yaml $(BUILD_DIR)/astra_v1_astraconnector.yaml
 
 .PHONY: generate-mocks
 generate-mocks: install-mockery
