@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/NetApp-Polaris/astra-connector-operator/common"
+	"github.com/google/uuid"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -54,11 +55,18 @@ func (ai *AstraConnector) ValidateNamespace() *field.Error {
 
 // ValidateTokenAndAccountID Validates the token and AccoundID provided that AstraConnector should be deployed to.
 func (ai *AstraConnector) ValidateTokenAndAccountID() *field.Error {
-	cloudBridgeJsonField := util.GetJSONFieldName(&ai.Spec, &ai.Spec.NatsSyncClient.CloudBridgeURL)
-	tokenRefBridgeJsonField := util.GetJSONFieldName(&ai.Spec, &ai.Spec.Astra.TokenRef)
-	accountJsonField := util.GetJSONFieldName(&ai.Spec, &ai.Spec.Astra.AccountId)
+	cloudBridgeJsonField := util.GetJSONFieldName(&ai.Spec.NatsSyncClient, &ai.Spec.NatsSyncClient.CloudBridgeURL)
+	tokenRefBridgeJsonField := util.GetJSONFieldName(&ai.Spec.Astra, &ai.Spec.Astra.TokenRef)
+	accountJsonField := util.GetJSONFieldName(&ai.Spec.Astra, &ai.Spec.Astra.AccountId)
 	astraHost := getAstraHostURL(ai.Spec.NatsSyncClient.CloudBridgeURL)
 	accountId := ai.Spec.Astra.AccountId
+
+	// Account needs to be a valid UUID
+	_, err := uuid.Parse(accountId)
+	if err != nil {
+		println("Please check account id provided.. Token needs to be UUID")
+		return field.Invalid(field.NewPath(accountJsonField), ai.Name, "Account not valid")
+	}
 
 	config, _ := ctrl.GetConfig()
 	clientset, _ := kubernetes.NewForConfig(config)
