@@ -43,6 +43,27 @@ func (_m *K8sUtilInterface) DeleteResource(_a0 context.Context, _a1 client.Objec
 	return r0
 }
 
+// GetAPITokenFromSecret provides a mock function with given fields: ctx, namespace, secretName
+func (_m *K8sUtilInterface) GetAPITokenFromSecret(ctx context.Context, namespace string, secretName string) (string, error) {
+	ret := _m.Called(ctx, namespace, secretName)
+
+	var r0 string
+	if rf, ok := ret.Get(0).(func(context.Context, string, string) string); ok {
+		r0 = rf(ctx, namespace, secretName)
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, string, string) error); ok {
+		r1 = rf(ctx, namespace, secretName)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // VersionGet provides a mock function with given fields:
 func (_m *K8sUtilInterface) VersionGet() (string, error) {
 	ret := _m.Called()

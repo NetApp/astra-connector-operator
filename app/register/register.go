@@ -7,15 +7,13 @@ package register
 import (
 	"bytes"
 	"context"
-	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"github.com/NetApp-Polaris/astra-connector-operator/util"
 	"io"
-	"net"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -35,41 +33,12 @@ const (
 	getClusterPollCount   = 5
 )
 
-// HTTPClient interface used for request and to facilitate testing
-type HTTPClient interface {
-	Do(req *http.Request) (*http.Response, error)
-}
-
-// HeaderMap User specific details required for the http header
-type HeaderMap struct {
-	AccountId     string
-	Authorization string
-}
-
-// DoRequest Makes http request with the given parameters
-func DoRequest(ctx context.Context, client HTTPClient, method, url string, body io.Reader, headerMap HeaderMap) (*http.Response, error, context.CancelFunc) {
-	// Child context that can't exceed a deadline specified
-	childCtx, cancel := context.WithTimeout(ctx, 3*time.Minute) // TODO : Update timeout here
-
-	req, _ := http.NewRequestWithContext(childCtx, method, url, body)
-
-	req.Header.Add("Content-Type", "application/json")
-
-	if headerMap.Authorization != "" {
-		req.Header.Add("authorization", headerMap.Authorization)
-	}
-
-	httpResponse, err := client.Do(req)
-	return httpResponse, err, cancel
-}
-
 type ClusterRegisterUtil interface {
 	GetConnectorIDFromConfigMap(cmData map[string]string) (string, error)
 	GetNatsSyncClientRegistrationURL() string
 	GetNatsSyncClientUnregisterURL() string
 	RegisterNatsSyncClient() (string, error)
 	UnRegisterNatsSyncClient() error
-	GetAPITokenFromSecret(secretName string) (string, error)
 	RegisterClusterWithAstra(astraConnectorId string) error
 	CloudExists(astraHost, cloudID, apiToken string) bool
 	ListClouds(astraHost, apiToken string) (*http.Response, error)
@@ -90,13 +59,13 @@ type ClusterRegisterUtil interface {
 
 type clusterRegisterUtil struct {
 	AstraConnector *v1.AstraConnector
-	Client         HTTPClient
+	Client         util.HTTPClient
 	K8sClient      client.Client
 	Ctx            context.Context
 	Log            logr.Logger
 }
 
-func NewClusterRegisterUtil(astraConnector *v1.AstraConnector, client HTTPClient, k8sClient client.Client, log logr.Logger, ctx context.Context) ClusterRegisterUtil {
+func NewClusterRegisterUtil(astraConnector *v1.AstraConnector, client util.HTTPClient, k8sClient client.Client, log logr.Logger, ctx context.Context) ClusterRegisterUtil {
 	return &clusterRegisterUtil{
 		AstraConnector: astraConnector,
 		Client:         client,
@@ -176,7 +145,7 @@ func (c clusterRegisterUtil) UnRegisterNatsSyncClient() error {
 		return err
 	}
 
-	response, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodPost, natsSyncClientUnregisterURL, bytes.NewBuffer(reqBodyBytes), HeaderMap{})
+	response, err, cancel := util.DoRequest(c.Ctx, c.Client, http.MethodPost, natsSyncClientUnregisterURL, bytes.NewBuffer(reqBodyBytes), util.HeaderMap{})
 	defer cancel()
 
 	if err != nil {
@@ -203,7 +172,7 @@ func (c clusterRegisterUtil) RegisterNatsSyncClient() (string, error) {
 		return "", err
 	}
 
-	response, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodPost, natsSyncClientRegisterURL, bytes.NewBuffer(reqBodyBytes), HeaderMap{})
+	response, err, cancel := util.DoRequest(c.Ctx, c.Client, http.MethodPost, natsSyncClientRegisterURL, bytes.NewBuffer(reqBodyBytes), util.HeaderMap{})
 	defer cancel()
 	if err != nil {
 		return "", err
@@ -242,15 +211,6 @@ func GetAstraHostURL(astraConnector *v1.AstraConnector) string {
 	return astraHost
 }
 
-func (c clusterRegisterUtil) getAstraHostFromURL(astraHostURL string) (string, error) {
-	cloudBridgeURLSplit := strings.Split(astraHostURL, "://")
-	if len(cloudBridgeURLSplit) != 2 {
-		errStr := fmt.Sprintf("invalid cloudBridgeURL provided: %s, format - https://hostname", astraHostURL)
-		return "", errors.New(errStr)
-	}
-	return cloudBridgeURLSplit[1], nil
-}
-
 func (c clusterRegisterUtil) logHttpError(response *http.Response) {
 	bodyBytes, err := io.ReadAll(response.Body)
 	if err != nil {
@@ -272,44 +232,11 @@ func (c clusterRegisterUtil) readResponseBody(response *http.Response) ([]byte, 
 	return bodyBytes, nil
 }
 
-func (c clusterRegisterUtil) setHttpClient(disableTls bool, astraHost string) error {
-	if disableTls {
-		http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
-		c.Log.WithValues("disableTls", disableTls).Info("TLS Validation Disabled! Not for use in production!")
-	}
-
-	if c.AstraConnector.Spec.NatsSyncClient.HostAliasIP != "" {
-		c.Log.WithValues("HostAliasIP", c.AstraConnector.Spec.NatsSyncClient.HostAliasIP).Info("Using the HostAlias IP")
-		cloudBridgeHost, err := c.getAstraHostFromURL(astraHost)
-		if err != nil {
-			return err
-		}
-
-		dialer := &net.Dialer{
-			Timeout:   30 * time.Second,
-			KeepAlive: 30 * time.Second,
-		}
-
-		http.DefaultTransport.(*http.Transport).DialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
-			if addr == cloudBridgeHost+":443" {
-				addr = c.AstraConnector.Spec.NatsSyncClient.HostAliasIP + ":443"
-			}
-			if addr == cloudBridgeHost+":80" {
-				addr = c.AstraConnector.Spec.NatsSyncClient.HostAliasIP + ":80"
-			}
-			return dialer.DialContext(ctx, network, addr)
-		}
-	}
-
-	c.Client = &http.Client{}
-	return nil
-}
-
 func (c clusterRegisterUtil) CloudExists(astraHost, cloudID, apiToken string) bool {
 	url := fmt.Sprintf("%s/accounts/%s/topology/v1/clouds/%s", astraHost, c.AstraConnector.Spec.Astra.AccountId, cloudID)
 
-	headerMap := HeaderMap{Authorization: fmt.Sprintf("Bearer %s", apiToken)}
-	response, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodGet, url, nil, headerMap)
+	headerMap := util.HeaderMap{Authorization: fmt.Sprintf("Bearer %s", apiToken)}
+	response, err, cancel := util.DoRequest(c.Ctx, c.Client, http.MethodGet, url, nil, headerMap)
 	defer cancel()
 
 	if err != nil {
@@ -336,8 +263,8 @@ func (c clusterRegisterUtil) ListClouds(astraHost, apiToken string) (*http.Respo
 	url := fmt.Sprintf("%s/accounts/%s/topology/v1/clouds", astraHost, c.AstraConnector.Spec.Astra.AccountId)
 
 	c.Log.Info("Getting clouds")
-	headerMap := HeaderMap{Authorization: fmt.Sprintf("Bearer %s", apiToken)}
-	response, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodGet, url, nil, headerMap)
+	headerMap := util.HeaderMap{Authorization: fmt.Sprintf("Bearer %s", apiToken)}
+	response, err, cancel := util.DoRequest(c.Ctx, c.Client, http.MethodGet, url, nil, headerMap)
 	defer cancel()
 
 	if err != nil {
@@ -429,8 +356,8 @@ func (c clusterRegisterUtil) CreateCloud(astraHost, cloudType, apiToken string) 
 	}
 
 	c.Log.WithValues("cloudType", cloudType).Info("Creating cloud")
-	headerMap := HeaderMap{Authorization: fmt.Sprintf("Bearer %s", apiToken)}
-	response, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodPost, url, bytes.NewBuffer(reqBodyBytes), headerMap)
+	headerMap := util.HeaderMap{Authorization: fmt.Sprintf("Bearer %s", apiToken)}
+	response, err, cancel := util.DoRequest(c.Ctx, c.Client, http.MethodPost, url, bytes.NewBuffer(reqBodyBytes), headerMap)
 	defer cancel()
 
 	if err != nil {
@@ -538,8 +465,8 @@ func (c clusterRegisterUtil) GetClusters(astraHost, cloudId, apiToken string) (G
 
 	c.Log.Info("Getting Clusters")
 
-	headerMap := HeaderMap{Authorization: fmt.Sprintf("Bearer %s", apiToken)}
-	clustersResp, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodGet, url, nil, headerMap)
+	headerMap := util.HeaderMap{Authorization: fmt.Sprintf("Bearer %s", apiToken)}
+	clustersResp, err, cancel := util.DoRequest(c.Ctx, c.Client, http.MethodGet, url, nil, headerMap)
 	defer cancel()
 
 	if err != nil {
@@ -585,8 +512,8 @@ func (c clusterRegisterUtil) GetCluster(astraHost, cloudId, clusterId, apiToken 
 	url := fmt.Sprintf("%s/accounts/%s/topology/v1/clouds/%s/clusters/%s", astraHost, c.AstraConnector.Spec.Astra.AccountId, cloudId, clusterId)
 	var clustersRespJson Cluster
 
-	headerMap := HeaderMap{Authorization: fmt.Sprintf("Bearer %s", apiToken)}
-	clustersResp, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodGet, url, nil, headerMap)
+	headerMap := util.HeaderMap{Authorization: fmt.Sprintf("Bearer %s", apiToken)}
+	clustersResp, err, cancel := util.DoRequest(c.Ctx, c.Client, http.MethodGet, url, nil, headerMap)
 	defer cancel()
 
 	if err != nil {
@@ -624,8 +551,8 @@ func (c clusterRegisterUtil) CreateCluster(astraHost, cloudId, astraConnectorId,
 	}
 
 	clustersBodyJson, _ := json.Marshal(clustersBody)
-	headerMap := HeaderMap{Authorization: fmt.Sprintf("Bearer %s", apiToken)}
-	clustersResp, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodPost, url, bytes.NewBuffer(clustersBodyJson), headerMap)
+	headerMap := util.HeaderMap{Authorization: fmt.Sprintf("Bearer %s", apiToken)}
+	clustersResp, err, cancel := util.DoRequest(c.Ctx, c.Client, http.MethodPost, url, bytes.NewBuffer(clustersBodyJson), headerMap)
 	defer cancel()
 
 	if err != nil {
@@ -681,8 +608,8 @@ func (c clusterRegisterUtil) UpdateCluster(astraHost, cloudId, clusterId, astraC
 	}
 
 	clustersBodyJson, _ := json.Marshal(clustersBody)
-	headerMap := HeaderMap{Authorization: fmt.Sprintf("Bearer %s", apiToken)}
-	clustersResp, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodPut, url, bytes.NewBuffer(clustersBodyJson), headerMap)
+	headerMap := util.HeaderMap{Authorization: fmt.Sprintf("Bearer %s", apiToken)}
+	clustersResp, err, cancel := util.DoRequest(c.Ctx, c.Client, http.MethodPut, url, bytes.NewBuffer(clustersBodyJson), headerMap)
 	defer cancel()
 
 	if err != nil {
@@ -740,8 +667,8 @@ func (c clusterRegisterUtil) GetStorageClass(astraHost, cloudId, clusterId, apiT
 
 	c.Log.Info("Getting Storage Classes")
 
-	headerMap := HeaderMap{Authorization: fmt.Sprintf("Bearer %s", apiToken)}
-	storageClassesResp, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodGet, url, nil, headerMap)
+	headerMap := util.HeaderMap{Authorization: fmt.Sprintf("Bearer %s", apiToken)}
+	storageClassesResp, err, cancel := util.DoRequest(c.Ctx, c.Client, http.MethodGet, url, nil, headerMap)
 	defer cancel()
 
 	if err != nil {
@@ -803,8 +730,8 @@ func (c clusterRegisterUtil) UpdateManagedCluster(astraHost, clusterId, astraCon
 	}
 	manageClustersBodyJson, _ := json.Marshal(manageClustersBody)
 
-	headerMap := HeaderMap{Authorization: fmt.Sprintf("Bearer %s", apiToken)}
-	manageClustersResp, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodPut, url, bytes.NewBuffer(manageClustersBodyJson), headerMap)
+	headerMap := util.HeaderMap{Authorization: fmt.Sprintf("Bearer %s", apiToken)}
+	manageClustersResp, err, cancel := util.DoRequest(c.Ctx, c.Client, http.MethodPut, url, bytes.NewBuffer(manageClustersBodyJson), headerMap)
 	defer cancel()
 
 	if err != nil {
@@ -833,8 +760,8 @@ func (c clusterRegisterUtil) CreateManagedCluster(astraHost, cloudId, clusterID,
 	}
 	manageClustersBodyJson, _ := json.Marshal(manageClustersBody)
 
-	headerMap := HeaderMap{Authorization: fmt.Sprintf("Bearer %s", apiToken)}
-	manageClustersResp, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodPost, url, bytes.NewBuffer(manageClustersBodyJson), headerMap)
+	headerMap := util.HeaderMap{Authorization: fmt.Sprintf("Bearer %s", apiToken)}
+	manageClustersResp, err, cancel := util.DoRequest(c.Ctx, c.Client, http.MethodPost, url, bytes.NewBuffer(manageClustersBodyJson), headerMap)
 	defer cancel()
 
 	if err != nil {
@@ -981,10 +908,12 @@ func (c clusterRegisterUtil) RegisterClusterWithAstra(astraConnectorId string) e
 	astraHost := GetAstraHostURL(c.AstraConnector)
 	c.Log.WithValues("URL", astraHost).Info("Astra Host Info")
 
-	err := c.setHttpClient(c.AstraConnector.Spec.Astra.SkipTLSValidation, astraHost)
+	httpClient, err := util.SetHttpClient(c.AstraConnector.Spec.Astra.SkipTLSValidation,
+		astraHost, c.AstraConnector.Spec.NatsSyncClient.HostAliasIP, c.Log)
 	if err != nil {
 		return err
 	}
+	c.Client = httpClient
 
 	// Extract the apiToken from the secret provided in the CR Spec via "tokenRef" field
 	// This is needed to make calls to the Astra

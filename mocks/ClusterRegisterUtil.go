@@ -128,27 +128,6 @@ func (_m *ClusterRegisterUtil) CreateOrUpdateManagedCluster(astraHost string, cl
 	return r0, r1
 }
 
-// GetAPITokenFromSecret provides a mock function with given fields: secretName
-func (_m *ClusterRegisterUtil) GetAPITokenFromSecret(secretName string) (string, error) {
-	ret := _m.Called(secretName)
-
-	var r0 string
-	if rf, ok := ret.Get(0).(func(string) string); ok {
-		r0 = rf(secretName)
-	} else {
-		r0 = ret.Get(0).(string)
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func(string) error); ok {
-		r1 = rf(secretName)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
 // GetCloudId provides a mock function with given fields: astraHost, cloudType, apiToken, retryTimeout
 func (_m *ClusterRegisterUtil) GetCloudId(astraHost string, cloudType string, apiToken string, retryTimeout ...time.Duration) (string, error) {
 	_va := make([]interface{}, len(retryTimeout))

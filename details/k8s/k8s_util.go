@@ -6,6 +6,8 @@ package k8s
 
 import (
 	"context"
+	coreV1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
@@ -25,6 +27,7 @@ type K8sUtil struct {
 
 type K8sUtilInterface interface {
 	CreateOrUpdateResource(context.Context, client.Object, client.Object) error
+	GetAPITokenFromSecret(ctx context.Context, namespace, secretName string) (string, error)
 	DeleteResource(context.Context, client.Object) error
 	VersionGet() (string, error)
 }
@@ -86,4 +89,26 @@ func (r *K8sUtil) VersionGet() (string, error) {
 	}
 	r.log.V(3).Info("versionInfo", "versionInfo", versionInfo)
 	return versionInfo.GitVersion, nil
+}
+
+// GetAPITokenFromSecret Gets Secret provided in the ACC Spec and returns api token string of the data in secret
+func (r *K8sUtil) GetAPITokenFromSecret(ctx context.Context, namespace, secretName string) (string, error) {
+	secret := &coreV1.Secret{}
+
+	err := r.Client.Get(ctx, types.NamespacedName{Name: secretName, Namespace: namespace}, secret)
+	if err != nil {
+		r.log.WithValues("namespace", namespace, "secret", secretName).Error(err, "failed to get kubernetes secret")
+		return "", err
+	}
+
+	// Extract the value of the 'apiToken' key from the secret
+	apiToken, ok := secret.Data["apiToken"]
+	if !ok {
+		r.log.WithValues("namespace", namespace, "secret", secretName).Error(err, "failed to extract apiToken key from secret")
+		return "", errors.New("failed to extract apiToken key from secret")
+	}
+
+	// Convert the value to a string
+	apiTokenStr := string(apiToken)
+	return apiTokenStr, nil
 }
