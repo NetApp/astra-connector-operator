@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -48,15 +49,20 @@ func (n NeptuneClientDeployerV2) GetDeploymentObjects(m *v1.AstraConnector, ctx 
 	if m.Spec.Neptune.Image != "" {
 		containerImage = m.Spec.Neptune.Image
 	} else {
-		imageBytes, err := os.ReadFile("/common/neptune_image_tag.txt")
+		absPath, err := filepath.Abs("./common/neptune_manager_tag.txt")
 		if err != nil {
-			return nil, errors.Wrap(err, "error reading neptune image tag")
+			return nil, errors.Wrap(err, "error reading neptune manager tag")
+		}
+		imageBytes, err := os.ReadFile(absPath)
+		if err != nil {
+			return nil, errors.Wrap(err, "error reading neptune manager tag")
 		}
 
 		containerImage = string(imageBytes)
+		containerImage = strings.TrimSpace(containerImage)
 	}
 
-	neptuneImage = fmt.Sprintf("%s/%s", imageRegistry, containerImage)
+	neptuneImage = fmt.Sprintf("%s/controller:%s", imageRegistry, containerImage)
 	log.Info("Using Neptune image", "image", neptuneImage)
 
 	deployment := &appsv1.Deployment{

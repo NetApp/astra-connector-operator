@@ -50,11 +50,11 @@ func (r *AstraConnectorController) deployResources(ctx context.Context, deployer
 	for _, funcList := range resources {
 
 		resourceList, err := funcList.getResource(deployer, astraConnector, ctx)
-		if resourceList == nil {
-			continue
-		}
 		if err != nil {
 			return errors.Wrapf(err, "Unable to get resource")
+		}
+		if resourceList == nil {
+			continue
 		}
 
 		for _, kubeObject := range resourceList {
