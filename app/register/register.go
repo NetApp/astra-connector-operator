@@ -39,6 +39,7 @@ type ClusterRegisterUtil interface {
 	GetNatsSyncClientUnregisterURL() string
 	RegisterNatsSyncClient() (string, error)
 	UnRegisterNatsSyncClient() error
+	GetAPITokenFromSecret(secretName string) (string, error)
 	RegisterClusterWithAstra(astraConnectorId string) error
 	CloudExists(astraHost, cloudID, apiToken string) bool
 	ListClouds(astraHost, apiToken string) (*http.Response, error)
