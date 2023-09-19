@@ -78,55 +78,14 @@ spec:
             status:
               description: ApplicationStatus defines the observed state of Application
               properties:
-                conditions:
-                  description: Each Condition contains details for one aspect of the current state of the Application.
-                  items:
-                    description: "Condition contains details for one aspect of the current state of this API Resource. --- This struct is intended for direct use as an array at the field path .status.conditions.  For example, \n type FooStatus struct{ // Represents the observations of a foo's current state. // Known .status.conditions.type are: \"Available\", \"Progressing\", and \"Degraded\" // +patchMergeKey=type // +patchStrategy=merge // +listType=map // +listMapKey=type Conditions []metav1.Condition `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\" protobuf:\"bytes,1,rep,name=conditions\"` \n // other fields }"
-                    properties:
-                      lastTransitionTime:
-                        description: lastTransitionTime is the last time the condition transitioned from one status to another. This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
-                        format: date-time
-                        type: string
-                      message:
-                        description: message is a human readable message indicating details about the transition. This may be an empty string.
-                        maxLength: 32768
-                        type: string
-                      observedGeneration:
-                        description: observedGeneration represents the .metadata.generation that the condition was set based upon. For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date with respect to the current state of the instance.
-                        format: int64
-                        minimum: 0
-                        type: integer
-                      reason:
-                        description: reason contains a programmatic identifier indicating the reason for the condition's last transition. Producers of specific condition types may define expected values and meanings for this field, and whether the values are considered a guaranteed API. The value should be a CamelCase string. This field may not be empty.
-                        maxLength: 1024
-                        minLength: 1
-                        pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
-                        type: string
-                      status:
-                        description: status of the condition, one of True, False, Unknown.
-                        enum:
-                          - "True"
-                          - "False"
-                          - Unknown
-                        type: string
-                      type:
-                        description: type of condition in CamelCase or in foo.example.com/CamelCase. --- Many .condition.type values are consistent across resources like Available, but because arbitrary conditions can be useful (see .node.status.conditions), the ability to deconflict is important. The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
-                        maxLength: 316
-                        pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
-                        type: string
-                    required:
-                      - lastTransitionTime
-                      - message
-                      - reason
-                      - status
-                      - type
-                    type: object
-                  type: array
+                collectionTimestamp:
+                  description: CollectionTimestamp records the time a backup was completed. Collection time is recorded even on failed backups. Collection time is recorded before uploading the backup object. The server's time is used for CollectionTimestamps
+                  format: date-time
+                  nullable: true
+                  type: string
                 protectionState:
                   description: 'ProtectionState determines protection state of the app based upon different parameters The current logic for protectionState is as follows: Fully Protected: someScheduleIsActive && hasScheduleWithSuccessfulLastBackup Partially Protected: someScheduleIsActive || someSuccessfulBackupExists || someSuccessfulSnapshotExists Not Protected: default'
                   type: string
-              required:
-                - conditions
               type: object
           type: object
       served: true
@@ -147,22 +106,10 @@ spec:
     kind: AppMirrorRelationship
     listKind: AppMirrorRelationshipList
     plural: appmirrorrelationships
-    shortNames:
-      - amr
     singular: appmirrorrelationship
   scope: Namespaced
   versions:
-    - additionalPrinterColumns:
-        - jsonPath: .status.state
-          name: State
-          type: string
-        - jsonPath: .status.error
-          name: Error
-          type: string
-        - jsonPath: .metadata.creationTimestamp
-          name: Age
-          type: date
-      name: v1alpha1
+    - name: v1alpha1
       schema:
         openAPIV3Schema:
           description: AppMirrorRelationship is the Schema for the appmirrorrelationships API
@@ -178,84 +125,12 @@ spec:
             spec:
               description: AppMirrorRelationshipSpec defines the desired state of AppMirrorRelationship
               properties:
-                applicationRef:
-                  description: Name of the Application
+                foo:
+                  description: Foo is an example field of AppMirrorRelationship. Edit appmirrorrelationship_types.go to remove/update
                   type: string
-                desiredState:
-                  description: DesiredState is the desired state of the AppMirrorRelationship
-                  type: string
-                destinationAppVaultRef:
-                  description: DestinationAppVaultRef is the name of the destination AppVault
-                  type: string
-                sourceAppVaultRef:
-                  description: SourceAppVaultRef is the name of the source AppVault
-                  type: string
-                sourceSnapshotsPath:
-                  description: SourceSnapshotPath is the name of the source app snapshots path
-                  type: string
-              required:
-                - applicationRef
-                - desiredState
-                - destinationAppVaultRef
-                - sourceAppVaultRef
-                - sourceSnapshotsPath
               type: object
             status:
               description: AppMirrorRelationshipStatus defines the observed state of AppMirrorRelationship
-              properties:
-                conditions:
-                  description: Each Condition contains details for one aspect of the current state of the AppMirrorRelationship
-                  items:
-                    description: "Condition contains details for one aspect of the current state of this API Resource. --- This struct is intended for direct use as an array at the field path .status.conditions.  For example, \n type FooStatus struct{ // Represents the observations of a foo's current state. // Known .status.conditions.type are: \"Available\", \"Progressing\", and \"Degraded\" // +patchMergeKey=type // +patchStrategy=merge // +listType=map // +listMapKey=type Conditions []metav1.Condition `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\" protobuf:\"bytes,1,rep,name=conditions\"` \n // other fields }"
-                    properties:
-                      lastTransitionTime:
-                        description: lastTransitionTime is the last time the condition transitioned from one status to another. This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
-                        format: date-time
-                        type: string
-                      message:
-                        description: message is a human readable message indicating details about the transition. This may be an empty string.
-                        maxLength: 32768
-                        type: string
-                      observedGeneration:
-                        description: observedGeneration represents the .metadata.generation that the condition was set based upon. For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date with respect to the current state of the instance.
-                        format: int64
-                        minimum: 0
-                        type: integer
-                      reason:
-                        description: reason contains a programmatic identifier indicating the reason for the condition's last transition. Producers of specific condition types may define expected values and meanings for this field, and whether the values are considered a guaranteed API. The value should be a CamelCase string. This field may not be empty.
-                        maxLength: 1024
-                        minLength: 1
-                        pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
-                        type: string
-                      status:
-                        description: status of the condition, one of True, False, Unknown.
-                        enum:
-                          - "True"
-                          - "False"
-                          - Unknown
-                        type: string
-                      type:
-                        description: type of condition in CamelCase or in foo.example.com/CamelCase. --- Many .condition.type values are consistent across resources like Available, but because arbitrary conditions can be useful (see .node.status.conditions), the ability to deconflict is important. The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
-                        maxLength: 316
-                        pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
-                        type: string
-                    required:
-                      - lastTransitionTime
-                      - message
-                      - reason
-                      - status
-                      - type
-                    type: object
-                  type: array
-                error:
-                  description: Error indicates the most recent error that has occurred. The error may not be permanent, so progress may continue after temporarily seeing an error.
-                  type: string
-                state:
-                  description: State indicates the current state of the AppMirrorRelationship
-                  type: string
-              required:
-                - conditions
-                - state
               type: object
           type: object
       served: true
@@ -276,22 +151,10 @@ spec:
     kind: AppMirrorUpdate
     listKind: AppMirrorUpdateList
     plural: appmirrorupdates
-    shortNames:
-      - amu
     singular: appmirrorupdate
   scope: Namespaced
   versions:
-    - additionalPrinterColumns:
-        - jsonPath: .status.state
-          name: State
-          type: string
-        - jsonPath: .status.error
-          name: Error
-          type: string
-        - jsonPath: .metadata.creationTimestamp
-          name: Age
-          type: date
-      name: v1alpha1
+    - name: v1alpha1
       schema:
         openAPIV3Schema:
           description: AppMirrorUpdate is the Schema for the appmirrorupdates API
@@ -582,11 +445,6 @@ spec:
               type: object
             status:
               description: AutoSupportBundleScheduleStatus defines the observed state of AutoSupportBundleSchedule
-              properties:
-                nextScheduledTimestamp:
-                  description: NextScheduledTimestamp The time to run the next scheduled ASUP
-                  format: date-time
-                  type: string
               type: object
           type: object
       served: true
@@ -1848,8 +1706,6 @@ spec:
                   type: string
                 secretRef:
                   type: string
-                skipCertValidation:
-                  type: boolean
               required:
                 - dataSourceRef
                 - pushEndpoint
@@ -2022,9 +1878,6 @@ spec:
                     - name
                   type: object
                   x-kubernetes-map-type: atomic
-                reclaimPolicy:
-                  description: ReclaimPolicy defines what happens to the ResticSnapshot of a restic backup when the ResticVolumeBackup CR is deleted Valid options are Retain, Delete (default).
-                  type: string
                 resticEnv:
                   description: Env vars to be provided to the restic CLI (including any required credentials)
                   items:
@@ -2174,9 +2027,6 @@ spec:
                   type: array
                 error:
                   description: Error indicates the most recent error that has occurred. The error may not be permanent, so progress may continue after temporarily seeing an error.
-                  type: string
-                resticDeleteJobName:
-                  description: Name of the Job created to run Restic delete
                   type: string
                 resticJobName:
                   description: Name of the Job created to run Restic
@@ -2830,9 +2680,6 @@ spec:
                   type: string
                 applicationRef:
                   description: ApplicationRef is the reference to the Application being snapshotted.
-                  type: string
-                reclaimPolicy:
-                  description: ReclaimPolicy defines what happens to the AppArchive of a snapshot when the snapshot CR is deleted Valid options are Retain, Delete (default).
                   type: string
               type: object
             status:
@@ -3549,6 +3396,21 @@ rules:
       - update
 ---
 apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  creationTimestamp: null
+  name: neptune-resourcesummaryupload
+  namespace: neptune-system
+rules:
+  - apiGroups:
+      - '*'
+    resources:
+      - secrets
+    verbs:
+      - get
+      - list
+---
+apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   creationTimestamp: null
@@ -3642,14 +3504,6 @@ rules:
     verbs:
       - get
       - list
-  - apiGroups:
-      - ""
-    resources:
-      - secrets
-    verbs:
-      - get
-      - list
-      - watch
   - apiGroups:
       - batch
     resources:
@@ -3925,14 +3779,6 @@ rules:
       - storage.k8s.io
     resources:
       - storageclasses
-    verbs:
-      - get
-      - list
-      - watch
-  - apiGroups:
-      - trident.netapp.io
-    resources:
-      - tridentbackends
     verbs:
       - get
       - list
