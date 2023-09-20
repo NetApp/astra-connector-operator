@@ -315,6 +315,9 @@ spec:
           status:
             description: AppMirrorUpdateStatus defines the observed state of AppMirrorUpdate
             properties:
+              appArchivePath:
+                description: AppArchivePath is the path where the snapshot was archived in the destination AppVault.
+                type: string
               completionTimestamp:
                 description: CompletionTimestamp records the time the AppMirrorUpdate completed. The server's time is used for CompletionTimestamps
                 format: date-time
