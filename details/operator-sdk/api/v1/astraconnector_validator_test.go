@@ -5,6 +5,9 @@
 package v1_test
 
 import (
+	"github.com/NetApp-Polaris/astra-connector-operator/mocks"
+	"github.com/stretchr/testify/mock"
+	"net/http"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -48,15 +51,15 @@ func TestAstraConnector_ValidateNamespace(t *testing.T) {
 	assert.Error(t, err, expectedErrMsg)
 }
 
-//func TestAstraConnector_ValidateInputs(t *testing.T) {
-//	ai := &v1.AstraConnector{Spec: v1.AstraConnectorSpec{Astra: v1.Astra{AccountId: "6587afff-7515-4c35-8e53-95545e427e31"}}}
-//	mockHttpClient := &mocks.HTTPClient{}
-//	mockHttpClient.On()
-//
-//	err := ai.ValidateTokenAndAccountID(mockHttpClient)
-//
-//	// Validate that no error occurred
-//	if err != nil {
-//		t.Error("Expected no error, but got:", err)
-//	}
-//}
+func TestAstraConnector_ValidateInputs(t *testing.T) {
+	ai := &v1.AstraConnector{Spec: v1.AstraConnectorSpec{Astra: v1.Astra{AccountId: "6587afff-7515-4c35-8e53-95545e427e31"}}}
+	mockHttpClient := &mocks.HTTPClient{}
+	mockHttpClient.On("Do", mock.Anything).Return(&http.Response{StatusCode: 200}, nil).Once()
+
+	err := ai.ValidateTokenAndAccountID(mockHttpClient)
+
+	// Validate that no error occurred
+	if err != nil {
+		t.Error("Expected no error, but got:", err)
+	}
+}
