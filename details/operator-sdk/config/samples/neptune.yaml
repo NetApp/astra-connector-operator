@@ -1,3 +1,16 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  labels:
+    app.kubernetes.io/component: manager
+    app.kubernetes.io/created-by: neptune
+    app.kubernetes.io/instance: system
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: namespace
+    app.kubernetes.io/part-of: neptune
+    control-plane: controller-manager
+  name: neptune-system
+---
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -315,6 +328,9 @@ spec:
           status:
             description: AppMirrorUpdateStatus defines the observed state of AppMirrorUpdate
             properties:
+              appArchivePath:
+                description: AppArchivePath is the path where the snapshot was archived in the destination AppVault.
+                type: string
               completionTimestamp:
                 description: CompletionTimestamp records the time the AppMirrorUpdate completed. The server's time is used for CompletionTimestamps
                 format: date-time
@@ -4215,18 +4231,6 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: neptune-resourcesummaryupload
-  namespace: neptune-system
----
-apiVersion: v1
-data:
-  IMG: controller:latest
-  NAMESPACE: neptune-system
-  REGISTRY: ""
-  REPOSITORY: ""
-  TAG: latest
-kind: ConfigMap
-metadata:
-  name: neptune-environment-dbt6t9tckc
   namespace: neptune-system
 ---
 apiVersion: v1
