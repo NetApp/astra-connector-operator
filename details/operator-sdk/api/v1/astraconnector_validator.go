@@ -29,7 +29,7 @@ func (ai *AstraConnector) ValidateCreateAstraConnector() field.ErrorList {
 		allErrs = append(allErrs, err)
 	}
 
-	if err := ai.ValidateTokenAndAccountID(); err != nil {
+	if err := ai.ValidateTokenAndAccountID(nil); err != nil {
 		log.V(3).Info("error while creating AstraConnector Instance", "namespace", ai.Namespace, "err", err)
 		allErrs = append(allErrs, err)
 	}
@@ -54,7 +54,7 @@ func (ai *AstraConnector) ValidateNamespace() *field.Error {
 }
 
 // ValidateTokenAndAccountID Validates the token and AccoundID provided that AstraConnector should be deployed to.
-func (ai *AstraConnector) ValidateTokenAndAccountID() *field.Error {
+func (ai *AstraConnector) ValidateTokenAndAccountID(httpClient util.HTTPClient) *field.Error {
 	cloudBridgeJsonField := util.GetJSONFieldName(&ai.Spec.NatsSyncClient, &ai.Spec.NatsSyncClient.CloudBridgeURL)
 	tokenRefBridgeJsonField := util.GetJSONFieldName(&ai.Spec.Astra, &ai.Spec.Astra.TokenRef)
 	accountJsonField := util.GetJSONFieldName(&ai.Spec.Astra, &ai.Spec.Astra.AccountId)
@@ -76,11 +76,13 @@ func (ai *AstraConnector) ValidateTokenAndAccountID() *field.Error {
 		return field.NotFound(field.NewPath(tokenRefBridgeJsonField), ai.Name)
 	}
 
-	httpClient, err := util.SetHttpClient(ai.Spec.Astra.SkipTLSValidation,
-		astraHost, ai.Spec.NatsSyncClient.HostAliasIP, log)
-	if err != nil {
-		log.Info(fmt.Sprintf("invalid cloudBridgeURL provided: %s, format - https://hostname", ai.Spec.NatsSyncClient.CloudBridgeURL))
-		return field.Invalid(field.NewPath(cloudBridgeJsonField), ai.Name, "CloudBridgeURL invalid format")
+	if httpClient == nil {
+		httpClient, err = util.SetHttpClient(ai.Spec.Astra.SkipTLSValidation,
+			astraHost, ai.Spec.NatsSyncClient.HostAliasIP, log)
+		if err != nil {
+			log.Info(fmt.Sprintf("invalid cloudBridgeURL provided: %s, format - https://hostname", ai.Spec.NatsSyncClient.CloudBridgeURL))
+			return field.Invalid(field.NewPath(cloudBridgeJsonField), ai.Name, "CloudBridgeURL invalid format")
+		}
 	}
 
 	url := fmt.Sprintf("%s/accounts/%s", astraHost, accountId)

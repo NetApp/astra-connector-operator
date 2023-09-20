@@ -909,12 +909,11 @@ func (c clusterRegisterUtil) RegisterClusterWithAstra(astraConnectorId string) e
 	astraHost := GetAstraHostURL(c.AstraConnector)
 	c.Log.WithValues("URL", astraHost).Info("Astra Host Info")
 
-	httpClient, err := util.SetHttpClient(c.AstraConnector.Spec.Astra.SkipTLSValidation,
+	_, err := util.SetHttpClient(c.AstraConnector.Spec.Astra.SkipTLSValidation,
 		astraHost, c.AstraConnector.Spec.NatsSyncClient.HostAliasIP, c.Log)
 	if err != nil {
 		return err
 	}
-	c.Client = httpClient
 
 	// Extract the apiToken from the secret provided in the CR Spec via "tokenRef" field
 	// This is needed to make calls to the Astra
