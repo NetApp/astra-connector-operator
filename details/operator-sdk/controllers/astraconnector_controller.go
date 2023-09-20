@@ -130,6 +130,7 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 
 	// deploy Neptune
 	if conf.Config.FeatureFlags().DeployNeptune() {
+		log.Info("Initiating Neptune deployment")
 		neptuneResult, err := r.deployNeptune(ctx, astraConnector, &natsSyncClientStatus)
 		if err != nil {
 			return neptuneResult, err
