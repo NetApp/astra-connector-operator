@@ -96,7 +96,7 @@ func (d *Deployer) GetDeploymentObject(m *v1.AstraConnector, ctx context.Context
 
 // labelsForEchoClient returns the labels for selecting the EchoClient
 func labelsForEchoClient(name string) map[string]string {
-	return map[string]string{"app": name}
+	return map[string]string{"app": name, "acs.amadeus.com/securityZone": "app"}
 }
 
 func (d *Deployer) GetStatefulsetObject(m *v1.AstraConnector, ctx context.Context) (*appsv1.StatefulSet, error) {

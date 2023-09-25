@@ -257,7 +257,7 @@ func (n *Deployer) GetNatsServiceObject(m *v1.AstraConnector) (*corev1.Service, 
 
 // labelsForNats returns the labels for selecting the nats resources
 func labelsForNats(name string) map[string]string {
-	return map[string]string{"app": name}
+	return map[string]string{"app": name, "acs.amadeus.com/securityZone": "app"}
 }
 
 func (n *Deployer) GetDeploymentObject(m *v1.AstraConnector, ctx context.Context) (*appsv1.Deployment, error) {

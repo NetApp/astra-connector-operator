@@ -184,7 +184,7 @@ func (d *Deployer) GetServiceObject(m *v1.AstraConnector, serviceName string) (*
 
 // LabelsForNatssyncClient returns the labels for selecting the NatssyncClient
 func LabelsForNatssyncClient(name string) map[string]string {
-	return map[string]string{"app": name}
+	return map[string]string{"app": name, "acs.amadeus.com/securityZone": "app"}
 }
 
 // GetConfigMapObject returns a ConfigMap object for NatssyncClient
