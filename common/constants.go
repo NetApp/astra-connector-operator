@@ -18,7 +18,7 @@ const (
 	NatsSyncClientPort                  = 8080
 	NatsSyncClientProtocol              = "TCP"
 	NatsSyncClientKeystoreUrl           = "configmap:///configmap-data"
-	NatsSyncClientDefaultImage          = "natssync-client:2.1.202308161939"
+	NatsSyncClientDefaultImage          = "natssync-client:2.1.202309262120"
 	NatsSyncClientDefaultCloudBridgeURL = "https://astra.netapp.io"
 
 	NatsName               = "nats"
@@ -31,9 +31,9 @@ const (
 	NatsMonitorPort        = 8222
 	NatsMetricsPort        = 7777
 	NatsGatewaysPort       = 7522
-	NatsDefaultReplicas    = 2
+	NatsDefaultReplicas    = 1
 	// NatsDefaultImage when changing default image push image to jfrog as well
-	NatsDefaultImage = "nats:2.8.4-alpine3.15"
+	NatsDefaultImage = "nats:2.10.1-alpine3.18"
 	NatsMaxPayload   = 8388608
 
 	NatsSyncClientConfigMapName               = "natssync-client-configmap"
