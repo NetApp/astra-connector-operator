@@ -75,7 +75,7 @@ func TestNatsGetStatefulSetObjectsUseDefaults(t *testing.T) {
 
 	assert.Equal(t, common.NatsName, statefulSet.Name)
 	assert.Equal(t, m.Namespace, statefulSet.Namespace)
-	assert.Equal(t, int32(2), *statefulSet.Spec.Replicas)
+	assert.Equal(t, int32(1), *statefulSet.Spec.Replicas)
 	assert.Equal(t, "nats:2.10.1-alpine3.18", statefulSet.Spec.Template.Spec.Containers[0].Image)
 	assert.Nil(t, statefulSet.Spec.Template.Spec.ImagePullSecrets)
 }
