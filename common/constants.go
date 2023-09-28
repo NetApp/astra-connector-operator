@@ -31,7 +31,7 @@ const (
 	NatsMonitorPort        = 8222
 	NatsMetricsPort        = 7777
 	NatsGatewaysPort       = 7522
-	NatsDefaultReplicas    = 2
+	NatsDefaultReplicas    = 1
 	// NatsDefaultImage when changing default image push image to jfrog as well
 	NatsDefaultImage = "nats:2.10.1-alpine3.18"
 	NatsMaxPayload   = 8388608
