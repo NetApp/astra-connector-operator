@@ -71,7 +71,7 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 		log.Error(err, FailedAstraConnectorGet)
 		natsSyncClientStatus.Status = FailedAstraConnectorGet
 		_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
-		return ctrl.Result{RequeueAfter: time.Minute * 5}, err
+		return ctrl.Result{RequeueAfter: time.Minute * conf.Config.ErrorTimeout()}, err
 	}
 
 	// Validate AstraConnector CR for any errors
