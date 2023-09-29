@@ -970,10 +970,10 @@ spec:
                           description: ID of the Restic snapshot created to represent this backup
                           type: string
                         resticVolumeBackupCompleted:
-                          description: Set to true when the ResticVolumeBackup has completed successfully TODO move to dataMover sub-struct since this is Restic-specific
+                          description: Set to true when the ResticVolumeBackup has completed successfully
                           type: boolean
                         resticVolumeBackupCreated:
-                          description: Set to true when the ResticVolumeBackup for the VolumeSnapshot has been created TODO move to dataMover sub-struct since this is Restic-specific
+                          description: Set to true when the ResticVolumeBackup for the VolumeSnapshot has been created
                           type: boolean
                         sourceVolumeSnapshot:
                           description: Namespaced name of the source VolumeSnapshot to be backed up
@@ -987,22 +987,19 @@ spec:
                           - namespace
                           type: object
                         volumeSnapshotContentCopyName:
-                          description: Name of the temporary copy of the volume snapshot content
+                          description: Name of the temporary copy of the VolumeSnapshotContent
                           type: string
                         volumeSnapshotCopied:
-                          description: Set to true when the volume snapshot has been copied into the neptune namespace TODO move to dataMover sub-struct since this is only needed for Restic and Kopia (not needed for SM-C)
+                          description: Set to true when the temporary copies of the VolumeSnapshot and VolumeSnapshotContent have been created
                           type: boolean
                         volumeSnapshotCopyDeleted:
-                          description: Set to true when the volume snapshot copy in the neptune namespace has been deleted (note it may still be in Terminating state) TODO move to dataMover sub-struct since this is only needed for Restic and Kopia (not needed for SM-C)
+                          description: Set to true when the temporary copies of the VolumeSnapshot and VolumeSnapshotContent have been deleted
                           type: boolean
                         volumeSnapshotCopyName:
-                          description: Name of the temporary copy of the volume snapshot in the neptune namespace
+                          description: Name of the temporary copy of the VolumeSnapshot
                           type: string
                         volumeSnapshotCopyReadyToUse:
-                          description: Set to true when the volume snapshot copy in the neptune namespace is ready to use TODO move to dataMover sub-struct since this is only needed for Restic and Kopia (not needed for SM-C)
-                          type: boolean
-                        volumeSnapshotCopyTerminated:
-                          description: Set to true when the volume snapshot copy in the neptune namespace has been fully terminated TODO move to dataMover sub-struct since this is only needed for Restic and Kopia (not needed for SM-C)
+                          description: Set to true when the temporary copy of the VolumeSnapshot is ready to use
                           type: boolean
                       required:
                       - resticVolumeBackupCompleted
@@ -1013,7 +1010,6 @@ spec:
                       - volumeSnapshotCopyDeleted
                       - volumeSnapshotCopyName
                       - volumeSnapshotCopyReadyToUse
-                      - volumeSnapshotCopyTerminated
                       type: object
                     type: array
                 type: object
