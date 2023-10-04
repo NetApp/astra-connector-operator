@@ -1913,16 +1913,34 @@ spec:
                 - name
                 type: object
                 x-kubernetes-map-type: atomic
+              hostNameAlias:
+                type: string
               pushEndpoint:
                 type: string
-              secretRef:
-                type: string
+              pushToken:
+                properties:
+                  valueFromSecret:
+                    description: ValueFromSecret indicates that the credential value should come from a secret.
+                    properties:
+                      key:
+                        description: The key of the secret to select from. Must be a valid secret key.
+                        type: string
+                      name:
+                        description: Name of the secret containing the value for this field. Must be in the same namespace.
+                        type: string
+                    required:
+                    - key
+                    - name
+                    type: object
+                required:
+                - valueFromSecret
+                type: object
               skipCertValidation:
                 type: boolean
             required:
             - dataSourceRef
             - pushEndpoint
-            - secretRef
+            - pushToken
             type: object
           status:
             description: ResourceSummaryUploadStatus defines the observed state of ResourceSummaryUpload
