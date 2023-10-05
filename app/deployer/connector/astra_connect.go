@@ -30,7 +30,7 @@ func NewAstraConnectorDeployer() model.Deployer {
 // GetDeploymentObjects returns a Astra Connect Deployment object
 func (d *AstraConnectDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, error) {
 	log := ctrllog.FromContext(ctx)
-	ls := LabelsForAstraConnectClient(common.AstraConnectName)
+	ls := LabelsForAstraConnectClient(common.AstraConnectName, ad)
 
 	var imageRegistry string
 	var containerImage string
@@ -130,8 +130,12 @@ func (d *AstraConnectDeployer) GetServiceObjects(m *v1.AstraConnector, ctx conte
 }
 
 // LabelsForAstraConnectClient returns the labels for selecting the AstraConnectClient
-func LabelsForAstraConnectClient(name string) map[string]string {
-	return map[string]string{"type": name, "role": name}
+func LabelsForAstraConnectClient(name string, additionalLabels map[string]string) map[string]string {
+	labels := map[string]string{"type": name, "role": name}
+	for k, v := range additionalLabels {
+		labels[k] = v
+	}
+	return labels
 }
 
 // GetConfigMapObjects returns a ConfigMap object for Astra Connect

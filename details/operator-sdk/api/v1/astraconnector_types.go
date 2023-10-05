@@ -16,6 +16,8 @@ type Astra struct {
 	ClusterId   string `json:"clusterId"`
 	ClusterName string `json:"clusterName,omitempty"`
 	// +kubebuilder:validation:Optional
+	Labels map[string]string `json:"labels,omitempty"`
+	// +kubebuilder:validation:Optional
 	StorageClassName  string `json:"storageClassName"`
 	SkipTLSValidation bool   `json:"skipTLSValidation,omitempty"`
 	TokenRef          string `json:"tokenRef,omitempty"`
