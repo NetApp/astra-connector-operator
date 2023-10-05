@@ -3073,7 +3073,7 @@ spec:
                 description: AppArchivePath is the path where the snapshot was archived in the AppVault.
                 type: string
               completionTimestamp:
-                description: CompletionTimestamp is the server time when the collection was completed.
+                description: CompletionTimestamp is the server time when the snapshot was completed.
                 format: date-time
                 nullable: true
                 type: string
