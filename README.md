@@ -1,114 +1,84 @@
-# Astra Installer Operator 
-Please refer to this confluence for now
-https://confluence.ngage.netapp.com/display/POLARIS/Phase+1+%2823.07%29+Astra+Connector+Deployment+-+Non+VPN+Instructions
+## Install the Astra Connector
 
-## Security Best Practices
-### Use RBAC
-Use RBAC (Role Based Access Control) in Kubernetes to limit access to the connector namespace after deployment
+This guide provides instructions for installing the latest version of the Astra Connector on your private cluster. If you need to install a specific release, refer to the appropriate release bundle. If you are using a bastion host, execute these commands from the command line of the bastion host.
 
-### Use a service mesh
-Use a service mesh to secure communications between pods
+### Steps
 
-### Limit token usage for registration
-The API token used for registration is only used once, and is not used after registering the connector.
-If the token was created specifically for registering the connector, we recommend discarding it after registration is complete.
-Discarding the token requires removing the token from the AstraConnector CRD, and revoking it from Astra.
+1. Apply the Astra Connector operator. When you run this command, the correct namespace for the Astra Connector is created and the configuration is applied to the namespace:
 
-### Use a NetworkPolicy
-Use a network policy to deny external communication to the pods in the connector namespace. The pods should only be making
-outbound communication.
+    ```bash
+    kubectl apply -f https://github.com/NetApp/astra-connector-operator/releases/latest/download/astraconnector_operator.yaml
+    ```
 
-NOTE: A network policy requires a network policy controller to enforce the policy.
+2. Verify that the operator is installed and ready:
 
-Here is an example NetworkPolicy to limit the communication:
-```
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: astra-connector-network-policy
-  namespace: astra-connector-namespace
-spec:
-  policyTypes:
-  - Ingress
-  - Egress
-  // Only allow communication to pods from the connector namespace
-  ingress:
-  - from:
-    namespaceSelector:
-      name: astra-connector-operator
-  // Allow all outgoing communication
-  egress:
-  - {}
-```
+    ```bash
+    kubectl get all -n astra-connector-operator
+    ```
 
-## CRD
-#### Sample CRD
-```
-apiVersion: astra/v1
-kind: AstraConnector
-metadata:
-  name: astra-connector
-spec:
-  astra:
-    token: <AstraApiToken>
-    clusterName: ipsprintdemo
-    accountId: 5831cf97-c52e-4185-ab83-db0fdd061c0e
-    acceptEULA: yes
-```
+3. Generate an Astra Control API token using the instructions in the [Astra Automation documentation](https://docs.netapp.com/us-en/astra-automation/get-started/get_api_token.html).
 
-## CRD details
-In the CRD, all the fields in the spec section have to be updated to the correct value
+4. Create a secret using the token. Replace `<API_TOKEN>` with the token you received from Astra Control:
 
-### imageRegistry
-| CRD Spec          | Details       | Optional | Default |
-| ----------------- | ------------- |--------- | --------|
-| name   | Image registry to pull images from | Yes | dockerhub for nats, theotw for the rest |
-| secret   | Image registry secret | Yes | "" |
+    ```bash
+    kubectl create secret generic astra-token \
+    --from-literal=apiToken=<API_TOKEN> \
+    -n astra-connector
+    ```
 
-Example:
-```
-spec:
-    ...
-    imageRegistry:
-        name: theotw
-        secret: otw-secret
-```
+5. Create a Docker secret to use to pull the Astra Connector image. Replace values in brackets <> with information from your environment:
 
-### [natssync-client](https://github.com/theotw/natssync)
-Natssync-Client talks to the Natssync-Server on Astra and ensures communication between Astra and the private AKS cluster
+    ```bash
+    kubectl create secret docker-registry regcred \
+    --docker-username=<ASTRA_ACCOUNT_ID> \
+    --docker-password=<API_TOKEN> \
+    -n astra-connector \
+    --docker-server=cr.astra.netapp.io
+    ```
 
-The natssync-client CRD is a map of key/value pairs
+6. Create the Astra Connector CR file and name it `astra-connector-cr.yaml`. Update the values in brackets <> to match your Astra Control environment and cluster configuration:
 
-| CRD Spec          | Details       | Optional | Default                             |
-| ----------------- | ------------- |--------- |-------------------------------------|
-| image   | natssync-client image | Yes | natssync-client:2.0 |
-| cloud-bridge-url  | Astra URL  | Yes | https://astra.netapp.io             |
-| skipTLSValidation | Skip TLS Validation| Yes| false                               |
-| hostalias | Use a custom IP for the cloud bridge hostname| Yes | false                               |
-| hostaliasIP | IP to use for host alias | Yes if hostalias is false |                                     |
+    ```yaml
+    apiVersion: astra.netapp.io/v1
+    kind: AstraConnector
+    metadata:
+      name: astra-connector
+      namespace: astra-connector
+    spec:
+      astra:
+        accountId: <ASTRA_ACCOUNT_ID>
+        clusterName: <CLUSTER_NAME>
+        skipTLSValidation: true
+        tokenRef: astra-token
+      natsSyncClient:
+        cloudBridgeURL: <ASTRA_CONTROL_HOST_URL>
+        hostAliasIP: <ASTRA_HOST_ALIAS_IP_ADDRESS>
+      imageRegistry:
+        name: cr.astra.netapp.io/astra
+        secret: regcred
+    ```
 
-Example:
-```
-spec:
-    ...
-    natssync-client:
-        image: theotw/natssync-client:0.9.202201132025
-        cloud-bridge-url: https://integration.astra.netapp.io
-```
-### [nats](https://nats.io/)
-| CRD Spec             | Details       | Optional | Default |
-| ---------------------| ------------- |--------- | --------|
-| size       | Replica count for the nats statefulset | Yes | 2 |
-| image      | nats image | Yes | nats:2.6.1-alpine3.14 |
+7. Apply the `astra-connector-cr.yaml` file after you populate it with the correct values:
 
+    ```bash
+    kubectl apply -n astra-connector -f astra-connector-cr.yaml
+    ```
 
-```
-### [astra](https://cloud.netapp.com/astra)
-| CRD Spec      | Details       | Optional | Default |
-| ------------- | ------------- | -------- |--------|
-| unregister    | Unregister the cluster with Astra | Yes | false |
-| token         | Astra API token of a user with an Owner Role| Yes | |
-| clusterName   | If and only if you are importing an AKS cluster that is marked in AKS as private, and not providing the K8S Config file to Astra, then you need the Name of the private AKS cluster.  Otherwise do not have this attribute, remove the line | Yes | empty|
-| accountId     | Astra account ID | No | |
-| acceptEULA    | End User License Agreement | No | no |
+8. Verify that the Astra Connector is fully deployed:
 
+    ```bash
+    kubectl get all -n astra-connector
+    ```
+
+9. Verify that the cluster is registered with Astra Control:
+
+    ```bash
+    kubectl get astraconnectors.astra.netapp.io -A
+    ```
+
+   You should see output similar to the following:
+
+    ```
+    NAMESPACE         NAME              REGISTERED   ASTRACONNECTORID                       STATUS
+    astra-connector   astra-connector   true         00a821c8-2cef-41ac-8777-ed05a417883e   Registered with Astra
+    ```
