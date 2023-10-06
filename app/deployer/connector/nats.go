@@ -45,10 +45,10 @@ func (n *NatsDeployer) GetStatefulSetObjects(m *v1.AstraConnector, ctx context.C
 	var natsImage string
 	var imageRegistry string
 	var containerImage string
-	if m.Spec.ImageRegistry.Name != "" && m.Spec.ImageRegistry.Name != common.DefaultImageRegistry {
+	if m.Spec.ImageRegistry.Name != "" {
 		imageRegistry = m.Spec.ImageRegistry.Name
 	} else {
-		imageRegistry = ""
+		imageRegistry = common.DefaultImageRegistry
 	}
 
 	if m.Spec.Nats.Image != "" {
@@ -57,11 +57,7 @@ func (n *NatsDeployer) GetStatefulSetObjects(m *v1.AstraConnector, ctx context.C
 		containerImage = common.NatsDefaultImage
 	}
 
-	if imageRegistry == "" {
-		natsImage = containerImage
-	} else {
-		natsImage = fmt.Sprintf("%s/%s", imageRegistry, containerImage)
-	}
+	natsImage = fmt.Sprintf("%s/%s", imageRegistry, containerImage)
 	log.Info("Using nats image", "image", natsImage)
 	dep := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
