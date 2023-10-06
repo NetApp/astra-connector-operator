@@ -1,3 +1,5 @@
+## This branch is currently being used for integration work. If you want to use the previously released build, please visit [this branch](https://github.com/NetApp/astra-connector-operator/tree/release-23-07) and follow the documentation there instead.
+
 ## Install the Astra Connector
 
 This guide provides instructions for installing the latest version of the Astra Connector on your private cluster. If you need to install a specific release, refer to the appropriate release bundle. If you are using a bastion host, execute these commands from the command line of the bastion host.
