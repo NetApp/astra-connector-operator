@@ -30,7 +30,7 @@ func (r *AstraConnectorController) deployConnector(ctx context.Context,
 			// Failed deploying we want status to reflect that for at least 30 seconds before it's requeued so
 			// anyone watching can be informed
 			log.V(3).Info("Requeue after 30 seconds, so that status reflects error")
-			return ctrl.Result{RequeueAfter: 30 * time.Second}, err
+			return ctrl.Result{RequeueAfter: time.Minute * conf.Config.ErrorTimeout()}, err
 		}
 	}
 
@@ -42,7 +42,7 @@ func (r *AstraConnectorController) deployConnector(ctx context.Context,
 	astraConnectorID := ""
 	err := r.Get(ctx, types.NamespacedName{Name: common.NatsSyncClientConfigMapName, Namespace: astraConnector.Namespace}, foundCM)
 	if err != nil {
-		return ctrl.Result{}, err
+		return ctrl.Result{RequeueAfter: time.Minute * conf.Config.ErrorTimeout()}, err
 	}
 	if len(foundCM.Data) != 0 {
 		registered = true
@@ -51,13 +51,13 @@ func (r *AstraConnectorController) deployConnector(ctx context.Context,
 			log.Error(err, FailedLocationIDGet)
 			natsSyncClientStatus.Status = FailedLocationIDGet
 			_ = r.updateAstraConnectorStatus(ctx, astraConnector, *natsSyncClientStatus)
-			return ctrl.Result{RequeueAfter: 1 * time.Minute}, err
+			return ctrl.Result{RequeueAfter: time.Minute * conf.Config.ErrorTimeout()}, err
 		}
 		if astraConnectorID == "" {
 			log.Error(err, EmptyLocationIDGet)
 			natsSyncClientStatus.Status = EmptyLocationIDGet
 			_ = r.updateAstraConnectorStatus(ctx, astraConnector, *natsSyncClientStatus)
-			return ctrl.Result{RequeueAfter: 1 * time.Minute}, err
+			return ctrl.Result{RequeueAfter: time.Minute * conf.Config.ErrorTimeout()}, err
 		}
 	}
 
@@ -68,7 +68,7 @@ func (r *AstraConnectorController) deployConnector(ctx context.Context,
 			log.Info("Skipping Nats and Astra registration, feature flag set to not register")
 			natsSyncClientStatus.Status = DeployedComponents
 			_ = r.updateAstraConnectorStatus(ctx, astraConnector, *natsSyncClientStatus)
-			return ctrl.Result{}, nil
+			return ctrl.Result{RequeueAfter: time.Minute * conf.Config.ErrorTimeout()}, nil
 		}
 
 		if registered {
@@ -80,7 +80,7 @@ func (r *AstraConnectorController) deployConnector(ctx context.Context,
 				log.Error(err, FailedRegisterNSClient)
 				natsSyncClientStatus.Status = FailedRegisterNSClient
 				_ = r.updateAstraConnectorStatus(ctx, astraConnector, *natsSyncClientStatus)
-				return ctrl.Result{RequeueAfter: 1 * time.Minute}, err
+				return ctrl.Result{RequeueAfter: time.Minute * conf.Config.ErrorTimeout()}, err
 			}
 
 			log.Info("natsSyncClient ConnectorID", "astraConnectorID", astraConnectorID)
@@ -97,7 +97,7 @@ func (r *AstraConnectorController) deployConnector(ctx context.Context,
 				log.Error(err, FailedConnectorIDAdd)
 				natsSyncClientStatus.Status = FailedConnectorIDAdd
 				_ = r.updateAstraConnectorStatus(ctx, astraConnector, *natsSyncClientStatus)
-				return ctrl.Result{RequeueAfter: 1 * time.Minute}, err
+				return ctrl.Result{RequeueAfter: time.Minute * conf.Config.ErrorTimeout()}, err
 			}
 			log.Info("Registered cluster with Astra")
 		}
@@ -111,7 +111,7 @@ func (r *AstraConnectorController) deployConnector(ctx context.Context,
 				log.Error(err, FailedUnRegisterNSClient)
 				natsSyncClientStatus.Status = FailedUnRegisterNSClient
 				_ = r.updateAstraConnectorStatus(ctx, astraConnector, *natsSyncClientStatus)
-				return ctrl.Result{Requeue: true}, err
+				return ctrl.Result{RequeueAfter: time.Minute * conf.Config.ErrorTimeout()}, err
 			}
 			log.Info(UnregisterNSClient)
 		} else {
@@ -122,6 +122,7 @@ func (r *AstraConnectorController) deployConnector(ctx context.Context,
 		natsSyncClientStatus.Status = UnregisterNSClient
 	}
 
+	// No need to requeue due to success
 	return ctrl.Result{}, nil
 }
 
