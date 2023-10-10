@@ -586,8 +586,8 @@ spec:
                 description: CompletionTimestamp The time that the ASUP generation and upload completed
                 format: date-time
                 type: string
-              createState:
-                description: CreateState is the current state of the ASUP bundle creation
+              generationState:
+                description: GenerationState is the current state of the ASUP bundle creation
                 enum:
                 - alreadyInProgress
                 - pending
@@ -596,11 +596,6 @@ spec:
                 - partial
                 - failed
                 type: string
-              createStateDetails:
-                description: CreateStateDetails lists additional details if CreateState does not end up in a completed state
-                items:
-                  type: string
-                type: array
               uploadState:
                 description: UploadState is the current state of the ASUP bundle upload
                 enum:
@@ -610,11 +605,6 @@ spec:
                 - completed
                 - failed
                 type: string
-              uploadStateDetails:
-                description: UploadStateDetails lists additional details if UploadState does not end up in a completed state
-                items:
-                  type: string
-                type: array
             type: object
         type: object
     served: true
@@ -3157,6 +3147,18 @@ metadata:
   labels:
     app.kubernetes.io/component: rbac
     app.kubernetes.io/created-by: neptune
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: serviceaccount
+    app.kubernetes.io/part-of: neptune
+  name: neptune-autosupportbundle
+  namespace: neptune-system
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: neptune
     app.kubernetes.io/instance: controller-manager
     app.kubernetes.io/managed-by: kustomize
     app.kubernetes.io/name: serviceaccount
@@ -3804,6 +3806,33 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   creationTimestamp: null
+  name: neptune-autosupportbundle
+rules:
+- apiGroups:
+  - '*'
+  resourceNames:
+  - kube-system
+  resources:
+  - namespaces
+  verbs:
+  - get
+- apiGroups:
+  - '*'
+  resources:
+  - pods
+  verbs:
+  - list
+- apiGroups:
+  - '*'
+  resources:
+  - pods/log
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
   name: neptune-exechook
 rules:
 - apiGroups:
@@ -4359,6 +4388,25 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: neptune-controller-manager
+  namespace: neptune-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: neptune
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: serviceaccount
+    app.kubernetes.io/part-of: neptune
+  name: neptune-autosupportbundle
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: neptune-autosupportbundle
+subjects:
+- kind: ServiceAccount
+  name: neptune-autosupportbundle
   namespace: neptune-system
 ---
 apiVersion: rbac.authorization.k8s.io/v1
