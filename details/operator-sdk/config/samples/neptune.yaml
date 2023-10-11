@@ -3040,12 +3040,6 @@ spec:
           spec:
             description: SnapshotSpec defines the desired state of Snapshot
             properties:
-              ExecHookRunsPostSnapshotRef:
-                description: ExecHookRunsPostSnapshotRef reference to the ExecHooksRun after snapshot complete
-                type: string
-              ExecHookRunsPreSnapshotRef:
-                description: ExecHookRunsPreSnapshotRef reference to the ExecHooksRun prior to snapshot
-                type: string
               appVaultRef:
                 description: AppVaultRef is the reference to the AppVault where the snapshot contents will go.
                 type: string
@@ -3054,6 +3048,12 @@ spec:
                 type: string
               reclaimPolicy:
                 description: ReclaimPolicy defines what happens to the AppArchive of a snapshot when the snapshot CR is deleted Valid options are Retain, Delete (default).
+                type: string
+              volumeSnapshotsCreatedTimeout:
+                description: VolumeSnapshotsCreatedTimeout specifies the time to wait for all VolumeSnapshots CreationTime to be set before returning timeout error. The default value is 5 minutes.
+                type: string
+              volumeSnapshotsReadyToUseTimeout:
+                description: VolumeSnapshotsReadyToUseTimeout specifies the time to wait for Snapshot CR to complete before returning timeout error. The default value is 30 minutes.
                 type: string
             type: object
           status:
