@@ -75,7 +75,7 @@ func DefaultConfiguration() *MutableConfiguration {
 		ErrorTimeout:            5,
 		FeatureFlags: featureFlags{
 			DeployNatsConnector:   true,
-			DeployNeptune:         false,
+			DeployNeptune:         true,
 			SkipAstraRegistration: false,
 		},
 	}
