@@ -71,12 +71,14 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 		log.Error(err, FailedAstraConnectorGet)
 		natsSyncClientStatus.Status = FailedAstraConnectorGet
 		_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
-		return ctrl.Result{RequeueAfter: time.Minute * conf.Config.ErrorTimeout()}, err
+		// Do not timeout for requeue. This is a user input error
+		return ctrl.Result{}, err
 	}
 
 	// Validate AstraConnector CR for any errors
 	err = r.validateAstraConnector(*astraConnector, log)
 	if err != nil {
+		// Do not timeout for requeue. This is a user input error
 		return ctrl.Result{}, err
 	}
 
@@ -93,7 +95,7 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 			if err := r.Update(ctx, astraConnector); err != nil {
 				natsSyncClientStatus.Status = FailedFinalizerAdd
 				_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
-				return ctrl.Result{}, err
+				return ctrl.Result{RequeueAfter: time.Minute * conf.Config.ErrorTimeout()}, err
 			}
 		}
 	} else {
@@ -117,11 +119,13 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 			if err := r.Update(ctx, astraConnector); err != nil {
 				natsSyncClientStatus.Status = FailedFinalizerRemove
 				_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
+				// Do not timeout requeue. Item is being deleted
 				return ctrl.Result{}, err
 			}
 		}
 
 		// Stop reconciliation as the item is being deleted
+		// Do not timeout requeue
 		return ctrl.Result{}, nil
 	}
 
@@ -151,7 +155,7 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 
 	// POST/PUT Managed Cluster
 	_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
-	return ctrl.Result{}, nil
+	return ctrl.Result{RequeueAfter: time.Minute * conf.Config.ErrorTimeout()}, nil
 }
 
 func (r *AstraConnectorController) updateAstraConnectorStatus(ctx context.Context, astraConnector *v1.AstraConnector, natsSyncClientStatus v1.NatsSyncClientStatus) error {
