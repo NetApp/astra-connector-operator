@@ -153,11 +153,7 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 		}
 	}
 
-	// POST/PUT Managed Cluster
-	err = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
-	if err != nil {
-		return ctrl.Result{RequeueAfter: time.Minute * conf.Config.ErrorTimeout()}, nil
-	}
+	_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
 	return ctrl.Result{}, nil
 }
 
