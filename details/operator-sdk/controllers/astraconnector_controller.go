@@ -7,13 +7,11 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"github.com/go-logr/logr"
+	"github.com/pkg/errors"
 	"net/http"
 	"reflect"
 	"strings"
-	"time"
-
-	"github.com/go-logr/logr"
-	"github.com/pkg/errors"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -71,14 +69,14 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 		log.Error(err, FailedAstraConnectorGet)
 		natsSyncClientStatus.Status = FailedAstraConnectorGet
 		_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
-		// Do not timeout for requeue. This is a user input error
+		// Do not requeue
 		return ctrl.Result{}, err
 	}
 
 	// Validate AstraConnector CR for any errors
 	err = r.validateAstraConnector(*astraConnector, log)
 	if err != nil {
-		// Do not timeout for requeue. This is a user input error
+		// Do not requeue. This is a user input error
 		return ctrl.Result{}, err
 	}
 
@@ -95,7 +93,7 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 			if err := r.Update(ctx, astraConnector); err != nil {
 				natsSyncClientStatus.Status = FailedFinalizerAdd
 				_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
-				return ctrl.Result{RequeueAfter: time.Minute * conf.Config.ErrorTimeout()}, err
+				return ctrl.Result{}, err
 			}
 		}
 	} else {
@@ -119,13 +117,17 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 			if err := r.Update(ctx, astraConnector); err != nil {
 				natsSyncClientStatus.Status = FailedFinalizerRemove
 				_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
-				// Do not timeout requeue. Item is being deleted
+				// Do not requeue. Item is being deleted
 				return ctrl.Result{}, err
 			}
 		}
 
 		// Stop reconciliation as the item is being deleted
-		// Do not timeout requeue
+		// Do not requeue
+		return ctrl.Result{}, nil
+	}
+
+	if r.deployedAlready(astraConnector) {
 		return ctrl.Result{}, nil
 	}
 
@@ -244,4 +246,8 @@ func (r *AstraConnectorController) validateAstraConnector(connector v1.AstraConn
 	}
 
 	return errors.New(fmt.Sprintf("Errors while validating AstraConnector CR: %s", strings.Join(fieldErrors, "; ")))
+}
+
+func (r *AstraConnectorController) deployedAlready(connector *v1.AstraConnector) bool {
+	return connector.Status.NatsSyncClient.Registered == "true"
 }
