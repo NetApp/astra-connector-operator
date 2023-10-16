@@ -7,11 +7,12 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"github.com/go-logr/logr"
-	"github.com/pkg/errors"
 	"net/http"
 	"reflect"
 	"strings"
+
+	"github.com/go-logr/logr"
+	"github.com/pkg/errors"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -128,6 +129,7 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 	}
 
 	if r.deployedAlready(astraConnector) {
+		log.Info("AstraConnector already deployed, not requeueing")
 		return ctrl.Result{}, nil
 	}
 
@@ -140,17 +142,20 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 		log.Info("Initiating Neptune deployment")
 		neptuneResult, err := r.deployNeptune(ctx, astraConnector, &natsSyncClientStatus)
 		if err != nil {
-			return neptuneResult, err
+			// Note: Returning nil in error since we want to wait for the requeue to happen
+			// non nil errors triggers the requeue right away
+			log.Error(err, "Error deploying Neptune, requeueing after delay", "delay", conf.Config.ErrorTimeout())
+			return neptuneResult, nil
 		}
 	}
 
 	if conf.Config.FeatureFlags().DeployNatsConnector() {
-		// deploy Connector
+		log.Info("Initiating Neptune deployment")
 		connectorResults, err := r.deployConnector(ctx, astraConnector, &natsSyncClientStatus)
 		if err != nil {
-			log.Error(err, "Error deploying resources")
-			// Note: Returning nil in error since we want to wait a minute for the requeue to happen
+			// Note: Returning nil in error since we want to wait for the requeue to happen
 			// non nil errors triggers the requeue right away
+			log.Error(err, "Error deploying NatsConnector, requeueing after delay", "delay", conf.Config.ErrorTimeout())
 			return connectorResults, nil
 		}
 	}
