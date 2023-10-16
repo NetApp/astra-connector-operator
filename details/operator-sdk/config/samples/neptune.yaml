@@ -3982,6 +3982,7 @@ rules:
   - get
   - list
   - update
+  - watch
 - apiGroups:
   - ""
   resources:
@@ -4400,21 +4401,13 @@ rules:
 - nonResourceURLs:
   - '*'
   verbs:
-  - create
-  - get
-  - list
-  - patch
-  - update
+  - '*'
 - apiGroups:
   - '*'
   resources:
   - '*'
   verbs:
-  - create
-  - get
-  - list
-  - patch
-  - update
+  - '*'
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
