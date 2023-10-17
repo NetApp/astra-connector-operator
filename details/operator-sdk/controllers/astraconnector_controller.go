@@ -150,7 +150,7 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 	}
 
 	if conf.Config.FeatureFlags().DeployNatsConnector() {
-		log.Info("Initiating Neptune deployment")
+		log.Info("Initiating Connector deployment")
 		connectorResults, err := r.deployConnector(ctx, astraConnector, &natsSyncClientStatus)
 		if err != nil {
 			// Note: Returning nil in error since we want to wait for the requeue to happen

@@ -38,13 +38,43 @@ var _ = Describe("Astraconnector controller", func() {
 
 		BeforeEach(func() {
 			By("Creating the Namespace to perform the tests")
-			err := k8sClient.Create(ctx, namespace)
+			ns := &corev1.Namespace{}
+			err := k8sClient.Get(ctx, types.NamespacedName{Name: connectorName}, ns)
+			if err == nil {
+				// Namespace exists, delete it
+				Expect(k8sClient.Delete(ctx, ns)).To(Succeed())
+				// Wait for deletion to complete
+				Eventually(func() error {
+					return k8sClient.Get(ctx, types.NamespacedName{Name: connectorName}, ns)
+				}, time.Minute, time.Second).ShouldNot(Succeed())
+			}
+			// Now create the namespace
+			err = k8sClient.Create(ctx, namespace)
 			Expect(err).To(Not(HaveOccurred()))
+
+			// Wait for the namespace to be created
+			Eventually(func() error {
+				return k8sClient.Get(ctx, types.NamespacedName{Name: namespace.Name}, &corev1.Namespace{})
+			}, time.Minute, time.Second).Should(Succeed())
 		})
 
 		AfterEach(func() {
-			By("Deleting the Namespace to perform the tests")
-			_ = k8sClient.Delete(ctx, namespace)
+			By("Removing the finalizer from the AstraConnector custom resource")
+			astraConnector := &v1.AstraConnector{}
+			err := k8sClient.Get(ctx, types.NamespacedName{Name: connectorName, Namespace: namespace.Name}, astraConnector)
+			if err == nil {
+				astraConnector.Finalizers = nil
+				Expect(k8sClient.Update(ctx, astraConnector)).To(Succeed())
+			}
+
+			By("Deleting the AstraConnector custom resource")
+			err = k8sClient.Delete(ctx, astraConnector)
+			if err != nil && !errors.IsNotFound(err) {
+				Expect(err).To(Not(HaveOccurred()))
+			}
+
+			By("Deleting the Namespace")
+			Expect(k8sClient.Delete(ctx, namespace)).To(Succeed())
 		})
 
 		It("should successfully reconcile a custom resource for astraconnector", func() {
@@ -87,7 +117,7 @@ var _ = Describe("Astraconnector controller", func() {
 				Scheme: k8sClient.Scheme(),
 			}
 
-			_, err = controller.Reconcile(ctx, reconcile.Request{
+			result, err := controller.Reconcile(ctx, reconcile.Request{
 				NamespacedName: typeNamespaceName,
 			})
 			Expect(err).To(Not(HaveOccurred()))
@@ -105,6 +135,14 @@ var _ = Describe("Astraconnector controller", func() {
 				natsName := types.NamespacedName{Name: "nats", Namespace: connectorName}
 				return k8sClient.Get(ctx, natsName, found)
 			}, time.Minute, time.Second).Should(Succeed())
+
+			By("checking the Reconcile result")
+			Expect(result.Requeue).To(BeFalse())
+
+			By("checking the AstraConnector status")
+			ac := &v1.AstraConnector{}
+			err = k8sClient.Get(context.Background(), typeNamespaceName, ac)
+			Expect(err).NotTo(HaveOccurred())
 		})
 	})
 })
