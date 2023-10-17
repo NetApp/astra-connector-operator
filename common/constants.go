@@ -7,7 +7,7 @@ package common
 import "github.com/NetApp-Polaris/astra-connector-operator/app/conf"
 
 const (
-	DefaultImageRegistry = "netappdownloads.jfrog.io/docker-astra-control-staging/arch30/neptune"
+	DefaultImageRegistry = "preview.astra.netapp.dev"
 
 	AstraConnectName            = "astraconnect"
 	AstraConnectDefaultReplicas = 1
