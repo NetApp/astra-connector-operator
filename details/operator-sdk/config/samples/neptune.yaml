@@ -3276,7 +3276,6 @@ spec:
                   type: object
                 type: array
             required:
-            - conditions
             - state
             type: object
         type: object
@@ -4094,6 +4093,16 @@ rules:
   - jobs/status
   verbs:
   - get
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - create
+  - get
+  - list
+  - patch
+  - watch
 - apiGroups:
   - management.astra.netapp.io
   resources:
