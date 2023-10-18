@@ -138,7 +138,12 @@ jobs:
         if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-') }}
         run: |
           export VERSION=$(cat VERSION)
-          make install-bundle
+          export MANIFEST_FILENAME=default-images-$VERSION.manifest
+          export MANIFEST_FILEPATH=./$MANIFEST_FILENAME
+          echo "MANIFEST_FILEPATH=$MANIFEST_FILEPATH" >> $GITHUB_ENV
+          echo "MANIFEST_FILENAME=$MANIFEST_FILENAME" >> $GITHUB_ENV
+          go run scripts/create_default_images_manifest.go $MANIFEST_FILEPATH
+          cat $MANIFEST_FILEPATH
 
       - name: Get Version
         if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-') }}
@@ -167,6 +172,34 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           FILE_PATH: "./build/astra_v1_astraconnector.yaml"
           ASSET_NAME: "astra_v1_astraconnector.yaml"
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ env.FILE_PATH }}
+          asset_name: ${{ env.ASSET_NAME }}
+          asset_content_type: text/yaml
+
+      - name: Upload default-image manifest
+        if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-') }}
+        id: upload-manifest
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FILE_PATH: ${{ env.MANIFEST_FILEPATH }}
+          ASSET_NAME: ${{ env.MANIFEST_FILENAME }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ env.FILE_PATH }}
+          asset_name: ${{ env.ASSET_NAME }}
+          asset_content_type: text/plain
+
+      - name: Upload astraconnector_operator.yaml
+        if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-') }}
+        id: upload-astraconnector-operator-yaml
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FILE_PATH: "./build/astraconnector_operator.yaml"
+          ASSET_NAME: "astraconnector_operator.yaml"
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ${{ env.FILE_PATH }}
