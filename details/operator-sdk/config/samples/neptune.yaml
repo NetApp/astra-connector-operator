@@ -202,11 +202,14 @@ spec:
                   - target
                   type: object
                 type: array
+              recurrenceRule:
+                description: string containing an RFC-5545 Section 3.8.5.3. Recurrence Rule. For the DTSTART parameter, only UTC timestamps (denoted by the "Z" suffix) are supported, and only timestamps before the current time are supported. For the RECUR rule parts, "FREQ" and "INTERVAL" are the only rule parts supported. For the FREQ rule part, "MINUTELY" and "HOURLY" are the only values supported.
+                type: string
               sourceAppVaultRef:
                 description: SourceAppVaultRef is the name of the source AppVault
                 type: string
               sourceSnapshotsPath:
-                description: SourceSnapshotPath is the name of the source app snapshots path
+                description: SourceSnapshotsPath is the name of the source app snapshots path
                 type: string
               storageClassName:
                 description: StorageClassName is the name of the StorageClass to use when creating new PVCs
@@ -215,6 +218,7 @@ spec:
             - applicationRef
             - desiredState
             - destinationAppVaultRef
+            - recurrenceRule
             - sourceAppVaultRef
             - sourceSnapshotsPath
             type: object
@@ -447,6 +451,9 @@ spec:
                       - name
                       - namespace
                       type: object
+                    newlyReplicated:
+                      description: NewlyReplicated will be set to true if the destination PVC did not already exist
+                      type: boolean
                     sourcePVC:
                       description: SourcePVC holds the namespace and name for the source PVC
                       properties:
@@ -461,6 +468,7 @@ spec:
                   required:
                   - destinationPVC
                   - destinationTMR
+                  - newlyReplicated
                   - sourcePVC
                   type: object
                 type: array
@@ -3613,6 +3621,32 @@ rules:
 - apiGroups:
   - management.astra.netapp.io
   resources:
+  - backuprestores
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - management.astra.netapp.io
+  resources:
+  - backuprestores/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - management.astra.netapp.io
+  resources:
+  - backuprestores/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - management.astra.netapp.io
+  resources:
   - backups
   verbs:
   - create
@@ -3746,39 +3780,78 @@ rules:
   - resourcebackups
   verbs:
   - create
+  - delete
   - get
   - list
+  - patch
+  - update
   - watch
+- apiGroups:
+  - management.astra.netapp.io
+  resources:
+  - resourcebackups/finalizers
+  verbs:
+  - update
 - apiGroups:
   - management.astra.netapp.io
   resources:
   - resourcebackups/status
   verbs:
   - get
+  - patch
+  - update
 - apiGroups:
   - management.astra.netapp.io
   resources:
   - resourcedeletes
   verbs:
   - create
+  - delete
   - get
   - list
+  - patch
+  - update
   - watch
+- apiGroups:
+  - management.astra.netapp.io
+  resources:
+  - resourcedeletes/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - management.astra.netapp.io
+  resources:
+  - resourcedeletes/status
+  verbs:
+  - get
+  - patch
+  - update
 - apiGroups:
   - management.astra.netapp.io
   resources:
   - resourcerestores
   verbs:
   - create
+  - delete
   - get
   - list
+  - patch
+  - update
   - watch
+- apiGroups:
+  - management.astra.netapp.io
+  resources:
+  - resourcerestores/finalizers
+  verbs:
+  - update
 - apiGroups:
   - management.astra.netapp.io
   resources:
   - resourcerestores/status
   verbs:
   - get
+  - patch
+  - update
 - apiGroups:
   - management.astra.netapp.io
   resources:
@@ -3837,9 +3910,26 @@ rules:
   - resticvolumerestores
   verbs:
   - create
+  - delete
   - get
   - list
+  - patch
+  - update
   - watch
+- apiGroups:
+  - management.astra.netapp.io
+  resources:
+  - resticvolumerestores/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - management.astra.netapp.io
+  resources:
+  - resticvolumerestores/status
+  verbs:
+  - get
+  - patch
+  - update
 - apiGroups:
   - management.astra.netapp.io
   resources:
@@ -3883,6 +3973,10 @@ rules:
   resources:
   - snapshotinplacerestores/finalizers
   verbs:
+  - create
+  - get
+  - list
+  - patch
   - update
 - apiGroups:
   - management.astra.netapp.io
@@ -3890,6 +3984,7 @@ rules:
   - snapshotinplacerestores/status
   verbs:
   - get
+  - list
   - patch
   - update
 - apiGroups:
@@ -4045,6 +4140,7 @@ rules:
   - get
   - list
   - update
+  - watch
 - apiGroups:
   - ""
   resources:
@@ -4140,32 +4236,6 @@ rules:
 - apiGroups:
   - management.astra.netapp.io
   resources:
-  - backuprestores
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - backuprestores/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - backuprestores/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
   - exechooks
   verbs:
   - create
@@ -4216,110 +4286,6 @@ rules:
   - patch
   - update
 - apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - resourcebackups
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - resourcebackups/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - resourcebackups/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - resourcedeletes
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - resourcedeletes/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - resourcedeletes/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - resourcerestores
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - resourcerestores/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - resourcerestores/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - resticvolumerestores
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - resticvolumerestores/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - resticvolumerestores/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
   - snapshot.storage.k8s.io
   resources:
   - volumesnapshotclasses
@@ -4341,6 +4307,14 @@ rules:
 - apiGroups:
   - snapshot.storage.k8s.io
   resources:
+  - volumesnapshotcontents/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - snapshot.storage.k8s.io
+  resources:
   - volumesnapshots
   verbs:
   - create
@@ -4348,7 +4322,22 @@ rules:
   - get
   - list
   - patch
+  - update
   - watch
+- apiGroups:
+  - snapshot.storage.k8s.io
+  resources:
+  - volumesnapshots/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - snapshot.storage.k8s.io
+  resources:
+  - volumesnapshots/status
+  verbs:
+  - get
+  - patch
+  - update
 - apiGroups:
   - storage.k8s.io
   resources:
@@ -4473,21 +4462,13 @@ rules:
 - nonResourceURLs:
   - '*'
   verbs:
-  - create
-  - get
-  - list
-  - patch
-  - update
+  - '*'
 - apiGroups:
   - '*'
   resources:
   - '*'
   verbs:
-  - create
-  - get
-  - list
-  - patch
-  - update
+  - '*'
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
