@@ -249,6 +249,16 @@ install-exes:
 	export GOOS=darwin; export GOARCH=arm64; go build -ldflags "-X github.com/NetApp/astra-connector-operator/installer/install.VERSION=${VERSION}" -v -o ${OUTPUT_INSTALL_EXE_DIR}/install_${VERSION}_$${GOARCH}_$${GOOS} ${INSTALL_DIR}/install.go; \
 	export GOOS=windows; export GOARCH=amd64; go build -ldflags "-X github.com/NetApp/astra-connector-operator/installer/install.VERSION=${VERSION}" -v -o ${OUTPUT_INSTALL_EXE_DIR}/install_${VERSION}_$${GOARCH}_$${GOOS}.exe ${INSTALL_DIR}/install.go
 
+# Creates release containing versioned YAMLs
+.PHONY: release
+release: kustomize
+	rm -rf build
+	mkdir build
+	cd details/operator-sdk/config/manager && $(KUSTOMIZE) edit set image controller=$(IMG)
+	cd details/operator-sdk && $(KUSTOMIZE) build config/default > $(BUILD_DIR)/only_astraconnector_operator.yaml
+	cat $(BUILD_DIR)/only_astraconnector_operator.yaml >> $(BUILD_DIR)/astraconnector_operator.yaml
+	cp $(MAKEFILE_DIR)/details/operator-sdk/config/samples/astra_v1_astraconnector.yaml $(BUILD_DIR)/astra_v1_astraconnector.yaml
+
 bundle-base:
 	rm -rf $(BUILD_DIR)/*.tgz # Remove existing tgz bundles
 	rm -rf $(INSTALL_BUNDLE_DIR)
