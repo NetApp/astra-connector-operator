@@ -92,8 +92,8 @@ jobs:
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          FILE_PATH: "./build/astra_v1_astraconnector.yaml"
-          ASSET_NAME: "astra_v1_astraconnector.yaml"
+          FILE_PATH: "./build/controllerconfig.yaml"
+          ASSET_NAME: "controllerconfig.yaml"
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ${{ env.FILE_PATH }}
