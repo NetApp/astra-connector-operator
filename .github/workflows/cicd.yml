@@ -30,6 +30,14 @@ jobs:
               dep ensure
           fi
 
+      - name: Get the version (non-release branch)
+        if: ${{ !startsWith(github.ref, 'refs/heads/release-') }}
+        run: |
+          export BRANCH_NAME=$(echo ${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}})
+          export BUILD_VERSION=$(date +'%Y%m%d%H%M')-$BRANCH_NAME
+          echo $BUILD_VERSION > VERSION
+          echo $BRANCH_NAME > BRANCH
+
       - name: Get the version (release branch)
         if: ${{ startsWith(github.ref, 'refs/heads/release-') }}
         run: |
