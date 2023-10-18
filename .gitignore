@@ -27,3 +27,5 @@ deployConfig.yaml
 
 # build dir
 build/
+
+.config.yaml
