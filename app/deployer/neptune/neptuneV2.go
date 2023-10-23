@@ -81,6 +81,7 @@ func (n NeptuneClientDeployerV2) GetDeploymentObjects(m *v1.AstraConnector, ctx 
 				"app.kubernetes.io/name":       "deployment",
 				"app.kubernetes.io/part-of":    "neptune",
 				"control-plane":                "controller-manager",
+				"app":                          "controller.neptune.netapp.io",
 			},
 		},
 		Spec: appsv1.DeploymentSpec{
