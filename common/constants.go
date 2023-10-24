@@ -12,7 +12,7 @@ const (
 	NatssyncClientPort                  = 8080
 	NatssyncClientProtocol              = "TCP"
 	NatssyncClientKeystoreUrl           = "configmap:///configmap-data"
-	NatssyncClientDefaultImage          = "natssync-client:0.9.202202170408"
+	NatssyncClientDefaultImage          = "natssync-client:2.0.202302011758"
 	NatssyncClientDefaultCloudBridgeURL = "https://astra.netapp.io"
 
 	NatsName               = "nats"
@@ -30,11 +30,11 @@ const (
 
 	HttpProxyClientName         = "httpproxy-client"
 	HttpProxyClientsize         = 1
-	HttpProxyClientDefaultImage = "httpproxylet:0.9.202202170408"
+	HttpProxyClientDefaultImage = "httpproxylet:2.2.202310101619"
 
 	EchoClientName         = "echo-client"
 	EchoClientDefaultSize  = 1
-	EchoClientDefaultImage = "echo-proxylet:0.9.202202170408"
+	EchoClientDefaultImage = "echo-proxylet:2.0"
 
 	NatssyncClientConfigMapName               = "natssync-client-configmap"
 	NatssyncClientConfigMapRoleName           = "natssync-client-configmap-role"
