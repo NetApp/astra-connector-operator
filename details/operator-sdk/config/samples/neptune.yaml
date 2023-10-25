@@ -716,7 +716,14 @@ spec:
     singular: backupinplacerestore
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - jsonPath: .status.state
+      name: State
+      type: string
+    - jsonPath: .status.error
+      name: Error
+      type: string
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: BackupInplaceRestore is the Schema for the backupinplacerestores API
@@ -2963,7 +2970,7 @@ spec:
                 nullable: true
                 type: string
               conditions:
-                description: Condition contains details for one aspect of the current state of this SnapshotInplaceRestore
+                description: Each Condition contains details for one aspect of the current state of the SnapshotInplace Restore.
                 items:
                   description: "Condition contains details for one aspect of the current state of this API Resource. --- This struct is intended for direct use as an array at the field path .status.conditions.  For example, \n type FooStatus struct{ // Represents the observations of a foo's current state. // Known .status.conditions.type are: \"Available\", \"Progressing\", and \"Degraded\" // +patchMergeKey=type // +patchStrategy=merge // +listType=map // +listMapKey=type Conditions []metav1.Condition `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\" protobuf:\"bytes,1,rep,name=conditions\"` \n // other fields }"
                   properties:
@@ -3006,33 +3013,15 @@ spec:
                   - type
                   type: object
                 type: array
-                x-kubernetes-list-map-keys:
-                - type
-                x-kubernetes-list-type: map
-              progress:
-                description: SnapshotInplaceRestoreProgress used to internally track progress of the snapshot in-place restore
-                properties:
-                  namespaceCreationCompleted:
-                    type: boolean
-                  pvResetReclaimPolicyCompleted:
-                    type: boolean
-                  pvSetReclaimPolicyCompleted:
-                    type: boolean
-                  pvcCopyComplete:
-                    type: boolean
-                  pvcCreationCompleted:
-                    type: boolean
-                  pvcEraseCompleted:
-                    type: boolean
-                  resourceBackupCompleted:
-                    type: boolean
-                  resourceDeletionCompleted:
-                    type: boolean
-                  resourceRestoreCompleted:
-                    type: boolean
-                  snapshotPVCCreationComplete:
-                    type: boolean
-                type: object
+              error:
+                description: Error indicates the most recent error that has occurred. The error may not be permanent, so progress may continue after temporarily seeing an error.
+                type: string
+              state:
+                description: 'INSERT ADDITIONAL STATUS FIELD - define observed state of cluster Important: Run "make" to regenerate code after modifying this file State indicates a high level summary of the SnapshotInplace Restore''s state'
+                type: string
+            required:
+            - conditions
+            - state
             type: object
         type: object
     served: true
@@ -3056,7 +3045,14 @@ spec:
     singular: snapshotrestore
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - jsonPath: .status.state
+      name: State
+      type: string
+    - jsonPath: .status.error
+      name: Error
+      type: string
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: SnapshotRestore is the Schema for the snapshotrestores API
