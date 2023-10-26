@@ -66,7 +66,7 @@ You need Kubernetes administrator permissions to install the Astra Connector ope
         image: echo-proxylet:2.0
       imageRegistry:
         name: theotw
-        secret: otw-secret
+        secret: ""
       astra:
         token: <ASTRA_CONTROL_SERVICE_API_TOKEN>
         #clusterName: <PRIVATE_AKS_CLUSTER_NAME>
@@ -74,10 +74,10 @@ You need Kubernetes administrator permissions to install the Astra Connector ope
         acceptEULA: yes
     ```
 
-5. After you populate the `controllerconfig.yaml` file with the correct values, apply the CR:
+5. After you populate the `astra-connector-cr.yaml` file with the correct values, apply the CR:
 
     ```bash
-    kubectl apply -f controllerconfig.yaml
+    kubectl apply -f astra-connector-cr.yaml
     ```
 
 6. Verify that the Astra Connector is fully deployed:
