@@ -41,7 +41,12 @@ You need Kubernetes administrator permissions to install the Astra Connector ope
 
 3. Get an API token from Astra Control. Refer to the Astra Automation documentation for instructions.
 
-4. Update the Astra Connector CR file located at `controllerconfig.yaml`. Update the values in brackets <> to match your Astra Control environment and cluster configuration:
+4. Create a file named `astra-connector-cr.yaml`. Update the values in brackets <> to match your Astra Control environment and cluster configuration:
+
+- `<ASTRA_CONTROL_SERVICE_URL>`: The web UI URL of Astra Control Service.
+- `<ASTRA_CONTROL_SERVICE_API_TOKEN>`: The Astra Control API token you obtained in the preceding step.
+- `<PRIVATE_AKS_CLUSTER_NAME>`: (AKS clusters only) - The cluster name of the private Azure Kubernetes Service cluster. Uncomment and populate this line only if you are adding a private AKS cluster.
+- `<ASTRA_CONTROL_ACCOUNT_ID>`: Obtained from the Astra Control web UI. Select the figure icon at the top right of the page and select API access.
 
     ```yaml
     apiVersion: netapp.astraconnector.com/v1
