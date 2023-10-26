@@ -30,7 +30,7 @@ You need Kubernetes administrator permissions to install the Astra Connector ope
 1. Install the Astra Connector operator on the private cluster you want to manage with Astra Control Service. When you run this command, the namespace `astra-connector-operator` is created and the configuration is applied to the namespace:
 
     ```bash
-    kubectl apply -f astraconnector_operator.yaml
+    https://github.com/NetApp/astra-connector-operator/releases/download/23.07.0-202310251519/astraconnector_operator.yaml
     ```
 
 2. Verify that the operator is installed and ready:
@@ -91,4 +91,4 @@ You should see output similar to the following:
 
 ```bash
 NAMESPACE         NAME              REGISTERED   ASTRACONNECTORID                       STATUS
-neptune-system   astra-connector   true         00a821c8-2cef-41ac-8777-ed05a417883e   Registered with Astra
+astra-connector   astra-connector   true         00a821c8-2cef-41ac-8777-ed05a417883e   Registered with Astra
