@@ -62,14 +62,7 @@ You need Kubernetes administrator permissions to install the Astra Connector ope
          namespace: astra-connector
        spec:
          natssync-client:
-           image: natssync-client:2.0.202302011758
            cloud-bridge-url: <ASTRA_CONTROL_SERVICE_URL>
-         nats:
-           image: nats:2.6.1-alpine3.14
-         httpproxy-client:
-           image: httpproxylet:2.2.202310101619
-         echo-client:
-           image: echo-proxylet:2.0
          imageRegistry:
            name: theotw
            secret: ""
