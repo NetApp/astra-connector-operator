@@ -41,59 +41,66 @@ You need Kubernetes administrator permissions to install the Astra Connector ope
 
 3. Get an API token from Astra Control. Refer to the Astra Automation documentation for instructions.
 
-4. Create a file named `astra-connector-cr.yaml`. Update the values in brackets <> to match your Astra Control environment and cluster configuration:
+4. Create `astra-connector` namespace
 
-- `<ASTRA_CONTROL_SERVICE_URL>`: The web UI URL of Astra Control Service.
-- `<ASTRA_CONTROL_SERVICE_API_TOKEN>`: The Astra Control API token you obtained in the preceding step.
-- `<PRIVATE_AKS_CLUSTER_NAME>`: (AKS clusters only) - The cluster name of the private Azure Kubernetes Service cluster. Uncomment and populate this line only if you are adding a private AKS cluster.
-- `<ASTRA_CONTROL_ACCOUNT_ID>`: Obtained from the Astra Control web UI. Select the figure icon at the top right of the page and select API access.
-
-    ```yaml
-    apiVersion: netapp.astraconnector.com/v1
-    kind: AstraConnector
-    metadata:
-      name: astra-connector
-      namespace: astra-connector
-    spec:
-      natssync-client:
-        image: natssync-client:2.0.202302011758
-        cloud-bridge-url: <ASTRA_CONTROL_SERVICE_URL>
-      nats:
-        image: nats:2.6.1-alpine3.14
-      httpproxy-client:
-        image: httpproxylet:2.2.202310101619
-      echo-client:
-        image: echo-proxylet:2.0
-      imageRegistry:
-        name: theotw
-        secret: ""
-      astra:
-        token: <ASTRA_CONTROL_SERVICE_API_TOKEN>
-        #clusterName: <PRIVATE_AKS_CLUSTER_NAME>
-        accountId: <ASTRA_CONTROL_ACCOUNT_ID>
-        acceptEULA: yes
+    ```bash
+   kubectl create ns astra-connector
     ```
 
-5. After you populate the `astra-connector-cr.yaml` file with the correct values, apply the CR:
+5. Create a file named `astra-connector-cr.yaml`. Update the values in brackets <> to match your Astra Control environment and cluster configuration:
+
+   - `<ASTRA_CONTROL_SERVICE_URL>`: The web UI URL of Astra Control Service.
+   - `<ASTRA_CONTROL_SERVICE_API_TOKEN>`: The Astra Control API token you obtained in the preceding step.
+   - `<PRIVATE_AKS_CLUSTER_NAME>`: (AKS clusters only) - The cluster name of the private Azure Kubernetes Service cluster. Uncomment and populate this line only if you are adding a private AKS cluster.
+   - `<ASTRA_CONTROL_ACCOUNT_ID>`: Obtained from the Astra Control web UI. Select the figure icon at the top right of the page and select API access.
+
+       ```yaml
+       apiVersion: netapp.astraconnector.com/v1
+       kind: AstraConnector
+       metadata:
+         name: astra-connector
+         namespace: astra-connector
+       spec:
+         natssync-client:
+           image: natssync-client:2.0.202302011758
+           cloud-bridge-url: <ASTRA_CONTROL_SERVICE_URL>
+         nats:
+           image: nats:2.6.1-alpine3.14
+         httpproxy-client:
+           image: httpproxylet:2.2.202310101619
+         echo-client:
+           image: echo-proxylet:2.0
+         imageRegistry:
+           name: theotw
+           secret: ""
+         astra:
+           token: <ASTRA_CONTROL_SERVICE_API_TOKEN>
+           #clusterName: <PRIVATE_AKS_CLUSTER_NAME>
+           accountId: <ASTRA_CONTROL_ACCOUNT_ID>
+           acceptEULA: yes
+       ```
+    
+6. After you populate the `astra-connector-cr.yaml` file with the correct values, apply the CR:
 
     ```bash
     kubectl apply -f astra-connector-cr.yaml
     ```
 
-6. Verify that the Astra Connector is fully deployed:
+7. Verify that the Astra Connector is fully deployed:
 
     ```bash
     kubectl get all -n astra-connector
     ```
 
-7. Verify that the cluster is registered with Astra Control:
+8. Verify that the cluster is registered with Astra Control:
 
     ```bash
     kubectl get astraconnectors.astra.netapp.io -A
     ```
 
-You should see output similar to the following:
+   You should see output similar to the following:
 
-```bash
-NAMESPACE         NAME              REGISTERED   ASTRACONNECTORID                       STATUS
-astra-connector   astra-connector   true         00a821c8-2cef-41ac-8777-ed05a417883e   Registered with Astra
+   ```bash
+   NAMESPACE         NAME              REGISTERED   ASTRACONNECTORID                       STATUS
+   astra-connector   astra-connector   true         00a821c8-2cef-41ac-8777-ed05a417883e   Registered with Astra
+   ```
