@@ -4579,6 +4579,25 @@ metadata:
     app.kubernetes.io/managed-by: kustomize
     app.kubernetes.io/name: serviceaccount
     app.kubernetes.io/part-of: neptune
+  name: neptune-autosupportbundle-metrics
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: neptune-metrics-reader
+subjects:
+- kind: ServiceAccount
+  name: neptune-autosupportbundle
+  namespace: neptune-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: neptune
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: serviceaccount
+    app.kubernetes.io/part-of: neptune
   name: neptune-exechook
 roleRef:
   apiGroup: rbac.authorization.k8s.io
