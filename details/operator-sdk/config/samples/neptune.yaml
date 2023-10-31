@@ -2979,7 +2979,14 @@ spec:
     singular: snapshotinplacerestore
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - jsonPath: .status.state
+      name: State
+      type: string
+    - jsonPath: .status.error
+      name: Error
+      type: string
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: SnapshotInplaceRestore is the Schema for the snapshotinplacerestores API
