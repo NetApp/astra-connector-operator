@@ -479,7 +479,6 @@ spec:
                 description: State indicates a high level summary of the AppMirrorUpdate's state
                 type: string
             required:
-            - conditions
             - state
             type: object
         type: object
