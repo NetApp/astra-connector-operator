@@ -1361,6 +1361,9 @@ spec:
               applicationRef:
                 description: ApplicationRef is the reference to the Application to execute hooks against
                 type: string
+              completionTimeout:
+                description: CompletionTimeout specifies the time to wait for the entire ExecHooksRun to complete before returning timeout error. The default value is 40 minutes.
+                type: string
               stage:
                 description: Stage The current stage to run execution hooks for
                 enum:
