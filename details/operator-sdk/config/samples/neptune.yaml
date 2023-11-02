@@ -1916,6 +1916,22 @@ spec:
               appVaultRef:
                 description: AppVaultRef is the reference to the AppVault where the snapshot contents will be read from.
                 type: string
+              exclusionResourceList:
+                description: ExclusionResourceList is an optional list of objects to exclude from being deleted.
+                items:
+                  description: GroupKind defines a kubernetes object
+                  properties:
+                    group:
+                      description: Group is the server time when the ResourceDelete is completed.
+                      type: string
+                    kind:
+                      description: Kind
+                      type: string
+                  required:
+                  - group
+                  - kind
+                  type: object
+                type: array
             type: object
           status:
             description: ResourceDeleteStatus defines the observed state of ResourceDelete
