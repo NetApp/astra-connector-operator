@@ -2106,6 +2106,39 @@ spec:
                   - target
                   type: object
                 type: array
+              resourceFilter:
+                description: ResourceFilter should be populated by the user if only certain resources must be restored in the target namespace
+                properties:
+                  resourceMatchers:
+                    description: ResourceMatchers is a list of matchers where each matcher matches one or more resources
+                    items:
+                      properties:
+                        groupKind:
+                          description: GroupKind kubernetes group kind of the resource that has to be matched
+                          type: string
+                        labelSelector:
+                          description: LabelSelector  is used to match a resource based on the metadata.labels field of the kubernetes resource
+                          type: string
+                        name:
+                          description: Name kubernetes metadata.name field of the resource that must be matched.
+                          type: string
+                        namespace:
+                          description: Namespace kubernetes metadata.namespace field of the resource that must be matched.
+                          type: string
+                        version:
+                          description: Version of the kubernetes resource that has to be matched.
+                          type: string
+                      required:
+                      - groupKind
+                      type: object
+                    type: array
+                  resourceSelectionCriteria:
+                    description: ResourceSelectionCriteria used to determine if the resources matching the provided resources matchers should be included into the collection or excluded from the collection.
+                    enum:
+                    - include
+                    - exclude
+                    type: string
+                type: object
             type: object
           status:
             description: ResourceRestoreStatus defines the observed state of ResourceRestore
