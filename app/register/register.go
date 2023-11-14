@@ -14,6 +14,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 	"strconv"
 	"strings"
 	"time"
@@ -21,6 +22,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
 	coreV1 "k8s.io/api/core/v1"
+	k8sStorageV1 "k8s.io/api/storage/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -96,11 +98,12 @@ type ClusterRegisterUtil interface {
 	CreateCluster(astraHost, cloudId, astraConnectorId, apiToken string) (ClusterInfo, error)
 	UpdateCluster(astraHost, cloudId, clusterId, astraConnectorId, apiToken string) error
 	CreateOrUpdateCluster(astraHost, cloudId, clusterId, astraConnectorId, clustersMethod, apiToken string) (ClusterInfo, error)
-	GetStorageClass(astraHost, cloudId, clusterId, apiToken string) (string, error)
 	CreateManagedCluster(astraHost, cloudId, clusterID, storageClass, apiToken string) error
 	UpdateManagedCluster(astraHost, clusterId, astraConnectorId, apiToken string) error
 	CreateOrUpdateManagedCluster(astraHost, cloudId, clusterId, astraConnectorId, managedClustersMethod, apiToken string) (ClusterInfo, error)
 	ValidateAndGetCluster(astraHost, cloudId, apiToken string) (ClusterInfo, error)
+	GetDefaultStorageClass() (string, error)
+	GetStorageClasses() (*k8sStorageV1.StorageClassList, error)
 }
 
 type clusterRegisterUtil struct {
@@ -684,6 +687,7 @@ func (c clusterRegisterUtil) CreateCluster(astraHost, cloudId, astraConnectorId,
 }
 
 // UpdateCluster Updates an existing cluster with the provided details
+// STOPPED HERE cannot GET a credential without an ID
 func (c clusterRegisterUtil) UpdateCluster(astraHost, cloudId, clusterId, astraConnectorId, apiToken string) error {
 	url := fmt.Sprintf("%s/accounts/%s/topology/v1/clouds/%s/clusters/%s", astraHost, c.AstraConnector.Spec.Astra.AccountId, cloudId, clusterId)
 
@@ -749,60 +753,66 @@ type GetStorageClassResponse struct {
 	Items []StorageClass `json:"items"`
 }
 
-func (c clusterRegisterUtil) GetStorageClass(astraHost, cloudId, clusterId, apiToken string) (string, error) {
-	url := fmt.Sprintf("%s/accounts/%s/topology/v1/clouds/%s/clusters/%s/storageClasses", astraHost, c.AstraConnector.Spec.Astra.AccountId, cloudId, clusterId)
-	var storageClassesRespJson GetStorageClassResponse
+func (c clusterRegisterUtil) GetStorageClasses() (*k8sStorageV1.StorageClassList, error) {
+	c.Log.Info("Getting storage classes")
+	storageClassList := &k8sStorageV1.StorageClassList{}
+	logger := log.FromContext(c.Ctx)
 
-	c.Log.Info("Getting Storage Classes")
-
-	headerMap := HeaderMap{Authorization: fmt.Sprintf("Bearer %s", apiToken)}
-	storageClassesResp, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodGet, url, nil, headerMap)
-	defer cancel()
-
+	err := c.K8sClient.List(c.Ctx, storageClassList)
 	if err != nil {
-		return "", errors.Wrap(err, "error on request get storage classes")
+		logger.Error(err, "Failed to retrieve list of storageClasses")
+		return nil, err
 	}
+	return storageClassList, nil
+}
 
-	if storageClassesResp.StatusCode != http.StatusOK {
-		return "", errors.New("get storage classes failed " + strconv.Itoa(storageClassesResp.StatusCode))
-	}
-
-	respBody, err := io.ReadAll(storageClassesResp.Body)
+// GetDefaultStorageClass gets the desired default storage class.
+// If 'StorageClassName' is set in the spec it will return that.
+// If 'StorageClassName' is not set, this will return the default SC that is set on
+// the cluster or empty string if no default is set.
+func (c clusterRegisterUtil) GetDefaultStorageClass() (string, error) {
+	c.Log.Info("Determining default storage class")
+	scs, err := c.GetStorageClasses()
 	if err != nil {
-		c.Log.WithValues("response", string(respBody)).Error(err, "error reading response")
-		return "", errors.Wrap(err, "error reading response from get storage classes")
+		return "", errors.New(fmt.Sprintf("get storage classes failed: %s", err))
 	}
 
-	err = json.Unmarshal(respBody, &storageClassesRespJson)
-	if err != nil {
-		c.Log.WithValues("response", string(respBody)).Error(err, "error unmarshalling response")
-		return "", errors.Wrap(err, "unmarshall error when getting storage classes")
-	}
+	var defaultSc *k8sStorageV1.StorageClass
 
-	var defaultStorageClassId string
-	var defaultStorageClassName string
-	for _, sc := range storageClassesRespJson.Items {
-		if sc.Name == c.AstraConnector.Spec.Astra.StorageClassName {
-			c.Log.Info("Using the storage class specified in the CR Spec", "StorageClassName", sc.Name, "StorageClassID", sc.ID)
-			return sc.ID, nil
-		}
-
-		if sc.IsDefault == "true" {
-			defaultStorageClassId = sc.ID
-			defaultStorageClassName = sc.Name
-		}
-	}
-
+	// If storageClassName is set in the CR, validate that the SC exists and then set it as default, else use the default from the cluster
 	if c.AstraConnector.Spec.Astra.StorageClassName != "" {
-		c.Log.Error(errors.New("invalid storage class specified"), "Storage Class Provided in the CR Spec is not valid : "+c.AstraConnector.Spec.Astra.StorageClassName)
+		c.Log.WithValues("StorageClassName", c.AstraConnector.Spec.Astra.StorageClassName).
+			Info("Checking storageClass for existence")
+		for _, sc := range scs.Items {
+			if sc.GetName() == c.AstraConnector.Spec.Astra.StorageClassName {
+				defaultSc = &sc
+				break
+			}
+		}
+		// Return an error if 'storageClassName' was set in the CR but doesn't actually exist on the cluster
+		if defaultSc == nil {
+			errMsg := fmt.Sprintf("storageClassName '%s' is defined in the spec but does not exist on the cluster", c.AstraConnector.Spec.Astra.StorageClassName)
+			return "", errors.New(errMsg)
+		}
+	} else {
+		c.Log.Info("'StorageClassName' is not defined in the spec, getting default storgeClass from the cluster")
+		for _, sc := range scs.Items {
+			if sc.Annotations["storageclass.kubernetes.io/is-default-class"] == "true" {
+				defaultSc = &sc
+				break
+			}
+		}
 	}
 
-	if defaultStorageClassId == "" {
-		c.Log.Info("No Storage Class is set to default")
-		return "", errors.New("no default storage class in the system")
+	var defaultStorageClassName, defaultStorageClassId string
+	if defaultSc == nil {
+		c.Log.Info("Default storage class is not set on the cluster")
+	} else {
+		defaultStorageClassName = defaultSc.GetName()
+		defaultStorageClassId = string(defaultSc.GetUID())
+		c.Log.Info("Using the default storage class", "StorageClassName", defaultStorageClassName, "StorageClassID", defaultStorageClassId)
 	}
 
-	c.Log.Info("Using the default storage class", "StorageClassName", defaultStorageClassName, "StorageClassID", defaultStorageClassId)
 	return defaultStorageClassId, nil
 }
 
@@ -900,7 +910,7 @@ func (c clusterRegisterUtil) CreateOrUpdateManagedCluster(astraHost, cloudId, cl
 	if managedClustersMethod == http.MethodPost {
 		// Get a Storage Class to be used for managing a cluster
 		// TODO : Doing this only for POST, since PUT /managedClusters doesn't update storageClass
-		storageClass, err := c.GetStorageClass(astraHost, cloudId, clusterId, apiToken)
+		storageClass, err := c.GetDefaultStorageClass()
 
 		if err != nil {
 			return ClusterInfo{}, err
