@@ -169,7 +169,7 @@ func (d *AstraConnectDeployer) GetClusterRoleObjects(m *v1.AstraConnector, ctx c
 			{
 				APIGroups: []string{"*"},
 				Resources: []string{"*"},
-				Verbs:     []string{"get", "list", "watch", "create", "update", "patch", "delete"},
+				Verbs:     []string{"*"},
 			},
 			{
 				APIGroups: []string{

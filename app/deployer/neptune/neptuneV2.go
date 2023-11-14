@@ -1,10 +1,17 @@
+/*
+ * Copyright (c) 2023. NetApp, Inc. All Rights Reserved.
+ */
+
 package neptune
 
 import (
 	"context"
 	"fmt"
-	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
+	"os"
+	"path/filepath"
 	"strings"
+
+	"github.com/pkg/errors"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -13,6 +20,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/NetApp-Polaris/astra-connector-operator/app/deployer/model"
 	"github.com/NetApp-Polaris/astra-connector-operator/common"
@@ -41,10 +49,24 @@ func (n NeptuneClientDeployerV2) GetDeploymentObjects(m *v1.AstraConnector, ctx 
 	if m.Spec.Neptune.Image != "" {
 		containerImage = m.Spec.Neptune.Image
 	} else {
-		containerImage = common.NeptuneDefaultImage
+		// Reading env variable for project root. This is to ensure that we can read this file in both test
+		//	and production environments. This variable will be set in test, and will be ignored for the app
+		//  running in docker.
+		rootDir := os.Getenv("PROJECT_ROOT")
+		if rootDir == "" {
+			rootDir = "."
+		}
+		filePath := filepath.Join(rootDir, "common/neptune_manager_tag.txt")
+		imageBytes, err := os.ReadFile(filePath)
+		if err != nil {
+			return nil, errors.Wrap(err, "error reading neptune manager tag")
+		}
+
+		containerImage = string(imageBytes)
+		containerImage = strings.TrimSpace(containerImage)
 	}
 
-	neptuneImage = fmt.Sprintf("%s/%s", imageRegistry, containerImage)
+	neptuneImage = fmt.Sprintf("%s/controller:%s", imageRegistry, containerImage)
 	log.Info("Using Neptune image", "image", neptuneImage)
 
 	deployment := &appsv1.Deployment{
@@ -75,6 +97,7 @@ func (n NeptuneClientDeployerV2) GetDeploymentObjects(m *v1.AstraConnector, ctx 
 					},
 					Labels: map[string]string{
 						"control-plane": "controller-manager",
+						"app":           "controller.neptune.netapp.io",
 					},
 				},
 				Spec: corev1.PodSpec{

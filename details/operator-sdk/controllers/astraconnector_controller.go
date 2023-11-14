@@ -45,7 +45,7 @@ type AstraConnectorController struct {
 //+kubebuilder:rbac:groups=astra.netapp.io,resources=astraconnectors,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=astra.netapp.io,resources=astraconnectors/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=astra.netapp.io,resources=astraconnectors/finalizers,verbs=update
-//+kubebuilder:rbac:groups=*,resources=*,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=*,resources=*,verbs=*
 //+kubebuilder:rbac:groups="";apiextensions.k8s.io;apps;autoscaling;batch;crd.projectcalico.org;extensions;networking.k8s.io;policy;rbac.authorization.k8s.io;security.openshift.io;snapshot.storage.k8s.io;storage.k8s.io;trident.netapp.io,resources=configmaps;cronjobs;customresourcedefinitions;daemonsets;deployments;horizontalpodautoscalers;ingresses;jobs;namespaces;networkpolicies;persistentvolumeclaims;poddisruptionbudgets;pods;podtemplates;podsecuritypolicies;replicasets;replicationcontrollers;replicationcontrollers/scale;rolebindings;roles;secrets;serviceaccounts;services;statefulsets;storageclasses;csidrivers;csinodes;securitycontextconstraints;tridentmirrorrelationships;tridentsnapshotinfos;tridentvolumes;volumesnapshots;volumesnapshotcontents;tridentversions;tridentbackends;tridentnodes,verbs=get;list;watch;delete;use;create;update;patch
 // +kubebuilder:rbac:urls=/metrics,verbs=get;list;watch
 
@@ -70,12 +70,14 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 		log.Error(err, FailedAstraConnectorGet)
 		natsSyncClientStatus.Status = FailedAstraConnectorGet
 		_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
+		// Do not requeue
 		return ctrl.Result{}, err
 	}
 
 	// Validate AstraConnector CR for any errors
 	err = r.validateAstraConnector(*astraConnector, log)
 	if err != nil {
+		// Do not requeue. This is a user input error
 		return ctrl.Result{}, err
 	}
 
@@ -116,11 +118,18 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 			if err := r.Update(ctx, astraConnector); err != nil {
 				natsSyncClientStatus.Status = FailedFinalizerRemove
 				_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
+				// Do not requeue. Item is being deleted
 				return ctrl.Result{}, err
 			}
 		}
 
 		// Stop reconciliation as the item is being deleted
+		// Do not requeue
+		return ctrl.Result{}, nil
+	}
+
+	if r.deployedAlready(astraConnector) {
+		log.Info("AstraConnector already deployed, not requeueing")
 		return ctrl.Result{}, nil
 	}
 
@@ -130,24 +139,27 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 
 	// deploy Neptune
 	if conf.Config.FeatureFlags().DeployNeptune() {
+		log.Info("Initiating Neptune deployment")
 		neptuneResult, err := r.deployNeptune(ctx, astraConnector, &natsSyncClientStatus)
 		if err != nil {
-			return neptuneResult, err
+			// Note: Returning nil in error since we want to wait for the requeue to happen
+			// non nil errors triggers the requeue right away
+			log.Error(err, "Error deploying Neptune, requeueing after delay", "delay", conf.Config.ErrorTimeout())
+			return neptuneResult, nil
 		}
 	}
 
 	if conf.Config.FeatureFlags().DeployNatsConnector() {
-		// deploy Connector
+		log.Info("Initiating Connector deployment")
 		connectorResults, err := r.deployConnector(ctx, astraConnector, &natsSyncClientStatus)
 		if err != nil {
-			log.Error(err, "Error deploying resources")
-			// Note: Returning nil in error since we want to wait a minute for the requeue to happen
+			// Note: Returning nil in error since we want to wait for the requeue to happen
 			// non nil errors triggers the requeue right away
+			log.Error(err, "Error deploying NatsConnector, requeueing after delay", "delay", conf.Config.ErrorTimeout())
 			return connectorResults, nil
 		}
 	}
 
-	// POST/PUT Managed Cluster
 	_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
 	return ctrl.Result{}, nil
 }
@@ -239,4 +251,8 @@ func (r *AstraConnectorController) validateAstraConnector(connector v1.AstraConn
 	}
 
 	return errors.New(fmt.Sprintf("Errors while validating AstraConnector CR: %s", strings.Join(fieldErrors, "; ")))
+}
+
+func (r *AstraConnectorController) deployedAlready(connector *v1.AstraConnector) bool {
+	return connector.Status.NatsSyncClient.Registered == "true"
 }

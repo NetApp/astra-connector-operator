@@ -96,7 +96,7 @@ vet: ## Run go vet against code.
 	go vet ./...
 
 test: manifests generate fmt vet envtest ## Run tests.
-	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) --arch=amd64 use $(ENVTEST_K8S_VERSION) -p path)" go test ./... -coverprofile cover.out
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) --arch=amd64 use $(ENVTEST_K8S_VERSION) -p path)" PROJECT_ROOT=$(PWD) go test ./... -coverprofile cover.out
 
 ##@ Build
 
@@ -170,14 +170,6 @@ bundle: manifests kustomize ## Generate bundle manifests and metadata, then vali
 	cd details/operator-sdk && $(KUSTOMIZE) build config/manifests | operator-sdk generate bundle -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)
 	operator-sdk bundle validate ./bundle
 
-.PHONY: bundle-build
-bundle-build: ## Build the bundle image.
-	docker build -f bundle.Dockerfile -t $(BUNDLE_IMG) .
-
-.PHONY: bundle-push
-bundle-push: ## Push the bundle image.
-	$(MAKE) docker-push IMG=$(BUNDLE_IMG)
-
 .PHONY: opm
 OPM = ./bin/opm
 opm: ## Download opm locally if necessary.
@@ -231,7 +223,9 @@ release: kustomize
 	mkdir build
 	cd details/operator-sdk/config/manager && $(KUSTOMIZE) edit set image controller=$(IMG)
 	cd details/operator-sdk && $(KUSTOMIZE) build config/default > $(BUILD_DIR)/only_astraconnector_operator.yaml
-	cat $(MAKEFILE_DIR)/details/operator-sdk/config/samples/neptune_v1_crd.yaml $(BUILD_DIR)/only_astraconnector_operator.yaml > $(BUILD_DIR)/astraconnector_operator.yaml
+	cat $(MAKEFILE_DIR)/details/operator-sdk/config/samples/neptune.yaml > $(BUILD_DIR)/astraconnector_operator.yaml
+	echo "---" >> $(BUILD_DIR)/astraconnector_operator.yaml
+	cat $(BUILD_DIR)/only_astraconnector_operator.yaml >> $(BUILD_DIR)/astraconnector_operator.yaml
 	cp $(MAKEFILE_DIR)/details/operator-sdk/config/samples/astra_v1_astraconnector.yaml $(BUILD_DIR)/astra_v1_astraconnector.yaml
 
 .PHONY: generate-mocks

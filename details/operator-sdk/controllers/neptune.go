@@ -4,9 +4,11 @@ import (
 	"context"
 	"time"
 
+	ctrl "sigs.k8s.io/controller-runtime"
+
+	"github.com/NetApp-Polaris/astra-connector-operator/app/conf"
 	"github.com/NetApp-Polaris/astra-connector-operator/app/deployer/neptune"
 	v1 "github.com/NetApp-Polaris/astra-connector-operator/details/operator-sdk/api/v1"
-	ctrl "sigs.k8s.io/controller-runtime"
 )
 
 func (r *AstraConnectorController) deployNeptune(ctx context.Context,
@@ -21,8 +23,9 @@ func (r *AstraConnectorController) deployNeptune(ctx context.Context,
 	if err != nil {
 		// Failed deploying we want status to reflect that for at least 30 seconds before it's requeued so
 		// anyone watching can be informed
-		return ctrl.Result{RequeueAfter: 30 * time.Second}, err
+		return ctrl.Result{RequeueAfter: time.Minute * conf.Config.ErrorTimeout()}, err
 	}
 
+	// No need to requeue due to success
 	return ctrl.Result{}, nil
 }

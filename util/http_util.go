@@ -25,7 +25,16 @@ type HeaderMap struct {
 }
 
 // DoRequest Makes http request with the given parameters
-func DoRequest(ctx context.Context, client HTTPClient, method, url string, body io.Reader, headerMap HeaderMap) (*http.Response, error, context.CancelFunc) {
+func DoRequest(ctx context.Context, client HTTPClient, method, url string, body io.Reader, headerMap HeaderMap, retryCount ...int) (*http.Response, error, context.CancelFunc) {
+	// Default retry count
+	retries := 1
+	if len(retryCount) > 0 {
+		retries = retryCount[0]
+	}
+
+	var httpResponse *http.Response
+	var err error
+
 	// Child context that can't exceed a deadline specified
 	childCtx, cancel := context.WithTimeout(ctx, 3*time.Minute) // TODO : Update timeout here
 
@@ -37,7 +46,13 @@ func DoRequest(ctx context.Context, client HTTPClient, method, url string, body 
 		req.Header.Add("authorization", headerMap.Authorization)
 	}
 
-	httpResponse, err := client.Do(req)
+	for i := 0; i < retries; i++ {
+		httpResponse, err = client.Do(req)
+		if err == nil {
+			break
+		}
+	}
+
 	return httpResponse, err, cancel
 }
 

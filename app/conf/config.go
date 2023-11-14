@@ -36,6 +36,7 @@ type ImmutableConfiguration struct {
 	metricsPort             int
 	healthProbePort         int
 	waitDurationForResource time.Duration
+	errorTimeout            time.Duration
 	featureFlags            ImmutableFeatureFlags
 
 	// This is only stored to be able to log it at app start-up: Do not use this field it is not immutable
@@ -55,6 +56,7 @@ type MutableConfiguration struct {
 	MetricsPort             int
 	HealthProbePort         int
 	WaitDurationForResource time.Duration
+	ErrorTimeout            time.Duration
 	FeatureFlags            featureFlags
 }
 
@@ -70,9 +72,10 @@ func DefaultConfiguration() *MutableConfiguration {
 		MetricsPort:             8080,
 		HealthProbePort:         8081,
 		WaitDurationForResource: 2 * time.Minute,
+		ErrorTimeout:            5,
 		FeatureFlags: featureFlags{
 			DeployNatsConnector:   true,
-			DeployNeptune:         false,
+			DeployNeptune:         true,
 			SkipAstraRegistration: false,
 		},
 	}
@@ -87,6 +90,7 @@ func toImmutableConfig(config *MutableConfiguration) *ImmutableConfiguration {
 		metricsPort:             config.MetricsPort,
 		healthProbePort:         config.HealthProbePort,
 		waitDurationForResource: config.WaitDurationForResource,
+		errorTimeout:            config.ErrorTimeout,
 		featureFlags: ImmutableFeatureFlags{
 			deployNatsConnector:   config.FeatureFlags.DeployNatsConnector,
 			deployNeptune:         config.FeatureFlags.DeployNeptune,
@@ -125,6 +129,10 @@ func (i ImmutableConfiguration) HealthProbePort() int {
 
 func (i ImmutableConfiguration) WaitDurationForResource() time.Duration {
 	return i.waitDurationForResource
+}
+
+func (i ImmutableConfiguration) ErrorTimeout() time.Duration {
+	return i.errorTimeout
 }
 
 func (i ImmutableConfiguration) FeatureFlags() ImmutableFeatureFlags {

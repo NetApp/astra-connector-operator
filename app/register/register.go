@@ -7,13 +7,15 @@ package register
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"github.com/NetApp-Polaris/astra-connector-operator/util"
 	"io"
+	"net"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -23,6 +25,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/NetApp-Polaris/astra-connector-operator/common"
+	"github.com/NetApp-Polaris/astra-connector-operator/util"
 	v1 "github.com/NetApp-Polaris/astra-connector-operator/details/operator-sdk/api/v1"
 )
 
@@ -32,6 +35,49 @@ const (
 	clusterManagedState   = "managed"
 	getClusterPollCount   = 5
 )
+
+// HTTPClient interface used for request and to facilitate testing
+type HTTPClient interface {
+	Do(req *http.Request) (*http.Response, error)
+}
+
+// HeaderMap User specific details required for the http header
+type HeaderMap struct {
+	AccountId     string
+	Authorization string
+}
+
+// DoRequest Makes http request with the given parameters
+func DoRequest(ctx context.Context, client HTTPClient, method, url string, body io.Reader, headerMap HeaderMap, retryCount ...int) (*http.Response, error, context.CancelFunc) {
+	// Default retry count
+	retries := 1
+	if len(retryCount) > 0 {
+		retries = retryCount[0]
+	}
+
+	var httpResponse *http.Response
+	var err error
+
+	// Child context that can't exceed a deadline specified
+	childCtx, cancel := context.WithTimeout(ctx, 3*time.Minute) // TODO : Update timeout here
+
+	req, _ := http.NewRequestWithContext(childCtx, method, url, body)
+
+	req.Header.Add("Content-Type", "application/json")
+
+	if headerMap.Authorization != "" {
+		req.Header.Add("authorization", headerMap.Authorization)
+	}
+
+	for i := 0; i < retries; i++ {
+		httpResponse, err = client.Do(req)
+		if err == nil {
+			break
+		}
+	}
+
+	return httpResponse, err, cancel
+}
 
 type ClusterRegisterUtil interface {
 	GetConnectorIDFromConfigMap(cmData map[string]string) (string, error)
