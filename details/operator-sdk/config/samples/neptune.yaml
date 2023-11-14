@@ -237,10 +237,13 @@ spec:
             description: AppMirrorRelationshipSpec defines the desired state of AppMirrorRelationship
             properties:
               applicationRef:
-                description: Name of the Application
+                description: ApplicationRef is the name of the Application
                 type: string
               desiredState:
                 description: DesiredState is the desired state of the AppMirrorRelationship
+                enum:
+                - established
+                - promoted
                 type: string
               destinationAppVaultRef:
                 description: DestinationAppVaultRef is the name of the destination AppVault
@@ -260,8 +263,11 @@ spec:
                   - target
                   type: object
                 type: array
+              promotedSnapshot:
+                description: PromotedSnapshot is the snapshot name to use during a planned fail over
+                type: string
               recurrenceRule:
-                description: string containing an RFC-5545 Section 3.8.5.3. Recurrence Rule. For the DTSTART parameter, only UTC timestamps (denoted by the "Z" suffix) are supported, and only timestamps before the current time are supported. For the RECUR rule parts, "FREQ" and "INTERVAL" are the only rule parts supported. For the FREQ rule part, "MINUTELY" and "HOURLY" are the only values supported.
+                description: RecurrenceRule is a string containing an RFC-5545 Section 3.8.5.3. Recurrence Rule. For the DTSTART parameter, only UTC timestamps (denoted by the "Z" suffix) are supported, and only timestamps before the current time are supported. For the RECUR rule parts, "FREQ" and "INTERVAL" are the only rule parts supported. For the FREQ rule part, "MINUTELY" and "HOURLY" are the only values supported.
                 type: string
               sourceAppVaultRef:
                 description: SourceAppVaultRef is the name of the source AppVault
