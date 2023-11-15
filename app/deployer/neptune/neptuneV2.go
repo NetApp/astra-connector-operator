@@ -149,12 +149,12 @@ func (n NeptuneClientDeployerV2) GetDeploymentObjects(m *v1.AstraConnector, ctx 
 							},
 							Resources: corev1.ResourceRequirements{
 								Limits: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("500m"),
-									corev1.ResourceMemory: resource.MustParse("128Mi"),
+									corev1.ResourceCPU:    resource.MustParse("1000m"),
+									corev1.ResourceMemory: resource.MustParse("256Mi"),
 								},
 								Requests: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("5m"),
-									corev1.ResourceMemory: resource.MustParse("64Mi"),
+									corev1.ResourceCPU:    resource.MustParse("10m"),
+									corev1.ResourceMemory: resource.MustParse("128Mi"),
 								},
 							},
 							SecurityContext: &corev1.SecurityContext{
@@ -200,12 +200,12 @@ func (n NeptuneClientDeployerV2) GetDeploymentObjects(m *v1.AstraConnector, ctx 
 							},
 							Resources: corev1.ResourceRequirements{
 								Limits: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("500m"),
-									corev1.ResourceMemory: resource.MustParse("128Mi"),
+									corev1.ResourceCPU:    resource.MustParse("1000m"),
+									corev1.ResourceMemory: resource.MustParse("1280Mi"),
 								},
 								Requests: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("10m"),
-									corev1.ResourceMemory: resource.MustParse("64Mi"),
+									corev1.ResourceCPU:    resource.MustParse("100m"),
+									corev1.ResourceMemory: resource.MustParse("640Mi"),
 								},
 							},
 							SecurityContext: &corev1.SecurityContext{
