@@ -45,10 +45,10 @@ func (n *NatsDeployer) GetStatefulSetObjects(m *v1.AstraConnector, ctx context.C
 	var natsImage string
 	var imageRegistry string
 	var containerImage string
-	if m.Spec.ImageRegistry.Name != "" && m.Spec.ImageRegistry.Name != common.DefaultImageRegistry {
+	if m.Spec.ImageRegistry.Name != "" {
 		imageRegistry = m.Spec.ImageRegistry.Name
 	} else {
-		imageRegistry = ""
+		imageRegistry = common.DefaultImageRegistry
 	}
 
 	if m.Spec.Nats.Image != "" {
@@ -57,11 +57,7 @@ func (n *NatsDeployer) GetStatefulSetObjects(m *v1.AstraConnector, ctx context.C
 		containerImage = common.NatsDefaultImage
 	}
 
-	if imageRegistry == "" {
-		natsImage = containerImage
-	} else {
-		natsImage = fmt.Sprintf("%s/%s", imageRegistry, containerImage)
-	}
+	natsImage = fmt.Sprintf("%s/%s", imageRegistry, containerImage)
 	log.Info("Using nats image", "image", natsImage)
 	dep := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
@@ -168,12 +164,18 @@ func (n *NatsDeployer) GetConfigMapObjects(m *v1.AstraConnector, ctx context.Con
 	var index int32
 	index = 0
 	var replicas int32
-	if m.Spec.Nats.Replicas > 2 {
-		replicas = m.Spec.Nats.Replicas
-	} else {
-		log.Info("Defaulting the Nats replica size", "size", common.NatsDefaultReplicas)
-		replicas = common.NatsDefaultReplicas
-	}
+
+	// Setting the replicas to 1, things dont work with multiple replicas on GKE
+	// Uncomment once issue is fixed.
+	//if m.Spec.Nats.Replicas > 2 {
+	//	replicas = m.Spec.Nats.Replicas
+	//} else {
+	//	log.Info("Defaulting the Nats replica size", "size", common.NatsDefaultReplicas)
+	//	replicas = common.NatsDefaultReplicas
+	//}
+
+	log.Info("Defaulting the Nats replica size", "size", common.NatsDefaultReplicas)
+	replicas = common.NatsDefaultReplicas
 
 	for index < replicas {
 		rt := fmt.Sprintf("\n    nats://nats-%d.nats-cluster:%d", index, common.NatsClusterPort)

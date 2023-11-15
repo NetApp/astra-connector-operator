@@ -75,8 +75,8 @@ func TestNatsGetStatefulSetObjectsUseDefaults(t *testing.T) {
 
 	assert.Equal(t, common.NatsName, statefulSet.Name)
 	assert.Equal(t, m.Namespace, statefulSet.Namespace)
-	assert.Equal(t, int32(2), *statefulSet.Spec.Replicas)
-	assert.Equal(t, "nats:2.8.4-alpine3.15", statefulSet.Spec.Template.Spec.Containers[0].Image)
+	assert.Equal(t, int32(1), *statefulSet.Spec.Replicas)
+	assert.Equal(t, "netappdownloads.jfrog.io/docker-astra-control-staging/arch30/neptune/nats:2.10.1-alpine3.18", statefulSet.Spec.Template.Spec.Containers[0].Image)
 	assert.Nil(t, statefulSet.Spec.Template.Spec.ImagePullSecrets)
 }
 
@@ -96,7 +96,7 @@ func TestNatsGetConfigMapObjects(t *testing.T) {
 	// Todo Add assertions for the expected values in the ConfigMap object
 	assert.Equal(t, common.NatsConfigMapName, configMap.Name)
 	assert.Equal(t, m.Namespace, configMap.Namespace)
-	data := map[string]string{"nats.conf": "pid_file: \"/var/run/nats/nats.pid\"\nhttp: 8222\nmax_payload: 8388608\n\ncluster {\n  port: 6222\n  routes [\n    nats://nats-0.nats-cluster:6222\n    nats://nats-1.nats-cluster:6222\n    ]\n\n  cluster_advertise: $CLUSTER_ADVERTISE\n  connect_retries: 30\n}\n"}
+	data := map[string]string{"nats.conf": "pid_file: \"/var/run/nats/nats.pid\"\nhttp: 8222\nmax_payload: 8388608\n\ncluster {\n  port: 6222\n  routes [\n    nats://nats-0.nats-cluster:6222\n    ]\n\n  cluster_advertise: $CLUSTER_ADVERTISE\n  connect_retries: 30\n}\n"}
 	assert.Equal(t, data, configMap.Data)
 }
 

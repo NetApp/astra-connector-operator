@@ -97,6 +97,7 @@ func (n NeptuneClientDeployerV2) GetDeploymentObjects(m *v1.AstraConnector, ctx 
 					},
 					Labels: map[string]string{
 						"control-plane": "controller-manager",
+						"app":           "controller.neptune.netapp.io",
 					},
 				},
 				Spec: corev1.PodSpec{

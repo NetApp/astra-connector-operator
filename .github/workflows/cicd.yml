@@ -119,7 +119,7 @@ jobs:
         run: |
           export BASE_VERSION=$(cat version.txt)
           export VERSION=$BASE_VERSION-$(date +'%Y%m%d%H%M')
-          echo $BUILD_VERSION > VERSION
+          echo $VERSION > VERSION
 
       - name: Build Images
         run: |
