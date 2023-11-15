@@ -12,11 +12,12 @@ import (
 
 func main() {
 	// Get cmd line args
-	if len(os.Args) < 2 {
-		fmt.Println("Usage: go run create_default_images_manifest.go <output_file_path>")
+	if len(os.Args) < 3 {
+		fmt.Println("Usage: go run create_default_images_manifest.go <output_file_path> <version>")
 		os.Exit(1)
 	}
 	destinationFilePath := os.Args[1]
+	connectorOperatorVersion := os.Args[2]
 
 	fmt.Printf("Creating default-image manifest file %s\n", destinationFilePath)
 
@@ -26,6 +27,7 @@ func main() {
 		fmt.Sprintf("%s/%s", defaultImageRegistry, common.AstraConnectDefaultImage),
 		fmt.Sprintf("%s/%s", defaultImageRegistry, common.NatsSyncClientDefaultImage),
 		fmt.Sprintf("%s/%s", defaultImageRegistry, common.NatsDefaultImage),
+		fmt.Sprintf("%s:%s", common.AstraConnectorOperatorRepository, connectorOperatorVersion),
 		fmt.Sprintf("%s/%s", defaultImageRegistry, common.NeptuneDefaultImage),
 	}
 
