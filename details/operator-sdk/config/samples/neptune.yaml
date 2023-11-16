@@ -954,6 +954,21 @@ spec:
                   - target
                   type: object
                 type: array
+              storageClassMapping:
+                description: StorageClassMapping defines a mapping from a storageClass present in the source application to the assignment in the restored application (clone)
+                items:
+                  properties:
+                    source:
+                      description: Source  storageClass that is assigned to one of the PVCs in the source application
+                      type: string
+                    target:
+                      description: Target storageClass that is assigned to the same PVC in the cloned/restored application
+                      type: string
+                  required:
+                  - source
+                  - target
+                  type: object
+                type: array
             type: object
           status:
             description: BackupRestoreStatus defines the observed state of BackupRestore
