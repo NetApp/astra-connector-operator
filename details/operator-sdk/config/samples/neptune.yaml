@@ -1525,6 +1525,9 @@ spec:
                     execHookRef:
                       description: ExecHookRef reference to the ExecHook being run
                       type: string
+                    execHookUID:
+                      description: ExecHookUID UID of the ExecHook being run
+                      type: string
                     failures:
                       description: Failures list of failures that may occur when attempting to run the exec hook
                       items:
@@ -1562,11 +1565,16 @@ spec:
                     podName:
                       description: PodName the name of the pod where the exec hook will be run
                       type: string
+                    podUID:
+                      description: PodUID the uid of the pod where the exec hook will be run
+                      type: string
                   required:
                   - containerName
                   - execHookRef
+                  - execHookUID
                   - namespace
                   - podName
+                  - podUID
                   type: object
                 type: array
               state:
