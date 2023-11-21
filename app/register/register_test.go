@@ -991,7 +991,7 @@ func TestUpdateCluster(t *testing.T) {
 }
 
 func TestCreateOrUpdateCluster(t *testing.T) {
-	host, cloudId, clusterId, connectorId, apiToken := "test_host", "test_cloudId", "test_clusterId", "test_connectorId", "test_apiToken"
+	host, cloudId, clusterId, connectorId, apiToken, connectorInstall := "test_host", "test_cloudId", "test_clusterId", "test_connectorId", "test_apiToken", "pending"
 
 	t.Run("TestCreateOrUpdateCluster__ReturnsErrorWhenCreateClusterFails", func(t *testing.T) {
 		clusterRegisterUtil, mockHttpClient, _, _ := createClusterRegister(AstraConnectorInput{})
@@ -999,7 +999,7 @@ func TestCreateOrUpdateCluster(t *testing.T) {
 		errorText := "this is an error"
 		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{}, errors.New(errorText))
 
-		clusterInfo, err := clusterRegisterUtil.CreateOrUpdateCluster(host, cloudId, clusterId, connectorId, http.MethodPost, apiToken)
+		clusterInfo, err := clusterRegisterUtil.CreateOrUpdateCluster(host, cloudId, clusterId, connectorId, connectorInstall, http.MethodPost, apiToken)
 
 		assert.Equal(t, "", clusterInfo.ID)
 		assert.Equal(t, "", clusterInfo.Name)
@@ -1015,7 +1015,7 @@ func TestCreateOrUpdateCluster(t *testing.T) {
 			Body:       ret,
 		}, nil).Once()
 
-		clusterInfo, err := clusterRegisterUtil.CreateOrUpdateCluster(host, cloudId, clusterId, connectorId, http.MethodPost, apiToken)
+		clusterInfo, err := clusterRegisterUtil.CreateOrUpdateCluster(host, cloudId, clusterId, connectorId, connectorInstall, http.MethodPost, apiToken)
 
 		assert.Equal(t, "1234", clusterInfo.ID)
 		assert.Equal(t, "test-cluster", clusterInfo.Name)
@@ -1029,7 +1029,7 @@ func TestCreateOrUpdateCluster(t *testing.T) {
 		errorText := "this is an error"
 		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{}, errors.New(errorText))
 
-		clusterInfo, err := clusterRegisterUtil.CreateOrUpdateCluster(host, cloudId, clusterId, connectorId, http.MethodPut, apiToken)
+		clusterInfo, err := clusterRegisterUtil.CreateOrUpdateCluster(host, cloudId, clusterId, connectorId, connectorInstall, http.MethodPut, apiToken)
 
 		assert.Equal(t, "", clusterInfo.ID)
 		assert.Equal(t, "", clusterInfo.Name)
@@ -1044,7 +1044,7 @@ func TestCreateOrUpdateCluster(t *testing.T) {
 			Body:       nil,
 		}, nil).Once()
 
-		clusterInfo, err := clusterRegisterUtil.CreateOrUpdateCluster(host, cloudId, clusterId, connectorId, http.MethodPut, apiToken)
+		clusterInfo, err := clusterRegisterUtil.CreateOrUpdateCluster(host, cloudId, clusterId, connectorId, connectorInstall, http.MethodPut, apiToken)
 
 		assert.Equal(t, "test_clusterId", clusterInfo.ID)
 		assert.Equal(t, "", clusterInfo.Name)
@@ -1283,7 +1283,7 @@ func TestCreateManagedCluster(t *testing.T) {
 }
 
 func TestCreateOrUpdateManagedCluster(t *testing.T) {
-	host, cloudId, clusterId, connectorId, apiToken := "test_host", "test_cloudId", "test_clusterId", "test_connectorId", "test_apiToken"
+	host, cloudId, clusterId, connectorId, apiToken, connectorInstall := "test_host", "test_cloudId", "test_clusterId", "test_connectorId", "test_apiToken", "pending"
 
 	t.Run("TestCreateOrUpdateManagedCluster__ReturnsErrorWhenUpdateManagedClusterFails", func(t *testing.T) {
 		clusterRegisterUtil, mockHttpClient, _, _ := createClusterRegister(AstraConnectorInput{})
@@ -1291,7 +1291,7 @@ func TestCreateOrUpdateManagedCluster(t *testing.T) {
 		errorText := "this is an error"
 		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{}, errors.New(errorText))
 
-		clusterInfo, err := clusterRegisterUtil.CreateOrUpdateManagedCluster(host, cloudId, clusterId, connectorId, http.MethodPut, apiToken)
+		clusterInfo, err := clusterRegisterUtil.CreateOrUpdateManagedCluster(host, cloudId, clusterId, connectorId, connectorInstall, http.MethodPut, apiToken)
 
 		assert.Equal(t, "", clusterInfo.ID)
 		assert.Equal(t, "", clusterInfo.Name)
@@ -1306,7 +1306,7 @@ func TestCreateOrUpdateManagedCluster(t *testing.T) {
 			Body:       nil,
 		}, nil).Once()
 
-		clusterInfo, err := clusterRegisterUtil.CreateOrUpdateManagedCluster(host, cloudId, clusterId, connectorId, http.MethodPut, apiToken)
+		clusterInfo, err := clusterRegisterUtil.CreateOrUpdateManagedCluster(host, cloudId, clusterId, connectorId, connectorInstall, http.MethodPut, apiToken)
 
 		assert.Equal(t, "test_clusterId", clusterInfo.ID)
 		assert.Equal(t, "", clusterInfo.Name)
@@ -1320,7 +1320,8 @@ func TestCreateOrUpdateManagedCluster(t *testing.T) {
 		errorText := "this is an error"
 		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{}, errors.New(errorText))
 
-		clusterInfo, err := clusterRegisterUtil.CreateOrUpdateManagedCluster(host, cloudId, clusterId, connectorId, http.MethodPost, apiToken)
+		// connectorInstall is "" here, otherwise it skips getting storage classes (expected)
+		clusterInfo, err := clusterRegisterUtil.CreateOrUpdateManagedCluster(host, cloudId, clusterId, connectorId, "", http.MethodPost, apiToken)
 
 		assert.Equal(t, "", clusterInfo.ID)
 		assert.Equal(t, "", clusterInfo.Name)
@@ -1330,16 +1331,10 @@ func TestCreateOrUpdateManagedCluster(t *testing.T) {
 	t.Run("TestCreateOrUpdateManagedCluster__ReturnsErrorWhenCreateManagedClusterFails", func(t *testing.T) {
 		clusterRegisterUtil, mockHttpClient, _, _ := createClusterRegister(AstraConnectorInput{})
 
-		ret := io.NopCloser(bytes.NewReader([]byte(`{"items":[{"id":"1234","name":"test_sc1234"}, {"id":"5678","name":"test-sc1","isDefault":"true"}]}`)))
-		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{
-			StatusCode: 200,
-			Body:       ret,
-		}, nil).Once()
-
 		errorText := "this is an error"
 		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{}, errors.New(errorText))
 
-		clusterInfo, err := clusterRegisterUtil.CreateOrUpdateManagedCluster(host, cloudId, clusterId, connectorId, http.MethodPost, apiToken)
+		clusterInfo, err := clusterRegisterUtil.CreateOrUpdateManagedCluster(host, cloudId, clusterId, connectorId, connectorInstall, http.MethodPost, apiToken)
 
 		assert.Equal(t, "", clusterInfo.ID)
 		assert.Equal(t, "", clusterInfo.Name)
@@ -1361,7 +1356,7 @@ func TestCreateOrUpdateManagedCluster(t *testing.T) {
 			Body:       ret,
 		}, nil).Once()
 
-		clusterInfo, err := clusterRegisterUtil.CreateOrUpdateManagedCluster(host, cloudId, clusterId, connectorId, http.MethodPost, apiToken)
+		clusterInfo, err := clusterRegisterUtil.CreateOrUpdateManagedCluster(host, cloudId, clusterId, connectorId, "", http.MethodPost, apiToken)
 
 		assert.Equal(t, "test_clusterId", clusterInfo.ID)
 		assert.Equal(t, "", clusterInfo.Name)
