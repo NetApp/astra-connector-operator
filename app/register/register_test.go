@@ -1177,7 +1177,7 @@ func TestGetStorageClass(t *testing.T) {
 }
 
 func TestUpdateManagedCluster(t *testing.T) {
-	host, clusterId, connectorId, apiToken := "test_host", "test_clusterId", "test_connectorId", "test_apiToken"
+	host, clusterId, connectorId, apiToken, connectorInstall := "test_host", "test_clusterId", "test_connectorId", "test_apiToken", "installed"
 
 	t.Run("TestUpdateManagedCluster__HTTPPutRequestFailsReturnError", func(t *testing.T) {
 		clusterRegisterUtil, mockHttpClient, _, _ := createClusterRegister(AstraConnectorInput{})
@@ -1185,7 +1185,7 @@ func TestUpdateManagedCluster(t *testing.T) {
 		errorText := "error on put request update"
 		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{}, errors.New(errorText))
 
-		err := clusterRegisterUtil.UpdateManagedCluster(host, clusterId, connectorId, apiToken)
+		err := clusterRegisterUtil.UpdateManagedCluster(host, clusterId, connectorId, connectorInstall, apiToken)
 		assert.EqualError(t, err, "error on request put manage clusters: error on put request update")
 	})
 
@@ -1197,7 +1197,7 @@ func TestUpdateManagedCluster(t *testing.T) {
 			Body:       nil,
 		}, nil).Once()
 
-		err := clusterRegisterUtil.UpdateManagedCluster(host, clusterId, connectorId, apiToken)
+		err := clusterRegisterUtil.UpdateManagedCluster(host, clusterId, connectorId, connectorInstall, apiToken)
 		assert.EqualError(t, err, "manage cluster failed with: 400")
 	})
 
@@ -1209,7 +1209,7 @@ func TestUpdateManagedCluster(t *testing.T) {
 			Body:       nil,
 		}, nil).Once()
 
-		err := clusterRegisterUtil.UpdateManagedCluster(host, clusterId, connectorId, apiToken)
+		err := clusterRegisterUtil.UpdateManagedCluster(host, clusterId, connectorId, connectorInstall, apiToken)
 		assert.Nil(t, err)
 	})
 }

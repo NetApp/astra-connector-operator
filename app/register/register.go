@@ -99,7 +99,7 @@ type ClusterRegisterUtil interface {
 	CreateOrUpdateCluster(astraHost, cloudId, clusterId, astraConnectorId, connectorInstall, clustersMethod, apiToken string) (ClusterInfo, error)
 	GetStorageClass(astraHost, cloudId, clusterId, apiToken string) (string, error)
 	CreateManagedCluster(astraHost, cloudId, clusterID, storageClass, connectorInstall, apiToken string) error
-	UpdateManagedCluster(astraHost, clusterId, astraConnectorId, apiToken string) error
+	UpdateManagedCluster(astraHost, clusterId, astraConnectorId, connectorInstall, apiToken string) error
 	CreateOrUpdateManagedCluster(astraHost, cloudId, clusterId, astraConnectorId, connectorInstall, managedClustersMethod, apiToken string) (ClusterInfo, error)
 	ValidateAndGetCluster(astraHost, cloudId, apiToken string) (ClusterInfo, error)
 }
@@ -810,7 +810,7 @@ func (c clusterRegisterUtil) GetStorageClass(astraHost, cloudId, clusterId, apiT
 }
 
 // UpdateManagedCluster Updates the persisted record of the given managed cluster
-func (c clusterRegisterUtil) UpdateManagedCluster(astraHost, clusterId, astraConnectorId, apiToken string) error {
+func (c clusterRegisterUtil) UpdateManagedCluster(astraHost, clusterId, astraConnectorId, connectorInstall, apiToken string) error {
 	url := fmt.Sprintf("%s/accounts/%s/topology/v1/managedClusters/%s", astraHost, c.AstraConnector.Spec.Astra.AccountId, clusterId)
 
 	manageClustersBody := Cluster{
@@ -818,6 +818,7 @@ func (c clusterRegisterUtil) UpdateManagedCluster(astraHost, clusterId, astraCon
 		Version:               common.AstraManagedClustersAPIVersion,
 		ConnectorCapabilities: common.GetConnectorCapabilities(),
 		PrivateRouteID:        astraConnectorId,
+		ConnectorInstall:      connectorInstall,
 	}
 	manageClustersBodyJson, _ := json.Marshal(manageClustersBody)
 
@@ -890,10 +891,16 @@ func (c clusterRegisterUtil) CreateManagedCluster(astraHost, cloudId, clusterID,
 }
 
 func (c clusterRegisterUtil) CreateOrUpdateManagedCluster(astraHost, cloudId, clusterId, astraConnectorId, connectorInstall, managedClustersMethod, apiToken string) (ClusterInfo, error) {
+	var newConnectorInstallValue string
+	// If connectorInstall was set (new arch-3.0 way of installing), update it to "installed"
+	if connectorInstall != "" {
+		newConnectorInstallValue = connectorInstallInstalled
+	}
+
 	if managedClustersMethod == http.MethodPut {
 		c.Log.Info("Updating Managed Cluster")
 
-		err := c.UpdateManagedCluster(astraHost, clusterId, astraConnectorId, apiToken)
+		err := c.UpdateManagedCluster(astraHost, clusterId, astraConnectorId, newConnectorInstallValue, apiToken)
 		if err != nil {
 			return ClusterInfo{}, errors.Wrap(err, "error updating managed cluster")
 		}
@@ -920,12 +927,6 @@ func (c clusterRegisterUtil) CreateOrUpdateManagedCluster(astraHost, cloudId, cl
 		}
 
 		c.Log.Info("Creating Managed Cluster")
-
-		var newConnectorInstallValue string
-		// If connectorInstall was set (new arch-3.0 way of installing), update it to "installed"
-		if connectorInstall != "" {
-			newConnectorInstallValue = connectorInstallInstalled
-		}
 
 		err = c.CreateManagedCluster(astraHost, cloudId, clusterId, storageClass, newConnectorInstallValue, apiToken)
 		if err != nil {
