@@ -29,10 +29,11 @@ import (
 )
 
 const (
-	errorRetrySleep       = time.Second * 3
-	clusterUnManagedState = "unmanaged"
-	clusterManagedState   = "managed"
-	getClusterPollCount   = 5
+	errorRetrySleep           = time.Second * 3
+	clusterUnManagedState     = "unmanaged"
+	clusterManagedState       = "managed"
+	getClusterPollCount       = 5
+	connectorInstallInstalled = "installed"
 )
 
 // HTTPClient interface used for request and to facilitate testing
@@ -97,7 +98,7 @@ type ClusterRegisterUtil interface {
 	UpdateCluster(astraHost, cloudId, clusterId, astraConnectorId, apiToken string) error
 	CreateOrUpdateCluster(astraHost, cloudId, clusterId, astraConnectorId, connectorInstall, clustersMethod, apiToken string) (ClusterInfo, error)
 	GetStorageClass(astraHost, cloudId, clusterId, apiToken string) (string, error)
-	CreateManagedCluster(astraHost, cloudId, clusterID, storageClass, apiToken string) error
+	CreateManagedCluster(astraHost, cloudId, clusterID, storageClass, connectorInstall, apiToken string) error
 	UpdateManagedCluster(astraHost, clusterId, astraConnectorId, apiToken string) error
 	CreateOrUpdateManagedCluster(astraHost, cloudId, clusterId, astraConnectorId, connectorInstall, managedClustersMethod, apiToken string) (ClusterInfo, error)
 	ValidateAndGetCluster(astraHost, cloudId, apiToken string) (ClusterInfo, error)
@@ -837,7 +838,7 @@ func (c clusterRegisterUtil) UpdateManagedCluster(astraHost, clusterId, astraCon
 }
 
 // CreateManagedCluster Transitions a cluster from unmanaged state to managed state
-func (c clusterRegisterUtil) CreateManagedCluster(astraHost, cloudId, clusterID, storageClass, apiToken string) error {
+func (c clusterRegisterUtil) CreateManagedCluster(astraHost, cloudId, clusterID, storageClass, connectorInstall, apiToken string) error {
 	url := fmt.Sprintf("%s/accounts/%s/topology/v1/managedClusters", astraHost, c.AstraConnector.Spec.Astra.AccountId)
 	var manageClustersRespJson Cluster
 
@@ -847,6 +848,7 @@ func (c clusterRegisterUtil) CreateManagedCluster(astraHost, cloudId, clusterID,
 		ID:                         clusterID,
 		TridentManagedStateDesired: clusterManagedState,
 		DefaultStorageClass:        storageClass,
+		ConnectorInstall:           connectorInstall,
 	}
 	manageClustersBodyJson, _ := json.Marshal(manageClustersBody)
 
@@ -919,7 +921,13 @@ func (c clusterRegisterUtil) CreateOrUpdateManagedCluster(astraHost, cloudId, cl
 
 		c.Log.Info("Creating Managed Cluster")
 
-		err = c.CreateManagedCluster(astraHost, cloudId, clusterId, storageClass, apiToken)
+		var newConnectorInstallValue string
+		// If connectorInstall was set (new arch-3.0 way of installing), update it to "installed"
+		if connectorInstall != "" {
+			newConnectorInstallValue = connectorInstallInstalled
+		}
+
+		err = c.CreateManagedCluster(astraHost, cloudId, clusterId, storageClass, newConnectorInstallValue, apiToken)
 		if err != nil {
 			return ClusterInfo{}, errors.Wrap(err, "error creating managed cluster")
 		}
