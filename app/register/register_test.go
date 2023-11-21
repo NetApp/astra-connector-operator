@@ -1215,7 +1215,7 @@ func TestUpdateManagedCluster(t *testing.T) {
 }
 
 func TestCreateManagedCluster(t *testing.T) {
-	host, cloudId, clusterId, storageClass, apiToken := "test_host", "test_cloudId", "test_clusterId", "test_sc", "test_apiToken"
+	host, cloudId, clusterId, storageClass, apiToken, connectorInstalled := "test_host", "test_cloudId", "test_clusterId", "test_sc", "test_apiToken", "installed"
 
 	t.Run("TestCreateManagedCluster__HTTPPostRequestFailsReturnError", func(t *testing.T) {
 		clusterRegisterUtil, mockHttpClient, _, _ := createClusterRegister(AstraConnectorInput{})
@@ -1223,7 +1223,7 @@ func TestCreateManagedCluster(t *testing.T) {
 		errorText := "error on post request create"
 		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{}, errors.New(errorText))
 
-		err := clusterRegisterUtil.CreateManagedCluster(host, cloudId, clusterId, storageClass, apiToken)
+		err := clusterRegisterUtil.CreateManagedCluster(host, cloudId, clusterId, storageClass, connectorInstalled, apiToken)
 		assert.EqualError(t, err, "error on request post manage clusters: error on post request create")
 	})
 
@@ -1235,7 +1235,7 @@ func TestCreateManagedCluster(t *testing.T) {
 			Body:       nil,
 		}, nil).Once()
 
-		err := clusterRegisterUtil.CreateManagedCluster(host, cloudId, clusterId, storageClass, apiToken)
+		err := clusterRegisterUtil.CreateManagedCluster(host, cloudId, clusterId, storageClass, connectorInstalled, apiToken)
 		assert.EqualError(t, err, "manage cluster failed with: 400")
 	})
 
@@ -1251,7 +1251,7 @@ func TestCreateManagedCluster(t *testing.T) {
 			Body:       &mockRead,
 		}, nil).Once()
 
-		err := clusterRegisterUtil.CreateManagedCluster(host, cloudId, clusterId, storageClass, apiToken)
+		err := clusterRegisterUtil.CreateManagedCluster(host, cloudId, clusterId, storageClass, connectorInstalled, apiToken)
 		assert.EqualError(t, err, "error reading response from post manage clusters: error reading")
 	})
 
@@ -1264,7 +1264,7 @@ func TestCreateManagedCluster(t *testing.T) {
 			Body:       ret,
 		}, nil).Once()
 
-		err := clusterRegisterUtil.CreateManagedCluster(host, cloudId, clusterId, storageClass, apiToken)
+		err := clusterRegisterUtil.CreateManagedCluster(host, cloudId, clusterId, storageClass, connectorInstalled, apiToken)
 		assert.ErrorContains(t, err, "unmarshall error when parsing post manage clusters response")
 	})
 
@@ -1277,7 +1277,7 @@ func TestCreateManagedCluster(t *testing.T) {
 			Body:       ret,
 		}, nil).Once()
 
-		err := clusterRegisterUtil.CreateManagedCluster(host, cloudId, clusterId, storageClass, apiToken)
+		err := clusterRegisterUtil.CreateManagedCluster(host, cloudId, clusterId, storageClass, connectorInstalled, apiToken)
 		assert.Nil(t, err)
 	})
 }
