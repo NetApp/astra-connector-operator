@@ -29,11 +29,11 @@ import (
 )
 
 const (
-	errorRetrySleep           = time.Second * 3
-	clusterUnManagedState     = "unmanaged"
-	clusterManagedState       = "managed"
-	getClusterPollCount       = 5
-	connectorInstallInstalled = "installed"
+	errorRetrySleep       = time.Second * 3
+	clusterUnManagedState = "unmanaged"
+	clusterManagedState   = "managed"
+	getClusterPollCount   = 5
+	connectorInstalled    = "installed"
 )
 
 // HTTPClient interface used for request and to facilitate testing
@@ -894,7 +894,7 @@ func (c clusterRegisterUtil) CreateOrUpdateManagedCluster(astraHost, cloudId, cl
 	var newConnectorInstallValue string
 	// If connectorInstall was set (new arch-3.0 way of installing), update it to "installed"
 	if connectorInstall != "" {
-		newConnectorInstallValue = connectorInstallInstalled
+		newConnectorInstallValue = connectorInstalled
 	}
 
 	if managedClustersMethod == http.MethodPut {
