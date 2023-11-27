@@ -3,6 +3,7 @@ kind: Namespace
 metadata:
   labels:
     control-plane: controller-manager
+    pod-security.kubernetes.io/enforce: privileged
   name: system
 ---
 apiVersion: apps/v1

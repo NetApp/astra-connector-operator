@@ -137,6 +137,16 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 	preCheckClient := precheck.NewPrecheckClient(log, k8sUtil)
 	preCheckClient.Run()
 
+	// deploy acp
+	log.Info("Initiating Neptune deployment")
+	neptuneResult, err := r.deployNeptune(ctx, astraConnector, &natsSyncClientStatus)
+	if err != nil {
+		// Note: Returning nil in error since we want to wait for the requeue to happen
+		// non nil errors triggers the requeue right away
+		log.Error(err, "Error deploying Neptune, requeueing after delay", "delay", conf.Config.ErrorTimeout())
+		return neptuneResult, nil
+	}
+
 	// deploy Neptune
 	if conf.Config.FeatureFlags().DeployNeptune() {
 		log.Info("Initiating Neptune deployment")
