@@ -27,8 +27,14 @@ type Clients struct {
 const k8sTimeout = 30 * time.Second
 
 func CreateK8SClients(cfg *rest.Config, namespace string) (*Clients, error) {
-	var clients *Clients
+	var clients = &Clients{}
 	var err error
+
+	// Create the Kubernetes client
+	clients.K8SClient, err = NewKubeClient(cfg, namespace, k8sTimeout)
+	if err != nil {
+		return nil, fmt.Errorf("could not initialize Kubernetes client; %v", err)
+	}
 
 	// Create the Kubernetes client
 	clients.KubeClient, err = kubernetes.NewForConfig(cfg)
