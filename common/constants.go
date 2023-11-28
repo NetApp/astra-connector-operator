@@ -9,9 +9,9 @@ import "github.com/NetApp-Polaris/astra-connector-operator/app/conf"
 const (
 	DefaultImageRegistry = "netappdownloads.jfrog.io/docker-astra-control-staging/arch30/neptune"
 
-	AstraConnectName            = "astraconnect"
-	AstraConnectDefaultReplicas = 1
-	AstraConnectDefaultImage    = "astra-connector:1.0.202310202233"
+	AstraConnectName                 = "astraconnect"
+	AstraConnectDefaultReplicas      = 1
+	AstraConnectDefaultImage         = "astra-connector:1.0.202311280654"
 	AstraConnectorOperatorRepository = "netapp/astra-connector-operator"
 
 	NatsSyncClientName                  = "natssync-client"
