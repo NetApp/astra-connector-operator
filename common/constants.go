@@ -11,7 +11,7 @@ const (
 
 	AstraConnectName                 = "astraconnect"
 	AstraConnectDefaultReplicas      = 1
-	AstraConnectDefaultImage         = "astra-connector:1.0.202311280654"
+	AstraConnectDefaultImage         = "astra-connector:1.0.202311291720"
 	AstraConnectorOperatorRepository = "netapp/astra-connector-operator"
 
 	NatsSyncClientName                  = "natssync-client"
