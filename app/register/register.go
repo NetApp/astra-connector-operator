@@ -29,11 +29,12 @@ import (
 )
 
 const (
-	errorRetrySleep       = time.Second * 3
-	clusterUnManagedState = "unmanaged"
-	clusterManagedState   = "managed"
-	getClusterPollCount   = 5
-	connectorInstalled    = "installed"
+	errorRetrySleep         = time.Second * 3
+	clusterUnManagedState   = "unmanaged"
+	clusterManagedState     = "managed"
+	getClusterPollCount     = 5
+	connectorInstalled      = "installed"
+	connectorInstallPending = "pending"
 )
 
 // HTTPClient interface used for request and to facilitate testing
@@ -94,7 +95,7 @@ type ClusterRegisterUtil interface {
 	GetOrCreateCloud(astraHost, cloudType, apiToken string) (string, error)
 	GetClusters(astraHost, cloudId, apiToken string) (GetClustersResponse, error)
 	GetCluster(astraHost, cloudId, clusterId, apiToken string) (Cluster, error)
-	CreateCluster(astraHost, cloudId, astraConnectorId, apiToken string) (ClusterInfo, error)
+	CreateCluster(astraHost, cloudId, astraConnectorId, connectorInstall, apiToken string) (ClusterInfo, error)
 	UpdateCluster(astraHost, cloudId, clusterId, astraConnectorId, apiToken string) error
 	CreateOrUpdateCluster(astraHost, cloudId, clusterId, astraConnectorId, connectorInstall, clustersMethod, apiToken string) (ClusterInfo, error)
 	GetStorageClass(astraHost, cloudId, clusterId, apiToken string) (string, error)
@@ -629,7 +630,7 @@ func (c clusterRegisterUtil) GetCluster(astraHost, cloudId, clusterId, apiToken 
 }
 
 // CreateCluster Creates a cluster with the provided details
-func (c clusterRegisterUtil) CreateCluster(astraHost, cloudId, astraConnectorId, apiToken string) (ClusterInfo, error) {
+func (c clusterRegisterUtil) CreateCluster(astraHost, cloudId, astraConnectorId, connectorInstall, apiToken string) (ClusterInfo, error) {
 	url := fmt.Sprintf("%s/accounts/%s/topology/v1/clouds/%s/clusters", astraHost, c.AstraConnector.Spec.Astra.AccountId, cloudId)
 	var clustersRespJson Cluster
 
@@ -639,6 +640,7 @@ func (c clusterRegisterUtil) CreateCluster(astraHost, cloudId, astraConnectorId,
 		Name:                  c.AstraConnector.Spec.Astra.ClusterName,
 		ConnectorCapabilities: common.GetConnectorCapabilities(),
 		PrivateRouteID:        astraConnectorId,
+		ConnectorInstall:      connectorInstall,
 	}
 
 	clustersBodyJson, _ := json.Marshal(clustersBody)
@@ -730,7 +732,7 @@ func (c clusterRegisterUtil) CreateOrUpdateCluster(astraHost, cloudId, clusterId
 	if clustersMethod == http.MethodPost {
 		c.Log.Info("Creating Cluster")
 
-		clusterInfo, err := c.CreateCluster(astraHost, cloudId, astraConnectorId, apiToken)
+		clusterInfo, err := c.CreateCluster(astraHost, cloudId, astraConnectorId, connectorInstallPending, apiToken)
 		if err != nil {
 			return ClusterInfo{}, errors.Wrap(err, "error creating cluster")
 		}

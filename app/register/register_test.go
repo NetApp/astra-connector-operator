@@ -852,7 +852,7 @@ func TestGetCluster(t *testing.T) {
 }
 
 func TestCreateCluster(t *testing.T) {
-	host, cloudId, connectorId, apiToken := "test_host", "test_cloudId", "test_connectorId", "test_apiToken"
+	host, cloudId, connectorId, apiToken, connectorInstall := "test_host", "test_cloudId", "test_connectorId", "test_apiToken", "pending"
 
 	t.Run("TestCreateCluster__HTTPPostRequestFailsReturnError", func(t *testing.T) {
 		clusterRegisterUtil, mockHttpClient, _, _ := createClusterRegister(AstraConnectorInput{})
@@ -860,7 +860,7 @@ func TestCreateCluster(t *testing.T) {
 		errorText := "error on post request create"
 		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{}, errors.New(errorText))
 
-		clusterInfo, err := clusterRegisterUtil.CreateCluster(host, cloudId, connectorId, apiToken)
+		clusterInfo, err := clusterRegisterUtil.CreateCluster(host, cloudId, connectorId, connectorInstall, apiToken)
 
 		assert.Equal(t, "", clusterInfo.ID)
 		assert.Equal(t, "", clusterInfo.Name)
@@ -879,7 +879,7 @@ func TestCreateCluster(t *testing.T) {
 			Body:       &mockRead,
 		}, nil).Once()
 
-		clusterInfo, err := clusterRegisterUtil.CreateCluster(host, cloudId, connectorId, apiToken)
+		clusterInfo, err := clusterRegisterUtil.CreateCluster(host, cloudId, connectorId, connectorInstall, apiToken)
 
 		assert.Equal(t, "", clusterInfo.ID)
 		assert.Equal(t, "", clusterInfo.Name)
@@ -895,7 +895,7 @@ func TestCreateCluster(t *testing.T) {
 			Body:       ret,
 		}, nil).Once()
 
-		clusterInfo, err := clusterRegisterUtil.CreateCluster(host, cloudId, connectorId, apiToken)
+		clusterInfo, err := clusterRegisterUtil.CreateCluster(host, cloudId, connectorId, connectorInstall, apiToken)
 
 		assert.Equal(t, "", clusterInfo.ID)
 		assert.Equal(t, "", clusterInfo.Name)
@@ -911,7 +911,7 @@ func TestCreateCluster(t *testing.T) {
 			Body:       ret,
 		}, nil).Once()
 
-		clusterInfo, err := clusterRegisterUtil.CreateCluster(host, cloudId, connectorId, apiToken)
+		clusterInfo, err := clusterRegisterUtil.CreateCluster(host, cloudId, connectorId, connectorInstall, apiToken)
 
 		assert.Equal(t, "", clusterInfo.ID)
 		assert.Equal(t, "", clusterInfo.Name)
@@ -927,7 +927,7 @@ func TestCreateCluster(t *testing.T) {
 			Body:       ret,
 		}, nil).Once()
 
-		clusterInfo, err := clusterRegisterUtil.CreateCluster(host, cloudId, connectorId, apiToken)
+		clusterInfo, err := clusterRegisterUtil.CreateCluster(host, cloudId, connectorId, connectorInstall, apiToken)
 
 		assert.Equal(t, "", clusterInfo.ID)
 		assert.Equal(t, "", clusterInfo.Name)
@@ -943,7 +943,7 @@ func TestCreateCluster(t *testing.T) {
 			Body:       ret,
 		}, nil).Once()
 
-		clusterInfo, err := clusterRegisterUtil.CreateCluster(host, cloudId, connectorId, apiToken)
+		clusterInfo, err := clusterRegisterUtil.CreateCluster(host, cloudId, connectorId, connectorInstall, apiToken)
 
 		assert.Equal(t, "1234", clusterInfo.ID)
 		assert.Equal(t, "test-cluster", clusterInfo.Name)
