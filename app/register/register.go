@@ -101,7 +101,7 @@ type ClusterRegisterUtil interface {
 	GetStorageClass(astraHost, cloudId, clusterId, apiToken string) (string, error)
 	CreateManagedCluster(astraHost, cloudId, clusterID, storageClass, connectorInstall, apiToken string) error
 	UpdateManagedCluster(astraHost, clusterId, astraConnectorId, connectorInstall, apiToken string) error
-	CreateOrUpdateManagedCluster(astraHost, cloudId, clusterId, astraConnectorId, connectorInstall, managedClustersMethod, apiToken string) (ClusterInfo, error)
+	CreateOrUpdateManagedCluster(astraHost, cloudId, clusterId, astraConnectorId, managedClustersMethod, apiToken string) (ClusterInfo, error)
 	ValidateAndGetCluster(astraHost, cloudId, apiToken string) (ClusterInfo, error)
 }
 
@@ -1065,7 +1065,7 @@ func (c clusterRegisterUtil) RegisterClusterWithAstra(astraConnectorId string) e
 	}
 
 	// Adding or Updating Managed Cluster based on the status from above
-	clusterInfo, err = c.CreateOrUpdateManagedCluster(astraHost, cloudId, clusterInfo.ID, astraConnectorId, clusterInfo.ConnectorInstall, managedClustersMethod, apiToken)
+	clusterInfo, err = c.CreateOrUpdateManagedCluster(astraHost, cloudId, clusterInfo.ID, astraConnectorId, managedClustersMethod, apiToken)
 	if err != nil {
 		return err
 	}
