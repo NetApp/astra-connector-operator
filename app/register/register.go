@@ -892,17 +892,11 @@ func (c clusterRegisterUtil) CreateManagedCluster(astraHost, cloudId, clusterID,
 	return errors.New("cluster state not changed to managed")
 }
 
-func (c clusterRegisterUtil) CreateOrUpdateManagedCluster(astraHost, cloudId, clusterId, astraConnectorId, connectorInstall, managedClustersMethod, apiToken string) (ClusterInfo, error) {
-	var newConnectorInstallValue string
-	// If connectorInstall was set (new arch-3.0 way of installing), update it to "installed"
-	if connectorInstall != "" {
-		newConnectorInstallValue = connectorInstalled
-	}
-
+func (c clusterRegisterUtil) CreateOrUpdateManagedCluster(astraHost, cloudId, clusterId, astraConnectorId, managedClustersMethod, apiToken string) (ClusterInfo, error) {
 	if managedClustersMethod == http.MethodPut {
 		c.Log.Info("Updating Managed Cluster")
 
-		err := c.UpdateManagedCluster(astraHost, clusterId, astraConnectorId, newConnectorInstallValue, apiToken)
+		err := c.UpdateManagedCluster(astraHost, clusterId, astraConnectorId, connectorInstalled, apiToken)
 		if err != nil {
 			return ClusterInfo{}, errors.Wrap(err, "error updating managed cluster")
 		}
@@ -911,26 +905,10 @@ func (c clusterRegisterUtil) CreateOrUpdateManagedCluster(astraHost, cloudId, cl
 	}
 
 	if managedClustersMethod == http.MethodPost {
-		// Get a Storage Class to be used for managing a cluster
-		// Doing this only for POST, since PUT /managedClusters doesn't update storageClass
-		var storageClass string
-		var err error
-		if connectorInstall == "" {
-			// If connectorInstall is not set, this is the old way of installing. We should be able to get the SC from Astra
-			storageClass, err = c.GetStorageClass(astraHost, cloudId, clusterId, apiToken)
-			if err != nil {
-				return ClusterInfo{}, err
-			}
-		} else {
-			// This is the new way of installing for arch-3.0. This way updates a pending cluster already created in Astra.
-			// There is no way to get the SCs from Astra, nor is there a way for Astra to set a default SC in arch 3.0
-			c.Log.Info("Arch-3.0 cluster detected, skipping setting storage class")
-			storageClass = ""
-		}
-
 		c.Log.Info("Creating Managed Cluster")
 
-		err = c.CreateManagedCluster(astraHost, cloudId, clusterId, storageClass, newConnectorInstallValue, apiToken)
+		// Note: we no longer set storageClass for arch3.0 clusters
+		err := c.CreateManagedCluster(astraHost, cloudId, clusterId, "", connectorInstalled, apiToken)
 		if err != nil {
 			return ClusterInfo{}, errors.Wrap(err, "error creating managed cluster")
 		}
