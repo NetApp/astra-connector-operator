@@ -254,7 +254,5 @@ func (r *AstraConnectorController) validateAstraConnector(connector v1.AstraConn
 }
 
 func (r *AstraConnectorController) deployedAlready(connector *v1.AstraConnector) bool {
-	//return connector.Status.NatsSyncClient.Registered == "true"
-	// TODO TESTING ONLY
-	return false
+	return connector.Status.NatsSyncClient.Registered == "true"
 }
