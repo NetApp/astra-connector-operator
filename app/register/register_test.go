@@ -1314,20 +1314,6 @@ func TestCreateOrUpdateManagedCluster(t *testing.T) {
 		assert.Nil(t, err)
 	})
 
-	t.Run("TestCreateOrUpdateManagedCluster__ReturnsErrorWhenGetStorageClassFails", func(t *testing.T) {
-		clusterRegisterUtil, mockHttpClient, _, _ := createClusterRegister(AstraConnectorInput{})
-
-		errorText := "this is an error"
-		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{}, errors.New(errorText))
-
-		// connectorInstall is "" here, otherwise it skips getting storage classes (expected)
-		clusterInfo, err := clusterRegisterUtil.CreateOrUpdateManagedCluster(host, cloudId, clusterId, connectorId, http.MethodPost, apiToken)
-
-		assert.Equal(t, "", clusterInfo.ID)
-		assert.Equal(t, "", clusterInfo.Name)
-		assert.EqualError(t, err, "error on request get storage classes: this is an error")
-	})
-
 	t.Run("TestCreateOrUpdateManagedCluster__ReturnsErrorWhenCreateManagedClusterFails", func(t *testing.T) {
 		clusterRegisterUtil, mockHttpClient, _, _ := createClusterRegister(AstraConnectorInput{})
 
@@ -1344,13 +1330,7 @@ func TestCreateOrUpdateManagedCluster(t *testing.T) {
 	t.Run("TestCreateOrUpdateManagedCluster__ReturnsClusterInfoWhenClusterGetsManaged", func(t *testing.T) {
 		clusterRegisterUtil, mockHttpClient, _, _ := createClusterRegister(AstraConnectorInput{})
 
-		ret := io.NopCloser(bytes.NewReader([]byte(`{"items":[{"id":"1234","name":"test_sc1234"}, {"id":"5678","name":"test-sc1","isDefault":"true"}]}`)))
-		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{
-			StatusCode: 200,
-			Body:       ret,
-		}, nil).Once()
-
-		ret = io.NopCloser(bytes.NewReader([]byte(`{"id":"test_cluster","name":"test-cluster","managedState":"managed"}`)))
+		ret := io.NopCloser(bytes.NewReader([]byte(`{"id":"test_cluster","name":"test-cluster","managedState":"managed"}`)))
 		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{
 			StatusCode: 201,
 			Body:       ret,
@@ -1374,7 +1354,7 @@ func TestValidateAndGetCluster(t *testing.T) {
 		errorText := "error on get request"
 		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{}, errors.New(errorText))
 
-		clusterInfo, err := clusterRegisterUtil.ValidateAndGetCluster(host, cloudId, apiToken)
+		clusterInfo, err := clusterRegisterUtil.ValidateAndGetCluster(host, cloudId, apiToken, nil)
 
 		assert.Equal(t, "", clusterInfo.ID)
 		assert.Equal(t, "", clusterInfo.Name)
@@ -1390,7 +1370,7 @@ func TestValidateAndGetCluster(t *testing.T) {
 			Body:       ret,
 		}, nil).Once()
 
-		clusterInfo, err := clusterRegisterUtil.ValidateAndGetCluster(host, cloudId, apiToken)
+		clusterInfo, err := clusterRegisterUtil.ValidateAndGetCluster(host, cloudId, apiToken, nil)
 
 		assert.Equal(t, "", clusterInfo.ID)
 		assert.Equal(t, "", clusterInfo.Name)
@@ -1406,7 +1386,7 @@ func TestValidateAndGetCluster(t *testing.T) {
 			Body:       ret,
 		}, nil).Once()
 
-		clusterInfo, err := clusterRegisterUtil.ValidateAndGetCluster(host, cloudId, apiToken)
+		clusterInfo, err := clusterRegisterUtil.ValidateAndGetCluster(host, cloudId, apiToken, nil)
 
 		assert.Equal(t, "1234", clusterInfo.ID)
 		assert.Equal(t, "this is a cluster", clusterInfo.Name)
@@ -1416,7 +1396,7 @@ func TestValidateAndGetCluster(t *testing.T) {
 	t.Run("TestValidateAndGetCluster__GetDefaultServiceFailsReturnError", func(t *testing.T) {
 		clusterRegisterUtil, _, _, _ := createClusterRegister(AstraConnectorInput{})
 
-		clusterInfo, err := clusterRegisterUtil.ValidateAndGetCluster(host, cloudId, apiToken)
+		clusterInfo, err := clusterRegisterUtil.ValidateAndGetCluster(host, cloudId, apiToken, nil)
 
 		assert.Equal(t, "", clusterInfo.ID)
 		assert.Equal(t, "", clusterInfo.Name)
@@ -1441,7 +1421,7 @@ func TestValidateAndGetCluster(t *testing.T) {
 		errorText := "error on get request"
 		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{}, errors.New(errorText))
 
-		clusterInfo, err := clusterRegisterUtil.ValidateAndGetCluster(host, cloudId, apiToken)
+		clusterInfo, err := clusterRegisterUtil.ValidateAndGetCluster(host, cloudId, apiToken, nil)
 
 		assert.Equal(t, "", clusterInfo.ID)
 		assert.Equal(t, "", clusterInfo.Name)
@@ -1469,7 +1449,7 @@ func TestValidateAndGetCluster(t *testing.T) {
 			Body:       ret,
 		}, nil).Once()
 
-		clusterInfo, err := clusterRegisterUtil.ValidateAndGetCluster(host, cloudId, apiToken)
+		clusterInfo, err := clusterRegisterUtil.ValidateAndGetCluster(host, cloudId, apiToken, nil)
 
 		assert.Equal(t, "1234", clusterInfo.ID)
 		assert.Equal(t, "cluster1", clusterInfo.Name)
@@ -1497,7 +1477,7 @@ func TestValidateAndGetCluster(t *testing.T) {
 			Body:       ret,
 		}, nil).Once()
 
-		clusterInfo, err := clusterRegisterUtil.ValidateAndGetCluster(host, cloudId, apiToken)
+		clusterInfo, err := clusterRegisterUtil.ValidateAndGetCluster(host, cloudId, apiToken, nil)
 
 		assert.Equal(t, "", clusterInfo.ID)
 		assert.Equal(t, "", clusterInfo.Name)
@@ -1552,14 +1532,14 @@ func TestRegisterClusterWithAstra(t *testing.T) {
 	t.Run("TestRegisterClusterWithAstra__SetHttpClientFailsReturnError", func(t *testing.T) {
 		clusterRegisterUtil, _, _, _ := createClusterRegister(AstraConnectorInput{invalidHostDetails: true})
 
-		err := clusterRegisterUtil.RegisterClusterWithAstra(connectorId)
+		err := clusterRegisterUtil.RegisterClusterWithAstra(connectorId, nil)
 		assert.EqualError(t, err, "invalid cloudBridgeURL provided: test_url, format - https://hostname")
 	})
 
 	t.Run("TestRegisterClusterWithAstra__GetAPITokenFromSecretFailsReturnError", func(t *testing.T) {
 		clusterRegisterUtil, _, _, _ := createClusterRegister(AstraConnectorInput{})
 
-		err := clusterRegisterUtil.RegisterClusterWithAstra(connectorId)
+		err := clusterRegisterUtil.RegisterClusterWithAstra(connectorId, nil)
 		assert.EqualError(t, err, "secrets \"astra-token\" not found")
 	})
 
@@ -1570,7 +1550,7 @@ func TestRegisterClusterWithAstra(t *testing.T) {
 		errorText := "error on get or create cloud"
 		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{}, errors.New(errorText))
 
-		err := clusterRegisterUtil.RegisterClusterWithAstra(connectorId)
+		err := clusterRegisterUtil.RegisterClusterWithAstra(connectorId, nil)
 		assert.EqualError(t, err, "Invalid CloudId provided in the Spec : 9876")
 	})
 
@@ -1587,7 +1567,7 @@ func TestRegisterClusterWithAstra(t *testing.T) {
 		errorText := "error on validate and get cluster"
 		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{}, errors.New(errorText))
 
-		err := clusterRegisterUtil.RegisterClusterWithAstra(connectorId)
+		err := clusterRegisterUtil.RegisterClusterWithAstra(connectorId, nil)
 		assert.EqualError(t, err, "services \"kubernetes\" not found")
 	})
 
@@ -1622,7 +1602,7 @@ func TestRegisterClusterWithAstra(t *testing.T) {
 		errorText := "error on create or update cluster"
 		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{}, errors.New(errorText))
 
-		err = clusterRegisterUtil.RegisterClusterWithAstra(connectorId)
+		err = clusterRegisterUtil.RegisterClusterWithAstra(connectorId, nil)
 		assert.EqualError(t, err, "error updating cluster: error on request put clusters: error on create or update cluster")
 	})
 
@@ -1659,17 +1639,10 @@ func TestRegisterClusterWithAstra(t *testing.T) {
 			Body:       nil,
 		}, nil).Once()
 
-		// For CreateOrUpdateManagedCluster call
-		ret = io.NopCloser(bytes.NewReader([]byte(`{"items":[{"id":"1234","name":"test_sc1234"}, {"id":"5678","name":"test-sc1","isDefault":"true"}]}`)))
-		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{
-			StatusCode: 200,
-			Body:       ret,
-		}, nil).Once()
-
 		errorText := "this is an error"
 		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{}, errors.New(errorText))
 
-		err = clusterRegisterUtil.RegisterClusterWithAstra(connectorId)
+		err = clusterRegisterUtil.RegisterClusterWithAstra(connectorId, nil)
 		assert.EqualError(t, err, "error creating managed cluster: error on request post manage clusters: this is an error")
 	})
 
@@ -1706,20 +1679,13 @@ func TestRegisterClusterWithAstra(t *testing.T) {
 			Body:       nil,
 		}, nil).Once()
 
-		// For CreateOrUpdateManagedCluster call
-		ret = io.NopCloser(bytes.NewReader([]byte(`{"items":[{"id":"1234","name":"test_sc1234"}, {"id":"5678","name":"test-sc1","isDefault":"true"}]}`)))
-		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{
-			StatusCode: 200,
-			Body:       ret,
-		}, nil).Once()
-
 		ret = io.NopCloser(bytes.NewReader([]byte(`{"id":"test_cluster","name":"test-cluster","managedState":"managed"}`)))
 		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{
 			StatusCode: 201,
 			Body:       ret,
 		}, nil).Once()
 
-		err = clusterRegisterUtil.RegisterClusterWithAstra(connectorId)
+		err = clusterRegisterUtil.RegisterClusterWithAstra(connectorId, nil)
 		assert.Nil(t, err)
 	})
 
@@ -1765,7 +1731,7 @@ func TestRegisterClusterWithAstra(t *testing.T) {
 			Body:       ret,
 		}, nil).Once()
 
-		err = clusterRegisterUtil.RegisterClusterWithAstra(connectorId)
+		err = clusterRegisterUtil.RegisterClusterWithAstra(connectorId, nil)
 		assert.Nil(t, err)
 	})
 
@@ -1803,20 +1769,13 @@ func TestRegisterClusterWithAstra(t *testing.T) {
 			Body:       ret,
 		}, nil).Once()
 
-		// For CreateOrUpdateManagedCluster call
-		ret = io.NopCloser(bytes.NewReader([]byte(`{"items":[{"id":"1234","name":"test_sc1234"}, {"id":"5678","name":"test-sc1","isDefault":"true"}]}`)))
-		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{
-			StatusCode: 200,
-			Body:       ret,
-		}, nil).Once()
-
 		ret = io.NopCloser(bytes.NewReader([]byte(`{"id":"test_cluster","name":"test-cluster","managedState":"managed"}`)))
 		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{
 			StatusCode: 201,
 			Body:       ret,
 		}, nil).Once()
 
-		err = clusterRegisterUtil.RegisterClusterWithAstra(connectorId)
+		err = clusterRegisterUtil.RegisterClusterWithAstra(connectorId, nil)
 		assert.Nil(t, err)
 	})
 }

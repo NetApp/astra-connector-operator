@@ -92,7 +92,7 @@ func (r *AstraConnectorController) deployConnector(ctx context.Context,
 			log.Info("Skipping cluster registration with Astra, incomplete Astra details provided TokenRef/AccountId/ClusterName")
 		} else {
 			log.Info("Registering cluster with Astra")
-			err = registerUtil.RegisterClusterWithAstra(astraConnectorID)
+			err = registerUtil.RegisterClusterWithAstra(astraConnectorID, astraConnector)
 			if err != nil {
 				log.Error(err, FailedConnectorIDAdd)
 				natsSyncClientStatus.Status = FailedConnectorIDAdd

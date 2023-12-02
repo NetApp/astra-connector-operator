@@ -23,6 +23,9 @@ spec:
     - jsonPath: .status.natsSyncClient.astraConnectorID
       name: AstraConnectorID
       type: string
+    - jsonPath: .status.ClusterID
+      name: ClusterID
+      type: string
     - jsonPath: .status.natsSyncClient.status
       name: Status
       type: string
@@ -109,6 +112,8 @@ spec:
           status:
             description: AstraConnectorStatus defines the observed state of AstraConnector
             properties:
+              clusterID:
+                type: string
               natsSyncClient:
                 description: NatsSyncClientStatus defines the observed state of NatsSyncClient
                 properties:
