@@ -66,7 +66,7 @@ type AstraConnectorSpec struct {
 type AstraConnectorStatus struct {
 	Nodes          []string             `json:"nodes"`
 	NatsSyncClient NatsSyncClientStatus `json:"natsSyncClient"`
-	ClusterId      string               `json:"clusterID"`
+	ClusterId      string               `json:"clusterID,omitempty"`
 }
 
 // NatsSyncClientStatus defines the observed state of NatsSyncClient
