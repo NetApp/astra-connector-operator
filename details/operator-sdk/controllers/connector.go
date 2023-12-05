@@ -2,7 +2,10 @@ package controllers
 
 import (
 	"context"
+	"github.com/NetApp-Polaris/astra-connector-operator/details/k8s"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"net/http"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -30,6 +33,16 @@ func (r *AstraConnectorController) deployConnector(ctx context.Context,
 			// Failed deploying we want status to reflect that for at least 30 seconds before it's requeued so
 			// anyone watching can be informed
 			log.V(3).Info("Requeue after 30 seconds, so that status reflects error")
+			return ctrl.Result{RequeueAfter: time.Minute * conf.Config.ErrorTimeout()}, err
+		}
+	}
+
+	if natsSyncClientStatus.AstraConnectorID == "" {
+		err := createASUPCR(ctx, astraConnector, r.Client, "123")
+		if err != nil {
+			log.Error(err, FailedASUPCreation)
+			natsSyncClientStatus.Status = FailedASUPCreation
+			_ = r.updateAstraConnectorStatus(ctx, astraConnector, *natsSyncClientStatus)
 			return ctrl.Result{RequeueAfter: time.Minute * conf.Config.ErrorTimeout()}, err
 		}
 	}
@@ -122,6 +135,16 @@ func (r *AstraConnectorController) deployConnector(ctx context.Context,
 		natsSyncClientStatus.Status = UnregisterNSClient
 	}
 
+	if natsSyncClientStatus.Registered == "true" && natsSyncClientStatus.AstraConnectorID != "" {
+		err = createASUPCR(ctx, astraConnector, r.Client, natsSyncClientStatus.AstraConnectorID)
+		if err != nil {
+			log.Error(err, FailedASUPCreation)
+			natsSyncClientStatus.Status = FailedASUPCreation
+			_ = r.updateAstraConnectorStatus(ctx, astraConnector, *natsSyncClientStatus)
+			return ctrl.Result{RequeueAfter: time.Minute * conf.Config.ErrorTimeout()}, err
+		}
+	}
+
 	// No need to requeue due to success
 	return ctrl.Result{}, nil
 }
@@ -135,4 +158,26 @@ func (r *AstraConnectorController) deleteConnectorClusterScopedResources(ctx con
 	for _, deployer := range connectorDeployers {
 		r.deleteClusterScopedResources(ctx, deployer, astraConnector)
 	}
+}
+
+func createASUPCR(ctx context.Context, astraConnector *v1.AstraConnector, client client.Client, astraConnectorID string) error {
+	log := ctrllog.FromContext(ctx)
+	k8sUtil := k8s.NewK8sUtil(client, log)
+
+	cr := &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"apiVersion": "management.astra.netapp.io/v1alpha1",
+			"kind":       "AutoSupportBundleSchedule",
+			"metadata": map[string]interface{}{
+				"name":      "asupbundleschedule-" + astraConnectorID,
+				"namespace": astraConnector.Namespace,
+			},
+			"spec": map[string]interface{}{
+				"enabled": astraConnector.Spec.AutoSupport.Enrolled,
+			},
+		},
+	}
+
+	return k8sUtil.CreateOrUpdateResource(ctx, cr, astraConnector)
+
 }

@@ -86,6 +86,9 @@ func createClusterRegister(astraConnectorInput AstraConnectorInput) (register.Cl
 			Astra: v1.Astra{
 				TokenRef: apiTokenSecret,
 			},
+			AutoSupport: v1.AutoSupport{
+				Enrolled: true,
+				URL:      "https://my-asup"},
 			ImageRegistry: v1.ImageRegistry{
 				Name:   "test-registry",
 				Secret: "test-secret",

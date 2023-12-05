@@ -27,6 +27,9 @@ func createNeptuneDeployer() (neptune.NeptuneClientDeployer, *v1.AstraConnector,
 			Namespace: "test-namespace",
 		},
 		Spec: v1.AstraConnectorSpec{
+			AutoSupport: v1.AutoSupport{
+				Enrolled: true,
+				URL:      "https://my-asup"},
 			ImageRegistry: v1.ImageRegistry{
 				Secret: "test-secret",
 			},
@@ -50,6 +53,9 @@ func createNeptuneDeployerV2() (neptune.NeptuneClientDeployerV2, *v1.AstraConnec
 			Namespace: "test-namespace",
 		},
 		Spec: v1.AstraConnectorSpec{
+			AutoSupport: v1.AutoSupport{
+				Enrolled: true,
+				URL:      "https://my-asup"},
 			ImageRegistry: v1.ImageRegistry{
 				Secret: "test-secret",
 			},
