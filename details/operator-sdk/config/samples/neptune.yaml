@@ -3205,7 +3205,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: ShutdownSnapshotSpec defines the desired state of ShutdownSnapshot
+            description: SnapshotSpec defines the desired state of Snapshot
             properties:
               appVaultRef:
                 description: AppVaultRef is the reference to the AppVault where the snapshot contents will go.
@@ -3224,7 +3224,7 @@ spec:
                 type: string
             type: object
           status:
-            description: ShutdownSnapshotStatus defines the observed state of ShutdownSnapshot
+            description: SnapshotStatus defines the observed state of Snapshot
             properties:
               appArchivePath:
                 description: AppArchivePath is the path where the snapshot was archived in the AppVault.
