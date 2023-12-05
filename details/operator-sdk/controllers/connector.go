@@ -94,14 +94,14 @@ func (r *AstraConnectorController) deployConnector(ctx context.Context,
 		} else {
 			log.Info("Registering cluster with Astra")
 
-			// Check if there is a cluster ID from
+			// Check if there is a cluster ID from:
 			// 1. CR Status. If it is in hear it means we have already been through this loop once and know what the ID is
 			// 2. Check the CR Spec. If it is in here, use it. It will be validated later.
 			// 3. If the clusterID is in neither of the above, leave it "" and the operator will create one and populate the status
 			// 4. Save the clusterID to the CR Status
 			var clusterId, createdClusterId string
-			if astraConnector != nil && strings.TrimSpace(astraConnector.Status.NatsSyncClient.AstraClusterId) != "" {
-				clusterId = astraConnector.Status.NatsSyncClient.AstraClusterId
+			if strings.TrimSpace(natsSyncClientStatus.AstraClusterId) != "" {
+				clusterId = natsSyncClientStatus.AstraClusterId
 				log.WithValues("clusterID", clusterId).Info("using clusterID from CR Status")
 			} else {
 				clusterId = astraConnector.Spec.Astra.ClusterId

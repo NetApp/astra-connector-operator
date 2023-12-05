@@ -52,11 +52,11 @@ type AstraConnectorController struct {
 func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := ctrllog.FromContext(ctx)
 
-	// Fetch the AstraConnector instance
-	astraConnector := &v1.AstraConnector{}
 	natsSyncClientStatus := v1.NatsSyncClientStatus{
 		Registered: "false",
 	}
+	// Fetch the AstraConnector instance
+	astraConnector := &v1.AstraConnector{}
 	err := r.Get(ctx, req.NamespacedName, astraConnector)
 	if err != nil {
 		if k8serrors.IsNotFound(err) {
@@ -73,6 +73,7 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 		// Do not requeue
 		return ctrl.Result{}, err
 	}
+	natsSyncClientStatus.AstraClusterId = astraConnector.Status.NatsSyncClient.AstraConnectorID
 
 	// Validate AstraConnector CR for any errors
 	err = r.validateAstraConnector(*astraConnector, log)
