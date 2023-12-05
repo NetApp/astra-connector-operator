@@ -71,6 +71,7 @@ type AstraConnectorStatus struct {
 // NatsSyncClientStatus defines the observed state of NatsSyncClient
 type NatsSyncClientStatus struct {
 	Registered       string `json:"registered"` //todo cluster vs connector registered
+	AstraClusterId   string `json:"astraClusterID"`
 	AstraConnectorID string `json:"astraConnectorID"`
 	Status           string `json:"status"`
 }
@@ -85,6 +86,7 @@ type ImageRegistry struct {
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 //+kubebuilder:printcolumn:name="Registered",type=string,JSONPath=`.status.natsSyncClient.registered`
+//+kubebuilder:printcolumn:name="AstraClusterID",type=string,JSONPath=`.status.natsSyncClient.astraClusterID`
 //+kubebuilder:printcolumn:name="AstraConnectorID",type=string,JSONPath=`.status.natsSyncClient.astraConnectorID`
 //+kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.natsSyncClient.status`
 
