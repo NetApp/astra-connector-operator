@@ -26,6 +26,8 @@ func (r *AstraConnectorController) deployNeptune(ctx context.Context,
 		return ctrl.Result{RequeueAfter: time.Minute * conf.Config.ErrorTimeout()}, err
 	}
 
+	// let's deploy the ASUP controller if user wants automatic asups
+
 	// No need to requeue due to success
 	return ctrl.Result{}, nil
 }

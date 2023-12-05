@@ -7,6 +7,7 @@ package neptune
 import (
 	"context"
 	"fmt"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"os"
 	"path/filepath"
 	"strings"
@@ -314,4 +315,23 @@ func (n NeptuneClientDeployerV2) GetRoleBindingObjects(m *v1.AstraConnector, ctx
 
 func (n NeptuneClientDeployerV2) GetClusterRoleBindingObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, error) {
 	return nil, nil
+}
+
+func GetASUPControllerObject(asupEnabled bool) client.Object {
+
+	cr := &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"apiVersion": "management.astra.netapp.io/v1alpha1",
+			"kind":       "AutoSupportBundleSchedule",
+			"metadata": map[string]interface{}{
+				"name": "autosupportbundleschedule-123",
+			},
+			"spec": map[string]interface{}{
+				"enabled": asupEnabled,
+			},
+		},
+	}
+
+	return cr
+
 }

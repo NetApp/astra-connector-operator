@@ -22,6 +22,17 @@ type Astra struct {
 	Unregister        bool   `json:"unregister,omitempty"`
 }
 
+// AutoSupport defines how the customer interacts with NetApp ActiveIQ.
+type AutoSupport struct {
+	// Enrolled determines if you want to send anonymous data to NetApp for support purposes.
+	// +kubebuilder:default:=true
+	Enrolled bool `json:"enrolled"`
+
+	// URL determines where the anonymous data will be sent
+	// +kubebuilder:default:="https://216.240.31.151/put/AsupPut-setenv"
+	URL string `json:"url,omitempty"`
+}
+
 type NatsSyncClient struct {
 	CloudBridgeURL string `json:"cloudBridgeURL,omitempty"`
 	// +kubebuilder:validation:Optional
@@ -60,6 +71,14 @@ type AstraConnectorSpec struct {
 	AstraConnect   AstraConnect   `json:"astraConnect,omitempty"`
 	Neptune        Neptune        `json:"neptune"`
 	ImageRegistry  ImageRegistry  `json:"imageRegistry,omitempty"`
+
+	// AutoSupport indicates willingness to participate in NetApp's proactive support application, NetApp Active IQ.
+	// An internet connection is required (port 442) and all support data is anonymized.
+	// The default election is true and indicates support data will be sent to NetApp.
+	// An empty or blank election is the same as a default election.
+	// Air gapped installations should enter false.
+	// +kubebuilder:validation:Required
+	AutoSupport AutoSupport `json:"autoSupport"`
 }
 
 // AstraConnectorStatus defines the observed state of AstraConnector
