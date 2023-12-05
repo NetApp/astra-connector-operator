@@ -87,7 +87,7 @@ type ClusterRegisterUtil interface {
 	RegisterNatsSyncClient() (string, error)
 	UnRegisterNatsSyncClient() error
 	GetAPITokenFromSecret(secretName string) (string, error)
-	RegisterClusterWithAstra(astraConnectorId string, astraConnector *v1.AstraConnector) error
+	RegisterClusterWithAstra(astraConnectorId, clusterId string) (string, error)
 	CloudExists(astraHost, cloudID, apiToken string) bool
 	ListClouds(astraHost, apiToken string) (*http.Response, error)
 	GetCloudId(astraHost, cloudType, apiToken string, retryTimeout ...time.Duration) (string, error)
@@ -102,7 +102,7 @@ type ClusterRegisterUtil interface {
 	CreateManagedCluster(astraHost, cloudId, clusterID, storageClass, connectorInstall, apiToken string) error
 	UpdateManagedCluster(astraHost, clusterId, astraConnectorId, connectorInstall, apiToken string) error
 	CreateOrUpdateManagedCluster(astraHost, cloudId, clusterId, astraConnectorId, managedClustersMethod, apiToken string) (ClusterInfo, error)
-	ValidateAndGetCluster(astraHost, cloudId, apiToken string, astraConnector *v1.AstraConnector) (ClusterInfo, error)
+	ValidateAndGetCluster(astraHost, cloudId, apiToken, clusterId string) (ClusterInfo, error)
 }
 
 type clusterRegisterUtil struct {
@@ -920,20 +920,21 @@ func (c clusterRegisterUtil) CreateOrUpdateManagedCluster(astraHost, cloudId, cl
 	return ClusterInfo{ID: clusterId}, nil
 }
 
-func (c clusterRegisterUtil) ValidateAndGetCluster(astraHost, cloudId, apiToken string, astraConnector *v1.AstraConnector) (ClusterInfo, error) {
+func (c clusterRegisterUtil) ValidateAndGetCluster(astraHost, cloudId, apiToken, clusterId string) (ClusterInfo, error) {
 	// If the clusterID exists in the AstraConnector 'status', it means there was no clusterID in the CR Spec originally,
 	// and we have already gone through the reconcile loop once and created a cluster. Use this clusterID.
 	//
 	// If a clusterId is known (from CR Spec or CR Status), validate its existence.
 	// If the provided clusterId exists in the DB, return the details of that cluster, otherwise return an error
-	var clusterId string
-
-	if astraConnector != nil && strings.TrimSpace(astraConnector.Status.ClusterId) != "" {
-		clusterId = astraConnector.Status.ClusterId
-		c.Log.WithValues("clusterID", clusterId).Info("using clusterID from CR Status")
-	} else {
-		clusterId = c.AstraConnector.Spec.Astra.ClusterId
-	}
+	//var clusterId string
+	//
+	//if astraConnector != nil && strings.TrimSpace(astraConnector.Status.NatsSyncClient.AstraClusterId) != "" {
+	//	clusterId = astraConnector.Status.NatsSyncClient.AstraClusterId
+	//	// Need to update Status here? todo
+	//	c.Log.WithValues("clusterID", clusterId).Info("using clusterID from CR Status")
+	//} else {
+	//	clusterId = c.AstraConnector.Spec.Astra.ClusterId
+	//}
 
 	if clusterId != "" {
 		c.Log.WithValues("cloudID", cloudId, "clusterID", clusterId).Info("Validating the provided ClusterId")
@@ -1003,20 +1004,20 @@ func (c clusterRegisterUtil) GetAPITokenFromSecret(secretName string) (string, e
 }
 
 // RegisterClusterWithAstra Registers/Adds the cluster to Astra
-func (c clusterRegisterUtil) RegisterClusterWithAstra(astraConnectorId string, astraConnector *v1.AstraConnector) error {
+func (c clusterRegisterUtil) RegisterClusterWithAstra(astraConnectorId string, clusterId string) (string, error) {
 	astraHost := GetAstraHostURL(c.AstraConnector)
 	c.Log.WithValues("URL", astraHost).Info("Astra Host Info")
 
 	err := c.setHttpClient(c.AstraConnector.Spec.Astra.SkipTLSValidation, astraHost)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	// Extract the apiToken from the secret provided in the CR Spec via "tokenRef" field
 	// This is needed to make calls to the Astra
 	apiToken, err := c.GetAPITokenFromSecret(c.AstraConnector.Spec.Astra.TokenRef)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	// 1. Checks the existence of cloud in the system with the cloudId (if it was specified in the CR Spec)
@@ -1027,7 +1028,7 @@ func (c clusterRegisterUtil) RegisterClusterWithAstra(astraConnectorId string, a
 	//    type "private" is created and the cloudId is returned.
 	cloudId, err := c.GetOrCreateCloud(astraHost, common.AstraPrivateCloudType, apiToken)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	// 1. Checks the existence of cluster in the system with the clusterId (if it was specified in the CR Spec)
@@ -1036,9 +1037,9 @@ func (c clusterRegisterUtil) RegisterClusterWithAstra(astraConnectorId string, a
 	// 2. If the ClusterId was not specified in the CR Spec, checks the existence of a cluster in the system (happens on reinstall)
 	//    with "K8s Service UUID" of the current cluster as "ApiServiceID" field value. If there exists such a record,
 	//    details related to that cluster will be returned. Otherwise, empty cluster details will be returned
-	clusterInfo, err := c.ValidateAndGetCluster(astraHost, cloudId, apiToken, astraConnector)
+	clusterInfo, err := c.ValidateAndGetCluster(astraHost, cloudId, apiToken, clusterId)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	var clustersMethod, managedClustersMethod string
@@ -1072,20 +1073,15 @@ func (c clusterRegisterUtil) RegisterClusterWithAstra(astraConnectorId string, a
 	// Adding or Updating a Cluster based on the status from above
 	clusterInfo, err = c.CreateOrUpdateCluster(astraHost, cloudId, clusterInfo.ID, astraConnectorId, clusterInfo.ConnectorInstall, clustersMethod, apiToken)
 	if err != nil {
-		return err
-	}
-
-	// Save the clusterID to the CR Status. This gets saved following this function's return
-	if astraConnector != nil {
-		astraConnector.Status.ClusterId = clusterInfo.ID
+		return "", err
 	}
 
 	// Adding or Updating Managed Cluster based on the status from above
 	clusterInfo, err = c.CreateOrUpdateManagedCluster(astraHost, cloudId, clusterInfo.ID, astraConnectorId, managedClustersMethod, apiToken)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	c.Log.WithValues("clusterId", clusterInfo.ID, "clusterName", clusterInfo.Name).Info("Cluster managed by Astra!!!!")
-	return nil
+	return clusterInfo.ID, nil
 }

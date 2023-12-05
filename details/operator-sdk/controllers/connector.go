@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"net/http"
+	"strings"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -92,7 +93,21 @@ func (r *AstraConnectorController) deployConnector(ctx context.Context,
 			log.Info("Skipping cluster registration with Astra, incomplete Astra details provided TokenRef/AccountId/ClusterName")
 		} else {
 			log.Info("Registering cluster with Astra")
-			err = registerUtil.RegisterClusterWithAstra(astraConnectorID, astraConnector)
+
+			// Check if there is a cluster ID from
+			// 1. CR Status. If it is in hear it means we have already been through this loop once and know what the ID is
+			// 2. Check the CR Spec. If it is in here, use it. It will be validated later.
+			// 3. If the clusterID is in neither of the above, leave it "" and the operator will create one and populate the status
+			// 4. Save the clusterID to the CR Status
+			var clusterId, createdClusterId string
+			if astraConnector != nil && strings.TrimSpace(astraConnector.Status.NatsSyncClient.AstraClusterId) != "" {
+				clusterId = astraConnector.Status.NatsSyncClient.AstraClusterId
+				log.WithValues("clusterID", clusterId).Info("using clusterID from CR Status")
+			} else {
+				clusterId = astraConnector.Spec.Astra.ClusterId
+			}
+
+			createdClusterId, err = registerUtil.RegisterClusterWithAstra(astraConnectorID, clusterId)
 			if err != nil {
 				log.Error(err, FailedConnectorIDAdd)
 				natsSyncClientStatus.Status = FailedConnectorIDAdd
@@ -100,6 +115,7 @@ func (r *AstraConnectorController) deployConnector(ctx context.Context,
 				return ctrl.Result{RequeueAfter: time.Minute * conf.Config.ErrorTimeout()}, err
 			}
 			log.Info("Registered cluster with Astra")
+			natsSyncClientStatus.AstraClusterId = createdClusterId
 		}
 		natsSyncClientStatus.Registered = "true"
 		natsSyncClientStatus.Status = "Registered with Astra"
