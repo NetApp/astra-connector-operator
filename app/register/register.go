@@ -921,20 +921,8 @@ func (c clusterRegisterUtil) CreateOrUpdateManagedCluster(astraHost, cloudId, cl
 }
 
 func (c clusterRegisterUtil) ValidateAndGetCluster(astraHost, cloudId, apiToken, clusterId string) (ClusterInfo, error) {
-	// If the clusterID exists in the AstraConnector 'status', it means there was no clusterID in the CR Spec originally,
-	// and we have already gone through the reconcile loop once and created a cluster. Use this clusterID.
-	//
 	// If a clusterId is known (from CR Spec or CR Status), validate its existence.
 	// If the provided clusterId exists in the DB, return the details of that cluster, otherwise return an error
-	//var clusterId string
-	//
-	//if astraConnector != nil && strings.TrimSpace(astraConnector.Status.NatsSyncClient.AstraClusterId) != "" {
-	//	clusterId = astraConnector.Status.NatsSyncClient.AstraClusterId
-	//	// Need to update Status here? todo
-	//	c.Log.WithValues("clusterID", clusterId).Info("using clusterID from CR Status")
-	//} else {
-	//	clusterId = c.AstraConnector.Spec.Astra.ClusterId
-	//}
 
 	if clusterId != "" {
 		c.Log.WithValues("cloudID", cloudId, "clusterID", clusterId).Info("Validating the provided ClusterId")
