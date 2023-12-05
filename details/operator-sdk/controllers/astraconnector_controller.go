@@ -73,7 +73,7 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 		// Do not requeue
 		return ctrl.Result{}, err
 	}
-	natsSyncClientStatus.AstraClusterId = astraConnector.Status.NatsSyncClient.AstraConnectorID
+	natsSyncClientStatus.AstraClusterId = astraConnector.Status.NatsSyncClient.AstraClusterId
 
 	// Validate AstraConnector CR for any errors
 	err = r.validateAstraConnector(*astraConnector, log)
