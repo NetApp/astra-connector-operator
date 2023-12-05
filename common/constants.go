@@ -55,7 +55,7 @@ const (
 	AstraPrivateCloudName = "private"
 
 	ConnectorNeptuneCapability = "neptuneV1"
-	ConnectorRelayCapability   = "relayV1"
+	ConnectorV2Capability      = "connectorV2" // V2 refers specifically to Arch 3.0 connector and beyond
 	ConnectorWatcherCapability = "watcherV1"
 
 	AstraClustersAPIVersion        = "1.4"
@@ -64,7 +64,7 @@ const (
 
 func GetConnectorCapabilities() []string {
 	capabilities := []string{
-		ConnectorRelayCapability,
+		ConnectorV2Capability,
 		ConnectorWatcherCapability,
 	}
 
