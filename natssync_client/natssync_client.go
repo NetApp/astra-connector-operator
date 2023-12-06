@@ -109,12 +109,16 @@ func (d *Deployer) GetDeploymentObject(m *v1.AstraConnector, ctx context.Context
 								Value: strconv.FormatBool(m.Spec.NatssyncClient.SkipTLSValidation),
 							},
 							{
+								Name:  "HTTPS_PROXY",
+								Value: "http://pxuser:NetApp123@10.193.245.19:3128",
+							},
+							{
 								Name:  "HTTP_PROXY",
-								Value: "http://azpzen.astrazeneca.net:9480",
+								Value: "http://pxuser:NetApp123@10.193.245.19:3128",
 							},
 							{
 								Name:  "NO_PROXY",
-								Value: "astra-connector,astrazeneca.net,localhost,127.0.0.1,172.29.*",
+								Value: "astra-connector,localhost,127.0.0.1",
 							},
 						},
 						VolumeMounts: []corev1.VolumeMount{
