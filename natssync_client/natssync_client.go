@@ -118,7 +118,7 @@ func (d *Deployer) GetDeploymentObject(m *v1.AstraConnector, ctx context.Context
 							},
 							{
 								Name:  "NO_PROXY",
-								Value: "astra-connector,localhost,127.0.0.1",
+								Value: "astra-connector,localhost,127.0.0.1,localhost,172.*",
 							},
 						},
 						VolumeMounts: []corev1.VolumeMount{
