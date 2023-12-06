@@ -89,7 +89,7 @@ type AstraConnectorStatus struct {
 // NatsSyncClientStatus defines the observed state of NatsSyncClient
 type NatsSyncClientStatus struct {
 	Registered       string `json:"registered"` //todo cluster vs connector registered
-	AstraClusterId   string `json:"astraClusterID"`
+	AstraClusterId   string `json:"astraClusterID,omitempty"`
 	AstraConnectorID string `json:"astraConnectorID"`
 	Status           string `json:"status"`
 }
