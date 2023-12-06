@@ -29,7 +29,7 @@ type AutoSupport struct {
 	Enrolled bool `json:"enrolled"`
 
 	// URL determines where the anonymous data will be sent
-	// +kubebuilder:default:="https://216.240.31.151/put/AsupPut-setenv"
+	// +kubebuilder:default:="https://stagesupport.netapp.com/put/AsupPut"
 	URL string `json:"url,omitempty"`
 }
 
@@ -77,7 +77,6 @@ type AstraConnectorSpec struct {
 	// The default election is true and indicates support data will be sent to NetApp.
 	// An empty or blank election is the same as a default election.
 	// Air gapped installations should enter false.
-	// +kubebuilder:validation:Required
 	AutoSupport AutoSupport `json:"autoSupport"`
 }
 

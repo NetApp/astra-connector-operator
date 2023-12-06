@@ -176,7 +176,7 @@ func (n NeptuneClientDeployerV2) GetDeploymentObjects(m *v1.AstraConnector, ctx 
 								"/manager",
 							},
 							Image: neptuneImage,
-							Env:   getNeptuneEnvVars(imageRegistry, containerImage, m.Spec.ImageRegistry.Secret),
+							Env:   getNeptuneEnvVars(imageRegistry, containerImage, m.Spec.ImageRegistry.Secret, m.Spec.AutoSupport.URL),
 							LivenessProbe: &corev1.Probe{
 								ProbeHandler: corev1.ProbeHandler{
 									HTTPGet: &corev1.HTTPGetAction{
@@ -240,7 +240,7 @@ func (n NeptuneClientDeployerV2) GetDeploymentObjects(m *v1.AstraConnector, ctx 
 	return deps, nil
 }
 
-func getNeptuneEnvVars(imageRegistry, containerImage, pullSecret string) []corev1.EnvVar {
+func getNeptuneEnvVars(imageRegistry, containerImage, pullSecret, asupUrl string) []corev1.EnvVar {
 	var envVars []corev1.EnvVar
 
 	//DefaultImageRegistry := "netappdownloads.jfrog.io/docker-astra-control-staging/arch30/neptune"
@@ -278,6 +278,13 @@ func getNeptuneEnvVars(imageRegistry, containerImage, pullSecret string) []corev
 		envVars = append(envVars, corev1.EnvVar{
 			Name:  "NEPTUNE_SECRET",
 			Value: pullSecret,
+		})
+	}
+
+	if asupUrl != "" {
+		envVars = append(envVars, corev1.EnvVar{
+			Name:  "NEPTUNE_AUTOSUPPORT_URL",
+			Value: asupUrl,
 		})
 	}
 

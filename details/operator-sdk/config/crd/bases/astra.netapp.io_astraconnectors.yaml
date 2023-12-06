@@ -90,7 +90,7 @@ spec:
                       data to NetApp for support purposes.
                     type: boolean
                   url:
-                    default: https://216.240.31.151/put/AsupPut-setenv
+                    default: https://stagesupport.netapp.com/put/AsupPut
                     description: URL determines where the anonymous data will be sent
                     type: string
                 type: object
@@ -126,8 +126,6 @@ spec:
                   image:
                     type: string
                 type: object
-            required:
-            - autoSupport
             type: object
           status:
             description: AstraConnectorStatus defines the observed state of AstraConnector
