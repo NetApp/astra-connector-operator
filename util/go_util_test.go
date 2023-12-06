@@ -22,6 +22,10 @@ func createAstraConnector() *v1.AstraConnector {
 				AccountId:   "test-account-id",
 				ClusterName: "test-cluster-name",
 			},
+			AutoSupport: v1.AutoSupport{
+				Enrolled: true,
+				URL:      "https://my-asup",
+			},
 			NatsSyncClient: v1.NatsSyncClient{
 				CloudBridgeURL: "test-url",
 			},

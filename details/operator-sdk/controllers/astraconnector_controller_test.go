@@ -90,6 +90,9 @@ var _ = Describe("Astraconnector controller", func() {
 						Namespace: namespace.Name,
 					},
 					Spec: v1.AstraConnectorSpec{
+						AutoSupport: v1.AutoSupport{
+							Enrolled: false,
+						},
 						ImageRegistry: v1.ImageRegistry{
 							Name:   "test-registry",
 							Secret: "test-secret",

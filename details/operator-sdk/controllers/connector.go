@@ -2,7 +2,10 @@ package controllers
 
 import (
 	"context"
+	"github.com/NetApp-Polaris/astra-connector-operator/details/k8s"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"net/http"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"strings"
 	"time"
 
@@ -138,6 +141,17 @@ func (r *AstraConnectorController) deployConnector(ctx context.Context,
 		natsSyncClientStatus.Status = UnregisterNSClient
 	}
 
+	// if we are registered and have a clusterid let's set up the asup cr
+	if natsSyncClientStatus.Registered == "true" && natsSyncClientStatus.AstraClusterId != "" {
+		err = createASUPCR(ctx, astraConnector, r.Client, natsSyncClientStatus.AstraClusterId)
+		if err != nil {
+			log.Error(err, FailedASUPCreation)
+			natsSyncClientStatus.Status = FailedASUPCreation
+			_ = r.updateAstraConnectorStatus(ctx, astraConnector, *natsSyncClientStatus)
+			return ctrl.Result{RequeueAfter: time.Minute * conf.Config.ErrorTimeout()}, err
+		}
+	}
+
 	// No need to requeue due to success
 	return ctrl.Result{}, nil
 }
@@ -151,4 +165,25 @@ func (r *AstraConnectorController) deleteConnectorClusterScopedResources(ctx con
 	for _, deployer := range connectorDeployers {
 		r.deleteClusterScopedResources(ctx, deployer, astraConnector)
 	}
+}
+
+func createASUPCR(ctx context.Context, astraConnector *v1.AstraConnector, client client.Client, astraClusterID string) error {
+	log := ctrllog.FromContext(ctx)
+	k8sUtil := k8s.NewK8sUtil(client, log)
+
+	cr := &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"apiVersion": "astra.netapp.io/v1",
+			"kind":       "AutoSupportBundleSchedule",
+			"metadata": map[string]interface{}{
+				"name":      "asupbundleschedule-" + astraClusterID,
+				"namespace": astraConnector.Namespace,
+			},
+			"spec": map[string]interface{}{
+				"enabled": astraConnector.Spec.AutoSupport.Enrolled,
+			},
+		},
+	}
+
+	return k8sUtil.CreateOrUpdateResource(ctx, cr, astraConnector)
 }

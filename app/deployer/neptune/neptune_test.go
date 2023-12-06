@@ -53,6 +53,9 @@ func createNeptuneDeployerV2() (neptune.NeptuneClientDeployerV2, *v1.AstraConnec
 			ImageRegistry: v1.ImageRegistry{
 				Secret: "test-secret",
 			},
+			AutoSupport: v1.AutoSupport{
+				Enrolled: true,
+				URL:      "https://my-asup"},
 		},
 	}
 
