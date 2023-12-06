@@ -76,6 +76,24 @@ spec:
                     format: int32
                     type: integer
                 type: object
+              autoSupport:
+                description: AutoSupport indicates willingness to participate in NetApp's
+                  proactive support application, NetApp Active IQ. An internet connection
+                  is required (port 442) and all support data is anonymized. The default
+                  election is true and indicates support data will be sent to NetApp.
+                  An empty or blank election is the same as a default election. Air
+                  gapped installations should enter false.
+                properties:
+                  enrolled:
+                    default: true
+                    description: Enrolled determines if you want to send anonymous
+                      data to NetApp for support purposes.
+                    type: boolean
+                  url:
+                    default: https://216.240.31.151/put/AsupPut-setenv
+                    description: URL determines where the anonymous data will be sent
+                    type: string
+                type: object
               imageRegistry:
                 properties:
                   name:
@@ -108,6 +126,8 @@ spec:
                   image:
                     type: string
                 type: object
+            required:
+            - autoSupport
             type: object
           status:
             description: AstraConnectorStatus defines the observed state of AstraConnector
