@@ -38,16 +38,6 @@ func (r *AstraConnectorController) deployConnector(ctx context.Context,
 		}
 	}
 
-	if natsSyncClientStatus.AstraClusterId == "" {
-		err := createASUPCR(ctx, astraConnector, r.Client, "123")
-		if err != nil {
-			log.Error(err, FailedASUPCreation)
-			natsSyncClientStatus.Status = FailedASUPCreation
-			_ = r.updateAstraConnectorStatus(ctx, astraConnector, *natsSyncClientStatus)
-			return ctrl.Result{RequeueAfter: time.Minute * conf.Config.ErrorTimeout()}, err
-		}
-	}
-
 	// Let's register the cluster now
 	registerUtil := register.NewClusterRegisterUtil(astraConnector, &http.Client{}, r.Client, log, context.Background())
 	registered := false
