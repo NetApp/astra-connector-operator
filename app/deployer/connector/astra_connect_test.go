@@ -24,6 +24,9 @@ func TestAstraConnectGetDeploymentObjects(t *testing.T) {
 			Namespace: "test-namespace",
 		},
 		Spec: v1.AstraConnectorSpec{
+			AutoSupport: v1.AutoSupport{Enrolled: true,
+				URL: "https://my-asup"},
+
 			ImageRegistry: v1.ImageRegistry{
 				Name:   "test-registry",
 				Secret: "test-secret",
@@ -119,6 +122,9 @@ func DummyAstraConnector() v1.AstraConnector {
 				Image:    "test-image",
 				Replicas: 1,
 			},
+			AutoSupport: v1.AutoSupport{
+				Enrolled: true,
+				URL:      "https://my-asup"},
 		},
 	}
 }

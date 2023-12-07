@@ -2,7 +2,11 @@ package controllers
 
 import (
 	"context"
+	"github.com/NetApp-Polaris/astra-connector-operator/details/k8s"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"net/http"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"strings"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -92,7 +96,21 @@ func (r *AstraConnectorController) deployConnector(ctx context.Context,
 			log.Info("Skipping cluster registration with Astra, incomplete Astra details provided TokenRef/AccountId/ClusterName")
 		} else {
 			log.Info("Registering cluster with Astra")
-			err = registerUtil.RegisterClusterWithAstra(astraConnectorID)
+
+			// Check if there is a cluster ID from:
+			// 1. CR Status. If it is in hear it means we have already been through this loop once and know what the ID is
+			// 2. Check the CR Spec. If it is in here, use it. It will be validated later.
+			// 3. If the clusterID is in neither of the above, leave it "" and the operator will create one and populate the status
+			// 4. Save the clusterID to the CR Status
+			var clusterId, createdClusterId string
+			if strings.TrimSpace(natsSyncClientStatus.AstraClusterId) != "" {
+				clusterId = natsSyncClientStatus.AstraClusterId
+				log.WithValues("clusterID", clusterId).Info("using clusterID from CR Status")
+			} else {
+				clusterId = astraConnector.Spec.Astra.ClusterId
+			}
+
+			createdClusterId, err = registerUtil.RegisterClusterWithAstra(astraConnectorID, clusterId)
 			if err != nil {
 				log.Error(err, FailedConnectorIDAdd)
 				natsSyncClientStatus.Status = FailedConnectorIDAdd
@@ -100,6 +118,7 @@ func (r *AstraConnectorController) deployConnector(ctx context.Context,
 				return ctrl.Result{RequeueAfter: time.Minute * conf.Config.ErrorTimeout()}, err
 			}
 			log.Info("Registered cluster with Astra")
+			natsSyncClientStatus.AstraClusterId = createdClusterId
 		}
 		natsSyncClientStatus.Registered = "true"
 		natsSyncClientStatus.Status = "Registered with Astra"
@@ -122,6 +141,17 @@ func (r *AstraConnectorController) deployConnector(ctx context.Context,
 		natsSyncClientStatus.Status = UnregisterNSClient
 	}
 
+	// if we are registered and have a clusterid let's set up the asup cr
+	if natsSyncClientStatus.Registered == "true" && natsSyncClientStatus.AstraClusterId != "" {
+		err = createASUPCR(ctx, astraConnector, r.Client, natsSyncClientStatus.AstraClusterId)
+		if err != nil {
+			log.Error(err, FailedASUPCreation)
+			natsSyncClientStatus.Status = FailedASUPCreation
+			_ = r.updateAstraConnectorStatus(ctx, astraConnector, *natsSyncClientStatus)
+			return ctrl.Result{RequeueAfter: time.Minute * conf.Config.ErrorTimeout()}, err
+		}
+	}
+
 	// No need to requeue due to success
 	return ctrl.Result{}, nil
 }
@@ -135,4 +165,25 @@ func (r *AstraConnectorController) deleteConnectorClusterScopedResources(ctx con
 	for _, deployer := range connectorDeployers {
 		r.deleteClusterScopedResources(ctx, deployer, astraConnector)
 	}
+}
+
+func createASUPCR(ctx context.Context, astraConnector *v1.AstraConnector, client client.Client, astraClusterID string) error {
+	log := ctrllog.FromContext(ctx)
+	k8sUtil := k8s.NewK8sUtil(client, log)
+
+	cr := &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"apiVersion": "astra.netapp.io/v1",
+			"kind":       "AutoSupportBundleSchedule",
+			"metadata": map[string]interface{}{
+				"name":      "asupbundleschedule-" + astraClusterID,
+				"namespace": astraConnector.Namespace,
+			},
+			"spec": map[string]interface{}{
+				"enabled": astraConnector.Spec.AutoSupport.Enrolled,
+			},
+		},
+	}
+
+	return k8sUtil.CreateOrUpdateResource(ctx, cr, astraConnector)
 }

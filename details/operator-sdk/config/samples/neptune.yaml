@@ -17,9 +17,9 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.11.1
   creationTimestamp: null
-  name: applications.management.astra.netapp.io
+  name: applications.astra.netapp.io
 spec:
-  group: management.astra.netapp.io
+  group: astra.netapp.io
   names:
     kind: Application
     listKind: ApplicationList
@@ -27,7 +27,7 @@ spec:
     singular: application
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - name: v1
     schema:
       openAPIV3Schema:
         description: Application is the Schema for the applications API
@@ -198,9 +198,9 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.11.1
   creationTimestamp: null
-  name: appmirrorrelationships.management.astra.netapp.io
+  name: appmirrorrelationships.astra.netapp.io
 spec:
-  group: management.astra.netapp.io
+  group: astra.netapp.io
   names:
     kind: AppMirrorRelationship
     listKind: AppMirrorRelationshipList
@@ -220,7 +220,7 @@ spec:
     - jsonPath: .metadata.creationTimestamp
       name: Age
       type: date
-    name: v1alpha1
+    name: v1
     schema:
       openAPIV3Schema:
         description: AppMirrorRelationship is the Schema for the appmirrorrelationships API
@@ -355,9 +355,9 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.11.1
   creationTimestamp: null
-  name: appmirrorupdates.management.astra.netapp.io
+  name: appmirrorupdates.astra.netapp.io
 spec:
-  group: management.astra.netapp.io
+  group: astra.netapp.io
   names:
     kind: AppMirrorUpdate
     listKind: AppMirrorUpdateList
@@ -377,7 +377,7 @@ spec:
     - jsonPath: .metadata.creationTimestamp
       name: Age
       type: date
-    name: v1alpha1
+    name: v1
     schema:
       openAPIV3Schema:
         description: AppMirrorUpdate is the Schema for the appmirrorupdates API
@@ -557,9 +557,9 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.11.1
   creationTimestamp: null
-  name: appvaults.management.astra.netapp.io
+  name: appvaults.astra.netapp.io
 spec:
-  group: management.astra.netapp.io
+  group: astra.netapp.io
   names:
     kind: AppVault
     listKind: AppVaultList
@@ -567,7 +567,7 @@ spec:
     singular: appvault
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - name: v1
     schema:
       openAPIV3Schema:
         description: AppVault is the Schema for the appvaults API
@@ -641,9 +641,9 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.11.1
   creationTimestamp: null
-  name: autosupportbundles.management.astra.netapp.io
+  name: autosupportbundles.astra.netapp.io
 spec:
-  group: management.astra.netapp.io
+  group: astra.netapp.io
   names:
     kind: AutoSupportBundle
     listKind: AutoSupportBundleList
@@ -651,7 +651,7 @@ spec:
     singular: autosupportbundle
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - name: v1
     schema:
       openAPIV3Schema:
         description: AutoSupportBundle is the Schema for the autosupportbundles API
@@ -719,9 +719,9 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.11.1
   creationTimestamp: null
-  name: autosupportbundleschedules.management.astra.netapp.io
+  name: autosupportbundleschedules.astra.netapp.io
 spec:
-  group: management.astra.netapp.io
+  group: astra.netapp.io
   names:
     kind: AutoSupportBundleSchedule
     listKind: AutoSupportBundleScheduleList
@@ -729,7 +729,7 @@ spec:
     singular: autosupportbundleschedule
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - name: v1
     schema:
       openAPIV3Schema:
         description: AutoSupportBundleSchedule is the Schema for the autosupportbundleschedules API
@@ -769,9 +769,9 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.11.1
   creationTimestamp: null
-  name: backupinplacerestores.management.astra.netapp.io
+  name: backupinplacerestores.astra.netapp.io
 spec:
-  group: management.astra.netapp.io
+  group: astra.netapp.io
   names:
     kind: BackupInplaceRestore
     listKind: BackupInplaceRestoreList
@@ -786,7 +786,7 @@ spec:
     - jsonPath: .status.error
       name: Error
       type: string
-    name: v1alpha1
+    name: v1
     schema:
       openAPIV3Schema:
         description: BackupInplaceRestore is the Schema for the backupinplacerestores API
@@ -900,9 +900,9 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.11.1
   creationTimestamp: null
-  name: backuprestores.management.astra.netapp.io
+  name: backuprestores.astra.netapp.io
 spec:
-  group: management.astra.netapp.io
+  group: astra.netapp.io
   names:
     kind: BackupRestore
     listKind: BackupRestoreList
@@ -917,7 +917,7 @@ spec:
     - jsonPath: .status.error
       name: Error
       type: string
-    name: v1alpha1
+    name: v1
     schema:
       openAPIV3Schema:
         description: BackupRestore is the Schema for the backuprestores API
@@ -1077,9 +1077,9 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.11.1
   creationTimestamp: null
-  name: backups.management.astra.netapp.io
+  name: backups.astra.netapp.io
 spec:
-  group: management.astra.netapp.io
+  group: astra.netapp.io
   names:
     kind: Backup
     listKind: BackupList
@@ -1094,7 +1094,7 @@ spec:
     - jsonPath: .status.error
       name: Error
       type: string
-    name: v1alpha1
+    name: v1
     schema:
       openAPIV3Schema:
         description: Backup is the Schema for the backups API
@@ -1272,66 +1272,9 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.11.1
   creationTimestamp: null
-  name: disruptivebackups.management.astra.netapp.io
+  name: exechooks.astra.netapp.io
 spec:
-  group: management.astra.netapp.io
-  names:
-    kind: DisruptiveBackup
-    listKind: DisruptiveBackupList
-    plural: disruptivebackups
-    singular: disruptivebackup
-  scope: Namespaced
-  versions:
-  - name: v1alpha1
-    schema:
-      openAPIV3Schema:
-        description: DisruptiveBackup is the Schema for the disruptivebackups API
-        properties:
-          apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
-            type: string
-          kind:
-            description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
-            type: string
-          metadata:
-            type: object
-          spec:
-            description: DisruptiveBackupSpec defines the desired state of DisruptiveBackup
-            properties:
-              appVaultRef:
-                description: Name of the AppVault to use as the target of the backup
-                type: string
-              applicationRef:
-                description: Name of the Application to back up
-                type: string
-            required:
-            - appVaultRef
-            - applicationRef
-            type: object
-          status:
-            description: DisruptiveBackupStatus defines the observed state of DisruptiveBackup
-            properties:
-              completionTimestamp:
-                description: CompletionTimestamp is the server time when the DisruptiveBackup was completed.
-                format: date-time
-                nullable: true
-                type: string
-            type: object
-        type: object
-    served: true
-    storage: true
-    subresources:
-      status: {}
----
-apiVersion: apiextensions.k8s.io/v1
-kind: CustomResourceDefinition
-metadata:
-  annotations:
-    controller-gen.kubebuilder.io/version: v0.11.1
-  creationTimestamp: null
-  name: exechooks.management.astra.netapp.io
-spec:
-  group: management.astra.netapp.io
+  group: astra.netapp.io
   names:
     kind: ExecHook
     listKind: ExecHookList
@@ -1339,7 +1282,7 @@ spec:
     singular: exechook
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - name: v1
     schema:
       openAPIV3Schema:
         description: ExecHook is the Schema for the exechooks API
@@ -1424,9 +1367,9 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.11.1
   creationTimestamp: null
-  name: exechooksruns.management.astra.netapp.io
+  name: exechooksruns.astra.netapp.io
 spec:
-  group: management.astra.netapp.io
+  group: astra.netapp.io
   names:
     kind: ExecHooksRun
     listKind: ExecHooksRunList
@@ -1441,7 +1384,7 @@ spec:
     - jsonPath: .status.error
       name: Error
       type: string
-    name: v1alpha1
+    name: v1
     schema:
       openAPIV3Schema:
         description: ExecHooksRun is the Schema for the exechooksruns API
@@ -1628,54 +1571,9 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.11.1
   creationTimestamp: null
-  name: policies.management.astra.netapp.io
+  name: pvccopies.astra.netapp.io
 spec:
-  group: management.astra.netapp.io
-  names:
-    kind: Policy
-    listKind: PolicyList
-    plural: policies
-    singular: policy
-  scope: Namespaced
-  versions:
-  - name: v1alpha1
-    schema:
-      openAPIV3Schema:
-        description: Policy is the Schema for the policies API
-        properties:
-          apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
-            type: string
-          kind:
-            description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
-            type: string
-          metadata:
-            type: object
-          spec:
-            description: PolicySpec defines the desired state of Policy
-            properties:
-              foo:
-                description: Foo is an example field of Policy. Edit policy_types.go to remove/update
-                type: string
-            type: object
-          status:
-            description: PolicyStatus defines the observed state of Policy
-            type: object
-        type: object
-    served: true
-    storage: true
-    subresources:
-      status: {}
----
-apiVersion: apiextensions.k8s.io/v1
-kind: CustomResourceDefinition
-metadata:
-  annotations:
-    controller-gen.kubebuilder.io/version: v0.11.1
-  creationTimestamp: null
-  name: pvccopies.management.astra.netapp.io
-spec:
-  group: management.astra.netapp.io
+  group: astra.netapp.io
   names:
     kind: PvcCopy
     listKind: PvcCopyList
@@ -1683,7 +1581,7 @@ spec:
     singular: pvccopy
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - name: v1
     schema:
       openAPIV3Schema:
         description: PvcCopy is the Schema for the pvccopies API
@@ -1781,9 +1679,9 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.11.1
   creationTimestamp: null
-  name: pvcerases.management.astra.netapp.io
+  name: pvcerases.astra.netapp.io
 spec:
-  group: management.astra.netapp.io
+  group: astra.netapp.io
   names:
     kind: PvcErase
     listKind: PvcEraseList
@@ -1791,7 +1689,7 @@ spec:
     singular: pvcerase
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - name: v1
     schema:
       openAPIV3Schema:
         description: PvcErase is the Schema for the pvcerases API
@@ -1889,9 +1787,9 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.11.1
   creationTimestamp: null
-  name: resourcebackups.management.astra.netapp.io
+  name: resourcebackups.astra.netapp.io
 spec:
-  group: management.astra.netapp.io
+  group: astra.netapp.io
   names:
     kind: ResourceBackup
     listKind: ResourceBackupList
@@ -1899,7 +1797,7 @@ spec:
     singular: resourcebackup
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - name: v1
     schema:
       openAPIV3Schema:
         description: ResourceBackup is the Schema for the resourcebackups API
@@ -2005,9 +1903,9 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.11.1
   creationTimestamp: null
-  name: resourcedeletes.management.astra.netapp.io
+  name: resourcedeletes.astra.netapp.io
 spec:
-  group: management.astra.netapp.io
+  group: astra.netapp.io
   names:
     kind: ResourceDelete
     listKind: ResourceDeleteList
@@ -2015,7 +1913,7 @@ spec:
     singular: resourcedelete
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - name: v1
     schema:
       openAPIV3Schema:
         description: ResourceDelete is the Schema for the resourcedeletes API
@@ -2155,9 +2053,9 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.11.1
   creationTimestamp: null
-  name: resourcerestores.management.astra.netapp.io
+  name: resourcerestores.astra.netapp.io
 spec:
-  group: management.astra.netapp.io
+  group: astra.netapp.io
   names:
     kind: ResourceRestore
     listKind: ResourceRestoreList
@@ -2165,7 +2063,7 @@ spec:
     singular: resourcerestore
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - name: v1
     schema:
       openAPIV3Schema:
         description: ResourceRestore is the Schema for the resourcerestores API
@@ -2304,9 +2202,9 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.11.1
   creationTimestamp: null
-  name: resourcesummaryuploads.management.astra.netapp.io
+  name: resourcesummaryuploads.astra.netapp.io
 spec:
-  group: management.astra.netapp.io
+  group: astra.netapp.io
   names:
     kind: ResourceSummaryUpload
     listKind: ResourceSummaryUploadList
@@ -2314,7 +2212,7 @@ spec:
     singular: resourcesummaryupload
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - name: v1
     schema:
       openAPIV3Schema:
         description: ResourceSummaryUpload is the Schema for the resourcesummaryuploads API
@@ -2448,9 +2346,9 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.11.1
   creationTimestamp: null
-  name: resticvolumebackups.management.astra.netapp.io
+  name: resticvolumebackups.astra.netapp.io
 spec:
-  group: management.astra.netapp.io
+  group: astra.netapp.io
   names:
     kind: ResticVolumeBackup
     listKind: ResticVolumeBackupList
@@ -2465,7 +2363,7 @@ spec:
     - jsonPath: .status.error
       name: Error
       type: string
-    name: v1alpha1
+    name: v1
     schema:
       openAPIV3Schema:
         description: ResticVolumeBackup is the Schema for the resticvolumebackups API
@@ -2789,9 +2687,9 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.11.1
   creationTimestamp: null
-  name: resticvolumerestores.management.astra.netapp.io
+  name: resticvolumerestores.astra.netapp.io
 spec:
-  group: management.astra.netapp.io
+  group: astra.netapp.io
   names:
     kind: ResticVolumeRestore
     listKind: ResticVolumeRestoreList
@@ -2799,7 +2697,7 @@ spec:
     singular: resticvolumerestore
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - name: v1
     schema:
       openAPIV3Schema:
         description: ResticVolumeRestore is the Schema for the resticvolumerestores API
@@ -3028,54 +2926,9 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.11.1
   creationTimestamp: null
-  name: restores.management.astra.netapp.io
+  name: schedules.astra.netapp.io
 spec:
-  group: management.astra.netapp.io
-  names:
-    kind: Restore
-    listKind: RestoreList
-    plural: restores
-    singular: restore
-  scope: Namespaced
-  versions:
-  - name: v1alpha1
-    schema:
-      openAPIV3Schema:
-        description: Restore is the Schema for the restores API
-        properties:
-          apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
-            type: string
-          kind:
-            description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
-            type: string
-          metadata:
-            type: object
-          spec:
-            description: RestoreSpec defines the desired state of Restore
-            properties:
-              foo:
-                description: Foo is an example field of Restore. Edit restore_types.go to remove/update
-                type: string
-            type: object
-          status:
-            description: RestoreStatus defines the observed state of Restore
-            type: object
-        type: object
-    served: true
-    storage: true
-    subresources:
-      status: {}
----
-apiVersion: apiextensions.k8s.io/v1
-kind: CustomResourceDefinition
-metadata:
-  annotations:
-    controller-gen.kubebuilder.io/version: v0.11.1
-  creationTimestamp: null
-  name: schedules.management.astra.netapp.io
-spec:
-  group: management.astra.netapp.io
+  group: astra.netapp.io
   names:
     kind: Schedule
     listKind: ScheduleList
@@ -3083,7 +2936,7 @@ spec:
     singular: schedule
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - name: v1
     schema:
       openAPIV3Schema:
         description: Schedule is the Schema for the schedules API
@@ -3174,9 +3027,9 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.11.1
   creationTimestamp: null
-  name: shutdownsnapshots.management.astra.netapp.io
+  name: shutdownsnapshots.astra.netapp.io
 spec:
-  group: management.astra.netapp.io
+  group: astra.netapp.io
   names:
     kind: ShutdownSnapshot
     listKind: ShutdownSnapshotList
@@ -3191,7 +3044,7 @@ spec:
     - jsonPath: .status.error
       name: Error
       type: string
-    name: v1alpha1
+    name: v1
     schema:
       openAPIV3Schema:
         description: ShutdownSnapshot is the Schema for the shutdownsnapshots API
@@ -3313,9 +3166,9 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.11.1
   creationTimestamp: null
-  name: snapshotinplacerestores.management.astra.netapp.io
+  name: snapshotinplacerestores.astra.netapp.io
 spec:
-  group: management.astra.netapp.io
+  group: astra.netapp.io
   names:
     kind: SnapshotInplaceRestore
     listKind: SnapshotInplaceRestoreList
@@ -3330,7 +3183,7 @@ spec:
     - jsonPath: .status.error
       name: Error
       type: string
-    name: v1alpha1
+    name: v1
     schema:
       openAPIV3Schema:
         description: SnapshotInplaceRestore is the Schema for the snapshotinplacerestores API
@@ -3367,6 +3220,39 @@ spec:
                   - target
                   type: object
                 type: array
+              resourceFilter:
+                description: ResourceFilter should be populated by the user if only certain resources must be restored in the target namespace
+                properties:
+                  resourceMatchers:
+                    description: ResourceMatchers is a list of matchers where each matcher matches one or more resources
+                    items:
+                      properties:
+                        groupKind:
+                          description: GroupKind kubernetes group kind of the resource that has to be matched
+                          type: string
+                        labelSelector:
+                          description: LabelSelector  is used to match a resource based on the metadata.labels field of the kubernetes resource
+                          type: string
+                        name:
+                          description: Name kubernetes metadata.name field of the resource that must be matched.
+                          type: string
+                        namespace:
+                          description: Namespace kubernetes metadata.namespace field of the resource that must be matched.
+                          type: string
+                        version:
+                          description: Version of the kubernetes resource that has to be matched.
+                          type: string
+                      required:
+                      - groupKind
+                      type: object
+                    type: array
+                  resourceSelectionCriteria:
+                    description: ResourceSelectionCriteria used to determine if the resources matching the provided resources matchers should be included into the collection or excluded from the collection.
+                    enum:
+                    - include
+                    - exclude
+                    type: string
+                type: object
             type: object
           status:
             description: SnapshotInplaceRestoreStatus defines the observed state of SnapshotInplaceRestore
@@ -3442,9 +3328,9 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.11.1
   creationTimestamp: null
-  name: snapshotrestores.management.astra.netapp.io
+  name: snapshotrestores.astra.netapp.io
 spec:
-  group: management.astra.netapp.io
+  group: astra.netapp.io
   names:
     kind: SnapshotRestore
     listKind: SnapshotRestoreList
@@ -3459,7 +3345,7 @@ spec:
     - jsonPath: .status.error
       name: Error
       type: string
-    name: v1alpha1
+    name: v1
     schema:
       openAPIV3Schema:
         description: SnapshotRestore is the Schema for the snapshotrestores API
@@ -3626,9 +3512,9 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.11.1
   creationTimestamp: null
-  name: snapshots.management.astra.netapp.io
+  name: snapshots.astra.netapp.io
 spec:
-  group: management.astra.netapp.io
+  group: astra.netapp.io
   names:
     kind: Snapshot
     listKind: SnapshotList
@@ -3643,7 +3529,7 @@ spec:
     - jsonPath: .status.error
       name: Error
       type: string
-    name: v1alpha1
+    name: v1
     schema:
       openAPIV3Schema:
         description: Snapshot is the Schema for the snapshots API
@@ -3904,6 +3790,557 @@ rules:
   - get
   - list
 - apiGroups:
+  - astra.netapp.io
+  resources:
+  - applications
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - astra.netapp.io
+  resources:
+  - applications/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - astra.netapp.io
+  resources:
+  - applications/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - astra.netapp.io
+  resources:
+  - appmirrorrelationships
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - astra.netapp.io
+  resources:
+  - appmirrorrelationships/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - astra.netapp.io
+  resources:
+  - appmirrorrelationships/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - astra.netapp.io
+  resources:
+  - appmirrorupdates
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - astra.netapp.io
+  resources:
+  - appmirrorupdates/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - astra.netapp.io
+  resources:
+  - appmirrorupdates/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - astra.netapp.io
+  resources:
+  - appvaults
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - astra.netapp.io
+  resources:
+  - appvaults/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - astra.netapp.io
+  resources:
+  - appvaults/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - astra.netapp.io
+  resources:
+  - autosupportbundles
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - astra.netapp.io
+  resources:
+  - autosupportbundles/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - astra.netapp.io
+  resources:
+  - autosupportbundles/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - astra.netapp.io
+  resources:
+  - backupinplacerestores
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - astra.netapp.io
+  resources:
+  - backupinplacerestores/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - astra.netapp.io
+  resources:
+  - backupinplacerestores/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - astra.netapp.io
+  resources:
+  - backuprestores
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - astra.netapp.io
+  resources:
+  - backuprestores/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - astra.netapp.io
+  resources:
+  - backuprestores/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - astra.netapp.io
+  resources:
+  - backups
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - astra.netapp.io
+  resources:
+  - backups/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - astra.netapp.io
+  resources:
+  - backups/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - astra.netapp.io
+  resources:
+  - pvccopies
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - astra.netapp.io
+  resources:
+  - pvccopies/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - astra.netapp.io
+  resources:
+  - pvccopies/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - astra.netapp.io
+  resources:
+  - pvcerases
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - astra.netapp.io
+  resources:
+  - pvcerases/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - astra.netapp.io
+  resources:
+  - pvcerases/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - astra.netapp.io
+  resources:
+  - resourcebackups
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - astra.netapp.io
+  resources:
+  - resourcebackups/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - astra.netapp.io
+  resources:
+  - resourcebackups/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - astra.netapp.io
+  resources:
+  - resourcedeletes
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - astra.netapp.io
+  resources:
+  - resourcedeletes/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - astra.netapp.io
+  resources:
+  - resourcedeletes/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - astra.netapp.io
+  resources:
+  - resourcerestores
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - astra.netapp.io
+  resources:
+  - resourcerestores/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - astra.netapp.io
+  resources:
+  - resourcerestores/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - astra.netapp.io
+  resources:
+  - resourcesummaryuploads
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - astra.netapp.io
+  resources:
+  - resourcesummaryuploads/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - astra.netapp.io
+  resources:
+  - resourcesummaryuploads/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - astra.netapp.io
+  resources:
+  - resticvolumebackups
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - astra.netapp.io
+  resources:
+  - resticvolumebackups/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - astra.netapp.io
+  resources:
+  - resticvolumebackups/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - astra.netapp.io
+  resources:
+  - resticvolumerestores
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - astra.netapp.io
+  resources:
+  - resticvolumerestores/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - astra.netapp.io
+  resources:
+  - resticvolumerestores/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - astra.netapp.io
+  resources:
+  - schedules
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - astra.netapp.io
+  resources:
+  - schedules/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - astra.netapp.io
+  resources:
+  - schedules/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - astra.netapp.io
+  resources:
+  - shutdownsnapshots
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - astra.netapp.io
+  resources:
+  - shutdownsnapshots/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - astra.netapp.io
+  resources:
+  - shutdownsnapshots/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - astra.netapp.io
+  resources:
+  - snapshotinplacerestores
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - astra.netapp.io
+  resources:
+  - snapshotinplacerestores/finalizers
+  verbs:
+  - create
+  - get
+  - list
+  - patch
+  - update
+- apiGroups:
+  - astra.netapp.io
+  resources:
+  - snapshotinplacerestores/status
+  verbs:
+  - get
+  - list
+  - patch
+  - update
+- apiGroups:
+  - astra.netapp.io
+  resources:
+  - snapshotrestores
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - astra.netapp.io
+  resources:
+  - snapshotrestores/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - astra.netapp.io
+  resources:
+  - snapshotrestores/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - astra.netapp.io
+  resources:
+  - snapshots
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - astra.netapp.io
+  resources:
+  - snapshots/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - astra.netapp.io
+  resources:
+  - snapshots/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
   - batch
   resources:
   - jobs
@@ -3929,609 +4366,6 @@ rules:
   - jobs/status
   verbs:
   - get
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - applications
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - applications/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - applications/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - appmirrorrelationships
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - appmirrorrelationships/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - appmirrorrelationships/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - appmirrorupdates
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - appmirrorupdates/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - appmirrorupdates/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - appvaults
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - appvaults/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - appvaults/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - autosupportbundles
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - autosupportbundles/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - autosupportbundles/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - backupinplacerestores
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - backupinplacerestores/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - backupinplacerestores/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - backuprestores
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - backuprestores/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - backuprestores/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - backups
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - backups/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - backups/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - disruptivebackups
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - disruptivebackups/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - disruptivebackups/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - policies
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - policies/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - policies/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - pvccopies
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - pvccopies/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - pvccopies/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - pvcerases
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - pvcerases/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - pvcerases/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - resourcebackups
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - resourcebackups/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - resourcebackups/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - resourcedeletes
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - resourcedeletes/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - resourcedeletes/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - resourcerestores
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - resourcerestores/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - resourcerestores/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - resourcesummaryuploads
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - resourcesummaryuploads/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - resourcesummaryuploads/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - resticvolumebackups
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - resticvolumebackups/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - resticvolumebackups/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - resticvolumerestores
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - resticvolumerestores/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - resticvolumerestores/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - schedules
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - schedules/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - schedules/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - shutdownsnapshots
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - shutdownsnapshots/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - shutdownsnapshots/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - snapshotinplacerestores
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - snapshotinplacerestores/finalizers
-  verbs:
-  - create
-  - get
-  - list
-  - patch
-  - update
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - snapshotinplacerestores/status
-  verbs:
-  - get
-  - list
-  - patch
-  - update
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - snapshotrestores
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - snapshotrestores/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - snapshotrestores/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - snapshots
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - snapshots/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - snapshots/status
-  verbs:
-  - get
-  - patch
-  - update
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -4659,6 +4493,92 @@ rules:
   - list
   - watch
 - apiGroups:
+  - astra.netapp.io
+  resources:
+  - '*'
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - astra.netapp.io
+  resources:
+  - autosupportbundleschedules
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - astra.netapp.io
+  resources:
+  - autosupportbundleschedules/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - astra.netapp.io
+  resources:
+  - autosupportbundleschedules/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - astra.netapp.io
+  resources:
+  - exechooks
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - astra.netapp.io
+  resources:
+  - exechooks/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - astra.netapp.io
+  resources:
+  - exechooks/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - astra.netapp.io
+  resources:
+  - exechooksruns
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - astra.netapp.io
+  resources:
+  - exechooksruns/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - astra.netapp.io
+  resources:
+  - exechooksruns/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
   - batch
   resources:
   - jobs
@@ -4694,92 +4614,6 @@ rules:
   - list
   - patch
   - watch
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - '*'
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - autosupportbundleschedules
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - autosupportbundleschedules/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - autosupportbundleschedules/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - exechooks
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - exechooks/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - exechooks/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - exechooksruns
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - exechooksruns/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - management.astra.netapp.io
-  resources:
-  - exechooksruns/status
-  verbs:
-  - get
-  - patch
-  - update
 - apiGroups:
   - snapshot.storage.k8s.io
   resources:
