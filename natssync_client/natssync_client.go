@@ -113,8 +113,12 @@ func (d *Deployer) GetDeploymentObject(m *v1.AstraConnector, ctx context.Context
 								Value: "http://azpzen.astrazeneca.net:9480",
 							},
 							{
+								Name:  "HTTPS_PROXY",
+								Value: "http://azpzen.astrazeneca.net:9480",
+							},
+							{
 								Name:  "NO_PROXY",
-								Value: "astra-connector,astrazeneca.net,localhost,127.0.0.1,172.29.*",
+								Value: "astra-connector,astrazeneca.net,localhost,127.0.0.1,172.0.0.0/8",
 							},
 						},
 						VolumeMounts: []corev1.VolumeMount{
