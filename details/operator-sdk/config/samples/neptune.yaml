@@ -27,7 +27,11 @@ spec:
     singular: application
   scope: Namespaced
   versions:
-  - name: v1
+  - additionalPrinterColumns:
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1
     schema:
       openAPIV3Schema:
         description: Application is the Schema for the applications API
@@ -567,7 +571,11 @@ spec:
     singular: appvault
   scope: Namespaced
   versions:
-  - name: v1
+  - additionalPrinterColumns:
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1
     schema:
       openAPIV3Schema:
         description: AppVault is the Schema for the appvaults API
@@ -651,7 +659,11 @@ spec:
     singular: autosupportbundle
   scope: Namespaced
   versions:
-  - name: v1
+  - additionalPrinterColumns:
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1
     schema:
       openAPIV3Schema:
         description: AutoSupportBundle is the Schema for the autosupportbundles API
@@ -729,7 +741,11 @@ spec:
     singular: autosupportbundleschedule
   scope: Namespaced
   versions:
-  - name: v1
+  - additionalPrinterColumns:
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1
     schema:
       openAPIV3Schema:
         description: AutoSupportBundleSchedule is the Schema for the autosupportbundleschedules API
@@ -786,6 +802,9 @@ spec:
     - jsonPath: .status.error
       name: Error
       type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
     name: v1
     schema:
       openAPIV3Schema:
@@ -917,6 +936,9 @@ spec:
     - jsonPath: .status.error
       name: Error
       type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
     name: v1
     schema:
       openAPIV3Schema:
@@ -1094,6 +1116,9 @@ spec:
     - jsonPath: .status.error
       name: Error
       type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
     name: v1
     schema:
       openAPIV3Schema:
@@ -1546,7 +1571,11 @@ spec:
     singular: exechook
   scope: Namespaced
   versions:
-  - name: v1
+  - additionalPrinterColumns:
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1
     schema:
       openAPIV3Schema:
         description: ExecHook is the Schema for the exechooks API
@@ -1648,6 +1677,9 @@ spec:
     - jsonPath: .status.error
       name: Error
       type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
     name: v1
     schema:
       openAPIV3Schema:
@@ -1845,7 +1877,11 @@ spec:
     singular: pvccopy
   scope: Namespaced
   versions:
-  - name: v1
+  - additionalPrinterColumns:
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1
     schema:
       openAPIV3Schema:
         description: PvcCopy is the Schema for the pvccopies API
@@ -1953,7 +1989,11 @@ spec:
     singular: pvcerase
   scope: Namespaced
   versions:
-  - name: v1
+  - additionalPrinterColumns:
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1
     schema:
       openAPIV3Schema:
         description: PvcErase is the Schema for the pvcerases API
@@ -2061,7 +2101,11 @@ spec:
     singular: resourcebackup
   scope: Namespaced
   versions:
-  - name: v1
+  - additionalPrinterColumns:
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1
     schema:
       openAPIV3Schema:
         description: ResourceBackup is the Schema for the resourcebackups API
@@ -2177,7 +2221,11 @@ spec:
     singular: resourcedelete
   scope: Namespaced
   versions:
-  - name: v1
+  - additionalPrinterColumns:
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1
     schema:
       openAPIV3Schema:
         description: ResourceDelete is the Schema for the resourcedeletes API
@@ -2327,7 +2375,11 @@ spec:
     singular: resourcerestore
   scope: Namespaced
   versions:
-  - name: v1
+  - additionalPrinterColumns:
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1
     schema:
       openAPIV3Schema:
         description: ResourceRestore is the Schema for the resourcerestores API
@@ -2476,7 +2528,11 @@ spec:
     singular: resourcesummaryupload
   scope: Namespaced
   versions:
-  - name: v1
+  - additionalPrinterColumns:
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1
     schema:
       openAPIV3Schema:
         description: ResourceSummaryUpload is the Schema for the resourcesummaryuploads API
@@ -2627,6 +2683,9 @@ spec:
     - jsonPath: .status.error
       name: Error
       type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
     name: v1
     schema:
       openAPIV3Schema:
@@ -2961,7 +3020,11 @@ spec:
     singular: resticvolumerestore
   scope: Namespaced
   versions:
-  - name: v1
+  - additionalPrinterColumns:
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1
     schema:
       openAPIV3Schema:
         description: ResticVolumeRestore is the Schema for the resticvolumerestores API
@@ -3200,7 +3263,11 @@ spec:
     singular: schedule
   scope: Namespaced
   versions:
-  - name: v1
+  - additionalPrinterColumns:
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1
     schema:
       openAPIV3Schema:
         description: Schedule is the Schema for the schedules API
@@ -3308,6 +3375,9 @@ spec:
     - jsonPath: .status.error
       name: Error
       type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
     name: v1
     schema:
       openAPIV3Schema:
@@ -3579,6 +3649,9 @@ spec:
     - jsonPath: .status.error
       name: Error
       type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
     name: v1
     schema:
       openAPIV3Schema:
@@ -3741,6 +3814,9 @@ spec:
     - jsonPath: .status.error
       name: Error
       type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
     name: v1
     schema:
       openAPIV3Schema:
@@ -3925,6 +4001,9 @@ spec:
     - jsonPath: .status.error
       name: Error
       type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
     name: v1
     schema:
       openAPIV3Schema:
