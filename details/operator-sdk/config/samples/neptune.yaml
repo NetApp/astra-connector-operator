@@ -1184,6 +1184,270 @@ spec:
               error:
                 description: Error indicates the most recent error that has occurred. The error may not be permanent, so progress may continue after temporarily seeing an error.
                 type: string
+              postBackupExecHooksRunResults:
+                description: PostBackupExecHooksRunResults contains the results of executing hooks during the post/backup stage/action
+                items:
+                  properties:
+                    completionTimestamp:
+                      description: CompletionTimestamp the time the exec hook run was finished regardless of failures
+                      format: date-time
+                      type: string
+                    containerName:
+                      description: ContainerName the name of the container the exec hook is run on
+                      type: string
+                    execHookRef:
+                      description: ExecHookRef reference to the ExecHook being run
+                      type: string
+                    execHookUID:
+                      description: ExecHookUID UID of the ExecHook being run
+                      type: string
+                    failures:
+                      description: Failures list of failures that may occur when attempting to run the exec hook
+                      items:
+                        description: Failure - most of this data is used for posting events and notifications
+                        properties:
+                          error:
+                            description: Error if a golang error was produced during the process of running an exec hook
+                            type: string
+                          exitCode:
+                            description: ExitCode if the script was executed but returned a non-zero exit code it is captured here. Note that customers can define their own exit code with special meanings to them
+                            type: integer
+                          isExecError:
+                            description: IsExecError this indicates that the script itself returned an error vs an error in other parts of the process such as copying the script onto the container
+                            type: boolean
+                          isTimeout:
+                            description: IsTimeout indicates that the exec hook took too long and was abandoned, this is parity with Astra
+                            type: boolean
+                          stderr:
+                            description: Stderr the stderr captured when executing the script
+                            type: string
+                          timeoutMinutes:
+                            description: TimeoutMinutes indicates the amount of time that was given to the exec hook to run. In astra it is used for Activity/Event/Notification messages
+                            type: integer
+                        required:
+                        - isExecError
+                        - isTimeout
+                        type: object
+                      type: array
+                    jobName:
+                      description: JobName name of the job created to run an execution hook
+                      type: string
+                    namespace:
+                      description: Namespace the namespace from the target application where the container is located
+                      type: string
+                    podName:
+                      description: PodName the name of the pod where the exec hook will be run
+                      type: string
+                    podUID:
+                      description: PodUID the uid of the pod where the exec hook will be run
+                      type: string
+                  required:
+                  - containerName
+                  - execHookRef
+                  - execHookUID
+                  - namespace
+                  - podName
+                  - podUID
+                  type: object
+                type: array
+              postSnapshotExecHooksRunResults:
+                description: PostSnapshotExecHooksRunResults contains the results of executing hooks during the post/snapshot stage/action
+                items:
+                  properties:
+                    completionTimestamp:
+                      description: CompletionTimestamp the time the exec hook run was finished regardless of failures
+                      format: date-time
+                      type: string
+                    containerName:
+                      description: ContainerName the name of the container the exec hook is run on
+                      type: string
+                    execHookRef:
+                      description: ExecHookRef reference to the ExecHook being run
+                      type: string
+                    execHookUID:
+                      description: ExecHookUID UID of the ExecHook being run
+                      type: string
+                    failures:
+                      description: Failures list of failures that may occur when attempting to run the exec hook
+                      items:
+                        description: Failure - most of this data is used for posting events and notifications
+                        properties:
+                          error:
+                            description: Error if a golang error was produced during the process of running an exec hook
+                            type: string
+                          exitCode:
+                            description: ExitCode if the script was executed but returned a non-zero exit code it is captured here. Note that customers can define their own exit code with special meanings to them
+                            type: integer
+                          isExecError:
+                            description: IsExecError this indicates that the script itself returned an error vs an error in other parts of the process such as copying the script onto the container
+                            type: boolean
+                          isTimeout:
+                            description: IsTimeout indicates that the exec hook took too long and was abandoned, this is parity with Astra
+                            type: boolean
+                          stderr:
+                            description: Stderr the stderr captured when executing the script
+                            type: string
+                          timeoutMinutes:
+                            description: TimeoutMinutes indicates the amount of time that was given to the exec hook to run. In astra it is used for Activity/Event/Notification messages
+                            type: integer
+                        required:
+                        - isExecError
+                        - isTimeout
+                        type: object
+                      type: array
+                    jobName:
+                      description: JobName name of the job created to run an execution hook
+                      type: string
+                    namespace:
+                      description: Namespace the namespace from the target application where the container is located
+                      type: string
+                    podName:
+                      description: PodName the name of the pod where the exec hook will be run
+                      type: string
+                    podUID:
+                      description: PodUID the uid of the pod where the exec hook will be run
+                      type: string
+                  required:
+                  - containerName
+                  - execHookRef
+                  - execHookUID
+                  - namespace
+                  - podName
+                  - podUID
+                  type: object
+                type: array
+              preBackupExecHooksRunResults:
+                description: PreBackupExecHooksRunResults contains the results of executing hooks during the pre/backup stage/action
+                items:
+                  properties:
+                    completionTimestamp:
+                      description: CompletionTimestamp the time the exec hook run was finished regardless of failures
+                      format: date-time
+                      type: string
+                    containerName:
+                      description: ContainerName the name of the container the exec hook is run on
+                      type: string
+                    execHookRef:
+                      description: ExecHookRef reference to the ExecHook being run
+                      type: string
+                    execHookUID:
+                      description: ExecHookUID UID of the ExecHook being run
+                      type: string
+                    failures:
+                      description: Failures list of failures that may occur when attempting to run the exec hook
+                      items:
+                        description: Failure - most of this data is used for posting events and notifications
+                        properties:
+                          error:
+                            description: Error if a golang error was produced during the process of running an exec hook
+                            type: string
+                          exitCode:
+                            description: ExitCode if the script was executed but returned a non-zero exit code it is captured here. Note that customers can define their own exit code with special meanings to them
+                            type: integer
+                          isExecError:
+                            description: IsExecError this indicates that the script itself returned an error vs an error in other parts of the process such as copying the script onto the container
+                            type: boolean
+                          isTimeout:
+                            description: IsTimeout indicates that the exec hook took too long and was abandoned, this is parity with Astra
+                            type: boolean
+                          stderr:
+                            description: Stderr the stderr captured when executing the script
+                            type: string
+                          timeoutMinutes:
+                            description: TimeoutMinutes indicates the amount of time that was given to the exec hook to run. In astra it is used for Activity/Event/Notification messages
+                            type: integer
+                        required:
+                        - isExecError
+                        - isTimeout
+                        type: object
+                      type: array
+                    jobName:
+                      description: JobName name of the job created to run an execution hook
+                      type: string
+                    namespace:
+                      description: Namespace the namespace from the target application where the container is located
+                      type: string
+                    podName:
+                      description: PodName the name of the pod where the exec hook will be run
+                      type: string
+                    podUID:
+                      description: PodUID the uid of the pod where the exec hook will be run
+                      type: string
+                  required:
+                  - containerName
+                  - execHookRef
+                  - execHookUID
+                  - namespace
+                  - podName
+                  - podUID
+                  type: object
+                type: array
+              preSnapshotExecHooksRunResults:
+                description: PreSnapshotExecHooksRunResults contains the results of executing hooks during the pre/snapshot stage/action
+                items:
+                  properties:
+                    completionTimestamp:
+                      description: CompletionTimestamp the time the exec hook run was finished regardless of failures
+                      format: date-time
+                      type: string
+                    containerName:
+                      description: ContainerName the name of the container the exec hook is run on
+                      type: string
+                    execHookRef:
+                      description: ExecHookRef reference to the ExecHook being run
+                      type: string
+                    execHookUID:
+                      description: ExecHookUID UID of the ExecHook being run
+                      type: string
+                    failures:
+                      description: Failures list of failures that may occur when attempting to run the exec hook
+                      items:
+                        description: Failure - most of this data is used for posting events and notifications
+                        properties:
+                          error:
+                            description: Error if a golang error was produced during the process of running an exec hook
+                            type: string
+                          exitCode:
+                            description: ExitCode if the script was executed but returned a non-zero exit code it is captured here. Note that customers can define their own exit code with special meanings to them
+                            type: integer
+                          isExecError:
+                            description: IsExecError this indicates that the script itself returned an error vs an error in other parts of the process such as copying the script onto the container
+                            type: boolean
+                          isTimeout:
+                            description: IsTimeout indicates that the exec hook took too long and was abandoned, this is parity with Astra
+                            type: boolean
+                          stderr:
+                            description: Stderr the stderr captured when executing the script
+                            type: string
+                          timeoutMinutes:
+                            description: TimeoutMinutes indicates the amount of time that was given to the exec hook to run. In astra it is used for Activity/Event/Notification messages
+                            type: integer
+                        required:
+                        - isExecError
+                        - isTimeout
+                        type: object
+                      type: array
+                    jobName:
+                      description: JobName name of the job created to run an execution hook
+                      type: string
+                    namespace:
+                      description: Namespace the namespace from the target application where the container is located
+                      type: string
+                    podName:
+                      description: PodName the name of the pod where the exec hook will be run
+                      type: string
+                    podUID:
+                      description: PodUID the uid of the pod where the exec hook will be run
+                      type: string
+                  required:
+                  - containerName
+                  - execHookRef
+                  - execHookUID
+                  - namespace
+                  - podName
+                  - podUID
+                  type: object
+                type: array
               progress:
                 description: Used to internally track progress through the backup
                 properties:
@@ -3134,6 +3398,138 @@ spec:
               error:
                 description: Error indicates the most recent error that has occurred. The error may not be permanent, so progress may continue after temporarily seeing an error.
                 type: string
+              postSnapshotExecHooksRunResults:
+                description: PostSnapshotExecHooksRunResults contains the results of executing hooks during the post/snapshot stage/action
+                items:
+                  properties:
+                    completionTimestamp:
+                      description: CompletionTimestamp the time the exec hook run was finished regardless of failures
+                      format: date-time
+                      type: string
+                    containerName:
+                      description: ContainerName the name of the container the exec hook is run on
+                      type: string
+                    execHookRef:
+                      description: ExecHookRef reference to the ExecHook being run
+                      type: string
+                    execHookUID:
+                      description: ExecHookUID UID of the ExecHook being run
+                      type: string
+                    failures:
+                      description: Failures list of failures that may occur when attempting to run the exec hook
+                      items:
+                        description: Failure - most of this data is used for posting events and notifications
+                        properties:
+                          error:
+                            description: Error if a golang error was produced during the process of running an exec hook
+                            type: string
+                          exitCode:
+                            description: ExitCode if the script was executed but returned a non-zero exit code it is captured here. Note that customers can define their own exit code with special meanings to them
+                            type: integer
+                          isExecError:
+                            description: IsExecError this indicates that the script itself returned an error vs an error in other parts of the process such as copying the script onto the container
+                            type: boolean
+                          isTimeout:
+                            description: IsTimeout indicates that the exec hook took too long and was abandoned, this is parity with Astra
+                            type: boolean
+                          stderr:
+                            description: Stderr the stderr captured when executing the script
+                            type: string
+                          timeoutMinutes:
+                            description: TimeoutMinutes indicates the amount of time that was given to the exec hook to run. In astra it is used for Activity/Event/Notification messages
+                            type: integer
+                        required:
+                        - isExecError
+                        - isTimeout
+                        type: object
+                      type: array
+                    jobName:
+                      description: JobName name of the job created to run an execution hook
+                      type: string
+                    namespace:
+                      description: Namespace the namespace from the target application where the container is located
+                      type: string
+                    podName:
+                      description: PodName the name of the pod where the exec hook will be run
+                      type: string
+                    podUID:
+                      description: PodUID the uid of the pod where the exec hook will be run
+                      type: string
+                  required:
+                  - containerName
+                  - execHookRef
+                  - execHookUID
+                  - namespace
+                  - podName
+                  - podUID
+                  type: object
+                type: array
+              preSnapshotExecHooksRunResults:
+                description: PreSnapshotExecHooksRunResults contains the results of executing hooks during the pre/snapshot stage/action
+                items:
+                  properties:
+                    completionTimestamp:
+                      description: CompletionTimestamp the time the exec hook run was finished regardless of failures
+                      format: date-time
+                      type: string
+                    containerName:
+                      description: ContainerName the name of the container the exec hook is run on
+                      type: string
+                    execHookRef:
+                      description: ExecHookRef reference to the ExecHook being run
+                      type: string
+                    execHookUID:
+                      description: ExecHookUID UID of the ExecHook being run
+                      type: string
+                    failures:
+                      description: Failures list of failures that may occur when attempting to run the exec hook
+                      items:
+                        description: Failure - most of this data is used for posting events and notifications
+                        properties:
+                          error:
+                            description: Error if a golang error was produced during the process of running an exec hook
+                            type: string
+                          exitCode:
+                            description: ExitCode if the script was executed but returned a non-zero exit code it is captured here. Note that customers can define their own exit code with special meanings to them
+                            type: integer
+                          isExecError:
+                            description: IsExecError this indicates that the script itself returned an error vs an error in other parts of the process such as copying the script onto the container
+                            type: boolean
+                          isTimeout:
+                            description: IsTimeout indicates that the exec hook took too long and was abandoned, this is parity with Astra
+                            type: boolean
+                          stderr:
+                            description: Stderr the stderr captured when executing the script
+                            type: string
+                          timeoutMinutes:
+                            description: TimeoutMinutes indicates the amount of time that was given to the exec hook to run. In astra it is used for Activity/Event/Notification messages
+                            type: integer
+                        required:
+                        - isExecError
+                        - isTimeout
+                        type: object
+                      type: array
+                    jobName:
+                      description: JobName name of the job created to run an execution hook
+                      type: string
+                    namespace:
+                      description: Namespace the namespace from the target application where the container is located
+                      type: string
+                    podName:
+                      description: PodName the name of the pod where the exec hook will be run
+                      type: string
+                    podUID:
+                      description: PodUID the uid of the pod where the exec hook will be run
+                      type: string
+                  required:
+                  - containerName
+                  - execHookRef
+                  - execHookUID
+                  - namespace
+                  - podName
+                  - podUID
+                  type: object
+                type: array
               state:
                 description: State indicates a high level summary of the Snapshot's state
                 type: string
@@ -3619,6 +4015,138 @@ spec:
               error:
                 description: Error indicates the most recent error that has occurred. The error may not be permanent, so progress may continue after temporarily seeing an error.
                 type: string
+              postSnapshotExecHooksRunResults:
+                description: PostSnapshotExecHooksRunResults contains the results of executing hooks during the post/snapshot stage/action
+                items:
+                  properties:
+                    completionTimestamp:
+                      description: CompletionTimestamp the time the exec hook run was finished regardless of failures
+                      format: date-time
+                      type: string
+                    containerName:
+                      description: ContainerName the name of the container the exec hook is run on
+                      type: string
+                    execHookRef:
+                      description: ExecHookRef reference to the ExecHook being run
+                      type: string
+                    execHookUID:
+                      description: ExecHookUID UID of the ExecHook being run
+                      type: string
+                    failures:
+                      description: Failures list of failures that may occur when attempting to run the exec hook
+                      items:
+                        description: Failure - most of this data is used for posting events and notifications
+                        properties:
+                          error:
+                            description: Error if a golang error was produced during the process of running an exec hook
+                            type: string
+                          exitCode:
+                            description: ExitCode if the script was executed but returned a non-zero exit code it is captured here. Note that customers can define their own exit code with special meanings to them
+                            type: integer
+                          isExecError:
+                            description: IsExecError this indicates that the script itself returned an error vs an error in other parts of the process such as copying the script onto the container
+                            type: boolean
+                          isTimeout:
+                            description: IsTimeout indicates that the exec hook took too long and was abandoned, this is parity with Astra
+                            type: boolean
+                          stderr:
+                            description: Stderr the stderr captured when executing the script
+                            type: string
+                          timeoutMinutes:
+                            description: TimeoutMinutes indicates the amount of time that was given to the exec hook to run. In astra it is used for Activity/Event/Notification messages
+                            type: integer
+                        required:
+                        - isExecError
+                        - isTimeout
+                        type: object
+                      type: array
+                    jobName:
+                      description: JobName name of the job created to run an execution hook
+                      type: string
+                    namespace:
+                      description: Namespace the namespace from the target application where the container is located
+                      type: string
+                    podName:
+                      description: PodName the name of the pod where the exec hook will be run
+                      type: string
+                    podUID:
+                      description: PodUID the uid of the pod where the exec hook will be run
+                      type: string
+                  required:
+                  - containerName
+                  - execHookRef
+                  - execHookUID
+                  - namespace
+                  - podName
+                  - podUID
+                  type: object
+                type: array
+              preSnapshotExecHooksRunResults:
+                description: PreSnapshotExecHooksRunResults contains the results of executing hooks during the pre/snapshot stage/action
+                items:
+                  properties:
+                    completionTimestamp:
+                      description: CompletionTimestamp the time the exec hook run was finished regardless of failures
+                      format: date-time
+                      type: string
+                    containerName:
+                      description: ContainerName the name of the container the exec hook is run on
+                      type: string
+                    execHookRef:
+                      description: ExecHookRef reference to the ExecHook being run
+                      type: string
+                    execHookUID:
+                      description: ExecHookUID UID of the ExecHook being run
+                      type: string
+                    failures:
+                      description: Failures list of failures that may occur when attempting to run the exec hook
+                      items:
+                        description: Failure - most of this data is used for posting events and notifications
+                        properties:
+                          error:
+                            description: Error if a golang error was produced during the process of running an exec hook
+                            type: string
+                          exitCode:
+                            description: ExitCode if the script was executed but returned a non-zero exit code it is captured here. Note that customers can define their own exit code with special meanings to them
+                            type: integer
+                          isExecError:
+                            description: IsExecError this indicates that the script itself returned an error vs an error in other parts of the process such as copying the script onto the container
+                            type: boolean
+                          isTimeout:
+                            description: IsTimeout indicates that the exec hook took too long and was abandoned, this is parity with Astra
+                            type: boolean
+                          stderr:
+                            description: Stderr the stderr captured when executing the script
+                            type: string
+                          timeoutMinutes:
+                            description: TimeoutMinutes indicates the amount of time that was given to the exec hook to run. In astra it is used for Activity/Event/Notification messages
+                            type: integer
+                        required:
+                        - isExecError
+                        - isTimeout
+                        type: object
+                      type: array
+                    jobName:
+                      description: JobName name of the job created to run an execution hook
+                      type: string
+                    namespace:
+                      description: Namespace the namespace from the target application where the container is located
+                      type: string
+                    podName:
+                      description: PodName the name of the pod where the exec hook will be run
+                      type: string
+                    podUID:
+                      description: PodUID the uid of the pod where the exec hook will be run
+                      type: string
+                  required:
+                  - containerName
+                  - execHookRef
+                  - execHookUID
+                  - namespace
+                  - podName
+                  - podUID
+                  type: object
+                type: array
               state:
                 description: State indicates a high level summary of the Snapshot's state
                 type: string
