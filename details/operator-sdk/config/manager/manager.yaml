@@ -12,6 +12,8 @@ metadata:
   namespace: system
   labels:
     control-plane: controller-manager
+  annotations:
+    seccomp.security.alpha.kubernetes.io/pod: 'runtime/default'
 spec:
   selector:
     matchLabels:
