@@ -12,8 +12,6 @@ metadata:
   namespace: system
   labels:
     control-plane: controller-manager
-  annotations:
-    seccomp.security.alpha.kubernetes.io/pod: 'runtime/default'
 spec:
   selector:
     matchLabels:
@@ -23,6 +21,8 @@ spec:
     metadata:
       labels:
         control-plane: controller-manager
+      annotations:
+        seccomp.security.alpha.kubernetes.io/pod: 'runtime/default'
     spec:
       securityContext:
         runAsNonRoot: true
@@ -35,6 +35,12 @@ spec:
         name: manager
         securityContext:
           allowPrivilegeEscalation: false
+          runAsNonRoot: true
+          runAsUser: 10001
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+              - ALL
         livenessProbe:
           httpGet:
             path: /healthz
