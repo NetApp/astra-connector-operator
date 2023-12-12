@@ -6,11 +6,14 @@ package k8s
 
 import (
 	"context"
+	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
 
 	rbacv1 "k8s.io/api/rbac/v1"
+	apiextv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/discovery"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -86,4 +89,23 @@ func (r *K8sUtil) VersionGet() (string, error) {
 	}
 	r.log.V(3).Info("versionInfo", "versionInfo", versionInfo)
 	return versionInfo.GitVersion, nil
+}
+
+// IsCRDInstalled returns the server version of the k8s cluster.
+func (r *K8sUtil) IsCRDInstalled(crdName string) bool {
+	crd := &apiextv1.CustomResourceDefinition{}
+	err := r.Client.Get(context.TODO(), types.NamespacedName{Name: "volumesnapshotclasses.snapshot.storage.k8s.io"}, crd)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			r.log.V(3).Info("VolumeSnapshotClass CRD does not exist")
+			return false
+		} else {
+			r.log.V(3).Info("Failed to get VolumeSnapshotClass CRD:", err)
+			return false
+		}
+	} else {
+		r.log.V(3).Info("VolumeSnapshotClass CRD exists")
+		return true
+
+	}
 }
