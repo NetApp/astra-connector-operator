@@ -256,15 +256,15 @@ spec:
                 description: NamespaceMapping is the mapping between source namespace to target namespace
                 items:
                   properties:
+                    destination:
+                      description: Destination namespace where the single resource will be cloned into
+                      type: string
                     source:
                       description: Source  namespace of a single resource in the collection
                       type: string
-                    target:
-                      description: Target namespace where the single resource will be cloned into
-                      type: string
                   required:
+                  - destination
                   - source
-                  - target
                   type: object
                 type: array
               promotedSnapshot:
@@ -831,15 +831,15 @@ spec:
                 description: NamespaceMapping is the mapping between source namespace to target namespace
                 items:
                   properties:
+                    destination:
+                      description: Destination namespace where the single resource will be cloned into
+                      type: string
                     source:
                       description: Source  namespace of a single resource in the collection
                       type: string
-                    target:
-                      description: Target namespace where the single resource will be cloned into
-                      type: string
                   required:
+                  - destination
                   - source
-                  - target
                   type: object
                 type: array
               resourceFilter:
@@ -998,15 +998,15 @@ spec:
                 description: NamespaceMapping is the mapping between source namespace to target namespace
                 items:
                   properties:
+                    destination:
+                      description: Destination namespace where the single resource will be cloned into
+                      type: string
                     source:
                       description: Source  namespace of a single resource in the collection
                       type: string
-                    target:
-                      description: Target namespace where the single resource will be cloned into
-                      type: string
                   required:
+                  - destination
                   - source
-                  - target
                   type: object
                 type: array
               resourceFilter:
@@ -1046,15 +1046,15 @@ spec:
                 description: StorageClassMapping defines a mapping from a storageClass present in the source application to the assignment in the restored application (clone)
                 items:
                   properties:
+                    destination:
+                      description: Destination storageClass that is assigned to the same PVC in the cloned/restored application
+                      type: string
                     source:
                       description: Source  storageClass that is assigned to one of the PVCs in the source application
                       type: string
-                    target:
-                      description: Target storageClass that is assigned to the same PVC in the cloned/restored application
-                      type: string
                   required:
+                  - destination
                   - source
-                  - target
                   type: object
                 type: array
             type: object
@@ -2438,15 +2438,15 @@ spec:
                 description: NamespaceMapping is the mapping between source namespace to target namespace
                 items:
                   properties:
+                    destination:
+                      description: Destination namespace where the single resource will be cloned into
+                      type: string
                     source:
                       description: Source  namespace of a single resource in the collection
                       type: string
-                    target:
-                      description: Target namespace where the single resource will be cloned into
-                      type: string
                   required:
+                  - destination
                   - source
-                  - target
                   type: object
                 type: array
               resourceFilter:
@@ -3711,15 +3711,15 @@ spec:
                 description: NamespaceMapping is the mapping between source namespace to target namespace
                 items:
                   properties:
+                    destination:
+                      description: Destination namespace where the single resource will be cloned into
+                      type: string
                     source:
                       description: Source  namespace of a single resource in the collection
                       type: string
-                    target:
-                      description: Target namespace where the single resource will be cloned into
-                      type: string
                   required:
+                  - destination
                   - source
-                  - target
                   type: object
                 type: array
               resourceFilter:
@@ -3876,15 +3876,15 @@ spec:
                 description: NamespaceMapping is the mapping between source namespace to target namespace
                 items:
                   properties:
+                    destination:
+                      description: Destination namespace where the single resource will be cloned into
+                      type: string
                     source:
                       description: Source  namespace of a single resource in the collection
                       type: string
-                    target:
-                      description: Target namespace where the single resource will be cloned into
-                      type: string
                   required:
+                  - destination
                   - source
-                  - target
                   type: object
                 type: array
               resourceFilter:
@@ -3924,15 +3924,15 @@ spec:
                 description: StorageClassMapping defines a mapping from a storageClass present in the source application to the assignment in the restored application (clone)
                 items:
                   properties:
+                    destination:
+                      description: Destination storageClass that is assigned to the same PVC in the cloned/restored application
+                      type: string
                     source:
                       description: Source  storageClass that is assigned to one of the PVCs in the source application
                       type: string
-                    target:
-                      description: Target storageClass that is assigned to the same PVC in the cloned/restored application
-                      type: string
                   required:
+                  - destination
                   - source
-                  - target
                   type: object
                 type: array
             type: object
