@@ -447,7 +447,7 @@ func (c clusterRegisterUtil) CreateCloud(astraHost, cloudType, apiToken string) 
 
 	c.Log.WithValues("cloudType", cloudType).Info("Creating cloud")
 	headerMap := HeaderMap{Authorization: fmt.Sprintf("Bearer %s", apiToken)}
-	response, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodPost, url, bytes.NewBuffer(reqBodyBytes), headerMap)
+	response, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodPost, url, bytes.NewBuffer(reqBodyBytes), headerMap, 3)
 	defer cancel()
 
 	if err != nil {
@@ -645,7 +645,7 @@ func (c clusterRegisterUtil) CreateCluster(astraHost, cloudId, astraConnectorId,
 
 	clustersBodyJson, _ := json.Marshal(clustersBody)
 	headerMap := HeaderMap{Authorization: fmt.Sprintf("Bearer %s", apiToken)}
-	clustersResp, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodPost, url, bytes.NewBuffer(clustersBodyJson), headerMap)
+	clustersResp, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodPost, url, bytes.NewBuffer(clustersBodyJson), headerMap, 3)
 	defer cancel()
 
 	if err != nil {
@@ -856,7 +856,7 @@ func (c clusterRegisterUtil) CreateManagedCluster(astraHost, cloudId, clusterID,
 	manageClustersBodyJson, _ := json.Marshal(manageClustersBody)
 
 	headerMap := HeaderMap{Authorization: fmt.Sprintf("Bearer %s", apiToken)}
-	manageClustersResp, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodPost, url, bytes.NewBuffer(manageClustersBodyJson), headerMap)
+	manageClustersResp, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodPost, url, bytes.NewBuffer(manageClustersBodyJson), headerMap, 3)
 	defer cancel()
 
 	if err != nil {
