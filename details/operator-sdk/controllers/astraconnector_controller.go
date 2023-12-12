@@ -126,12 +126,7 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 
 		// Stop reconciliation as the item is being deleted
 		// Do not requeue
-		return ctrl.Result{}, nil
-	}
-
-	if r.deployedAlready(astraConnector) {
-		log.Info("AstraConnector already deployed, not requeueing")
-		return ctrl.Result{}, nil
+		return ctrl.Result{Requeue: false}, nil
 	}
 
 	k8sUtil := k8s.NewK8sUtil(r.Client, log)
@@ -165,7 +160,7 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 		log.Info(fmt.Sprintf("Updating CR status, clusterID: '%s'", natsSyncClientStatus.AstraClusterId))
 	}
 	_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
-	return ctrl.Result{}, nil
+	return ctrl.Result{Requeue: false}, nil
 }
 
 func (r *AstraConnectorController) updateAstraConnectorStatus(ctx context.Context, astraConnector *v1.AstraConnector, natsSyncClientStatus v1.NatsSyncClientStatus) error {
