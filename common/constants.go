@@ -50,6 +50,8 @@ const (
 	NeptuneMetricServicePort             = 8443
 	NeptuneMetricServiceProtocol         = "TCP"
 	NeptuneDefaultImage                  = "controller:e056f69"
+	NeptuneDefaultTag                    = "e056f69"
+	NeptuneTagFile                       = "common/neptune_manager_tag.txt"
 
 	AstraPrivateCloudType = "private"
 	AstraPrivateCloudName = "private"
@@ -61,6 +63,10 @@ const (
 	AstraClustersAPIVersion        = "1.4"
 	AstraManagedClustersAPIVersion = "1.2"
 )
+
+func GetNeptuneRepositories() []string {
+	return []string{"controller", "resourcesummaryupload", "resourcerestore", "resourcedelete", "resourcebackup", "exechook"}
+}
 
 func GetConnectorCapabilities() []string {
 	capabilities := []string{

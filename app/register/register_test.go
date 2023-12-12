@@ -1297,7 +1297,7 @@ func TestCreateOrUpdateManagedCluster(t *testing.T) {
 
 		clusterInfo, err := clusterRegisterUtil.CreateOrUpdateManagedCluster(host, cloudId, clusterId, connectorId, http.MethodPut, apiToken)
 
-		assert.Equal(t, "", clusterInfo.ID)
+		assert.Equal(t, clusterId, clusterInfo.ID)
 		assert.Equal(t, "", clusterInfo.Name)
 		assert.EqualError(t, err, "error updating managed cluster: error on request put manage clusters: this is an error")
 	})
@@ -1312,7 +1312,7 @@ func TestCreateOrUpdateManagedCluster(t *testing.T) {
 
 		clusterInfo, err := clusterRegisterUtil.CreateOrUpdateManagedCluster(host, cloudId, clusterId, connectorId, http.MethodPut, apiToken)
 
-		assert.Equal(t, "test_clusterId", clusterInfo.ID)
+		assert.Equal(t, clusterId, clusterInfo.ID)
 		assert.Equal(t, "", clusterInfo.Name)
 		assert.Equal(t, "managed", clusterInfo.ManagedState)
 		assert.Nil(t, err)
@@ -1326,7 +1326,7 @@ func TestCreateOrUpdateManagedCluster(t *testing.T) {
 
 		clusterInfo, err := clusterRegisterUtil.CreateOrUpdateManagedCluster(host, cloudId, clusterId, connectorId, http.MethodPost, apiToken)
 
-		assert.Equal(t, "", clusterInfo.ID)
+		assert.Equal(t, clusterId, clusterInfo.ID)
 		assert.Equal(t, "", clusterInfo.Name)
 		assert.EqualError(t, err, "error creating managed cluster: error on request post manage clusters: this is an error")
 	})
@@ -1342,7 +1342,7 @@ func TestCreateOrUpdateManagedCluster(t *testing.T) {
 
 		clusterInfo, err := clusterRegisterUtil.CreateOrUpdateManagedCluster(host, cloudId, clusterId, connectorId, http.MethodPost, apiToken)
 
-		assert.Equal(t, "test_clusterId", clusterInfo.ID)
+		assert.Equal(t, clusterId, clusterInfo.ID)
 		assert.Equal(t, "", clusterInfo.Name)
 		assert.Equal(t, "managed", clusterInfo.ManagedState)
 		assert.Nil(t, err)
