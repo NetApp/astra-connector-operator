@@ -251,7 +251,3 @@ func (r *AstraConnectorController) validateAstraConnector(connector v1.AstraConn
 
 	return errors.New(fmt.Sprintf("Errors while validating AstraConnector CR: %s", strings.Join(fieldErrors, "; ")))
 }
-
-func (r *AstraConnectorController) deployedAlready(connector *v1.AstraConnector) bool {
-	return connector.Status.NatsSyncClient.Registered == "true"
-}
