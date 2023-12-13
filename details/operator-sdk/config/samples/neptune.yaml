@@ -27,7 +27,11 @@ spec:
     singular: application
   scope: Namespaced
   versions:
-  - name: v1
+  - additionalPrinterColumns:
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1
     schema:
       openAPIV3Schema:
         description: Application is the Schema for the applications API
@@ -91,7 +95,7 @@ spec:
                   type: object
                 type: array
               includedNamespaces:
-                description: IncludedNamespaces is a slice of namespaceSelectors to include in our app definition. If empty, all namespaces are included.
+                description: our app definition.
                 items:
                   properties:
                     labelSelector:
@@ -130,8 +134,9 @@ spec:
                   required:
                   - namespace
                   type: object
-                nullable: true
                 type: array
+            required:
+            - includedNamespaces
             type: object
           status:
             description: ApplicationStatus defines the observed state of Application
@@ -252,15 +257,15 @@ spec:
                 description: NamespaceMapping is the mapping between source namespace to target namespace
                 items:
                   properties:
+                    destination:
+                      description: Destination namespace where the single resource will be cloned into
+                      type: string
                     source:
                       description: Source  namespace of a single resource in the collection
                       type: string
-                    target:
-                      description: Target namespace where the single resource will be cloned into
-                      type: string
                   required:
+                  - destination
                   - source
-                  - target
                   type: object
                 type: array
               promotedSnapshot:
@@ -567,7 +572,11 @@ spec:
     singular: appvault
   scope: Namespaced
   versions:
-  - name: v1
+  - additionalPrinterColumns:
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1
     schema:
       openAPIV3Schema:
         description: AppVault is the Schema for the appvaults API
@@ -651,7 +660,11 @@ spec:
     singular: autosupportbundle
   scope: Namespaced
   versions:
-  - name: v1
+  - additionalPrinterColumns:
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1
     schema:
       openAPIV3Schema:
         description: AutoSupportBundle is the Schema for the autosupportbundles API
@@ -729,7 +742,11 @@ spec:
     singular: autosupportbundleschedule
   scope: Namespaced
   versions:
-  - name: v1
+  - additionalPrinterColumns:
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1
     schema:
       openAPIV3Schema:
         description: AutoSupportBundleSchedule is the Schema for the autosupportbundleschedules API
@@ -786,6 +803,9 @@ spec:
     - jsonPath: .status.error
       name: Error
       type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
     name: v1
     schema:
       openAPIV3Schema:
@@ -812,17 +832,50 @@ spec:
                 description: NamespaceMapping is the mapping between source namespace to target namespace
                 items:
                   properties:
+                    destination:
+                      description: Destination namespace where the single resource will be cloned into
+                      type: string
                     source:
                       description: Source  namespace of a single resource in the collection
                       type: string
-                    target:
-                      description: Target namespace where the single resource will be cloned into
-                      type: string
                   required:
+                  - destination
                   - source
-                  - target
                   type: object
                 type: array
+              resourceFilter:
+                description: ResourceFilter should be populated by the user if only certain resources must be restored in the target namespace
+                properties:
+                  resourceMatchers:
+                    description: ResourceMatchers is a list of matchers where each matcher matches one or more resources
+                    items:
+                      properties:
+                        groupKind:
+                          description: GroupKind kubernetes group kind of the resource that has to be matched
+                          type: string
+                        labelSelector:
+                          description: LabelSelector  is used to match a resource based on the metadata.labels field of the kubernetes resource
+                          type: string
+                        name:
+                          description: Name kubernetes metadata.name field of the resource that must be matched.
+                          type: string
+                        namespace:
+                          description: Namespace kubernetes metadata.namespace field of the resource that must be matched.
+                          type: string
+                        version:
+                          description: Version of the kubernetes resource that has to be matched.
+                          type: string
+                      required:
+                      - groupKind
+                      type: object
+                    type: array
+                  resourceSelectionCriteria:
+                    description: ResourceSelectionCriteria used to determine if the resources matching the provided resources matchers should be included into the collection or excluded from the collection.
+                    enum:
+                    - include
+                    - exclude
+                    type: string
+                type: object
             type: object
           status:
             description: BackupInplaceRestoreStatus defines the observed state of BackupInplaceRestore
@@ -917,6 +970,9 @@ spec:
     - jsonPath: .status.error
       name: Error
       type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
     name: v1
     schema:
       openAPIV3Schema:
@@ -943,15 +999,15 @@ spec:
                 description: NamespaceMapping is the mapping between source namespace to target namespace
                 items:
                   properties:
+                    destination:
+                      description: Destination namespace where the single resource will be cloned into
+                      type: string
                     source:
                       description: Source  namespace of a single resource in the collection
                       type: string
-                    target:
-                      description: Target namespace where the single resource will be cloned into
-                      type: string
                   required:
+                  - destination
                   - source
-                  - target
                   type: object
                 type: array
               resourceFilter:
@@ -991,15 +1047,15 @@ spec:
                 description: StorageClassMapping defines a mapping from a storageClass present in the source application to the assignment in the restored application (clone)
                 items:
                   properties:
+                    destination:
+                      description: Destination storageClass that is assigned to the same PVC in the cloned/restored application
+                      type: string
                     source:
                       description: Source  storageClass that is assigned to one of the PVCs in the source application
                       type: string
-                    target:
-                      description: Target storageClass that is assigned to the same PVC in the cloned/restored application
-                      type: string
                   required:
+                  - destination
                   - source
-                  - target
                   type: object
                 type: array
             type: object
@@ -1094,6 +1150,9 @@ spec:
     - jsonPath: .status.error
       name: Error
       type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
     name: v1
     schema:
       openAPIV3Schema:
@@ -1184,6 +1243,270 @@ spec:
               error:
                 description: Error indicates the most recent error that has occurred. The error may not be permanent, so progress may continue after temporarily seeing an error.
                 type: string
+              postBackupExecHooksRunResults:
+                description: PostBackupExecHooksRunResults contains the results of executing hooks during the post/backup stage/action
+                items:
+                  properties:
+                    completionTimestamp:
+                      description: CompletionTimestamp the time the exec hook run was finished regardless of failures
+                      format: date-time
+                      type: string
+                    containerName:
+                      description: ContainerName the name of the container the exec hook is run on
+                      type: string
+                    execHookRef:
+                      description: ExecHookRef reference to the ExecHook being run
+                      type: string
+                    execHookUID:
+                      description: ExecHookUID UID of the ExecHook being run
+                      type: string
+                    failures:
+                      description: Failures list of failures that may occur when attempting to run the exec hook
+                      items:
+                        description: Failure - most of this data is used for posting events and notifications
+                        properties:
+                          error:
+                            description: Error if a golang error was produced during the process of running an exec hook
+                            type: string
+                          exitCode:
+                            description: ExitCode if the script was executed but returned a non-zero exit code it is captured here. Note that customers can define their own exit code with special meanings to them
+                            type: integer
+                          isExecError:
+                            description: IsExecError this indicates that the script itself returned an error vs an error in other parts of the process such as copying the script onto the container
+                            type: boolean
+                          isTimeout:
+                            description: IsTimeout indicates that the exec hook took too long and was abandoned, this is parity with Astra
+                            type: boolean
+                          stderr:
+                            description: Stderr the stderr captured when executing the script
+                            type: string
+                          timeoutMinutes:
+                            description: TimeoutMinutes indicates the amount of time that was given to the exec hook to run. In astra it is used for Activity/Event/Notification messages
+                            type: integer
+                        required:
+                        - isExecError
+                        - isTimeout
+                        type: object
+                      type: array
+                    jobName:
+                      description: JobName name of the job created to run an execution hook
+                      type: string
+                    namespace:
+                      description: Namespace the namespace from the target application where the container is located
+                      type: string
+                    podName:
+                      description: PodName the name of the pod where the exec hook will be run
+                      type: string
+                    podUID:
+                      description: PodUID the uid of the pod where the exec hook will be run
+                      type: string
+                  required:
+                  - containerName
+                  - execHookRef
+                  - execHookUID
+                  - namespace
+                  - podName
+                  - podUID
+                  type: object
+                type: array
+              postSnapshotExecHooksRunResults:
+                description: PostSnapshotExecHooksRunResults contains the results of executing hooks during the post/snapshot stage/action
+                items:
+                  properties:
+                    completionTimestamp:
+                      description: CompletionTimestamp the time the exec hook run was finished regardless of failures
+                      format: date-time
+                      type: string
+                    containerName:
+                      description: ContainerName the name of the container the exec hook is run on
+                      type: string
+                    execHookRef:
+                      description: ExecHookRef reference to the ExecHook being run
+                      type: string
+                    execHookUID:
+                      description: ExecHookUID UID of the ExecHook being run
+                      type: string
+                    failures:
+                      description: Failures list of failures that may occur when attempting to run the exec hook
+                      items:
+                        description: Failure - most of this data is used for posting events and notifications
+                        properties:
+                          error:
+                            description: Error if a golang error was produced during the process of running an exec hook
+                            type: string
+                          exitCode:
+                            description: ExitCode if the script was executed but returned a non-zero exit code it is captured here. Note that customers can define their own exit code with special meanings to them
+                            type: integer
+                          isExecError:
+                            description: IsExecError this indicates that the script itself returned an error vs an error in other parts of the process such as copying the script onto the container
+                            type: boolean
+                          isTimeout:
+                            description: IsTimeout indicates that the exec hook took too long and was abandoned, this is parity with Astra
+                            type: boolean
+                          stderr:
+                            description: Stderr the stderr captured when executing the script
+                            type: string
+                          timeoutMinutes:
+                            description: TimeoutMinutes indicates the amount of time that was given to the exec hook to run. In astra it is used for Activity/Event/Notification messages
+                            type: integer
+                        required:
+                        - isExecError
+                        - isTimeout
+                        type: object
+                      type: array
+                    jobName:
+                      description: JobName name of the job created to run an execution hook
+                      type: string
+                    namespace:
+                      description: Namespace the namespace from the target application where the container is located
+                      type: string
+                    podName:
+                      description: PodName the name of the pod where the exec hook will be run
+                      type: string
+                    podUID:
+                      description: PodUID the uid of the pod where the exec hook will be run
+                      type: string
+                  required:
+                  - containerName
+                  - execHookRef
+                  - execHookUID
+                  - namespace
+                  - podName
+                  - podUID
+                  type: object
+                type: array
+              preBackupExecHooksRunResults:
+                description: PreBackupExecHooksRunResults contains the results of executing hooks during the pre/backup stage/action
+                items:
+                  properties:
+                    completionTimestamp:
+                      description: CompletionTimestamp the time the exec hook run was finished regardless of failures
+                      format: date-time
+                      type: string
+                    containerName:
+                      description: ContainerName the name of the container the exec hook is run on
+                      type: string
+                    execHookRef:
+                      description: ExecHookRef reference to the ExecHook being run
+                      type: string
+                    execHookUID:
+                      description: ExecHookUID UID of the ExecHook being run
+                      type: string
+                    failures:
+                      description: Failures list of failures that may occur when attempting to run the exec hook
+                      items:
+                        description: Failure - most of this data is used for posting events and notifications
+                        properties:
+                          error:
+                            description: Error if a golang error was produced during the process of running an exec hook
+                            type: string
+                          exitCode:
+                            description: ExitCode if the script was executed but returned a non-zero exit code it is captured here. Note that customers can define their own exit code with special meanings to them
+                            type: integer
+                          isExecError:
+                            description: IsExecError this indicates that the script itself returned an error vs an error in other parts of the process such as copying the script onto the container
+                            type: boolean
+                          isTimeout:
+                            description: IsTimeout indicates that the exec hook took too long and was abandoned, this is parity with Astra
+                            type: boolean
+                          stderr:
+                            description: Stderr the stderr captured when executing the script
+                            type: string
+                          timeoutMinutes:
+                            description: TimeoutMinutes indicates the amount of time that was given to the exec hook to run. In astra it is used for Activity/Event/Notification messages
+                            type: integer
+                        required:
+                        - isExecError
+                        - isTimeout
+                        type: object
+                      type: array
+                    jobName:
+                      description: JobName name of the job created to run an execution hook
+                      type: string
+                    namespace:
+                      description: Namespace the namespace from the target application where the container is located
+                      type: string
+                    podName:
+                      description: PodName the name of the pod where the exec hook will be run
+                      type: string
+                    podUID:
+                      description: PodUID the uid of the pod where the exec hook will be run
+                      type: string
+                  required:
+                  - containerName
+                  - execHookRef
+                  - execHookUID
+                  - namespace
+                  - podName
+                  - podUID
+                  type: object
+                type: array
+              preSnapshotExecHooksRunResults:
+                description: PreSnapshotExecHooksRunResults contains the results of executing hooks during the pre/snapshot stage/action
+                items:
+                  properties:
+                    completionTimestamp:
+                      description: CompletionTimestamp the time the exec hook run was finished regardless of failures
+                      format: date-time
+                      type: string
+                    containerName:
+                      description: ContainerName the name of the container the exec hook is run on
+                      type: string
+                    execHookRef:
+                      description: ExecHookRef reference to the ExecHook being run
+                      type: string
+                    execHookUID:
+                      description: ExecHookUID UID of the ExecHook being run
+                      type: string
+                    failures:
+                      description: Failures list of failures that may occur when attempting to run the exec hook
+                      items:
+                        description: Failure - most of this data is used for posting events and notifications
+                        properties:
+                          error:
+                            description: Error if a golang error was produced during the process of running an exec hook
+                            type: string
+                          exitCode:
+                            description: ExitCode if the script was executed but returned a non-zero exit code it is captured here. Note that customers can define their own exit code with special meanings to them
+                            type: integer
+                          isExecError:
+                            description: IsExecError this indicates that the script itself returned an error vs an error in other parts of the process such as copying the script onto the container
+                            type: boolean
+                          isTimeout:
+                            description: IsTimeout indicates that the exec hook took too long and was abandoned, this is parity with Astra
+                            type: boolean
+                          stderr:
+                            description: Stderr the stderr captured when executing the script
+                            type: string
+                          timeoutMinutes:
+                            description: TimeoutMinutes indicates the amount of time that was given to the exec hook to run. In astra it is used for Activity/Event/Notification messages
+                            type: integer
+                        required:
+                        - isExecError
+                        - isTimeout
+                        type: object
+                      type: array
+                    jobName:
+                      description: JobName name of the job created to run an execution hook
+                      type: string
+                    namespace:
+                      description: Namespace the namespace from the target application where the container is located
+                      type: string
+                    podName:
+                      description: PodName the name of the pod where the exec hook will be run
+                      type: string
+                    podUID:
+                      description: PodUID the uid of the pod where the exec hook will be run
+                      type: string
+                  required:
+                  - containerName
+                  - execHookRef
+                  - execHookUID
+                  - namespace
+                  - podName
+                  - podUID
+                  type: object
+                type: array
               progress:
                 description: Used to internally track progress through the backup
                 properties:
@@ -1282,7 +1605,11 @@ spec:
     singular: exechook
   scope: Namespaced
   versions:
-  - name: v1
+  - additionalPrinterColumns:
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1
     schema:
       openAPIV3Schema:
         description: ExecHook is the Schema for the exechooks API
@@ -1384,6 +1711,9 @@ spec:
     - jsonPath: .status.error
       name: Error
       type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
     name: v1
     schema:
       openAPIV3Schema:
@@ -1581,7 +1911,11 @@ spec:
     singular: pvccopy
   scope: Namespaced
   versions:
-  - name: v1
+  - additionalPrinterColumns:
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1
     schema:
       openAPIV3Schema:
         description: PvcCopy is the Schema for the pvccopies API
@@ -1689,7 +2023,11 @@ spec:
     singular: pvcerase
   scope: Namespaced
   versions:
-  - name: v1
+  - additionalPrinterColumns:
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1
     schema:
       openAPIV3Schema:
         description: PvcErase is the Schema for the pvcerases API
@@ -1797,7 +2135,11 @@ spec:
     singular: resourcebackup
   scope: Namespaced
   versions:
-  - name: v1
+  - additionalPrinterColumns:
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1
     schema:
       openAPIV3Schema:
         description: ResourceBackup is the Schema for the resourcebackups API
@@ -1913,7 +2255,11 @@ spec:
     singular: resourcedelete
   scope: Namespaced
   versions:
-  - name: v1
+  - additionalPrinterColumns:
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1
     schema:
       openAPIV3Schema:
         description: ResourceDelete is the Schema for the resourcedeletes API
@@ -2063,7 +2409,11 @@ spec:
     singular: resourcerestore
   scope: Namespaced
   versions:
-  - name: v1
+  - additionalPrinterColumns:
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1
     schema:
       openAPIV3Schema:
         description: ResourceRestore is the Schema for the resourcerestores API
@@ -2089,15 +2439,15 @@ spec:
                 description: NamespaceMapping is the mapping between source namespace to target namespace
                 items:
                   properties:
+                    destination:
+                      description: Destination namespace where the single resource will be cloned into
+                      type: string
                     source:
                       description: Source  namespace of a single resource in the collection
                       type: string
-                    target:
-                      description: Target namespace where the single resource will be cloned into
-                      type: string
                   required:
+                  - destination
                   - source
-                  - target
                   type: object
                 type: array
               resourceFilter:
@@ -2212,7 +2562,11 @@ spec:
     singular: resourcesummaryupload
   scope: Namespaced
   versions:
-  - name: v1
+  - additionalPrinterColumns:
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1
     schema:
       openAPIV3Schema:
         description: ResourceSummaryUpload is the Schema for the resourcesummaryuploads API
@@ -2363,6 +2717,9 @@ spec:
     - jsonPath: .status.error
       name: Error
       type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
     name: v1
     schema:
       openAPIV3Schema:
@@ -2697,7 +3054,11 @@ spec:
     singular: resticvolumerestore
   scope: Namespaced
   versions:
-  - name: v1
+  - additionalPrinterColumns:
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1
     schema:
       openAPIV3Schema:
         description: ResticVolumeRestore is the Schema for the resticvolumerestores API
@@ -2936,7 +3297,11 @@ spec:
     singular: schedule
   scope: Namespaced
   versions:
-  - name: v1
+  - additionalPrinterColumns:
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1
     schema:
       openAPIV3Schema:
         description: Schedule is the Schema for the schedules API
@@ -3044,6 +3409,9 @@ spec:
     - jsonPath: .status.error
       name: Error
       type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
     name: v1
     schema:
       openAPIV3Schema:
@@ -3134,6 +3502,138 @@ spec:
               error:
                 description: Error indicates the most recent error that has occurred. The error may not be permanent, so progress may continue after temporarily seeing an error.
                 type: string
+              postSnapshotExecHooksRunResults:
+                description: PostSnapshotExecHooksRunResults contains the results of executing hooks during the post/snapshot stage/action
+                items:
+                  properties:
+                    completionTimestamp:
+                      description: CompletionTimestamp the time the exec hook run was finished regardless of failures
+                      format: date-time
+                      type: string
+                    containerName:
+                      description: ContainerName the name of the container the exec hook is run on
+                      type: string
+                    execHookRef:
+                      description: ExecHookRef reference to the ExecHook being run
+                      type: string
+                    execHookUID:
+                      description: ExecHookUID UID of the ExecHook being run
+                      type: string
+                    failures:
+                      description: Failures list of failures that may occur when attempting to run the exec hook
+                      items:
+                        description: Failure - most of this data is used for posting events and notifications
+                        properties:
+                          error:
+                            description: Error if a golang error was produced during the process of running an exec hook
+                            type: string
+                          exitCode:
+                            description: ExitCode if the script was executed but returned a non-zero exit code it is captured here. Note that customers can define their own exit code with special meanings to them
+                            type: integer
+                          isExecError:
+                            description: IsExecError this indicates that the script itself returned an error vs an error in other parts of the process such as copying the script onto the container
+                            type: boolean
+                          isTimeout:
+                            description: IsTimeout indicates that the exec hook took too long and was abandoned, this is parity with Astra
+                            type: boolean
+                          stderr:
+                            description: Stderr the stderr captured when executing the script
+                            type: string
+                          timeoutMinutes:
+                            description: TimeoutMinutes indicates the amount of time that was given to the exec hook to run. In astra it is used for Activity/Event/Notification messages
+                            type: integer
+                        required:
+                        - isExecError
+                        - isTimeout
+                        type: object
+                      type: array
+                    jobName:
+                      description: JobName name of the job created to run an execution hook
+                      type: string
+                    namespace:
+                      description: Namespace the namespace from the target application where the container is located
+                      type: string
+                    podName:
+                      description: PodName the name of the pod where the exec hook will be run
+                      type: string
+                    podUID:
+                      description: PodUID the uid of the pod where the exec hook will be run
+                      type: string
+                  required:
+                  - containerName
+                  - execHookRef
+                  - execHookUID
+                  - namespace
+                  - podName
+                  - podUID
+                  type: object
+                type: array
+              preSnapshotExecHooksRunResults:
+                description: PreSnapshotExecHooksRunResults contains the results of executing hooks during the pre/snapshot stage/action
+                items:
+                  properties:
+                    completionTimestamp:
+                      description: CompletionTimestamp the time the exec hook run was finished regardless of failures
+                      format: date-time
+                      type: string
+                    containerName:
+                      description: ContainerName the name of the container the exec hook is run on
+                      type: string
+                    execHookRef:
+                      description: ExecHookRef reference to the ExecHook being run
+                      type: string
+                    execHookUID:
+                      description: ExecHookUID UID of the ExecHook being run
+                      type: string
+                    failures:
+                      description: Failures list of failures that may occur when attempting to run the exec hook
+                      items:
+                        description: Failure - most of this data is used for posting events and notifications
+                        properties:
+                          error:
+                            description: Error if a golang error was produced during the process of running an exec hook
+                            type: string
+                          exitCode:
+                            description: ExitCode if the script was executed but returned a non-zero exit code it is captured here. Note that customers can define their own exit code with special meanings to them
+                            type: integer
+                          isExecError:
+                            description: IsExecError this indicates that the script itself returned an error vs an error in other parts of the process such as copying the script onto the container
+                            type: boolean
+                          isTimeout:
+                            description: IsTimeout indicates that the exec hook took too long and was abandoned, this is parity with Astra
+                            type: boolean
+                          stderr:
+                            description: Stderr the stderr captured when executing the script
+                            type: string
+                          timeoutMinutes:
+                            description: TimeoutMinutes indicates the amount of time that was given to the exec hook to run. In astra it is used for Activity/Event/Notification messages
+                            type: integer
+                        required:
+                        - isExecError
+                        - isTimeout
+                        type: object
+                      type: array
+                    jobName:
+                      description: JobName name of the job created to run an execution hook
+                      type: string
+                    namespace:
+                      description: Namespace the namespace from the target application where the container is located
+                      type: string
+                    podName:
+                      description: PodName the name of the pod where the exec hook will be run
+                      type: string
+                    podUID:
+                      description: PodUID the uid of the pod where the exec hook will be run
+                      type: string
+                  required:
+                  - containerName
+                  - execHookRef
+                  - execHookUID
+                  - namespace
+                  - podName
+                  - podUID
+                  type: object
+                type: array
               state:
                 description: State indicates a high level summary of the Snapshot's state
                 type: string
@@ -3183,6 +3683,9 @@ spec:
     - jsonPath: .status.error
       name: Error
       type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
     name: v1
     schema:
       openAPIV3Schema:
@@ -3209,15 +3712,15 @@ spec:
                 description: NamespaceMapping is the mapping between source namespace to target namespace
                 items:
                   properties:
+                    destination:
+                      description: Destination namespace where the single resource will be cloned into
+                      type: string
                     source:
                       description: Source  namespace of a single resource in the collection
                       type: string
-                    target:
-                      description: Target namespace where the single resource will be cloned into
-                      type: string
                   required:
+                  - destination
                   - source
-                  - target
                   type: object
                 type: array
               resourceFilter:
@@ -3345,6 +3848,9 @@ spec:
     - jsonPath: .status.error
       name: Error
       type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
     name: v1
     schema:
       openAPIV3Schema:
@@ -3371,15 +3877,15 @@ spec:
                 description: NamespaceMapping is the mapping between source namespace to target namespace
                 items:
                   properties:
+                    destination:
+                      description: Destination namespace where the single resource will be cloned into
+                      type: string
                     source:
                       description: Source  namespace of a single resource in the collection
                       type: string
-                    target:
-                      description: Target namespace where the single resource will be cloned into
-                      type: string
                   required:
+                  - destination
                   - source
-                  - target
                   type: object
                 type: array
               resourceFilter:
@@ -3419,15 +3925,15 @@ spec:
                 description: StorageClassMapping defines a mapping from a storageClass present in the source application to the assignment in the restored application (clone)
                 items:
                   properties:
+                    destination:
+                      description: Destination storageClass that is assigned to the same PVC in the cloned/restored application
+                      type: string
                     source:
                       description: Source  storageClass that is assigned to one of the PVCs in the source application
                       type: string
-                    target:
-                      description: Target storageClass that is assigned to the same PVC in the cloned/restored application
-                      type: string
                   required:
+                  - destination
                   - source
-                  - target
                   type: object
                 type: array
             type: object
@@ -3529,6 +4035,9 @@ spec:
     - jsonPath: .status.error
       name: Error
       type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
     name: v1
     schema:
       openAPIV3Schema:
@@ -3619,6 +4128,138 @@ spec:
               error:
                 description: Error indicates the most recent error that has occurred. The error may not be permanent, so progress may continue after temporarily seeing an error.
                 type: string
+              postSnapshotExecHooksRunResults:
+                description: PostSnapshotExecHooksRunResults contains the results of executing hooks during the post/snapshot stage/action
+                items:
+                  properties:
+                    completionTimestamp:
+                      description: CompletionTimestamp the time the exec hook run was finished regardless of failures
+                      format: date-time
+                      type: string
+                    containerName:
+                      description: ContainerName the name of the container the exec hook is run on
+                      type: string
+                    execHookRef:
+                      description: ExecHookRef reference to the ExecHook being run
+                      type: string
+                    execHookUID:
+                      description: ExecHookUID UID of the ExecHook being run
+                      type: string
+                    failures:
+                      description: Failures list of failures that may occur when attempting to run the exec hook
+                      items:
+                        description: Failure - most of this data is used for posting events and notifications
+                        properties:
+                          error:
+                            description: Error if a golang error was produced during the process of running an exec hook
+                            type: string
+                          exitCode:
+                            description: ExitCode if the script was executed but returned a non-zero exit code it is captured here. Note that customers can define their own exit code with special meanings to them
+                            type: integer
+                          isExecError:
+                            description: IsExecError this indicates that the script itself returned an error vs an error in other parts of the process such as copying the script onto the container
+                            type: boolean
+                          isTimeout:
+                            description: IsTimeout indicates that the exec hook took too long and was abandoned, this is parity with Astra
+                            type: boolean
+                          stderr:
+                            description: Stderr the stderr captured when executing the script
+                            type: string
+                          timeoutMinutes:
+                            description: TimeoutMinutes indicates the amount of time that was given to the exec hook to run. In astra it is used for Activity/Event/Notification messages
+                            type: integer
+                        required:
+                        - isExecError
+                        - isTimeout
+                        type: object
+                      type: array
+                    jobName:
+                      description: JobName name of the job created to run an execution hook
+                      type: string
+                    namespace:
+                      description: Namespace the namespace from the target application where the container is located
+                      type: string
+                    podName:
+                      description: PodName the name of the pod where the exec hook will be run
+                      type: string
+                    podUID:
+                      description: PodUID the uid of the pod where the exec hook will be run
+                      type: string
+                  required:
+                  - containerName
+                  - execHookRef
+                  - execHookUID
+                  - namespace
+                  - podName
+                  - podUID
+                  type: object
+                type: array
+              preSnapshotExecHooksRunResults:
+                description: PreSnapshotExecHooksRunResults contains the results of executing hooks during the pre/snapshot stage/action
+                items:
+                  properties:
+                    completionTimestamp:
+                      description: CompletionTimestamp the time the exec hook run was finished regardless of failures
+                      format: date-time
+                      type: string
+                    containerName:
+                      description: ContainerName the name of the container the exec hook is run on
+                      type: string
+                    execHookRef:
+                      description: ExecHookRef reference to the ExecHook being run
+                      type: string
+                    execHookUID:
+                      description: ExecHookUID UID of the ExecHook being run
+                      type: string
+                    failures:
+                      description: Failures list of failures that may occur when attempting to run the exec hook
+                      items:
+                        description: Failure - most of this data is used for posting events and notifications
+                        properties:
+                          error:
+                            description: Error if a golang error was produced during the process of running an exec hook
+                            type: string
+                          exitCode:
+                            description: ExitCode if the script was executed but returned a non-zero exit code it is captured here. Note that customers can define their own exit code with special meanings to them
+                            type: integer
+                          isExecError:
+                            description: IsExecError this indicates that the script itself returned an error vs an error in other parts of the process such as copying the script onto the container
+                            type: boolean
+                          isTimeout:
+                            description: IsTimeout indicates that the exec hook took too long and was abandoned, this is parity with Astra
+                            type: boolean
+                          stderr:
+                            description: Stderr the stderr captured when executing the script
+                            type: string
+                          timeoutMinutes:
+                            description: TimeoutMinutes indicates the amount of time that was given to the exec hook to run. In astra it is used for Activity/Event/Notification messages
+                            type: integer
+                        required:
+                        - isExecError
+                        - isTimeout
+                        type: object
+                      type: array
+                    jobName:
+                      description: JobName name of the job created to run an execution hook
+                      type: string
+                    namespace:
+                      description: Namespace the namespace from the target application where the container is located
+                      type: string
+                    podName:
+                      description: PodName the name of the pod where the exec hook will be run
+                      type: string
+                    podUID:
+                      description: PodUID the uid of the pod where the exec hook will be run
+                      type: string
+                  required:
+                  - containerName
+                  - execHookRef
+                  - execHookUID
+                  - namespace
+                  - podName
+                  - podUID
+                  type: object
+                type: array
               state:
                 description: State indicates a high level summary of the Snapshot's state
                 type: string
@@ -4681,6 +5322,7 @@ rules:
   - tridentactionmirrorupdates
   verbs:
   - create
+  - delete
   - get
   - list
   - update
@@ -4699,6 +5341,7 @@ rules:
   - tridentmirrorrelationships
   verbs:
   - create
+  - delete
   - get
   - list
   - update

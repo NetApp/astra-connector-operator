@@ -898,7 +898,7 @@ func (c clusterRegisterUtil) CreateOrUpdateManagedCluster(astraHost, cloudId, cl
 
 		err := c.UpdateManagedCluster(astraHost, clusterId, astraConnectorId, connectorInstalled, apiToken)
 		if err != nil {
-			return ClusterInfo{}, errors.Wrap(err, "error updating managed cluster")
+			return ClusterInfo{ID: clusterId}, errors.Wrap(err, "error updating managed cluster")
 		}
 
 		return ClusterInfo{ID: clusterId, ManagedState: clusterManagedState}, nil
@@ -910,7 +910,7 @@ func (c clusterRegisterUtil) CreateOrUpdateManagedCluster(astraHost, cloudId, cl
 		// Note: we no longer set storageClass for arch3.0 clusters
 		err := c.CreateManagedCluster(astraHost, cloudId, clusterId, "", connectorInstalled, apiToken)
 		if err != nil {
-			return ClusterInfo{}, errors.Wrap(err, "error creating managed cluster")
+			return ClusterInfo{ID: clusterId}, errors.Wrap(err, "error creating managed cluster")
 		}
 
 		return ClusterInfo{ID: clusterId, ManagedState: clusterManagedState}, nil
@@ -1067,7 +1067,7 @@ func (c clusterRegisterUtil) RegisterClusterWithAstra(astraConnectorId string, c
 	// Adding or Updating Managed Cluster based on the status from above
 	clusterInfo, err = c.CreateOrUpdateManagedCluster(astraHost, cloudId, clusterInfo.ID, astraConnectorId, managedClustersMethod, apiToken)
 	if err != nil {
-		return "", err
+		return clusterInfo.ID, err
 	}
 
 	c.Log.WithValues("clusterId", clusterInfo.ID, "clusterName", clusterInfo.Name).Info("Cluster managed by Astra!!!!")
