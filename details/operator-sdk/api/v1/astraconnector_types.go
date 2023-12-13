@@ -79,7 +79,7 @@ type AstraConnectorSpec struct {
 	// Air gapped installations should enter false.
 	AutoSupport AutoSupport `json:"autoSupport"`
 
-	// SkipValidation determines if you want to skip pre-checks.
+	// SkipPreCheck determines if you want to skip pre-checks and go ahead with the installation.
 	// +kubebuilder:default:=false
 	SkipPreCheck bool `json:"skipPreCheck"`
 }

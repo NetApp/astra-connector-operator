@@ -128,7 +128,8 @@ spec:
                 type: object
               skipPreCheck:
                 default: false
-                description: SkipValidation determines if you want to skip pre-checks.
+                description: SkipPreCheck determines if you want to skip pre-checks
+                  and go ahead with the installation.
                 type: boolean
             type: object
           status:
