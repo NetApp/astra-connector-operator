@@ -95,7 +95,7 @@ spec:
                   type: object
                 type: array
               includedNamespaces:
-                description: IncludedNamespaces is a slice of namespaceSelectors to include in our app definition. If empty, all namespaces are included.
+                description: our app definition.
                 items:
                   properties:
                     labelSelector:
@@ -134,8 +134,9 @@ spec:
                   required:
                   - namespace
                   type: object
-                nullable: true
                 type: array
+            required:
+            - includedNamespaces
             type: object
           status:
             description: ApplicationStatus defines the observed state of Application
