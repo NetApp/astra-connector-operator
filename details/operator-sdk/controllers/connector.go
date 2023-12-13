@@ -102,7 +102,7 @@ func (r *AstraConnectorController) deployConnector(ctx context.Context,
 			// 2. Check the CR Spec. If it is in here, use it. It will be validated later.
 			// 3. If the clusterID is in neither of the above, leave it "" and the operator will create one and populate the status
 			// 4. Save the clusterID to the CR Status
-			var clusterId, createdClusterId string
+			var clusterId string
 			if strings.TrimSpace(natsSyncClientStatus.AstraClusterId) != "" {
 				clusterId = natsSyncClientStatus.AstraClusterId
 				log.WithValues("clusterID", clusterId).Info("using clusterID from CR Status")
@@ -110,7 +110,7 @@ func (r *AstraConnectorController) deployConnector(ctx context.Context,
 				clusterId = astraConnector.Spec.Astra.ClusterId
 			}
 
-			createdClusterId, err = registerUtil.RegisterClusterWithAstra(astraConnectorID, clusterId)
+			natsSyncClientStatus.AstraClusterId, err = registerUtil.RegisterClusterWithAstra(astraConnectorID, clusterId)
 			if err != nil {
 				log.Error(err, FailedConnectorIDAdd)
 				natsSyncClientStatus.Status = FailedConnectorIDAdd
@@ -118,7 +118,6 @@ func (r *AstraConnectorController) deployConnector(ctx context.Context,
 				return ctrl.Result{RequeueAfter: time.Minute * conf.Config.ErrorTimeout()}, err
 			}
 			log.Info("Registered cluster with Astra")
-			natsSyncClientStatus.AstraClusterId = createdClusterId
 		}
 		natsSyncClientStatus.Registered = "true"
 		natsSyncClientStatus.Status = "Registered with Astra"
