@@ -5322,6 +5322,7 @@ rules:
   - tridentactionmirrorupdates
   verbs:
   - create
+  - delete
   - get
   - list
   - update
@@ -5340,6 +5341,7 @@ rules:
   - tridentmirrorrelationships
   verbs:
   - create
+  - delete
   - get
   - list
   - update
