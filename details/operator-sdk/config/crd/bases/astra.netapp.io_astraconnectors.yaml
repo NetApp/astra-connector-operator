@@ -126,6 +126,10 @@ spec:
                   image:
                     type: string
                 type: object
+              skipPreCheck:
+                default: false
+                description: SkipValidation determines if you want to skip pre-checks.
+                type: boolean
             type: object
           status:
             description: AstraConnectorStatus defines the observed state of AstraConnector

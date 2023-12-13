@@ -30,6 +30,7 @@ type K8sUtilInterface interface {
 	CreateOrUpdateResource(context.Context, client.Object, client.Object) error
 	DeleteResource(context.Context, client.Object) error
 	VersionGet() (string, error)
+	IsCRDInstalled(string) bool
 }
 
 func NewK8sUtil(c client.Client, log logr.Logger) K8sUtilInterface {
@@ -94,17 +95,17 @@ func (r *K8sUtil) VersionGet() (string, error) {
 // IsCRDInstalled returns the server version of the k8s cluster.
 func (r *K8sUtil) IsCRDInstalled(crdName string) bool {
 	crd := &apiextv1.CustomResourceDefinition{}
-	err := r.Client.Get(context.TODO(), types.NamespacedName{Name: "volumesnapshotclasses.snapshot.storage.k8s.io"}, crd)
+	err := r.Client.Get(context.TODO(), types.NamespacedName{Name: crdName}, crd)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			r.log.V(3).Info("VolumeSnapshotClass CRD does not exist")
+			r.log.V(3).Info(crdName + " CRD does not exist")
 			return false
 		} else {
-			r.log.V(3).Info("Failed to get VolumeSnapshotClass CRD:", err)
+			r.log.V(3).Info("Failed to get VolumeSnapshotClass CRD: "+crdName, err)
 			return false
 		}
 	} else {
-		r.log.V(3).Info("VolumeSnapshotClass CRD exists")
+		r.log.V(3).Info(crdName + " CRD exists")
 		return true
 
 	}
