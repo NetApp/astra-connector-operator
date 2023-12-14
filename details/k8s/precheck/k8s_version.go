@@ -11,7 +11,7 @@ import (
 
 const (
 	MinKubernetesVersion = "1.24.0"
-	MaxKubernetesVersion = "1.27.0"
+	MaxKubernetesVersion = "1.29.0"
 )
 
 func (p *PrecheckClient) RunK8sVersionCheck() error {
