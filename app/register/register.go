@@ -1067,7 +1067,7 @@ func (c clusterRegisterUtil) RegisterClusterWithAstra(astraConnectorId string, c
 	// Adding or Updating Managed Cluster based on the status from above
 	clusterInfo, err = c.CreateOrUpdateManagedCluster(astraHost, cloudId, clusterInfo.ID, astraConnectorId, managedClustersMethod, apiToken)
 	if err != nil {
-		return "", err
+		return clusterInfo.ID, err
 	}
 
 	c.Log.WithValues("clusterId", clusterInfo.ID, "clusterName", clusterInfo.Name).Info("Cluster managed by Astra!!!!")
