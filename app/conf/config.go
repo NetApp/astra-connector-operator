@@ -72,7 +72,7 @@ func DefaultConfiguration() *MutableConfiguration {
 		MetricsPort:             8080,
 		HealthProbePort:         8081,
 		WaitDurationForResource: 2 * time.Minute,
-		ErrorTimeout:            5,
+		ErrorTimeout:            2,
 		FeatureFlags: featureFlags{
 			DeployNatsConnector:   true,
 			DeployNeptune:         true,
