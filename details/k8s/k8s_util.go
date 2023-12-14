@@ -101,7 +101,7 @@ func (r *K8sUtil) IsCRDInstalled(crdName string) bool {
 			r.log.V(3).Info(crdName + " CRD does not exist")
 			return false
 		} else {
-			r.log.V(3).Info("Failed to get VolumeSnapshotClass CRD: "+crdName, err)
+			r.log.V(3).Info("Failed to get CRD: "+crdName, err)
 			return false
 		}
 	} else {
