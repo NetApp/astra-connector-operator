@@ -22,10 +22,6 @@ func NewPrecheckClient(log logr.Logger, k8sUtil k8s.K8sUtilInterface) *PrecheckC
 	}
 }
 
-func (p *PrecheckClient) Run() []error {
-	var errList []error
-	errList = append(errList, p.RunK8sVersionCheck())
-	errList = append(errList, p.RunK8sCRDCheck())
-
-	return errList
+func (p *PrecheckClient) Run() {
+	p.RunK8sVersionCheck()
 }
