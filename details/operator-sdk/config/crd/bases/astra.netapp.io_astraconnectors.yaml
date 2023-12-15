@@ -126,11 +126,6 @@ spec:
                   image:
                     type: string
                 type: object
-              skipPreCheck:
-                default: false
-                description: SkipPreCheck determines if you want to skip pre-checks
-                  and go ahead with the installation.
-                type: boolean
             type: object
           status:
             description: AstraConnectorStatus defines the observed state of AstraConnector

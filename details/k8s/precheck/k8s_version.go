@@ -3,7 +3,6 @@
 package precheck
 
 import (
-	"errors"
 	"fmt"
 
 	semver "github.com/hashicorp/go-version"
@@ -11,27 +10,26 @@ import (
 
 const (
 	MinKubernetesVersion = "1.24.0"
-	MaxKubernetesVersion = "1.29.0"
+	MaxKubernetesVersion = "1.27.0"
 )
 
-func (p *PrecheckClient) RunK8sVersionCheck() error {
+func (p *PrecheckClient) RunK8sVersionCheck() {
 	versionString, err := p.k8sUtil.VersionGet()
 	if err != nil {
 		p.log.Error(err, "failed to get k8s version of host cluster")
-		return err
+		return
 	}
 
 	k8sVersion, err := semver.NewSemver(versionString)
 	if err != nil {
 		p.log.Error(err, "failed to parse k8s version string", "version string", versionString)
-		return err
+		return
 	}
 
 	if warning := isSupported(*k8sVersion); warning == nil {
 		p.log.Info("detected valid k8s version")
-		return nil
 	} else {
-		return errors.New(*warning)
+		p.log.Info(*warning)
 	}
 }
 
