@@ -6,10 +6,9 @@ package k8s
 
 import (
 	"context"
-	"k8s.io/apimachinery/pkg/types"
-
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
+	"k8s.io/apimachinery/pkg/types"
 
 	rbacv1 "k8s.io/api/rbac/v1"
 	apiextv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -102,6 +101,7 @@ func (r *K8sUtil) IsCRDInstalled(crdName string) bool {
 			return false
 		} else {
 			r.log.V(3).Info("Failed to get CRD: "+crdName, err)
+			print(err.Error())
 			return false
 		}
 	} else {
