@@ -78,6 +78,10 @@ type AstraConnectorSpec struct {
 	// An empty or blank election is the same as a default election.
 	// Air gapped installations should enter false.
 	AutoSupport AutoSupport `json:"autoSupport"`
+
+	// SkipPreCheck determines if you want to skip pre-checks and go ahead with the installation.
+	// +kubebuilder:default:=false
+	SkipPreCheck bool `json:"skipPreCheck"`
 }
 
 // AstraConnectorStatus defines the observed state of AstraConnector
