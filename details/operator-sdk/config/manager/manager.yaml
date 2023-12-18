@@ -21,10 +21,10 @@ spec:
     metadata:
       labels:
         control-plane: controller-manager
-      annotations:
-        seccomp.security.alpha.kubernetes.io/pod: 'runtime/default'
     spec:
       securityContext:
+        seccompProfile:
+          type: RuntimeDefault
         runAsNonRoot: true
       containers:
       - command:
