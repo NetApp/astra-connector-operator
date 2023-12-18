@@ -240,9 +240,10 @@ func TestUnRegisterNatsSyncClient(t *testing.T) {
 func TestRegisterNatsSyncClient(t *testing.T) {
 	t.Run("TestRegisterNatsSyncClient__InvalidAuthPayloadReturnsError", func(t *testing.T) {
 		clusterRegisterUtil, _, _, _ := createClusterRegister(AstraConnectorInput{})
-		connectorId, err := clusterRegisterUtil.RegisterNatsSyncClient()
+		connectorId, errorReason, err := clusterRegisterUtil.RegisterNatsSyncClient()
 
 		assert.Equal(t, "", connectorId)
+		assert.Equal(t, errorReason, "Failed to get secret astra-token")
 		assert.EqualError(t, err, "secrets \"astra-token\" not found")
 	})
 
@@ -252,9 +253,10 @@ func TestRegisterNatsSyncClient(t *testing.T) {
 		errorText := "error on post request create"
 		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{}, errors.New(errorText))
 
-		connectorId, err := clusterRegisterUtil.RegisterNatsSyncClient()
+		connectorId, errorReason, err := clusterRegisterUtil.RegisterNatsSyncClient()
 
 		assert.Equal(t, "", connectorId)
+		assert.Contains(t, errorReason, "Failed to make POST call to")
 		assert.EqualError(t, err, errorText)
 	})
 
@@ -267,9 +269,10 @@ func TestRegisterNatsSyncClient(t *testing.T) {
 			Body:       ret,
 		}, nil).Once()
 
-		connectorId, err := clusterRegisterUtil.RegisterNatsSyncClient()
+		connectorId, errorReason, err := clusterRegisterUtil.RegisterNatsSyncClient()
 
 		assert.Equal(t, "", connectorId)
+		assert.Contains(t, errorReason, "failed with http status code 400")
 		assert.ErrorContains(t, err, "Unexpected registration status code: 400")
 	})
 
@@ -285,9 +288,10 @@ func TestRegisterNatsSyncClient(t *testing.T) {
 			Body:       &mockRead,
 		}, nil).Once()
 
-		connectorId, err := clusterRegisterUtil.RegisterNatsSyncClient()
+		connectorId, errorReason, err := clusterRegisterUtil.RegisterNatsSyncClient()
 
 		assert.Equal(t, "", connectorId)
+		assert.Contains(t, errorReason, "Failed to read response from POST call to")
 		assert.EqualError(t, err, "error reading")
 	})
 
@@ -300,9 +304,10 @@ func TestRegisterNatsSyncClient(t *testing.T) {
 			Body:       ret,
 		}, nil).Once()
 
-		connectorId, err := clusterRegisterUtil.RegisterNatsSyncClient()
+		connectorId, errorReason, err := clusterRegisterUtil.RegisterNatsSyncClient()
 
 		assert.Equal(t, "test-connectorID", connectorId)
+		assert.Equal(t, "", errorReason)
 		assert.Nil(t, err)
 	})
 
@@ -315,9 +320,10 @@ func TestRegisterNatsSyncClient(t *testing.T) {
 			Body:       ret,
 		}, nil).Once()
 
-		connectorId, err := clusterRegisterUtil.RegisterNatsSyncClient()
+		connectorId, errorReason, err := clusterRegisterUtil.RegisterNatsSyncClient()
 
 		assert.Equal(t, "", connectorId)
+		assert.Contains(t, errorReason, "Failed to decode astraConnector.Id from response body of POST")
 		assert.NotNil(t, err)
 	})
 }
@@ -410,9 +416,10 @@ func TestGetCloudId(t *testing.T) {
 		errorText := "error on get request"
 		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{}, errors.New(errorText))
 
-		cloudId, err := clusterRegisterUtil.GetCloudId(host, cloudType, apiToken, 3*time.Second)
+		cloudId, errorReason, err := clusterRegisterUtil.GetCloudId(host, cloudType, apiToken, 3*time.Second)
 
 		assert.Equal(t, "", cloudId)
+		assert.Equal(t, "Failed to Get Clouds", errorReason)
 		assert.EqualError(t, err, "timed out querying Astra API")
 	})
 
@@ -425,9 +432,10 @@ func TestGetCloudId(t *testing.T) {
 			Body:       ret,
 		}, nil)
 
-		cloudId, err := clusterRegisterUtil.GetCloudId(host, cloudType, apiToken, 3*time.Second)
+		cloudId, errorReason, err := clusterRegisterUtil.GetCloudId(host, cloudType, apiToken, 3*time.Second)
 
 		assert.Equal(t, "", cloudId)
+		assert.Equal(t, "Failed to Get Clouds", errorReason)
 		assert.EqualError(t, err, "timed out querying Astra API")
 	})
 
@@ -443,9 +451,10 @@ func TestGetCloudId(t *testing.T) {
 			Body:       &mockRead,
 		}, nil).Once()
 
-		cloudId, err := clusterRegisterUtil.GetCloudId(host, cloudType, apiToken)
+		cloudId, errorReason, err := clusterRegisterUtil.GetCloudId(host, cloudType, apiToken)
 
 		assert.Equal(t, "", cloudId)
+		assert.Equal(t, "Failed to read response from Get Clouds", errorReason)
 		assert.EqualError(t, err, "error reading")
 	})
 
@@ -458,9 +467,10 @@ func TestGetCloudId(t *testing.T) {
 			Body:       ret,
 		}, nil).Once()
 
-		cloudId, err := clusterRegisterUtil.GetCloudId(host, cloudType, apiToken)
+		cloudId, errorReason, err := clusterRegisterUtil.GetCloudId(host, cloudType, apiToken)
 
 		assert.Equal(t, "", cloudId)
+		assert.Equal(t, "Failed to unmarshal response from Get Clouds", errorReason)
 		assert.EqualError(t, err, "invalid character 'i' looking for beginning of value")
 	})
 
@@ -473,9 +483,10 @@ func TestGetCloudId(t *testing.T) {
 			Body:       ret,
 		}, nil).Once()
 
-		cloudId, err := clusterRegisterUtil.GetCloudId(host, cloudType, apiToken)
+		cloudId, errorReason, err := clusterRegisterUtil.GetCloudId(host, cloudType, apiToken)
 
 		assert.Equal(t, "", cloudId)
+		assert.Equal(t, "", errorReason)
 		assert.Nil(t, err)
 	})
 
@@ -488,9 +499,10 @@ func TestGetCloudId(t *testing.T) {
 			Body:       ret,
 		}, nil).Once()
 
-		cloudId, err := clusterRegisterUtil.GetCloudId(host, cloudType, apiToken)
+		cloudId, errorReason, err := clusterRegisterUtil.GetCloudId(host, cloudType, apiToken)
 
 		assert.Equal(t, "1234", cloudId)
+		assert.Equal(t, "", errorReason)
 		assert.Nil(t, err)
 	})
 }
@@ -504,9 +516,10 @@ func TestCreateCloud(t *testing.T) {
 		errorText := "error on post request create"
 		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{}, errors.New(errorText))
 
-		cloudId, err := clusterRegisterUtil.CreateCloud(host, cloudType, apiToken)
+		cloudId, errorReason, err := clusterRegisterUtil.CreateCloud(host, cloudType, apiToken)
 
 		assert.Equal(t, "", cloudId)
+		assert.Contains(t, errorReason, "Failed to make POST call to")
 		assert.EqualError(t, err, "error on post request create")
 	})
 
@@ -522,9 +535,10 @@ func TestCreateCloud(t *testing.T) {
 			Body:       &mockRead,
 		}, nil).Once()
 
-		cloudId, err := clusterRegisterUtil.CreateCloud(host, cloudType, apiToken)
+		cloudId, errorReason, err := clusterRegisterUtil.CreateCloud(host, cloudType, apiToken)
 
 		assert.Equal(t, "", cloudId)
+		assert.Contains(t, errorReason, "Failed to read response from POST call to")
 		assert.EqualError(t, err, "error reading response: error reading")
 	})
 
@@ -537,9 +551,10 @@ func TestCreateCloud(t *testing.T) {
 			Body:       ret,
 		}, nil).Once()
 
-		cloudId, err := clusterRegisterUtil.CreateCloud(host, cloudType, apiToken)
+		cloudId, errorReason, err := clusterRegisterUtil.CreateCloud(host, cloudType, apiToken)
 
 		assert.Equal(t, "", cloudId)
+		assert.Contains(t, errorReason, "Failed to unmarshal response from POST call to")
 		assert.ErrorContains(t, err, "error unmarshalling response")
 	})
 
@@ -552,9 +567,10 @@ func TestCreateCloud(t *testing.T) {
 			Body:       ret,
 		}, nil).Once()
 
-		cloudId, err := clusterRegisterUtil.CreateCloud(host, cloudType, apiToken)
+		cloudId, errorReason, err := clusterRegisterUtil.CreateCloud(host, cloudType, apiToken)
 
 		assert.Equal(t, "", cloudId)
+		assert.Equal(t, "", errorReason)
 		assert.Nil(t, err)
 	})
 
@@ -567,9 +583,10 @@ func TestCreateCloud(t *testing.T) {
 			Body:       ret,
 		}, nil).Once()
 
-		cloudId, err := clusterRegisterUtil.CreateCloud(host, cloudType, apiToken)
+		cloudId, errorReason, err := clusterRegisterUtil.CreateCloud(host, cloudType, apiToken)
 
 		assert.Equal(t, "1234", cloudId)
+		assert.Equal(t, "", errorReason)
 		assert.Nil(t, err)
 	})
 }
@@ -583,10 +600,11 @@ func TestGetOrCreateCloud(t *testing.T) {
 		errorText := "error on get request"
 		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{}, errors.New(errorText))
 
-		cloudId, err := clusterRegisterUtil.GetOrCreateCloud(host, cloudType, apiToken)
+		cloudId, errorReason, err := clusterRegisterUtil.GetOrCreateCloud(host, cloudType, apiToken)
 
 		assert.Equal(t, "", cloudId)
-		assert.EqualError(t, err, "Invalid CloudId provided in the Spec : 9876")
+		assert.Equal(t, "Invalid CloudId 9876 provided in the Spec", errorReason)
+		assert.EqualError(t, err, "Invalid CloudId 9876 provided in the Spec")
 	})
 
 	t.Run("TestGetOrCreateCloud__ValidCloudIdProvidedInTheSpecReturnCloudId", func(t *testing.T) {
@@ -597,9 +615,10 @@ func TestGetOrCreateCloud(t *testing.T) {
 			Body:       nil,
 		}, nil).Once()
 
-		cloudId, err := clusterRegisterUtil.GetOrCreateCloud(host, cloudType, apiToken)
+		cloudId, errorReason, err := clusterRegisterUtil.GetOrCreateCloud(host, cloudType, apiToken)
 
 		assert.Equal(t, "9876", cloudId)
+		assert.Equal(t, "", errorReason)
 		assert.Nil(t, err)
 	})
 
@@ -612,9 +631,10 @@ func TestGetOrCreateCloud(t *testing.T) {
 			Body:       ret,
 		}, nil).Once()
 
-		cloudId, err := clusterRegisterUtil.GetOrCreateCloud(host, cloudType, apiToken)
+		cloudId, errorReason, err := clusterRegisterUtil.GetOrCreateCloud(host, cloudType, apiToken)
 
 		assert.Equal(t, "", cloudId)
+		assert.Equal(t, "Failed to unmarshal response from Get Clouds", errorReason)
 		assert.EqualError(t, err, "invalid character 'i' looking for beginning of value")
 	})
 
@@ -627,9 +647,10 @@ func TestGetOrCreateCloud(t *testing.T) {
 			Body:       ret,
 		}, nil).Once()
 
-		cloudId, err := clusterRegisterUtil.GetOrCreateCloud(host, cloudType, apiToken)
+		cloudId, errorReason, err := clusterRegisterUtil.GetOrCreateCloud(host, cloudType, apiToken)
 
 		assert.Equal(t, "1234", cloudId)
+		assert.Equal(t, "", errorReason)
 		assert.Nil(t, err)
 	})
 
@@ -645,9 +666,10 @@ func TestGetOrCreateCloud(t *testing.T) {
 		errorText := "error on post request create"
 		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{}, errors.New(errorText))
 
-		cloudId, err := clusterRegisterUtil.GetOrCreateCloud(host, cloudType, apiToken)
+		cloudId, errorReason, err := clusterRegisterUtil.GetOrCreateCloud(host, cloudType, apiToken)
 
 		assert.Equal(t, "", cloudId)
+		assert.Contains(t, errorReason, "Failed to make POST call to")
 		assert.EqualError(t, err, "error on post request create")
 	})
 
@@ -666,9 +688,10 @@ func TestGetOrCreateCloud(t *testing.T) {
 			Body:       ret,
 		}, nil).Once()
 
-		cloudId, err := clusterRegisterUtil.GetOrCreateCloud(host, cloudType, apiToken)
+		cloudId, errorReason, err := clusterRegisterUtil.GetOrCreateCloud(host, cloudType, apiToken)
 
 		assert.Equal(t, "", cloudId)
+		assert.Equal(t, "Got empty Cloud Id from POST call to clouds", errorReason)
 		assert.EqualError(t, err, "could not create cloud of type private")
 	})
 
@@ -687,9 +710,10 @@ func TestGetOrCreateCloud(t *testing.T) {
 			Body:       ret,
 		}, nil).Once()
 
-		cloudId, err := clusterRegisterUtil.GetOrCreateCloud(host, cloudType, apiToken)
+		cloudId, errorReason, err := clusterRegisterUtil.GetOrCreateCloud(host, cloudType, apiToken)
 
 		assert.Equal(t, "1234", cloudId)
+		assert.Equal(t, "", errorReason)
 		assert.Nil(t, err)
 	})
 }
@@ -703,9 +727,10 @@ func TestGetClusters(t *testing.T) {
 		errorText := "error on get request"
 		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{}, errors.New(errorText))
 
-		clusters, err := clusterRegisterUtil.GetClusters(host, cloudId, apiToken)
+		clusters, errorReason, err := clusterRegisterUtil.GetClusters(host, cloudId, apiToken)
 
 		assert.Equal(t, 0, len(clusters.Items))
+		assert.Contains(t, errorReason, "Failed to make GET call to")
 		assert.EqualError(t, err, "error on request get clusters: error on get request")
 	})
 
@@ -717,9 +742,10 @@ func TestGetClusters(t *testing.T) {
 			Body:       nil,
 		}, nil).Once()
 
-		clusters, err := clusterRegisterUtil.GetClusters(host, cloudId, apiToken)
+		clusters, errorReason, err := clusterRegisterUtil.GetClusters(host, cloudId, apiToken)
 
 		assert.Equal(t, 0, len(clusters.Items))
+		assert.Contains(t, errorReason, "failed with http status code 401")
 		assert.EqualError(t, err, "get clusters failed 401")
 	})
 
@@ -735,9 +761,10 @@ func TestGetClusters(t *testing.T) {
 			Body:       &mockRead,
 		}, nil).Once()
 
-		clusters, err := clusterRegisterUtil.GetClusters(host, cloudId, apiToken)
+		clusters, errorReason, err := clusterRegisterUtil.GetClusters(host, cloudId, apiToken)
 
 		assert.Equal(t, 0, len(clusters.Items))
+		assert.Contains(t, errorReason, "Failed to read response from GET call to")
 		assert.EqualError(t, err, "error reading response from get clusters: error reading")
 	})
 
@@ -750,9 +777,10 @@ func TestGetClusters(t *testing.T) {
 			Body:       ret,
 		}, nil).Once()
 
-		clusters, err := clusterRegisterUtil.GetClusters(host, cloudId, apiToken)
+		clusters, errorReason, err := clusterRegisterUtil.GetClusters(host, cloudId, apiToken)
 
 		assert.Equal(t, 0, len(clusters.Items))
+		assert.Contains(t, errorReason, "Failed to unmarshal response from GET call to")
 		assert.EqualError(t, err, "unmarshall error when getting clusters: invalid character 'i' looking for beginning of value")
 	})
 
@@ -765,9 +793,10 @@ func TestGetClusters(t *testing.T) {
 			Body:       ret,
 		}, nil).Once()
 
-		clusters, err := clusterRegisterUtil.GetClusters(host, cloudId, apiToken)
+		clusters, errorReason, err := clusterRegisterUtil.GetClusters(host, cloudId, apiToken)
 
 		assert.Equal(t, 2, len(clusters.Items))
+		assert.Equal(t, "", errorReason)
 		assert.Nil(t, err)
 	})
 }
@@ -781,10 +810,11 @@ func TestGetCluster(t *testing.T) {
 		errorText := "error on get request"
 		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{}, errors.New(errorText))
 
-		cluster, err := clusterRegisterUtil.GetCluster(host, cloudId, clusterId, apiToken)
+		cluster, errorReason, err := clusterRegisterUtil.GetCluster(host, cloudId, clusterId, apiToken)
 
 		assert.Equal(t, "", cluster.ID)
 		assert.Equal(t, "", cluster.Name)
+		assert.Contains(t, errorReason, "Failed to make GET call to")
 		assert.EqualError(t, err, "error on request get clusters: error on get request")
 	})
 
@@ -796,10 +826,11 @@ func TestGetCluster(t *testing.T) {
 			Body:       nil,
 		}, nil).Once()
 
-		cluster, err := clusterRegisterUtil.GetCluster(host, cloudId, clusterId, apiToken)
+		cluster, errorReason, err := clusterRegisterUtil.GetCluster(host, cloudId, clusterId, apiToken)
 
 		assert.Equal(t, "", cluster.ID)
 		assert.Equal(t, "", cluster.Name)
+		assert.Contains(t, errorReason, "failed with http status code 401")
 		assert.EqualError(t, err, "get clusters failed with: 401")
 	})
 
@@ -815,10 +846,11 @@ func TestGetCluster(t *testing.T) {
 			Body:       &mockRead,
 		}, nil).Once()
 
-		cluster, err := clusterRegisterUtil.GetCluster(host, cloudId, clusterId, apiToken)
+		cluster, errorReason, err := clusterRegisterUtil.GetCluster(host, cloudId, clusterId, apiToken)
 
 		assert.Equal(t, "", cluster.ID)
 		assert.Equal(t, "", cluster.Name)
+		assert.Contains(t, errorReason, "Failed to read response from GET call to")
 		assert.EqualError(t, err, "error reading response from get clusters: error reading")
 	})
 
@@ -831,10 +863,11 @@ func TestGetCluster(t *testing.T) {
 			Body:       ret,
 		}, nil).Once()
 
-		cluster, err := clusterRegisterUtil.GetCluster(host, cloudId, clusterId, apiToken)
+		cluster, errorReason, err := clusterRegisterUtil.GetCluster(host, cloudId, clusterId, apiToken)
 
 		assert.Equal(t, "", cluster.ID)
 		assert.Equal(t, "", cluster.Name)
+		assert.Contains(t, errorReason, "Failed to unmarshal response from GET call to")
 		assert.EqualError(t, err, "unmarshall error when parsing get clusters response: invalid character 'i' looking for beginning of value")
 	})
 
@@ -847,10 +880,11 @@ func TestGetCluster(t *testing.T) {
 			Body:       ret,
 		}, nil).Once()
 
-		cluster, err := clusterRegisterUtil.GetCluster(host, cloudId, clusterId, apiToken)
+		cluster, errorReason, err := clusterRegisterUtil.GetCluster(host, cloudId, clusterId, apiToken)
 
 		assert.Equal(t, "1234", cluster.ID)
 		assert.Equal(t, "this is a cluster", cluster.Name)
+		assert.Equal(t, "", errorReason)
 		assert.Nil(t, err)
 	})
 }
@@ -864,10 +898,11 @@ func TestCreateCluster(t *testing.T) {
 		errorText := "error on post request create"
 		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{}, errors.New(errorText))
 
-		clusterInfo, err := clusterRegisterUtil.CreateCluster(host, cloudId, connectorId, apiToken)
+		clusterInfo, errorReason, err := clusterRegisterUtil.CreateCluster(host, cloudId, connectorId, apiToken)
 
 		assert.Equal(t, "", clusterInfo.ID)
 		assert.Equal(t, "", clusterInfo.Name)
+		assert.Contains(t, errorReason, "Failed to make POST call to")
 		assert.EqualError(t, err, "error on request post clusters: error on post request create")
 	})
 
@@ -883,10 +918,11 @@ func TestCreateCluster(t *testing.T) {
 			Body:       &mockRead,
 		}, nil).Once()
 
-		clusterInfo, err := clusterRegisterUtil.CreateCluster(host, cloudId, connectorId, apiToken)
+		clusterInfo, errorReason, err := clusterRegisterUtil.CreateCluster(host, cloudId, connectorId, apiToken)
 
 		assert.Equal(t, "", clusterInfo.ID)
 		assert.Equal(t, "", clusterInfo.Name)
+		assert.Contains(t, errorReason, "Failed to read response from POST call to")
 		assert.EqualError(t, err, "error reading response from post clusters: error reading")
 	})
 
@@ -899,10 +935,11 @@ func TestCreateCluster(t *testing.T) {
 			Body:       ret,
 		}, nil).Once()
 
-		clusterInfo, err := clusterRegisterUtil.CreateCluster(host, cloudId, connectorId, apiToken)
+		clusterInfo, errorReason, err := clusterRegisterUtil.CreateCluster(host, cloudId, connectorId, apiToken)
 
 		assert.Equal(t, "", clusterInfo.ID)
 		assert.Equal(t, "", clusterInfo.Name)
+		assert.Contains(t, errorReason, "failed with http status code 400")
 		assert.EqualError(t, err, "add cluster failed with: 400")
 	})
 
@@ -915,10 +952,11 @@ func TestCreateCluster(t *testing.T) {
 			Body:       ret,
 		}, nil).Once()
 
-		clusterInfo, err := clusterRegisterUtil.CreateCluster(host, cloudId, connectorId, apiToken)
+		clusterInfo, errorReason, err := clusterRegisterUtil.CreateCluster(host, cloudId, connectorId, apiToken)
 
 		assert.Equal(t, "", clusterInfo.ID)
 		assert.Equal(t, "", clusterInfo.Name)
+		assert.Contains(t, errorReason, "Failed to unmarshal response from POST call to")
 		assert.ErrorContains(t, err, "unmarshall error when parsing post clusters response")
 	})
 
@@ -931,10 +969,11 @@ func TestCreateCluster(t *testing.T) {
 			Body:       ret,
 		}, nil).Once()
 
-		clusterInfo, err := clusterRegisterUtil.CreateCluster(host, cloudId, connectorId, apiToken)
+		clusterInfo, errorReason, err := clusterRegisterUtil.CreateCluster(host, cloudId, connectorId, apiToken)
 
 		assert.Equal(t, "", clusterInfo.ID)
 		assert.Equal(t, "", clusterInfo.Name)
+		assert.Contains(t, errorReason, "Got empty clusterId in response from POST call")
 		assert.EqualError(t, err, "got empty id from post clusters response")
 	})
 
@@ -947,11 +986,12 @@ func TestCreateCluster(t *testing.T) {
 			Body:       ret,
 		}, nil).Once()
 
-		clusterInfo, err := clusterRegisterUtil.CreateCluster(host, cloudId, connectorId, apiToken)
+		clusterInfo, errorReason, err := clusterRegisterUtil.CreateCluster(host, cloudId, connectorId, apiToken)
 
 		assert.Equal(t, "1234", clusterInfo.ID)
 		assert.Equal(t, "test-cluster", clusterInfo.Name)
 		assert.Equal(t, "unmanaged", clusterInfo.ManagedState)
+		assert.Equal(t, "", errorReason)
 		assert.Nil(t, err)
 	})
 }
@@ -965,7 +1005,8 @@ func TestUpdateCluster(t *testing.T) {
 		errorText := "error on put request update"
 		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{}, errors.New(errorText))
 
-		err := clusterRegisterUtil.UpdateCluster(host, cloudId, clusterId, connectorId, apiToken)
+		errorReason, err := clusterRegisterUtil.UpdateCluster(host, cloudId, clusterId, connectorId, apiToken)
+		assert.Contains(t, errorReason, "Failed to make PUT call to")
 		assert.EqualError(t, err, "error on request put clusters: error on put request update")
 	})
 
@@ -977,7 +1018,8 @@ func TestUpdateCluster(t *testing.T) {
 			Body:       nil,
 		}, nil).Once()
 
-		err := clusterRegisterUtil.UpdateCluster(host, cloudId, clusterId, connectorId, apiToken)
+		errorReason, err := clusterRegisterUtil.UpdateCluster(host, cloudId, clusterId, connectorId, apiToken)
+		assert.Contains(t, errorReason, "failed with http status code 400")
 		assert.EqualError(t, err, "update cluster failed with: 400")
 	})
 
@@ -989,7 +1031,8 @@ func TestUpdateCluster(t *testing.T) {
 			Body:       nil,
 		}, nil).Once()
 
-		err := clusterRegisterUtil.UpdateCluster(host, cloudId, clusterId, connectorId, apiToken)
+		errorReason, err := clusterRegisterUtil.UpdateCluster(host, cloudId, clusterId, connectorId, apiToken)
+		assert.Equal(t, "", errorReason)
 		assert.Nil(t, err)
 	})
 }
@@ -1003,10 +1046,11 @@ func TestCreateOrUpdateCluster(t *testing.T) {
 		errorText := "this is an error"
 		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{}, errors.New(errorText))
 
-		clusterInfo, err := clusterRegisterUtil.CreateOrUpdateCluster(host, cloudId, clusterId, connectorId, connectorInstall, http.MethodPost, apiToken)
+		clusterInfo, errorReason, err := clusterRegisterUtil.CreateOrUpdateCluster(host, cloudId, clusterId, connectorId, connectorInstall, http.MethodPost, apiToken)
 
 		assert.Equal(t, "", clusterInfo.ID)
 		assert.Equal(t, "", clusterInfo.Name)
+		assert.Contains(t, errorReason, "Failed to make POST call to")
 		assert.EqualError(t, err, "error creating cluster: error on request post clusters: this is an error")
 	})
 
@@ -1019,11 +1063,12 @@ func TestCreateOrUpdateCluster(t *testing.T) {
 			Body:       ret,
 		}, nil).Once()
 
-		clusterInfo, err := clusterRegisterUtil.CreateOrUpdateCluster(host, cloudId, clusterId, connectorId, connectorInstall, http.MethodPost, apiToken)
+		clusterInfo, errorReason, err := clusterRegisterUtil.CreateOrUpdateCluster(host, cloudId, clusterId, connectorId, connectorInstall, http.MethodPost, apiToken)
 
 		assert.Equal(t, "1234", clusterInfo.ID)
 		assert.Equal(t, "test-cluster", clusterInfo.Name)
 		assert.Equal(t, "unmanaged", clusterInfo.ManagedState)
+		assert.Equal(t, "", errorReason)
 		assert.Nil(t, err)
 	})
 
@@ -1033,10 +1078,11 @@ func TestCreateOrUpdateCluster(t *testing.T) {
 		errorText := "this is an error"
 		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{}, errors.New(errorText))
 
-		clusterInfo, err := clusterRegisterUtil.CreateOrUpdateCluster(host, cloudId, clusterId, connectorId, connectorInstall, http.MethodPut, apiToken)
+		clusterInfo, errorReason, err := clusterRegisterUtil.CreateOrUpdateCluster(host, cloudId, clusterId, connectorId, connectorInstall, http.MethodPut, apiToken)
 
 		assert.Equal(t, "", clusterInfo.ID)
 		assert.Equal(t, "", clusterInfo.Name)
+		assert.Contains(t, errorReason, "Failed to make PUT call to")
 		assert.EqualError(t, err, "error updating cluster: error on request put clusters: this is an error")
 	})
 
@@ -1048,11 +1094,12 @@ func TestCreateOrUpdateCluster(t *testing.T) {
 			Body:       nil,
 		}, nil).Once()
 
-		clusterInfo, err := clusterRegisterUtil.CreateOrUpdateCluster(host, cloudId, clusterId, connectorId, connectorInstall, http.MethodPut, apiToken)
+		clusterInfo, errorReason, err := clusterRegisterUtil.CreateOrUpdateCluster(host, cloudId, clusterId, connectorId, connectorInstall, http.MethodPut, apiToken)
 
 		assert.Equal(t, "test_clusterId", clusterInfo.ID)
 		assert.Equal(t, "", clusterInfo.Name)
 		assert.Equal(t, "", clusterInfo.ManagedState)
+		assert.Equal(t, "", errorReason)
 		assert.Nil(t, err)
 	})
 }
@@ -1189,7 +1236,8 @@ func TestUpdateManagedCluster(t *testing.T) {
 		errorText := "error on put request update"
 		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{}, errors.New(errorText))
 
-		err := clusterRegisterUtil.UpdateManagedCluster(host, clusterId, connectorId, connectorInstall, apiToken)
+		errorReason, err := clusterRegisterUtil.UpdateManagedCluster(host, clusterId, connectorId, connectorInstall, apiToken)
+		assert.Contains(t, errorReason, "Failed to make PUT call to")
 		assert.EqualError(t, err, "error on request put manage clusters: error on put request update")
 	})
 
@@ -1201,7 +1249,8 @@ func TestUpdateManagedCluster(t *testing.T) {
 			Body:       nil,
 		}, nil).Once()
 
-		err := clusterRegisterUtil.UpdateManagedCluster(host, clusterId, connectorId, connectorInstall, apiToken)
+		errorReason, err := clusterRegisterUtil.UpdateManagedCluster(host, clusterId, connectorId, connectorInstall, apiToken)
+		assert.Contains(t, errorReason, "failed with http status code 400")
 		assert.EqualError(t, err, "manage cluster failed with: 400")
 	})
 
@@ -1213,7 +1262,8 @@ func TestUpdateManagedCluster(t *testing.T) {
 			Body:       nil,
 		}, nil).Once()
 
-		err := clusterRegisterUtil.UpdateManagedCluster(host, clusterId, connectorId, connectorInstall, apiToken)
+		errorReason, err := clusterRegisterUtil.UpdateManagedCluster(host, clusterId, connectorId, connectorInstall, apiToken)
+		assert.Equal(t, "", errorReason)
 		assert.Nil(t, err)
 	})
 }
@@ -1227,7 +1277,8 @@ func TestCreateManagedCluster(t *testing.T) {
 		errorText := "error on post request create"
 		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{}, errors.New(errorText))
 
-		err := clusterRegisterUtil.CreateManagedCluster(host, cloudId, clusterId, storageClass, connectorInstalled, apiToken)
+		errorReason, err := clusterRegisterUtil.CreateManagedCluster(host, cloudId, clusterId, storageClass, connectorInstalled, apiToken)
+		assert.Contains(t, errorReason, "Failed to make POST call to")
 		assert.EqualError(t, err, "error on request post manage clusters: error on post request create")
 	})
 
@@ -1239,7 +1290,8 @@ func TestCreateManagedCluster(t *testing.T) {
 			Body:       nil,
 		}, nil).Once()
 
-		err := clusterRegisterUtil.CreateManagedCluster(host, cloudId, clusterId, storageClass, connectorInstalled, apiToken)
+		errorReason, err := clusterRegisterUtil.CreateManagedCluster(host, cloudId, clusterId, storageClass, connectorInstalled, apiToken)
+		assert.Contains(t, errorReason, "failed with http status code 400")
 		assert.EqualError(t, err, "manage cluster failed with: 400")
 	})
 
@@ -1255,7 +1307,8 @@ func TestCreateManagedCluster(t *testing.T) {
 			Body:       &mockRead,
 		}, nil).Once()
 
-		err := clusterRegisterUtil.CreateManagedCluster(host, cloudId, clusterId, storageClass, connectorInstalled, apiToken)
+		errorReason, err := clusterRegisterUtil.CreateManagedCluster(host, cloudId, clusterId, storageClass, connectorInstalled, apiToken)
+		assert.Contains(t, errorReason, "Failed to read response from POST call to")
 		assert.EqualError(t, err, "error reading response from post manage clusters: error reading")
 	})
 
@@ -1268,7 +1321,8 @@ func TestCreateManagedCluster(t *testing.T) {
 			Body:       ret,
 		}, nil).Once()
 
-		err := clusterRegisterUtil.CreateManagedCluster(host, cloudId, clusterId, storageClass, connectorInstalled, apiToken)
+		errorReason, err := clusterRegisterUtil.CreateManagedCluster(host, cloudId, clusterId, storageClass, connectorInstalled, apiToken)
+		assert.Contains(t, errorReason, "Failed to unmarshal response from POST call to")
 		assert.ErrorContains(t, err, "unmarshall error when parsing post manage clusters response")
 	})
 
@@ -1281,7 +1335,8 @@ func TestCreateManagedCluster(t *testing.T) {
 			Body:       ret,
 		}, nil).Once()
 
-		err := clusterRegisterUtil.CreateManagedCluster(host, cloudId, clusterId, storageClass, connectorInstalled, apiToken)
+		errorReason, err := clusterRegisterUtil.CreateManagedCluster(host, cloudId, clusterId, storageClass, connectorInstalled, apiToken)
+		assert.Equal(t, "", errorReason)
 		assert.Nil(t, err)
 	})
 }
@@ -1295,10 +1350,11 @@ func TestCreateOrUpdateManagedCluster(t *testing.T) {
 		errorText := "this is an error"
 		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{}, errors.New(errorText))
 
-		clusterInfo, err := clusterRegisterUtil.CreateOrUpdateManagedCluster(host, cloudId, clusterId, connectorId, http.MethodPut, apiToken)
+		clusterInfo, errorReason, err := clusterRegisterUtil.CreateOrUpdateManagedCluster(host, cloudId, clusterId, connectorId, http.MethodPut, apiToken)
 
 		assert.Equal(t, clusterId, clusterInfo.ID)
 		assert.Equal(t, "", clusterInfo.Name)
+		assert.Contains(t, errorReason, "Failed to make PUT call to")
 		assert.EqualError(t, err, "error updating managed cluster: error on request put manage clusters: this is an error")
 	})
 
@@ -1310,11 +1366,12 @@ func TestCreateOrUpdateManagedCluster(t *testing.T) {
 			Body:       nil,
 		}, nil).Once()
 
-		clusterInfo, err := clusterRegisterUtil.CreateOrUpdateManagedCluster(host, cloudId, clusterId, connectorId, http.MethodPut, apiToken)
+		clusterInfo, errorReason, err := clusterRegisterUtil.CreateOrUpdateManagedCluster(host, cloudId, clusterId, connectorId, http.MethodPut, apiToken)
 
 		assert.Equal(t, clusterId, clusterInfo.ID)
 		assert.Equal(t, "", clusterInfo.Name)
 		assert.Equal(t, "managed", clusterInfo.ManagedState)
+		assert.Equal(t, "", errorReason)
 		assert.Nil(t, err)
 	})
 
@@ -1324,10 +1381,11 @@ func TestCreateOrUpdateManagedCluster(t *testing.T) {
 		errorText := "this is an error"
 		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{}, errors.New(errorText))
 
-		clusterInfo, err := clusterRegisterUtil.CreateOrUpdateManagedCluster(host, cloudId, clusterId, connectorId, http.MethodPost, apiToken)
+		clusterInfo, errorReason, err := clusterRegisterUtil.CreateOrUpdateManagedCluster(host, cloudId, clusterId, connectorId, http.MethodPost, apiToken)
 
 		assert.Equal(t, clusterId, clusterInfo.ID)
 		assert.Equal(t, "", clusterInfo.Name)
+		assert.Contains(t, errorReason, "Failed to make POST call to")
 		assert.EqualError(t, err, "error creating managed cluster: error on request post manage clusters: this is an error")
 	})
 
@@ -1340,11 +1398,12 @@ func TestCreateOrUpdateManagedCluster(t *testing.T) {
 			Body:       ret,
 		}, nil).Once()
 
-		clusterInfo, err := clusterRegisterUtil.CreateOrUpdateManagedCluster(host, cloudId, clusterId, connectorId, http.MethodPost, apiToken)
+		clusterInfo, errorReason, err := clusterRegisterUtil.CreateOrUpdateManagedCluster(host, cloudId, clusterId, connectorId, http.MethodPost, apiToken)
 
 		assert.Equal(t, clusterId, clusterInfo.ID)
 		assert.Equal(t, "", clusterInfo.Name)
 		assert.Equal(t, "managed", clusterInfo.ManagedState)
+		assert.Equal(t, "", errorReason)
 		assert.Nil(t, err)
 	})
 }
@@ -1358,10 +1417,11 @@ func TestValidateAndGetCluster(t *testing.T) {
 		errorText := "error on get request"
 		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{}, errors.New(errorText))
 
-		clusterInfo, err := clusterRegisterUtil.ValidateAndGetCluster(host, cloudId, apiToken, "1234")
+		clusterInfo, errorReason, err := clusterRegisterUtil.ValidateAndGetCluster(host, cloudId, apiToken, "1234")
 
 		assert.Equal(t, "", clusterInfo.ID)
 		assert.Equal(t, "", clusterInfo.Name)
+		assert.Contains(t, errorReason, "Failed to make GET call to")
 		assert.EqualError(t, err, "error on get cluster: error on request get clusters: error on get request")
 	})
 
@@ -1374,14 +1434,15 @@ func TestValidateAndGetCluster(t *testing.T) {
 			Body:       ret,
 		}, nil).Once()
 
-		clusterInfo, err := clusterRegisterUtil.ValidateAndGetCluster(host, cloudId, apiToken, "1234")
+		clusterInfo, errorReason, err := clusterRegisterUtil.ValidateAndGetCluster(host, cloudId, apiToken, "1234")
 
 		assert.Equal(t, "", clusterInfo.ID)
 		assert.Equal(t, "", clusterInfo.Name)
-		assert.EqualError(t, err, "Invalid ClusterId provided in the Spec : 1234")
+		assert.Equal(t, "Invalid ClusterId 1234 provided in the Spec", errorReason)
+		assert.EqualError(t, err, "Invalid ClusterId 1234 provided in the Spec")
 	})
 
-	t.Run("TestValidateAndGetCluster__ValidClusterIdProvidedInTheSpecReturnCloudId", func(t *testing.T) {
+	t.Run("TestValidateAndGetCluster__ValidClusterIdProvidedInTheSpecReturnClusterInfo", func(t *testing.T) {
 		clusterRegisterUtil, mockHttpClient, _, _ := createClusterRegister(AstraConnectorInput{cloudId: true, clusterId: true})
 
 		ret := io.NopCloser(bytes.NewReader([]byte(`{"id":"1234","name":"this is a cluster"}`)))
@@ -1390,20 +1451,22 @@ func TestValidateAndGetCluster(t *testing.T) {
 			Body:       ret,
 		}, nil).Once()
 
-		clusterInfo, err := clusterRegisterUtil.ValidateAndGetCluster(host, cloudId, apiToken, "1234")
+		clusterInfo, errorReason, err := clusterRegisterUtil.ValidateAndGetCluster(host, cloudId, apiToken, "1234")
 
 		assert.Equal(t, "1234", clusterInfo.ID)
 		assert.Equal(t, "this is a cluster", clusterInfo.Name)
+		assert.Equal(t, "", errorReason)
 		assert.Nil(t, err)
 	})
 
 	t.Run("TestValidateAndGetCluster__GetDefaultServiceFailsReturnError", func(t *testing.T) {
 		clusterRegisterUtil, _, _, _ := createClusterRegister(AstraConnectorInput{})
 
-		clusterInfo, err := clusterRegisterUtil.ValidateAndGetCluster(host, cloudId, apiToken, "")
+		clusterInfo, errorReason, err := clusterRegisterUtil.ValidateAndGetCluster(host, cloudId, apiToken, "")
 
 		assert.Equal(t, "", clusterInfo.ID)
 		assert.Equal(t, "", clusterInfo.Name)
+		assert.Equal(t, "Failed to get kubernetes service from default namespace", errorReason)
 		assert.EqualError(t, err, "services \"kubernetes\" not found")
 	})
 
@@ -1425,10 +1488,11 @@ func TestValidateAndGetCluster(t *testing.T) {
 		errorText := "error on get request"
 		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{}, errors.New(errorText))
 
-		clusterInfo, err := clusterRegisterUtil.ValidateAndGetCluster(host, cloudId, apiToken, "")
+		clusterInfo, errorReason, err := clusterRegisterUtil.ValidateAndGetCluster(host, cloudId, apiToken, "")
 
 		assert.Equal(t, "", clusterInfo.ID)
 		assert.Equal(t, "", clusterInfo.Name)
+		assert.Contains(t, errorReason, "Failed to make GET call to")
 		assert.EqualError(t, err, "error on get clusters: error on request get clusters: error on get request")
 	})
 
@@ -1453,10 +1517,11 @@ func TestValidateAndGetCluster(t *testing.T) {
 			Body:       ret,
 		}, nil).Once()
 
-		clusterInfo, err := clusterRegisterUtil.ValidateAndGetCluster(host, cloudId, apiToken, "")
+		clusterInfo, errorReason, err := clusterRegisterUtil.ValidateAndGetCluster(host, cloudId, apiToken, "")
 
 		assert.Equal(t, "1234", clusterInfo.ID)
 		assert.Equal(t, "cluster1", clusterInfo.Name)
+		assert.Equal(t, "", errorReason)
 		assert.Nil(t, err)
 	})
 
@@ -1481,10 +1546,11 @@ func TestValidateAndGetCluster(t *testing.T) {
 			Body:       ret,
 		}, nil).Once()
 
-		clusterInfo, err := clusterRegisterUtil.ValidateAndGetCluster(host, cloudId, apiToken, "")
+		clusterInfo, errorReason, err := clusterRegisterUtil.ValidateAndGetCluster(host, cloudId, apiToken, "")
 
 		assert.Equal(t, "", clusterInfo.ID)
 		assert.Equal(t, "", clusterInfo.Name)
+		assert.Equal(t, "", errorReason)
 		assert.Nil(t, err)
 	})
 }
@@ -1492,9 +1558,10 @@ func TestValidateAndGetCluster(t *testing.T) {
 func TestGetAPITokenFromSecret(t *testing.T) {
 	t.Run("GetAPITokenFromSecret__SecretNotPresentReturnsError", func(t *testing.T) {
 		clusterRegisterUtil, _, _, _ := createClusterRegister(AstraConnectorInput{})
-		apiToken, err := clusterRegisterUtil.GetAPITokenFromSecret("astra-token")
+		apiToken, errorReason, err := clusterRegisterUtil.GetAPITokenFromSecret("astra-token")
 
 		assert.Equal(t, apiToken, "")
+		assert.Equal(t, "Failed to get secret astra-token", errorReason)
 		assert.EqualError(t, err, "secrets \"astra-token\" not found")
 	})
 
@@ -1515,17 +1582,19 @@ func TestGetAPITokenFromSecret(t *testing.T) {
 		err := fakeClient.Create(ctx, secret)
 		assert.NoError(t, err)
 
-		apiToken, err := clusterRegisterUtil.GetAPITokenFromSecret(apiTokenSecret)
+		apiToken, errorReason, err := clusterRegisterUtil.GetAPITokenFromSecret(apiTokenSecret)
 
 		assert.Equal(t, apiToken, "")
+		assert.Equal(t, "Failed to extract 'apiToken' key from secret astra-token", errorReason)
 		assert.EqualError(t, err, "failed to extract apiToken key from secret")
 	})
 
 	t.Run("GetAPITokenFromSecret__ReturnsApiToken", func(t *testing.T) {
 		clusterRegisterUtil, _, apiTokenSecret, _ := createClusterRegister(AstraConnectorInput{createTokenSecret: true})
 
-		apiToken, err := clusterRegisterUtil.GetAPITokenFromSecret(apiTokenSecret)
+		apiToken, errorReason, err := clusterRegisterUtil.GetAPITokenFromSecret(apiTokenSecret)
 		assert.Equal(t, apiToken, "auth-token")
+		assert.Equal(t, "", errorReason)
 		assert.NoError(t, err)
 	})
 }
@@ -1536,14 +1605,16 @@ func TestRegisterClusterWithAstra(t *testing.T) {
 	t.Run("TestRegisterClusterWithAstra__SetHttpClientFailsReturnError", func(t *testing.T) {
 		clusterRegisterUtil, _, _, _ := createClusterRegister(AstraConnectorInput{invalidHostDetails: true})
 
-		_, err := clusterRegisterUtil.RegisterClusterWithAstra(connectorId, "")
+		_, errorReason, err := clusterRegisterUtil.RegisterClusterWithAstra(connectorId, "")
+		assert.Equal(t, "Failed to set TLS Config", errorReason)
 		assert.EqualError(t, err, "invalid cloudBridgeURL provided: test_url, format - https://hostname")
 	})
 
 	t.Run("TestRegisterClusterWithAstra__GetAPITokenFromSecretFailsReturnError", func(t *testing.T) {
 		clusterRegisterUtil, _, _, _ := createClusterRegister(AstraConnectorInput{})
 
-		_, err := clusterRegisterUtil.RegisterClusterWithAstra(connectorId, "")
+		_, errorReason, err := clusterRegisterUtil.RegisterClusterWithAstra(connectorId, "")
+		assert.Equal(t, "Failed to get secret astra-token", errorReason)
 		assert.EqualError(t, err, "secrets \"astra-token\" not found")
 	})
 
@@ -1554,8 +1625,9 @@ func TestRegisterClusterWithAstra(t *testing.T) {
 		errorText := "error on get or create cloud"
 		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{}, errors.New(errorText))
 
-		_, err := clusterRegisterUtil.RegisterClusterWithAstra(connectorId, "")
-		assert.EqualError(t, err, "Invalid CloudId provided in the Spec : 9876")
+		_, errorReason, err := clusterRegisterUtil.RegisterClusterWithAstra(connectorId, "")
+		assert.Equal(t, "Invalid CloudId 9876 provided in the Spec", errorReason)
+		assert.EqualError(t, err, "Invalid CloudId 9876 provided in the Spec")
 	})
 
 	t.Run("TestRegisterClusterWithAstra__ValidateAndGetClusterFailsReturnError", func(t *testing.T) {
@@ -1571,7 +1643,8 @@ func TestRegisterClusterWithAstra(t *testing.T) {
 		errorText := "error on validate and get cluster"
 		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{}, errors.New(errorText))
 
-		_, err := clusterRegisterUtil.RegisterClusterWithAstra(connectorId, "")
+		_, errorReason, err := clusterRegisterUtil.RegisterClusterWithAstra(connectorId, "")
+		assert.Equal(t, "Failed to get kubernetes service from default namespace", errorReason)
 		assert.EqualError(t, err, "services \"kubernetes\" not found")
 	})
 
@@ -1606,7 +1679,8 @@ func TestRegisterClusterWithAstra(t *testing.T) {
 		errorText := "error on create or update cluster"
 		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{}, errors.New(errorText))
 
-		_, err = clusterRegisterUtil.RegisterClusterWithAstra(connectorId, "")
+		_, errorReason, err := clusterRegisterUtil.RegisterClusterWithAstra(connectorId, "")
+		assert.Equal(t, "Failed to make PUT call to https://astra.netapp.io/accounts//topology/v1/clouds/9876/clusters/1234", errorReason)
 		assert.EqualError(t, err, "error updating cluster: error on request put clusters: error on create or update cluster")
 	})
 
@@ -1646,7 +1720,8 @@ func TestRegisterClusterWithAstra(t *testing.T) {
 		errorText := "this is an error"
 		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{}, errors.New(errorText))
 
-		_, err = clusterRegisterUtil.RegisterClusterWithAstra(connectorId, "")
+		_, errorReason, err := clusterRegisterUtil.RegisterClusterWithAstra(connectorId, "")
+		assert.Equal(t, "Failed to make POST call to https://astra.netapp.io/accounts//topology/v1/managedClusters", errorReason)
 		assert.EqualError(t, err, "error creating managed cluster: error on request post manage clusters: this is an error")
 	})
 
@@ -1689,7 +1764,8 @@ func TestRegisterClusterWithAstra(t *testing.T) {
 			Body:       ret,
 		}, nil).Once()
 
-		_, err = clusterRegisterUtil.RegisterClusterWithAstra(connectorId, "")
+		_, errorReason, err := clusterRegisterUtil.RegisterClusterWithAstra(connectorId, "")
+		assert.Equal(t, "", errorReason)
 		assert.Nil(t, err)
 	})
 
@@ -1735,7 +1811,8 @@ func TestRegisterClusterWithAstra(t *testing.T) {
 			Body:       ret,
 		}, nil).Once()
 
-		_, err = clusterRegisterUtil.RegisterClusterWithAstra(connectorId, "")
+		_, errorReason, err := clusterRegisterUtil.RegisterClusterWithAstra(connectorId, "")
+		assert.Equal(t, "", errorReason)
 		assert.Nil(t, err)
 	})
 
@@ -1779,7 +1856,8 @@ func TestRegisterClusterWithAstra(t *testing.T) {
 			Body:       ret,
 		}, nil).Once()
 
-		_, err = clusterRegisterUtil.RegisterClusterWithAstra(connectorId, "")
+		_, errorReason, err := clusterRegisterUtil.RegisterClusterWithAstra(connectorId, "")
+		assert.Equal(t, "", errorReason)
 		assert.Nil(t, err)
 	})
 }

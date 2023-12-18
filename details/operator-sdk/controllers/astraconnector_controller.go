@@ -129,9 +129,27 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 		return ctrl.Result{Requeue: false}, nil
 	}
 
-	k8sUtil := k8s.NewK8sUtil(r.Client, log)
-	preCheckClient := precheck.NewPrecheckClient(log, k8sUtil)
-	preCheckClient.Run()
+	if !astraConnector.Spec.SkipPreCheck {
+		k8sUtil := k8s.NewK8sUtil(r.Client, log)
+		preCheckClient := precheck.NewPrecheckClient(log, k8sUtil)
+		errList := preCheckClient.Run()
+		if errList != nil {
+			errString := ""
+			for i, err := range errList {
+				if i > 0 {
+					errString = errString + ", "
+				}
+
+				log.Error(err, "Pre-check Error")
+				errString = errString + err.Error()
+			}
+			errString = "Pre-check errors: " + errString
+			natsSyncClientStatus.Status = errString
+			_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
+			// Do not requeue. Item is being deleted
+			return ctrl.Result{}, errors.New(errString)
+		}
+	}
 
 	// deploy Neptune
 	if conf.Config.FeatureFlags().DeployNeptune() {
