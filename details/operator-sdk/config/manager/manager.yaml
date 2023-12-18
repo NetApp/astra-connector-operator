@@ -22,10 +22,7 @@ spec:
       labels:
         control-plane: controller-manager
     spec:
-      securityContext:
-        seccompProfile:
-          type: RuntimeDefault
-        runAsNonRoot: true
+      automountServiceAccountToken: false
       containers:
       - command:
         - /manager
@@ -35,8 +32,11 @@ spec:
         name: manager
         securityContext:
           allowPrivilegeEscalation: false
+          seccompProfile:
+            type: RuntimeDefault
           runAsNonRoot: true
           runAsUser: 10001
+          runAsGroup: 20000
           readOnlyRootFilesystem: true
           capabilities:
             drop:
