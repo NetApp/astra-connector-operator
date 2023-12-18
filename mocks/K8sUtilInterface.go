@@ -43,6 +43,20 @@ func (_m *K8sUtilInterface) DeleteResource(_a0 context.Context, _a1 client.Objec
 	return r0
 }
 
+// IsCRDInstalled provides a mock function with given fields: _a0
+func (_m *K8sUtilInterface) IsCRDInstalled(_a0 string) bool {
+	ret := _m.Called(_a0)
+
+	var r0 bool
+	if rf, ok := ret.Get(0).(func(string) bool); ok {
+		r0 = rf(_a0)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+
+	return r0
+}
+
 // VersionGet provides a mock function with given fields:
 func (_m *K8sUtilInterface) VersionGet() (string, error) {
 	ret := _m.Called()
