@@ -62,7 +62,7 @@ func (d *AstraConnectDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx co
 
 	ref := &corev1.ConfigMapKeySelector{LocalObjectReference: corev1.LocalObjectReference{Name: common.AstraConnectName}, Key: "nats_url"}
 
-	userUID := int64(10001)
+	userUID := int64(1000740000)
 	readOnlyRootFilesystem := true
 	runAsNonRoot := true
 	dep := &appsv1.Deployment{

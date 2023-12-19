@@ -66,7 +66,7 @@ func (d *NatsSyncClientDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx 
 		replicas = common.NatsSyncClientDefaultReplicas
 	}
 
-	userUID := int64(10001)
+	userUID := int64(1000740000)
 	readOnlyRootFilesystem := true
 	runAsNonRoot := true
 	dep := &appsv1.Deployment{
