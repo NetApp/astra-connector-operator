@@ -95,7 +95,7 @@ spec:
                   type: object
                 type: array
               includedNamespaces:
-                description: our app definition.
+                description: IncludedNamespaces is a slice of namespaceSelectors to include in our app definition.
                 items:
                   properties:
                     labelSelector:
