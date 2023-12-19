@@ -66,10 +66,16 @@ func (d *NatsSyncClientDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx 
 		replicas = common.NatsSyncClientDefaultReplicas
 	}
 
+	userUID := int64(10001)
+	readOnlyRootFilesystem := true
+	runAsNonRoot := true
 	dep := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      common.NatsSyncClientName,
 			Namespace: m.Namespace,
+			Annotations: map[string]string{
+				"container.seccomp.security.alpha.kubernetes.io/pod": "runtime/default",
+			},
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: &replicas,
@@ -115,6 +121,14 @@ func (d *NatsSyncClientDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx 
 								Name:      common.NatsSyncClientConfigMapVolumeName,
 								MountPath: keyStoreURLSplit[1],
 							},
+						},
+						SecurityContext: &corev1.SecurityContext{
+							Capabilities: &corev1.Capabilities{
+								Drop: []corev1.Capability{"ALL"},
+							},
+							ReadOnlyRootFilesystem: &readOnlyRootFilesystem,
+							RunAsNonRoot:           &runAsNonRoot,
+							RunAsUser:              &userUID,
 						},
 					}},
 					ServiceAccountName: common.NatsSyncClientConfigMapServiceAccountName,
