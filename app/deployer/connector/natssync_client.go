@@ -66,6 +66,7 @@ func (d *NatsSyncClientDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx 
 		replicas = common.NatsSyncClientDefaultReplicas
 	}
 
+	// High UID to satisfy OCP requirements
 	userUID := int64(1000740000)
 	readOnlyRootFilesystem := true
 	runAsNonRoot := true
