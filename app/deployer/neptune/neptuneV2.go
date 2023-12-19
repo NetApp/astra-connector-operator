@@ -69,6 +69,10 @@ func (n NeptuneClientDeployerV2) GetDeploymentObjects(m *v1.AstraConnector, ctx 
 	neptuneImage = fmt.Sprintf("%s/controller:%s", imageRegistry, containerImage)
 	log.Info("Using Neptune image", "image", neptuneImage)
 
+	// High UID to satisfy OCP requirements
+	userUID := int64(1000740000)
+	readOnlyRootFilesystem := true
+	runAsNonRoot := true
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      common.NeptuneName,
@@ -81,6 +85,9 @@ func (n NeptuneClientDeployerV2) GetDeploymentObjects(m *v1.AstraConnector, ctx 
 				"app.kubernetes.io/name":       "deployment",
 				"app.kubernetes.io/part-of":    "neptune",
 				"control-plane":                "controller-manager",
+			},
+			Annotations: map[string]string{
+				"container.seccomp.security.alpha.kubernetes.io/pod": "runtime/default",
 			},
 		},
 		Spec: appsv1.DeploymentSpec{
@@ -215,6 +222,9 @@ func (n NeptuneClientDeployerV2) GetDeploymentObjects(m *v1.AstraConnector, ctx 
 										"ALL",
 									},
 								},
+								ReadOnlyRootFilesystem: &readOnlyRootFilesystem,
+								RunAsNonRoot:           &runAsNonRoot,
+								RunAsUser:              &userUID,
 							},
 						},
 					},
