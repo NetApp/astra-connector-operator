@@ -853,15 +853,21 @@ spec:
                         groupKind:
                           description: GroupKind kubernetes group kind of the resource that has to be matched
                           type: string
-                        labelSelector:
-                          description: LabelSelector  is used to match a resource based on the metadata.labels field of the kubernetes resource
-                          type: string
-                        name:
-                          description: Name kubernetes metadata.name field of the resource that must be matched.
-                          type: string
-                        namespace:
-                          description: Namespace kubernetes metadata.namespace field of the resource that must be matched.
-                          type: string
+                        labelSelectors:
+                          description: LabelSelectors  is used to match resource(s) based on the metadata.labels field of the kubernetes resource
+                          items:
+                            type: string
+                          type: array
+                        names:
+                          description: Names kubernetes metadata.name field of the resource(s) that must be matched.
+                          items:
+                            type: string
+                          type: array
+                        namespaces:
+                          description: Namespaces kubernetes metadata.namespace field of the resource(s) that must be matched.
+                          items:
+                            type: string
+                          type: array
                         version:
                           description: Version of the kubernetes resource that has to be matched.
                           type: string
@@ -1020,15 +1026,21 @@ spec:
                         groupKind:
                           description: GroupKind kubernetes group kind of the resource that has to be matched
                           type: string
-                        labelSelector:
-                          description: LabelSelector  is used to match a resource based on the metadata.labels field of the kubernetes resource
-                          type: string
-                        name:
-                          description: Name kubernetes metadata.name field of the resource that must be matched.
-                          type: string
-                        namespace:
-                          description: Namespace kubernetes metadata.namespace field of the resource that must be matched.
-                          type: string
+                        labelSelectors:
+                          description: LabelSelectors  is used to match resource(s) based on the metadata.labels field of the kubernetes resource
+                          items:
+                            type: string
+                          type: array
+                        names:
+                          description: Names kubernetes metadata.name field of the resource(s) that must be matched.
+                          items:
+                            type: string
+                          type: array
+                        namespaces:
+                          description: Namespaces kubernetes metadata.namespace field of the resource(s) that must be matched.
+                          items:
+                            type: string
+                          type: array
                         version:
                           description: Version of the kubernetes resource that has to be matched.
                           type: string
@@ -2307,15 +2319,21 @@ spec:
                         groupKind:
                           description: GroupKind kubernetes group kind of the resource that has to be matched
                           type: string
-                        labelSelector:
-                          description: LabelSelector  is used to match a resource based on the metadata.labels field of the kubernetes resource
-                          type: string
-                        name:
-                          description: Name kubernetes metadata.name field of the resource that must be matched.
-                          type: string
-                        namespace:
-                          description: Namespace kubernetes metadata.namespace field of the resource that must be matched.
-                          type: string
+                        labelSelectors:
+                          description: LabelSelectors  is used to match resource(s) based on the metadata.labels field of the kubernetes resource
+                          items:
+                            type: string
+                          type: array
+                        names:
+                          description: Names kubernetes metadata.name field of the resource(s) that must be matched.
+                          items:
+                            type: string
+                          type: array
+                        namespaces:
+                          description: Namespaces kubernetes metadata.namespace field of the resource(s) that must be matched.
+                          items:
+                            type: string
+                          type: array
                         version:
                           description: Version of the kubernetes resource that has to be matched.
                           type: string
@@ -2460,15 +2478,21 @@ spec:
                         groupKind:
                           description: GroupKind kubernetes group kind of the resource that has to be matched
                           type: string
-                        labelSelector:
-                          description: LabelSelector  is used to match a resource based on the metadata.labels field of the kubernetes resource
-                          type: string
-                        name:
-                          description: Name kubernetes metadata.name field of the resource that must be matched.
-                          type: string
-                        namespace:
-                          description: Namespace kubernetes metadata.namespace field of the resource that must be matched.
-                          type: string
+                        labelSelectors:
+                          description: LabelSelectors  is used to match resource(s) based on the metadata.labels field of the kubernetes resource
+                          items:
+                            type: string
+                          type: array
+                        names:
+                          description: Names kubernetes metadata.name field of the resource(s) that must be matched.
+                          items:
+                            type: string
+                          type: array
+                        namespaces:
+                          description: Namespaces kubernetes metadata.namespace field of the resource(s) that must be matched.
+                          items:
+                            type: string
+                          type: array
                         version:
                           description: Version of the kubernetes resource that has to be matched.
                           type: string
@@ -3733,15 +3757,21 @@ spec:
                         groupKind:
                           description: GroupKind kubernetes group kind of the resource that has to be matched
                           type: string
-                        labelSelector:
-                          description: LabelSelector  is used to match a resource based on the metadata.labels field of the kubernetes resource
-                          type: string
-                        name:
-                          description: Name kubernetes metadata.name field of the resource that must be matched.
-                          type: string
-                        namespace:
-                          description: Namespace kubernetes metadata.namespace field of the resource that must be matched.
-                          type: string
+                        labelSelectors:
+                          description: LabelSelectors  is used to match resource(s) based on the metadata.labels field of the kubernetes resource
+                          items:
+                            type: string
+                          type: array
+                        names:
+                          description: Names kubernetes metadata.name field of the resource(s) that must be matched.
+                          items:
+                            type: string
+                          type: array
+                        namespaces:
+                          description: Namespaces kubernetes metadata.namespace field of the resource(s) that must be matched.
+                          items:
+                            type: string
+                          type: array
                         version:
                           description: Version of the kubernetes resource that has to be matched.
                           type: string
@@ -3898,15 +3928,21 @@ spec:
                         groupKind:
                           description: GroupKind kubernetes group kind of the resource that has to be matched
                           type: string
-                        labelSelector:
-                          description: LabelSelector  is used to match a resource based on the metadata.labels field of the kubernetes resource
-                          type: string
-                        name:
-                          description: Name kubernetes metadata.name field of the resource that must be matched.
-                          type: string
-                        namespace:
-                          description: Namespace kubernetes metadata.namespace field of the resource that must be matched.
-                          type: string
+                        labelSelectors:
+                          description: LabelSelectors  is used to match resource(s) based on the metadata.labels field of the kubernetes resource
+                          items:
+                            type: string
+                          type: array
+                        names:
+                          description: Names kubernetes metadata.name field of the resource(s) that must be matched.
+                          items:
+                            type: string
+                          type: array
+                        namespaces:
+                          description: Namespaces kubernetes metadata.namespace field of the resource(s) that must be matched.
+                          items:
+                            type: string
+                          type: array
                         version:
                           description: Version of the kubernetes resource that has to be matched.
                           type: string
