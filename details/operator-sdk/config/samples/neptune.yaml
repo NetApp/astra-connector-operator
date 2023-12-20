@@ -1762,6 +1762,45 @@ spec:
               completionTimeout:
                 description: CompletionTimeout specifies the time to wait for the entire ExecHooksRun to complete before returning timeout error. The default value is 40 minutes.
                 type: string
+              resourceFilter:
+                description: ResourceFilter Should be populated by the user, if only certain resources should be considered for executing hooks, which is often useful when doing a selective restore
+                properties:
+                  resourceMatchers:
+                    description: ResourceMatchers is a list of matchers where each matcher matches one or more resources
+                    items:
+                      properties:
+                        groupKind:
+                          description: GroupKind kubernetes group kind of the resource that has to be matched
+                          type: string
+                        labelSelectors:
+                          description: LabelSelectors  is used to match resource(s) based on the metadata.labels field of the kubernetes resource
+                          items:
+                            type: string
+                          type: array
+                        names:
+                          description: Names kubernetes metadata.name field of the resource(s) that must be matched.
+                          items:
+                            type: string
+                          type: array
+                        namespaces:
+                          description: Namespaces kubernetes metadata.namespace field of the resource(s) that must be matched.
+                          items:
+                            type: string
+                          type: array
+                        version:
+                          description: Version of the kubernetes resource that has to be matched.
+                          type: string
+                      required:
+                      - groupKind
+                      type: object
+                    type: array
+                  resourceSelectionCriteria:
+                    description: ResourceSelectionCriteria used to determine if the resources matching the provided resources matchers should be included into the collection or excluded from the collection.
+                    enum:
+                    - include
+                    - exclude
+                    type: string
+                type: object
               stage:
                 description: Stage The current stage to run execution hooks for
                 enum:
