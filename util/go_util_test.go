@@ -1,6 +1,8 @@
 package util_test
 
 import (
+	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -82,4 +84,59 @@ func TestGetJSONFieldName(t *testing.T) {
 		jsonTag = util.GetJSONFieldName(&ac.Status, &a.field)
 		assert.Equal(t, "", jsonTag)
 	})
+
+	t.Run("TestGetJSONFieldName__WhenValidStructFieldIsNested", func(t *testing.T) {
+		ac := createAstraConnector()
+
+		jsonTag := util.GetJSONFieldName(&ac.Spec.Astra, &ac.Spec.Astra.ClusterName)
+		assert.Equal(t, "clusterName", jsonTag)
+	})
+}
+
+func TestIsValidResourceName(t *testing.T) {
+	tests := map[string]struct {
+		name     string
+		expected bool
+	}{
+		"name contains all legal characters": {
+			"snap-2eff1a7e-679d-4fc6-892f-1nridmry3dj",
+			true,
+		},
+		"name is greater than 253 characters": {
+			fmt.Sprintf("resource-name%v", strings.Join(make([]string, 50), "-test")),
+			false,
+		},
+		"name is empty": {
+			// "" is not valid for Kubernetes names.
+			"",
+			false,
+		},
+		"name contains illegal character at beginning": {
+			// "-" is not valid for end of Kubernetes names.
+			"-snap-2eff1a7e-679d-4fc6-892f-1nridmry3dj",
+			false,
+		},
+		"name contains illegal character within": {
+			// "_" is not valid for Kubernetes names.
+			"snap_2eff1a7e-679d-4fc6-892f-1nridmry3dj",
+			false,
+		},
+		"name contains illegal character at end": {
+			// "-" is not valid for end of Kubernetes names.
+			"snap-2eff1a7e-679d-4fc6-892f-1nridmry3dj-",
+			false,
+		},
+		"name contains uppercase illegal character at beginning": {
+			// Uppercase letters are not valid for Kubernetes names.
+			"Snap-2eff1a7e-679d-4fc6-892f-1nridmry3dj",
+			false,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			isValid := util.IsValidKubernetesLabel(test.name)
+			assert.Equal(t, test.expected, isValid)
+		})
+	}
 }
