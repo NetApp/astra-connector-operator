@@ -93,17 +93,22 @@ func TestGetJSONFieldName(t *testing.T) {
 	})
 }
 
-func TestIsValidResourceName(t *testing.T) {
+func TestIsValidKubernetesLabel(t *testing.T) {
 	tests := map[string]struct {
 		name     string
 		expected bool
 	}{
-		"name contains all legal characters": {
-			"snap-2eff1a7e-679d-4fc6-892f-1nridmry3dj",
+		"name contains a number at end": {
+			"valid-astra-cluster-name-0",
 			true,
 		},
-		"name is greater than 253 characters": {
-			fmt.Sprintf("resource-name%v", strings.Join(make([]string, 50), "-test")),
+		"name contains a number at beginning": {
+			// "-" is not valid for end of Kubernetes names.
+			"0-valid-astra-cluster-name",
+			true,
+		},
+		"name is greater than 64 characters": {
+			fmt.Sprintf("resource-name%v", strings.Join(make([]string, 15), "-test")),
 			false,
 		},
 		"name is empty": {
@@ -113,22 +118,23 @@ func TestIsValidResourceName(t *testing.T) {
 		},
 		"name contains illegal character at beginning": {
 			// "-" is not valid for end of Kubernetes names.
-			"-snap-2eff1a7e-679d-4fc6-892f-1nridmry3dj",
+			"-invalid-astra-cluster-name",
 			false,
 		},
+
 		"name contains illegal character within": {
 			// "_" is not valid for Kubernetes names.
-			"snap_2eff1a7e-679d-4fc6-892f-1nridmry3dj",
+			"invalid-astra-cluster_name",
 			false,
 		},
 		"name contains illegal character at end": {
 			// "-" is not valid for end of Kubernetes names.
-			"snap-2eff1a7e-679d-4fc6-892f-1nridmry3dj-",
+			"invalid-astra-cluster-name-",
 			false,
 		},
 		"name contains uppercase illegal character at beginning": {
 			// Uppercase letters are not valid for Kubernetes names.
-			"Snap-2eff1a7e-679d-4fc6-892f-1nridmry3dj",
+			"Invalid-astra-cluster-name",
 			false,
 		},
 	}
