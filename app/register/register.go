@@ -20,13 +20,20 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
+
 	coreV1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/version"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/NetApp-Polaris/astra-connector-operator/common"
 	v1 "github.com/NetApp-Polaris/astra-connector-operator/details/operator-sdk/api/v1"
 )
+
+type OrchestratorFlavor string
 
 const (
 	errorRetrySleep         = time.Second * 3
@@ -35,6 +42,16 @@ const (
 	getClusterPollCount     = 5
 	connectorInstalled      = "installed"
 	connectorInstallPending = "pending"
+	openShiftApiServerName  = "openshift-apiserver"
+
+	FlavorAKS        OrchestratorFlavor = "aks"
+	FlavorAWS        OrchestratorFlavor = "eks"
+	FlavorGKE        OrchestratorFlavor = "gke"
+	FlavorKubernetes OrchestratorFlavor = "k8s"
+	FlavorOpenShift  OrchestratorFlavor = "openshift"
+	FlavorRKE        OrchestratorFlavor = "rke"
+	FlavorTanzu      OrchestratorFlavor = "tanzu"
+	FlavorAnthos     OrchestratorFlavor = "anthos"
 )
 
 // HTTPClient interface used for request and to facilitate testing
@@ -111,6 +128,10 @@ type clusterRegisterUtil struct {
 	K8sClient      client.Client
 	Ctx            context.Context
 	Log            logr.Logger
+
+	openShiftVersion string
+	versionInfo      *version.Info
+	flavor           OrchestratorFlavor
 }
 
 func NewClusterRegisterUtil(astraConnector *v1.AstraConnector, client HTTPClient, k8sClient client.Client, log logr.Logger, ctx context.Context) ClusterRegisterUtil {
@@ -1075,4 +1096,214 @@ func (c clusterRegisterUtil) RegisterClusterWithAstra(astraConnectorId string, c
 
 	c.Log.WithValues("clusterId", clusterInfo.ID, "clusterName", clusterInfo.Name).Info("Cluster managed by Astra!!!!")
 	return clusterInfo.ID, "", nil
+}
+
+func (c clusterRegisterUtil) discoverKubernetesFlavor() OrchestratorFlavor {
+	apiToken, errorReason, err := c.GetAPITokenFromSecret(c.AstraConnector.Spec.Astra.TokenRef)
+	if err != nil {
+		c.Log.Error(err, "failed to get API token fron secret", "secret", c.AstraConnector.Spec.Astra.TokenRef, "errorReason", errorReason)
+		return FlavorKubernetes
+	}
+
+	if c.isGKEFlavor() {
+		return FlavorGKE
+	}
+
+	if c.isAnthosFlavor(apiToken) {
+		return FlavorAnthos
+	}
+
+	if c.isOpenshiftFlavor(apiToken) {
+		return FlavorOpenShift
+	}
+
+	if c.isRKEFlavor(apiToken) || c.isRKE2Flavor(apiToken) {
+		return FlavorRKE
+	}
+
+	if c.isTanzuFlavor(apiToken) {
+		return FlavorTanzu
+	}
+
+	if c.isAKSFlavor() {
+		return FlavorAKS
+	}
+
+	return FlavorKubernetes
+}
+
+// isOpenshiftFlavor - tries to hit an api registered by the openshift operator
+// https://confluence.ngage.netapp.com/display/POLARIS/OpenShift+Questions
+func (c clusterRegisterUtil) isOpenshiftFlavor(apiToken string) bool {
+
+	_, err := c.getOpenshiftVersion(apiToken)
+	if err != nil {
+		if k8serrors.IsNotFound(err) {
+			return false
+		}
+		log.WithError(err).Info("error requesting for openshift version endpoint")
+		return false
+	}
+
+	return true
+}
+
+func (c clusterRegisterUtil) getOpenshiftVersion(apiToken string) (string, error) {
+
+	// return cached version if already cached. else retrieve it by calling the API
+	if c.openShiftVersion != "" {
+		return c.openShiftVersion, nil
+	}
+
+	// struct modeling only required information present in openshift API response
+	var openshiftVersionSchema struct {
+		Status struct {
+			Versions []struct {
+				Name    string
+				Version string
+			}
+		}
+	}
+
+	headerMap := HeaderMap{Authorization: fmt.Sprintf("Bearer %s", apiToken)}
+	res, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodGet, "apis/config.openshift.io/v1/clusteroperators/openshift-apiserver", nil, headerMap)
+	defer cancel()
+
+	respBody, err := c.readResponseBody(res)
+	if err != nil {
+		c.Log.WithValues("response", string(respBody)).Error(err, "error reading response")
+		return "", err
+	}
+
+	if err := json.Unmarshal(respBody, &openshiftVersionSchema); err != nil {
+		return "", fmt.Errorf("failed to unmarshal version bytes: %v", err)
+	}
+
+	for _, versionObject := range openshiftVersionSchema.Status.Versions {
+		if versionObject.Name == openShiftApiServerName {
+			c.openShiftVersion = versionObject.Version
+			return versionObject.Version, nil
+		}
+	}
+
+	return "", fmt.Errorf("failed to find version object for '%v'", openShiftApiServerName)
+}
+
+// isRKEFlavor - checks for the presence of the rancher API
+func (c clusterRegisterUtil) isRKEFlavor(apiToken string) bool {
+	// Querying the base URL will return a list of supported API versions. If we wanted to we could
+	// parse the response, extract the latest version and use it to query cluster CRs to ensure one
+	// actually exists, but for now the presence of the API is sufficient for determining it is Rancher
+	headerMap := HeaderMap{Authorization: fmt.Sprintf("Bearer %s", apiToken)}
+	res, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodGet, "apis/management.cattle.io", nil, headerMap)
+	defer cancel()
+
+	respBody, err := c.readResponseBody(res)
+	if err != nil {
+		c.Log.WithValues("response", string(respBody)).Error(err, "error reading response")
+		return false
+	}
+
+	log.Debugf("Rancher API is present %s", string(respBody))
+
+	if err != nil {
+		if k8serrors.IsNotFound(err) {
+			return false
+		}
+		log.WithError(err).Info("error querying the rancher API")
+		return false
+	}
+	return true
+}
+
+// isRKE2Flavor - checks for the presence of the RKE2 base: k3s API
+func (c clusterRegisterUtil) isRKE2Flavor(apiToken string) bool {
+	headerMap := HeaderMap{Authorization: fmt.Sprintf("Bearer %s", apiToken)}
+	res, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodGet, "apis/k3s.cattle.io", nil, headerMap)
+	defer cancel()
+
+	respBody, err := c.readResponseBody(res)
+	if err != nil {
+		c.Log.WithValues("response", string(respBody)).Error(err, "error reading response")
+		return false
+	}
+
+	log.Debugf("Rancher 2 API is present %s", string(respBody))
+
+	if err != nil {
+		if k8serrors.IsNotFound(err) {
+			return false
+		}
+		log.WithError(err).Info("error querying the RKE2 API")
+		return false
+	}
+	return true
+}
+
+// isTanzuFlavor - checks for the presence of the tanzu API
+func (c clusterRegisterUtil) isTanzuFlavor(apiToken string) bool {
+	headerMap := HeaderMap{Authorization: fmt.Sprintf("Bearer %s", apiToken)}
+	res, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodGet, "apis/core.antrea.tanzu.vmware.com", nil, headerMap)
+	defer cancel()
+
+	respBody, err := c.readResponseBody(res)
+	if err != nil {
+		c.Log.WithValues("response", string(respBody)).Error(err, "error reading response")
+		return false
+	}
+
+	log.Debugf("Tanzu API is present %s", string(respBody))
+
+	if err != nil {
+		if k8serrors.IsNotFound(err) {
+			return false
+		}
+		log.WithError(err).Info("error querying the TKG API")
+		return false
+	}
+	return true
+}
+
+// isAKSFlavor - checks cluster roles for AKS service resource
+// https://docs.microsoft.com/en-us/azure/aks/concepts-identity#clusterrolebinding
+func (c clusterRegisterUtil) isAKSFlavor() bool {
+	const aksService = "aks-service"
+	aksRoleBinding := &rbacv1.ClusterRole{}
+	err := c.K8sClient.Get(c.Ctx, types.NamespacedName{Name: aksService, Namespace: ""}, aksRoleBinding)
+	if err != nil {
+		errMsg := "Failed to get aks-service service"
+		c.Log.Error(err, errMsg)
+		return false
+	}
+
+	return aksRoleBinding != nil
+}
+
+// isGKEFlavor - checks for 'gke' in the client git version
+// i.e. "gitVersion": "v1.20.6-gke.1000",
+func (c clusterRegisterUtil) isGKEFlavor() bool {
+	return c.versionInfo != nil && strings.Contains(strings.ToLower(c.versionInfo.GitVersion), string(FlavorGKE))
+}
+
+// isAnthosFlavor - checks for the presence of the Anthos API
+func (c clusterRegisterUtil) isAnthosFlavor(apiToken string) bool {
+	headerMap := HeaderMap{Authorization: fmt.Sprintf("Bearer %s", apiToken)}
+	res, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodGet, "apis/anthos.gke.io", nil, headerMap)
+	defer cancel()
+
+	respBody, err := c.readResponseBody(res)
+	if err != nil {
+		c.Log.WithValues("response", string(respBody)).Error(err, "error reading response")
+		return false
+	}
+
+	log.Debugf("Anthos API is present %s", string(respBody))
+
+	if err != nil {
+		if k8serrors.IsNotFound(err) {
+			log.WithError(err).Info("error querying the Anthos API")
+		}
+		return false
+	}
+	return true
 }
