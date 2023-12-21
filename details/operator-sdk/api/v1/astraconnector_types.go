@@ -95,6 +95,7 @@ type NatsSyncClientStatus struct {
 	Registered       string `json:"registered"` //todo cluster vs connector registered
 	AstraClusterId   string `json:"astraClusterID,omitempty"`
 	AstraConnectorID string `json:"astraConnectorID"`
+	ClusterType      string `json:"clusterType"`
 	Status           string `json:"status"`
 }
 
@@ -111,6 +112,7 @@ type ImageRegistry struct {
 //+kubebuilder:printcolumn:name="AstraClusterID",type=string,JSONPath=`.status.natsSyncClient.astraClusterID`
 //+kubebuilder:printcolumn:name="AstraConnectorID",type=string,JSONPath=`.status.natsSyncClient.astraConnectorID`
 //+kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.natsSyncClient.status`
+//+kubebuilder:printcolumn:name="ClusterType",type=string,JSONPath=`.status.natsSyncClient.clusterType`
 
 // AstraConnector is the Schema for the astraconnectors API
 type AstraConnector struct {

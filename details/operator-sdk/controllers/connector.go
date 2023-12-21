@@ -67,6 +67,10 @@ func (r *AstraConnectorController) deployConnector(ctx context.Context,
 		}
 	}
 
+	clusterFlavor := registerUtil.DiscoverKubernetesFlavor()
+	natsSyncClientStatus.ClusterType = string(clusterFlavor)
+	_ = r.updateAstraConnectorStatus(ctx, astraConnector, *natsSyncClientStatus)
+
 	// RegisterClient
 	if !astraConnector.Spec.Astra.Unregister {
 		// Check the feature flag first

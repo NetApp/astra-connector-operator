@@ -120,6 +120,7 @@ type ClusterRegisterUtil interface {
 	UpdateManagedCluster(astraHost, clusterId, astraConnectorId, connectorInstall, apiToken string) (string, error)
 	CreateOrUpdateManagedCluster(astraHost, cloudId, clusterId, astraConnectorId, managedClustersMethod, apiToken string) (ClusterInfo, string, error)
 	ValidateAndGetCluster(astraHost, cloudId, apiToken, clusterId string) (ClusterInfo, string, error)
+	DiscoverKubernetesFlavor() OrchestratorFlavor
 }
 
 type clusterRegisterUtil struct {
@@ -1098,7 +1099,7 @@ func (c clusterRegisterUtil) RegisterClusterWithAstra(astraConnectorId string, c
 	return clusterInfo.ID, "", nil
 }
 
-func (c clusterRegisterUtil) discoverKubernetesFlavor() OrchestratorFlavor {
+func (c clusterRegisterUtil) DiscoverKubernetesFlavor() OrchestratorFlavor {
 	apiToken, errorReason, err := c.GetAPITokenFromSecret(c.AstraConnector.Spec.Astra.TokenRef)
 	if err != nil {
 		c.Log.Error(err, "failed to get API token fron secret", "secret", c.AstraConnector.Spec.Astra.TokenRef, "errorReason", errorReason)
