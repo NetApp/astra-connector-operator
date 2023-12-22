@@ -26,10 +26,10 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/version"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/NetApp-Polaris/astra-connector-operator/common"
+	"github.com/NetApp-Polaris/astra-connector-operator/details/k8s"
 	v1 "github.com/NetApp-Polaris/astra-connector-operator/details/operator-sdk/api/v1"
 )
 
@@ -129,10 +129,6 @@ type clusterRegisterUtil struct {
 	K8sClient      client.Client
 	Ctx            context.Context
 	Log            logr.Logger
-
-	openShiftVersion string
-	versionInfo      *version.Info
-	flavor           OrchestratorFlavor
 }
 
 func NewClusterRegisterUtil(astraConnector *v1.AstraConnector, client HTTPClient, k8sClient client.Client, log logr.Logger, ctx context.Context) ClusterRegisterUtil {
@@ -1150,12 +1146,6 @@ func (c clusterRegisterUtil) isOpenshiftFlavor(apiToken string) bool {
 }
 
 func (c clusterRegisterUtil) getOpenshiftVersion(apiToken string) (string, error) {
-
-	// return cached version if already cached. else retrieve it by calling the API
-	if c.openShiftVersion != "" {
-		return c.openShiftVersion, nil
-	}
-
 	// struct modeling only required information present in openshift API response
 	var openshiftVersionSchema struct {
 		Status struct {
@@ -1182,7 +1172,6 @@ func (c clusterRegisterUtil) getOpenshiftVersion(apiToken string) (string, error
 
 	for _, versionObject := range openshiftVersionSchema.Status.Versions {
 		if versionObject.Name == openShiftApiServerName {
-			c.openShiftVersion = versionObject.Version
 			return versionObject.Version, nil
 		}
 	}
@@ -1283,7 +1272,14 @@ func (c clusterRegisterUtil) isAKSFlavor() bool {
 // isGKEFlavor - checks for 'gke' in the client git version
 // i.e. "gitVersion": "v1.20.6-gke.1000",
 func (c clusterRegisterUtil) isGKEFlavor() bool {
-	return c.versionInfo != nil && strings.Contains(strings.ToLower(c.versionInfo.GitVersion), string(FlavorGKE))
+	k8sUtil := k8s.NewK8sUtil(c.K8sClient, c.Log)
+	k8sVersionStr, err := k8sUtil.VersionGet()
+	if err != nil {
+		log.Error(err, "failed to get k8s version of host cluster")
+		return false
+	}
+
+	return k8sVersionStr != "" && strings.Contains(k8sVersionStr, string(FlavorGKE))
 }
 
 // isAnthosFlavor - checks for the presence of the Anthos API
