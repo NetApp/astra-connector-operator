@@ -58,7 +58,7 @@ const (
 
 	ConnectorV2Capability      = "connectorV2" // V2 refers specifically to Arch 3.0 connector and beyond
 	ConnectorNeptuneCapability = "neptuneV1"
-	ConnectorRelayCapability   = "relayV1" // TODO ASTRACTL-30644: remove
+	ConnectorRelayCapability   = "relayV1" // TODO ASTRACTL-30948: remove completely
 	ConnectorWatcherCapability = "watcherV1"
 
 	AstraClustersAPIVersion        = "1.4"
@@ -72,7 +72,7 @@ func GetNeptuneRepositories() []string {
 func GetConnectorCapabilities() []string {
 	capabilities := []string{
 		ConnectorV2Capability,
-		ConnectorRelayCapability, // TODO ASTRACTL-30644: remove
+		ConnectorRelayCapability, // TODO ASTRACTL-30948: remove completely
 		ConnectorWatcherCapability,
 	}
 
