@@ -2,12 +2,14 @@ package controllers
 
 import (
 	"context"
-	"github.com/NetApp-Polaris/astra-connector-operator/details/k8s"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"net/http"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"strings"
 	"time"
+
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/NetApp-Polaris/astra-connector-operator/details/k8s"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -79,10 +81,10 @@ func (r *AstraConnectorController) deployConnector(ctx context.Context,
 			log.Info("natsSyncClient already registered", "astraConnectorID", astraConnectorID)
 		} else {
 			log.Info("Registering natsSyncClient")
-			astraConnectorID, err = registerUtil.RegisterNatsSyncClient()
+			astraConnectorID, errorReason, err := registerUtil.RegisterNatsSyncClient()
 			if err != nil {
 				log.Error(err, FailedRegisterNSClient)
-				natsSyncClientStatus.Status = FailedRegisterNSClient
+				natsSyncClientStatus.Status = errorReason
 				_ = r.updateAstraConnectorStatus(ctx, astraConnector, *natsSyncClientStatus)
 				return ctrl.Result{RequeueAfter: time.Minute * conf.Config.ErrorTimeout()}, err
 			}
@@ -102,7 +104,7 @@ func (r *AstraConnectorController) deployConnector(ctx context.Context,
 			// 2. Check the CR Spec. If it is in here, use it. It will be validated later.
 			// 3. If the clusterID is in neither of the above, leave it "" and the operator will create one and populate the status
 			// 4. Save the clusterID to the CR Status
-			var clusterId, createdClusterId string
+			var clusterId string
 			if strings.TrimSpace(natsSyncClientStatus.AstraClusterId) != "" {
 				clusterId = natsSyncClientStatus.AstraClusterId
 				log.WithValues("clusterID", clusterId).Info("using clusterID from CR Status")
@@ -110,15 +112,15 @@ func (r *AstraConnectorController) deployConnector(ctx context.Context,
 				clusterId = astraConnector.Spec.Astra.ClusterId
 			}
 
-			createdClusterId, err = registerUtil.RegisterClusterWithAstra(astraConnectorID, clusterId)
+			var errorReason string
+			natsSyncClientStatus.AstraClusterId, errorReason, err = registerUtil.RegisterClusterWithAstra(astraConnectorID, clusterId)
 			if err != nil {
 				log.Error(err, FailedConnectorIDAdd)
-				natsSyncClientStatus.Status = FailedConnectorIDAdd
+				natsSyncClientStatus.Status = errorReason
 				_ = r.updateAstraConnectorStatus(ctx, astraConnector, *natsSyncClientStatus)
 				return ctrl.Result{RequeueAfter: time.Minute * conf.Config.ErrorTimeout()}, err
 			}
 			log.Info("Registered cluster with Astra")
-			natsSyncClientStatus.AstraClusterId = createdClusterId
 		}
 		natsSyncClientStatus.Registered = "true"
 		natsSyncClientStatus.Status = "Registered with Astra"

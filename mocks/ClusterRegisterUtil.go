@@ -31,7 +31,7 @@ func (_m *ClusterRegisterUtil) CloudExists(astraHost string, cloudID string, api
 }
 
 // CreateCloud provides a mock function with given fields: astraHost, cloudType, apiToken
-func (_m *ClusterRegisterUtil) CreateCloud(astraHost string, cloudType string, apiToken string) (string, error) {
+func (_m *ClusterRegisterUtil) CreateCloud(astraHost string, cloudType string, apiToken string) (string, string, error) {
 	ret := _m.Called(astraHost, cloudType, apiToken)
 
 	var r0 string
@@ -41,18 +41,25 @@ func (_m *ClusterRegisterUtil) CreateCloud(astraHost string, cloudType string, a
 		r0 = ret.Get(0).(string)
 	}
 
-	var r1 error
-	if rf, ok := ret.Get(1).(func(string, string, string) error); ok {
+	var r1 string
+	if rf, ok := ret.Get(1).(func(string, string, string) string); ok {
 		r1 = rf(astraHost, cloudType, apiToken)
 	} else {
-		r1 = ret.Error(1)
+		r1 = ret.Get(1).(string)
 	}
 
-	return r0, r1
+	var r2 error
+	if rf, ok := ret.Get(2).(func(string, string, string) error); ok {
+		r2 = rf(astraHost, cloudType, apiToken)
+	} else {
+		r2 = ret.Error(2)
+	}
+
+	return r0, r1, r2
 }
 
 // CreateCluster provides a mock function with given fields: astraHost, cloudId, astraConnectorId, apiToken
-func (_m *ClusterRegisterUtil) CreateCluster(astraHost string, cloudId string, astraConnectorId string, apiToken string) (register.ClusterInfo, error) {
+func (_m *ClusterRegisterUtil) CreateCluster(astraHost string, cloudId string, astraConnectorId string, apiToken string) (register.ClusterInfo, string, error) {
 	ret := _m.Called(astraHost, cloudId, astraConnectorId, apiToken)
 
 	var r0 register.ClusterInfo
@@ -62,44 +69,37 @@ func (_m *ClusterRegisterUtil) CreateCluster(astraHost string, cloudId string, a
 		r0 = ret.Get(0).(register.ClusterInfo)
 	}
 
-	var r1 error
-	if rf, ok := ret.Get(1).(func(string, string, string, string) error); ok {
+	var r1 string
+	if rf, ok := ret.Get(1).(func(string, string, string, string) string); ok {
 		r1 = rf(astraHost, cloudId, astraConnectorId, apiToken)
 	} else {
-		r1 = ret.Error(1)
+		r1 = ret.Get(1).(string)
 	}
 
-	return r0, r1
-}
-
-// CreateManagedCluster provides a mock function with given fields: astraHost, cloudId, clusterID, storageClass, apiToken
-func (_m *ClusterRegisterUtil) CreateManagedCluster(astraHost string, cloudId string, clusterID string, storageClass string, apiToken string) error {
-	ret := _m.Called(astraHost, cloudId, clusterID, storageClass, apiToken)
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(string, string, string, string, string) error); ok {
-		r0 = rf(astraHost, cloudId, clusterID, storageClass, apiToken)
+	var r2 error
+	if rf, ok := ret.Get(2).(func(string, string, string, string) error); ok {
+		r2 = rf(astraHost, cloudId, astraConnectorId, apiToken)
 	} else {
-		r0 = ret.Error(0)
+		r2 = ret.Error(2)
 	}
 
-	return r0
+	return r0, r1, r2
 }
 
-// CreateOrUpdateCluster provides a mock function with given fields: astraHost, cloudId, clusterId, astraConnectorId, clustersMethod, apiToken
-func (_m *ClusterRegisterUtil) CreateOrUpdateCluster(astraHost string, cloudId string, clusterId string, astraConnectorId string, clustersMethod string, apiToken string) (register.ClusterInfo, error) {
-	ret := _m.Called(astraHost, cloudId, clusterId, astraConnectorId, clustersMethod, apiToken)
+// CreateManagedCluster provides a mock function with given fields: astraHost, cloudId, clusterID, storageClass, connectorInstall, apiToken
+func (_m *ClusterRegisterUtil) CreateManagedCluster(astraHost string, cloudId string, clusterID string, storageClass string, connectorInstall string, apiToken string) (string, error) {
+	ret := _m.Called(astraHost, cloudId, clusterID, storageClass, connectorInstall, apiToken)
 
-	var r0 register.ClusterInfo
-	if rf, ok := ret.Get(0).(func(string, string, string, string, string, string) register.ClusterInfo); ok {
-		r0 = rf(astraHost, cloudId, clusterId, astraConnectorId, clustersMethod, apiToken)
+	var r0 string
+	if rf, ok := ret.Get(0).(func(string, string, string, string, string, string) string); ok {
+		r0 = rf(astraHost, cloudId, clusterID, storageClass, connectorInstall, apiToken)
 	} else {
-		r0 = ret.Get(0).(register.ClusterInfo)
+		r0 = ret.Get(0).(string)
 	}
 
 	var r1 error
 	if rf, ok := ret.Get(1).(func(string, string, string, string, string, string) error); ok {
-		r1 = rf(astraHost, cloudId, clusterId, astraConnectorId, clustersMethod, apiToken)
+		r1 = rf(astraHost, cloudId, clusterID, storageClass, connectorInstall, apiToken)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -107,8 +107,36 @@ func (_m *ClusterRegisterUtil) CreateOrUpdateCluster(astraHost string, cloudId s
 	return r0, r1
 }
 
+// CreateOrUpdateCluster provides a mock function with given fields: astraHost, cloudId, clusterId, astraConnectorId, connectorInstall, clustersMethod, apiToken
+func (_m *ClusterRegisterUtil) CreateOrUpdateCluster(astraHost string, cloudId string, clusterId string, astraConnectorId string, connectorInstall string, clustersMethod string, apiToken string) (register.ClusterInfo, string, error) {
+	ret := _m.Called(astraHost, cloudId, clusterId, astraConnectorId, connectorInstall, clustersMethod, apiToken)
+
+	var r0 register.ClusterInfo
+	if rf, ok := ret.Get(0).(func(string, string, string, string, string, string, string) register.ClusterInfo); ok {
+		r0 = rf(astraHost, cloudId, clusterId, astraConnectorId, connectorInstall, clustersMethod, apiToken)
+	} else {
+		r0 = ret.Get(0).(register.ClusterInfo)
+	}
+
+	var r1 string
+	if rf, ok := ret.Get(1).(func(string, string, string, string, string, string, string) string); ok {
+		r1 = rf(astraHost, cloudId, clusterId, astraConnectorId, connectorInstall, clustersMethod, apiToken)
+	} else {
+		r1 = ret.Get(1).(string)
+	}
+
+	var r2 error
+	if rf, ok := ret.Get(2).(func(string, string, string, string, string, string, string) error); ok {
+		r2 = rf(astraHost, cloudId, clusterId, astraConnectorId, connectorInstall, clustersMethod, apiToken)
+	} else {
+		r2 = ret.Error(2)
+	}
+
+	return r0, r1, r2
+}
+
 // CreateOrUpdateManagedCluster provides a mock function with given fields: astraHost, cloudId, clusterId, astraConnectorId, managedClustersMethod, apiToken
-func (_m *ClusterRegisterUtil) CreateOrUpdateManagedCluster(astraHost string, cloudId string, clusterId string, astraConnectorId string, managedClustersMethod string, apiToken string) (register.ClusterInfo, error) {
+func (_m *ClusterRegisterUtil) CreateOrUpdateManagedCluster(astraHost string, cloudId string, clusterId string, astraConnectorId string, managedClustersMethod string, apiToken string) (register.ClusterInfo, string, error) {
 	ret := _m.Called(astraHost, cloudId, clusterId, astraConnectorId, managedClustersMethod, apiToken)
 
 	var r0 register.ClusterInfo
@@ -118,18 +146,25 @@ func (_m *ClusterRegisterUtil) CreateOrUpdateManagedCluster(astraHost string, cl
 		r0 = ret.Get(0).(register.ClusterInfo)
 	}
 
-	var r1 error
-	if rf, ok := ret.Get(1).(func(string, string, string, string, string, string) error); ok {
+	var r1 string
+	if rf, ok := ret.Get(1).(func(string, string, string, string, string, string) string); ok {
 		r1 = rf(astraHost, cloudId, clusterId, astraConnectorId, managedClustersMethod, apiToken)
 	} else {
-		r1 = ret.Error(1)
+		r1 = ret.Get(1).(string)
 	}
 
-	return r0, r1
+	var r2 error
+	if rf, ok := ret.Get(2).(func(string, string, string, string, string, string) error); ok {
+		r2 = rf(astraHost, cloudId, clusterId, astraConnectorId, managedClustersMethod, apiToken)
+	} else {
+		r2 = ret.Error(2)
+	}
+
+	return r0, r1, r2
 }
 
 // GetAPITokenFromSecret provides a mock function with given fields: secretName
-func (_m *ClusterRegisterUtil) GetAPITokenFromSecret(secretName string) (string, error) {
+func (_m *ClusterRegisterUtil) GetAPITokenFromSecret(secretName string) (string, string, error) {
 	ret := _m.Called(secretName)
 
 	var r0 string
@@ -139,18 +174,25 @@ func (_m *ClusterRegisterUtil) GetAPITokenFromSecret(secretName string) (string,
 		r0 = ret.Get(0).(string)
 	}
 
-	var r1 error
-	if rf, ok := ret.Get(1).(func(string) error); ok {
+	var r1 string
+	if rf, ok := ret.Get(1).(func(string) string); ok {
 		r1 = rf(secretName)
 	} else {
-		r1 = ret.Error(1)
+		r1 = ret.Get(1).(string)
 	}
 
-	return r0, r1
+	var r2 error
+	if rf, ok := ret.Get(2).(func(string) error); ok {
+		r2 = rf(secretName)
+	} else {
+		r2 = ret.Error(2)
+	}
+
+	return r0, r1, r2
 }
 
 // GetCloudId provides a mock function with given fields: astraHost, cloudType, apiToken, retryTimeout
-func (_m *ClusterRegisterUtil) GetCloudId(astraHost string, cloudType string, apiToken string, retryTimeout ...time.Duration) (string, error) {
+func (_m *ClusterRegisterUtil) GetCloudId(astraHost string, cloudType string, apiToken string, retryTimeout ...time.Duration) (string, string, error) {
 	_va := make([]interface{}, len(retryTimeout))
 	for _i := range retryTimeout {
 		_va[_i] = retryTimeout[_i]
@@ -167,18 +209,25 @@ func (_m *ClusterRegisterUtil) GetCloudId(astraHost string, cloudType string, ap
 		r0 = ret.Get(0).(string)
 	}
 
-	var r1 error
-	if rf, ok := ret.Get(1).(func(string, string, string, ...time.Duration) error); ok {
+	var r1 string
+	if rf, ok := ret.Get(1).(func(string, string, string, ...time.Duration) string); ok {
 		r1 = rf(astraHost, cloudType, apiToken, retryTimeout...)
 	} else {
-		r1 = ret.Error(1)
+		r1 = ret.Get(1).(string)
 	}
 
-	return r0, r1
+	var r2 error
+	if rf, ok := ret.Get(2).(func(string, string, string, ...time.Duration) error); ok {
+		r2 = rf(astraHost, cloudType, apiToken, retryTimeout...)
+	} else {
+		r2 = ret.Error(2)
+	}
+
+	return r0, r1, r2
 }
 
 // GetCluster provides a mock function with given fields: astraHost, cloudId, clusterId, apiToken
-func (_m *ClusterRegisterUtil) GetCluster(astraHost string, cloudId string, clusterId string, apiToken string) (register.Cluster, error) {
+func (_m *ClusterRegisterUtil) GetCluster(astraHost string, cloudId string, clusterId string, apiToken string) (register.Cluster, string, error) {
 	ret := _m.Called(astraHost, cloudId, clusterId, apiToken)
 
 	var r0 register.Cluster
@@ -188,18 +237,25 @@ func (_m *ClusterRegisterUtil) GetCluster(astraHost string, cloudId string, clus
 		r0 = ret.Get(0).(register.Cluster)
 	}
 
-	var r1 error
-	if rf, ok := ret.Get(1).(func(string, string, string, string) error); ok {
+	var r1 string
+	if rf, ok := ret.Get(1).(func(string, string, string, string) string); ok {
 		r1 = rf(astraHost, cloudId, clusterId, apiToken)
 	} else {
-		r1 = ret.Error(1)
+		r1 = ret.Get(1).(string)
 	}
 
-	return r0, r1
+	var r2 error
+	if rf, ok := ret.Get(2).(func(string, string, string, string) error); ok {
+		r2 = rf(astraHost, cloudId, clusterId, apiToken)
+	} else {
+		r2 = ret.Error(2)
+	}
+
+	return r0, r1, r2
 }
 
 // GetClusters provides a mock function with given fields: astraHost, cloudId, apiToken
-func (_m *ClusterRegisterUtil) GetClusters(astraHost string, cloudId string, apiToken string) (register.GetClustersResponse, error) {
+func (_m *ClusterRegisterUtil) GetClusters(astraHost string, cloudId string, apiToken string) (register.GetClustersResponse, string, error) {
 	ret := _m.Called(astraHost, cloudId, apiToken)
 
 	var r0 register.GetClustersResponse
@@ -209,14 +265,21 @@ func (_m *ClusterRegisterUtil) GetClusters(astraHost string, cloudId string, api
 		r0 = ret.Get(0).(register.GetClustersResponse)
 	}
 
-	var r1 error
-	if rf, ok := ret.Get(1).(func(string, string, string) error); ok {
+	var r1 string
+	if rf, ok := ret.Get(1).(func(string, string, string) string); ok {
 		r1 = rf(astraHost, cloudId, apiToken)
 	} else {
-		r1 = ret.Error(1)
+		r1 = ret.Get(1).(string)
 	}
 
-	return r0, r1
+	var r2 error
+	if rf, ok := ret.Get(2).(func(string, string, string) error); ok {
+		r2 = rf(astraHost, cloudId, apiToken)
+	} else {
+		r2 = ret.Error(2)
+	}
+
+	return r0, r1, r2
 }
 
 // GetConnectorIDFromConfigMap provides a mock function with given fields: cmData
@@ -269,7 +332,7 @@ func (_m *ClusterRegisterUtil) GetNatsSyncClientUnregisterURL() string {
 }
 
 // GetOrCreateCloud provides a mock function with given fields: astraHost, cloudType, apiToken
-func (_m *ClusterRegisterUtil) GetOrCreateCloud(astraHost string, cloudType string, apiToken string) (string, error) {
+func (_m *ClusterRegisterUtil) GetOrCreateCloud(astraHost string, cloudType string, apiToken string) (string, string, error) {
 	ret := _m.Called(astraHost, cloudType, apiToken)
 
 	var r0 string
@@ -279,14 +342,21 @@ func (_m *ClusterRegisterUtil) GetOrCreateCloud(astraHost string, cloudType stri
 		r0 = ret.Get(0).(string)
 	}
 
-	var r1 error
-	if rf, ok := ret.Get(1).(func(string, string, string) error); ok {
+	var r1 string
+	if rf, ok := ret.Get(1).(func(string, string, string) string); ok {
 		r1 = rf(astraHost, cloudType, apiToken)
 	} else {
-		r1 = ret.Error(1)
+		r1 = ret.Get(1).(string)
 	}
 
-	return r0, r1
+	var r2 error
+	if rf, ok := ret.Get(2).(func(string, string, string) error); ok {
+		r2 = rf(astraHost, cloudType, apiToken)
+	} else {
+		r2 = ret.Error(2)
+	}
+
+	return r0, r1, r2
 }
 
 // GetStorageClass provides a mock function with given fields: astraHost, cloudId, clusterId, apiToken
@@ -333,22 +403,36 @@ func (_m *ClusterRegisterUtil) ListClouds(astraHost string, apiToken string) (*h
 	return r0, r1
 }
 
-// RegisterClusterWithAstra provides a mock function with given fields: astraConnectorId
-func (_m *ClusterRegisterUtil) RegisterClusterWithAstra(astraConnectorId string) error {
-	ret := _m.Called(astraConnectorId)
+// RegisterClusterWithAstra provides a mock function with given fields: astraConnectorId, clusterId
+func (_m *ClusterRegisterUtil) RegisterClusterWithAstra(astraConnectorId string, clusterId string) (string, string, error) {
+	ret := _m.Called(astraConnectorId, clusterId)
 
-	var r0 error
-	if rf, ok := ret.Get(0).(func(string) error); ok {
-		r0 = rf(astraConnectorId)
+	var r0 string
+	if rf, ok := ret.Get(0).(func(string, string) string); ok {
+		r0 = rf(astraConnectorId, clusterId)
 	} else {
-		r0 = ret.Error(0)
+		r0 = ret.Get(0).(string)
 	}
 
-	return r0
+	var r1 string
+	if rf, ok := ret.Get(1).(func(string, string) string); ok {
+		r1 = rf(astraConnectorId, clusterId)
+	} else {
+		r1 = ret.Get(1).(string)
+	}
+
+	var r2 error
+	if rf, ok := ret.Get(2).(func(string, string) error); ok {
+		r2 = rf(astraConnectorId, clusterId)
+	} else {
+		r2 = ret.Error(2)
+	}
+
+	return r0, r1, r2
 }
 
 // RegisterNatsSyncClient provides a mock function with given fields:
-func (_m *ClusterRegisterUtil) RegisterNatsSyncClient() (string, error) {
+func (_m *ClusterRegisterUtil) RegisterNatsSyncClient() (string, string, error) {
 	ret := _m.Called()
 
 	var r0 string
@@ -358,14 +442,21 @@ func (_m *ClusterRegisterUtil) RegisterNatsSyncClient() (string, error) {
 		r0 = ret.Get(0).(string)
 	}
 
-	var r1 error
-	if rf, ok := ret.Get(1).(func() error); ok {
+	var r1 string
+	if rf, ok := ret.Get(1).(func() string); ok {
 		r1 = rf()
 	} else {
-		r1 = ret.Error(1)
+		r1 = ret.Get(1).(string)
 	}
 
-	return r0, r1
+	var r2 error
+	if rf, ok := ret.Get(2).(func() error); ok {
+		r2 = rf()
+	} else {
+		r2 = ret.Error(2)
+	}
+
+	return r0, r1, r2
 }
 
 // UnRegisterNatsSyncClient provides a mock function with given fields:
@@ -383,52 +474,73 @@ func (_m *ClusterRegisterUtil) UnRegisterNatsSyncClient() error {
 }
 
 // UpdateCluster provides a mock function with given fields: astraHost, cloudId, clusterId, astraConnectorId, apiToken
-func (_m *ClusterRegisterUtil) UpdateCluster(astraHost string, cloudId string, clusterId string, astraConnectorId string, apiToken string) error {
+func (_m *ClusterRegisterUtil) UpdateCluster(astraHost string, cloudId string, clusterId string, astraConnectorId string, apiToken string) (string, error) {
 	ret := _m.Called(astraHost, cloudId, clusterId, astraConnectorId, apiToken)
 
-	var r0 error
-	if rf, ok := ret.Get(0).(func(string, string, string, string, string) error); ok {
+	var r0 string
+	if rf, ok := ret.Get(0).(func(string, string, string, string, string) string); ok {
 		r0 = rf(astraHost, cloudId, clusterId, astraConnectorId, apiToken)
 	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
-// UpdateManagedCluster provides a mock function with given fields: astraHost, clusterId, astraConnectorId, apiToken
-func (_m *ClusterRegisterUtil) UpdateManagedCluster(astraHost string, clusterId string, astraConnectorId string, apiToken string) error {
-	ret := _m.Called(astraHost, clusterId, astraConnectorId, apiToken)
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(string, string, string, string) error); ok {
-		r0 = rf(astraHost, clusterId, astraConnectorId, apiToken)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
-// ValidateAndGetCluster provides a mock function with given fields: astraHost, cloudId, apiToken
-func (_m *ClusterRegisterUtil) ValidateAndGetCluster(astraHost string, cloudId string, apiToken string) (register.ClusterInfo, error) {
-	ret := _m.Called(astraHost, cloudId, apiToken)
-
-	var r0 register.ClusterInfo
-	if rf, ok := ret.Get(0).(func(string, string, string) register.ClusterInfo); ok {
-		r0 = rf(astraHost, cloudId, apiToken)
-	} else {
-		r0 = ret.Get(0).(register.ClusterInfo)
+		r0 = ret.Get(0).(string)
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(string, string, string) error); ok {
-		r1 = rf(astraHost, cloudId, apiToken)
+	if rf, ok := ret.Get(1).(func(string, string, string, string, string) error); ok {
+		r1 = rf(astraHost, cloudId, clusterId, astraConnectorId, apiToken)
 	} else {
 		r1 = ret.Error(1)
 	}
 
 	return r0, r1
+}
+
+// UpdateManagedCluster provides a mock function with given fields: astraHost, clusterId, astraConnectorId, connectorInstall, apiToken
+func (_m *ClusterRegisterUtil) UpdateManagedCluster(astraHost string, clusterId string, astraConnectorId string, connectorInstall string, apiToken string) (string, error) {
+	ret := _m.Called(astraHost, clusterId, astraConnectorId, connectorInstall, apiToken)
+
+	var r0 string
+	if rf, ok := ret.Get(0).(func(string, string, string, string, string) string); ok {
+		r0 = rf(astraHost, clusterId, astraConnectorId, connectorInstall, apiToken)
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(string, string, string, string, string) error); ok {
+		r1 = rf(astraHost, clusterId, astraConnectorId, connectorInstall, apiToken)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// ValidateAndGetCluster provides a mock function with given fields: astraHost, cloudId, apiToken, clusterId
+func (_m *ClusterRegisterUtil) ValidateAndGetCluster(astraHost string, cloudId string, apiToken string, clusterId string) (register.ClusterInfo, string, error) {
+	ret := _m.Called(astraHost, cloudId, apiToken, clusterId)
+
+	var r0 register.ClusterInfo
+	if rf, ok := ret.Get(0).(func(string, string, string, string) register.ClusterInfo); ok {
+		r0 = rf(astraHost, cloudId, apiToken, clusterId)
+	} else {
+		r0 = ret.Get(0).(register.ClusterInfo)
+	}
+
+	var r1 string
+	if rf, ok := ret.Get(1).(func(string, string, string, string) string); ok {
+		r1 = rf(astraHost, cloudId, apiToken, clusterId)
+	} else {
+		r1 = ret.Get(1).(string)
+	}
+
+	var r2 error
+	if rf, ok := ret.Get(2).(func(string, string, string, string) error); ok {
+		r2 = rf(astraHost, cloudId, apiToken, clusterId)
+	} else {
+		r2 = ret.Error(2)
+	}
+
+	return r0, r1, r2
 }
 
 type mockConstructorTestingTNewClusterRegisterUtil interface {

@@ -7,6 +7,7 @@ package connector
 import (
 	"context"
 	"fmt"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"strconv"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -61,10 +62,17 @@ func (d *AstraConnectDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx co
 
 	ref := &corev1.ConfigMapKeySelector{LocalObjectReference: corev1.LocalObjectReference{Name: common.AstraConnectName}, Key: "nats_url"}
 
+	// High UID to satisfy OCP requirements
+	userUID := int64(1000740000)
+	readOnlyRootFilesystem := true
+	runAsNonRoot := true
 	dep := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      common.AstraConnectName,
 			Namespace: m.Namespace,
+			Annotations: map[string]string{
+				"container.seccomp.security.alpha.kubernetes.io/pod": "runtime/default",
+			},
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: &replicas,
@@ -106,6 +114,19 @@ func (d *AstraConnectDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx co
 									},
 								},
 							},
+						},
+						Resources: corev1.ResourceRequirements{
+							Limits: corev1.ResourceList{
+								corev1.ResourceCPU: resource.MustParse("0.1"),
+							},
+						},
+						SecurityContext: &corev1.SecurityContext{
+							Capabilities: &corev1.Capabilities{
+								Drop: []corev1.Capability{"ALL"},
+							},
+							ReadOnlyRootFilesystem: &readOnlyRootFilesystem,
+							RunAsNonRoot:           &runAsNonRoot,
+							RunAsUser:              &userUID,
 						},
 					}},
 					ServiceAccountName: common.AstraConnectName,

@@ -59,10 +59,18 @@ func (n *NatsDeployer) GetStatefulSetObjects(m *v1.AstraConnector, ctx context.C
 
 	natsImage = fmt.Sprintf("%s/%s", imageRegistry, containerImage)
 	log.Info("Using nats image", "image", natsImage)
+
+	// High UID to satisfy OCP requirements
+	userUID := int64(1000740000)
+	readOnlyRootFilesystem := true
+	runAsNonRoot := true
 	dep := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      common.NatsName,
 			Namespace: m.Namespace,
+			Annotations: map[string]string{
+				"container.seccomp.security.alpha.kubernetes.io/pod": "runtime/default",
+			},
 		},
 		Spec: appsv1.StatefulSetSpec{
 			ServiceName: common.NatsClusterServiceName,
@@ -120,6 +128,14 @@ func (n *NatsDeployer) GetStatefulSetObjects(m *v1.AstraConnector, ctx context.C
 								Name:      "pid",
 								MountPath: "/var/run/nats",
 							},
+						},
+						SecurityContext: &corev1.SecurityContext{
+							Capabilities: &corev1.Capabilities{
+								Drop: []corev1.Capability{"ALL"},
+							},
+							ReadOnlyRootFilesystem: &readOnlyRootFilesystem,
+							RunAsNonRoot:           &runAsNonRoot,
+							RunAsUser:              &userUID,
 						},
 					}},
 					Volumes: []corev1.Volume{

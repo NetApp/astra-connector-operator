@@ -101,6 +101,7 @@ var _ = Describe("Astraconnector controller", func() {
 							Image:    "test-image",
 							Replicas: 3,
 						},
+						SkipPreCheck: true,
 					},
 				}
 

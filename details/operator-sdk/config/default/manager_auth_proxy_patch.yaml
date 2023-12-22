@@ -20,6 +20,9 @@ spec:
         - containerPort: 8443
           protocol: TCP
           name: https
+        securityContext:
+          seccompProfile:
+            type: RuntimeDefault
       - name: manager
         args:
         - "--health-probe-bind-address=:8081"
