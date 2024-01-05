@@ -1684,6 +1684,11 @@ spec:
                 - pre
                 - post
                 type: string
+              timeout:
+                default: 25
+                description: Timeout int that defines the max time in minutes an execution hook will be allowed to run. Min is 1 minute. Defaults to 25 min if not specified
+                minimum: 1
+                type: integer
             required:
             - action
             - applicationRef
