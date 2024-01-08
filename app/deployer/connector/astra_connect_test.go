@@ -2,10 +2,11 @@ package connector_test
 
 import (
 	"context"
+	"testing"
+
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
-	"testing"
 
 	"github.com/NetApp-Polaris/astra-connector-operator/app/deployer/connector"
 	"github.com/NetApp-Polaris/astra-connector-operator/common"
@@ -97,7 +98,7 @@ func TestAstraConnectGetDeploymentObjectsUsingDefaults(t *testing.T) {
 	assert.Equal(t, common.AstraConnectName, deployment.Spec.Template.Spec.ServiceAccountName)
 
 	container := deployment.Spec.Template.Spec.Containers[0]
-	assert.Equal(t, "netappdownloads.jfrog.io/docker-astra-control-staging/arch30/neptune/astra-connector:1.0.202311291720", container.Image)
+	assert.Equal(t, "netappdownloads.jfrog.io/docker-astra-control-staging/arch30/neptune/astra-connector:1.0.202401052212", container.Image)
 	assert.Equal(t, common.AstraConnectName, container.Name)
 	assert.Equal(t, 4, len(container.Env))
 	assert.Equal(t, "NATS_SERVER_URL", container.Env[0].Name)
