@@ -9,6 +9,7 @@ import (
 )
 
 type Astra struct {
+	// +kubebuilder:validation:Required
 	AccountId string `json:"accountId"`
 	// +kubebuilder:validation:Optional
 	CloudId string `json:"cloudId"`

@@ -5,6 +5,9 @@
 package v1_test
 
 import (
+	"github.com/NetApp-Polaris/astra-connector-operator/mocks"
+	"github.com/stretchr/testify/mock"
+	"net/http"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -13,12 +16,12 @@ import (
 )
 
 func TestAstraConnector_ValidateCreateAstraConnector(t *testing.T) {
-	ai := &v1.AstraConnector{}
-	err := ai.ValidateCreateAstraConnector()
+	ai := &v1.AstraConnector{Spec: v1.AstraConnectorSpec{Astra: v1.Astra{AccountId: "6587afff-7515-4c35-8e53-95545e427e31"}}}
+	err := ai.ValidateNamespace()
 
 	// Validate that no error occurred
-	if len(err) != 0 {
-		t.Errorf("Expected no errors, but got %d", len(err))
+	if err != nil {
+		t.Error("Expected no error, but got:", err)
 	}
 }
 
@@ -36,16 +39,27 @@ func TestAstraConnector_ValidateNamespace(t *testing.T) {
 	ai := &v1.AstraConnector{}
 	ai.ObjectMeta.Namespace = "default"
 
-	errors := ai.ValidateCreateAstraConnector()
+	err := ai.ValidateNamespace()
 
 	// Validate that an error occurred
-	if errors == nil {
+	if err == nil {
 		t.Error("Expected an error, but got nil")
 	}
 
 	// Validate the error message and field path
 	expectedErrMsg := "default namespace not allowed"
-	assert.Equal(t, 1, len(errors))
-	assert.Equal(t, expectedErrMsg, errors[0].Detail)
-	assert.Equal(t, "namespace", errors[0].Field)
+	assert.Error(t, err, expectedErrMsg)
+}
+
+func TestAstraConnector_ValidateInputs(t *testing.T) {
+	ai := &v1.AstraConnector{Spec: v1.AstraConnectorSpec{Astra: v1.Astra{AccountId: "6587afff-7515-4c35-8e53-95545e427e31"}}}
+	mockHttpClient := &mocks.HTTPClient{}
+	mockHttpClient.On("Do", mock.Anything).Return(&http.Response{StatusCode: 200}, nil).Once()
+
+	err := ai.ValidateTokenAndAccountID(mockHttpClient)
+
+	// Validate that no error occurred
+	if err != nil {
+		t.Error("Expected no error, but got:", err)
+	}
 }
