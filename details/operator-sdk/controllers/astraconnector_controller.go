@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"reflect"
 	"strings"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
@@ -129,7 +130,7 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 		return ctrl.Result{Requeue: false}, nil
 	}
 
-	if r.needsReconcile(*astraConnector) {
+	if r.needsReconcile(*astraConnector, log) {
 		log.Info("Actual state does not match desired state", "registered", astraConnector.Status.NatsSyncClient.Registered, "desiredSpec", astraConnector.Spec)
 		if !astraConnector.Spec.SkipPreCheck {
 			k8sUtil := k8s.NewK8sUtil(r.Client, log)
@@ -180,7 +181,13 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 			log.Info(fmt.Sprintf("Updating CR status, clusterID: '%s'", natsSyncClientStatus.AstraClusterId))
 		}
 		_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
+		log.Info("assignging to status", "spec", astraConnector.Spec)
 		astraConnector.Status.ObservedSpec = astraConnector.Spec
+		err = r.Status().Update(ctx, astraConnector)
+		if err != nil {
+			log.Error(err, "Failed to update AstraConnector status")
+			return ctrl.Result{RequeueAfter: time.Minute * conf.Config.ErrorTimeout()}, err
+		}
 		return ctrl.Result{Requeue: false}, nil
 
 	} else {
@@ -278,7 +285,7 @@ func (r *AstraConnectorController) validateAstraConnector(connector v1.AstraConn
 	return errors.New(fmt.Sprintf("Errors while validating AstraConnector CR: %s", strings.Join(fieldErrors, "; ")))
 }
 
-func (r *AstraConnectorController) needsReconcile(connector v1.AstraConnector) bool {
+func (r *AstraConnectorController) needsReconcile(connector v1.AstraConnector, log logr.Logger) bool {
 	// Ensure that the cluster has registered successfully
 	if connector.Status.NatsSyncClient.Registered != "true" {
 		return true
