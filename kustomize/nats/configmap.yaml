@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nats-config
+  namespace: ${NAMESPACE}
+data:
+  nats.conf: |
+    pid_file: "/var/run/nats/nats.pid"
+    http: 8222
+    max_payload: 1048576
+    cluster {
+      port: 6222
+      routes: [
+        "nats://nats-0.nats-cluster.${NAMESPACE}.svc.cluster.local:6222"
+      ]
+      cluster_advertise: "nats.nats.${NAMESPACE}.svc.cluster.local"
+      connect_retries: 30
+    }
