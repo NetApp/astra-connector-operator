@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023. NetApp, Inc. All Rights Reserved.
+ * Copyright (c) 2024. NetApp, Inc. All Rights Reserved.
  */
 
 package controllers
@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"reflect"
 	"strings"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
@@ -64,14 +65,14 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 			// Return and don't requeue
 			log.Info("AstraConnector resource not found. Ignoring since object must be deleted")
-			return ctrl.Result{}, nil
+			return ctrl.Result{Requeue: false}, nil
 		}
 		// Error reading the object - requeue the request.
 		log.Error(err, FailedAstraConnectorGet)
 		natsSyncClientStatus.Status = FailedAstraConnectorGet
 		_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
 		// Do not requeue
-		return ctrl.Result{}, err
+		return ctrl.Result{Requeue: false}, err
 	}
 	natsSyncClientStatus.AstraClusterId = astraConnector.Status.NatsSyncClient.AstraClusterId
 
@@ -79,7 +80,7 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 	err = r.validateAstraConnector(*astraConnector, log)
 	if err != nil {
 		// Do not requeue. This is a user input error
-		return ctrl.Result{}, err
+		return ctrl.Result{Requeue: false}, err
 	}
 
 	// name of our custom finalizer
@@ -129,56 +130,70 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 		return ctrl.Result{Requeue: false}, nil
 	}
 
-	if !astraConnector.Spec.SkipPreCheck {
-		k8sUtil := k8s.NewK8sUtil(r.Client, log)
-		preCheckClient := precheck.NewPrecheckClient(log, k8sUtil)
-		errList := preCheckClient.Run()
-		if errList != nil {
-			errString := ""
-			for i, err := range errList {
-				if i > 0 {
-					errString = errString + ", "
+	if r.needsReconcile(*astraConnector, log) {
+		log.Info("Actual state does not match desired state", "registered", astraConnector.Status.NatsSyncClient.Registered, "desiredSpec", astraConnector.Spec)
+		if !astraConnector.Spec.SkipPreCheck {
+			k8sUtil := k8s.NewK8sUtil(r.Client, log)
+			preCheckClient := precheck.NewPrecheckClient(log, k8sUtil)
+			errList := preCheckClient.Run()
+			if errList != nil {
+				errString := ""
+				for i, err := range errList {
+					if i > 0 {
+						errString = errString + ", "
+					}
+
+					log.Error(err, "Pre-check Error")
+					errString = errString + err.Error()
 				}
-
-				log.Error(err, "Pre-check Error")
-				errString = errString + err.Error()
+				errString = "Pre-check errors: " + errString
+				natsSyncClientStatus.Status = errString
+				_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
+				// Do not requeue. Item is being deleted
+				return ctrl.Result{}, errors.New(errString)
 			}
-			errString = "Pre-check errors: " + errString
-			natsSyncClientStatus.Status = errString
-			_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
-			// Do not requeue. Item is being deleted
-			return ctrl.Result{}, errors.New(errString)
 		}
-	}
 
-	// deploy Neptune
-	if conf.Config.FeatureFlags().DeployNeptune() {
-		log.Info("Initiating Neptune deployment")
-		neptuneResult, err := r.deployNeptune(ctx, astraConnector, &natsSyncClientStatus)
+		// deploy Neptune
+		if conf.Config.FeatureFlags().DeployNeptune() {
+			log.Info("Initiating Neptune deployment")
+			neptuneResult, err := r.deployNeptune(ctx, astraConnector, &natsSyncClientStatus)
+			if err != nil {
+				// Note: Returning nil in error since we want to wait for the requeue to happen
+				// non nil errors triggers the requeue right away
+				log.Error(err, "Error deploying Neptune, requeueing after delay", "delay", conf.Config.ErrorTimeout())
+				return neptuneResult, nil
+			}
+		}
+
+		if conf.Config.FeatureFlags().DeployNatsConnector() {
+			log.Info("Initiating Connector deployment")
+			connectorResults, err := r.deployConnector(ctx, astraConnector, &natsSyncClientStatus)
+			if err != nil {
+				// Note: Returning nil in error since we want to wait for the requeue to happen
+				// non nil errors triggers the requeue right away
+				log.Error(err, "Error deploying NatsConnector, requeueing after delay", "delay", conf.Config.ErrorTimeout())
+				return connectorResults, nil
+			}
+		}
+
+		if natsSyncClientStatus.AstraClusterId != "" {
+			log.Info(fmt.Sprintf("Updating CR status, clusterID: '%s'", natsSyncClientStatus.AstraClusterId))
+		}
+		_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
+		log.Info("assignging to status", "spec", astraConnector.Spec)
+		astraConnector.Status.ObservedSpec = astraConnector.Spec
+		err = r.Status().Update(ctx, astraConnector)
 		if err != nil {
-			// Note: Returning nil in error since we want to wait for the requeue to happen
-			// non nil errors triggers the requeue right away
-			log.Error(err, "Error deploying Neptune, requeueing after delay", "delay", conf.Config.ErrorTimeout())
-			return neptuneResult, nil
+			log.Error(err, "Failed to update AstraConnector status")
+			return ctrl.Result{RequeueAfter: time.Minute * conf.Config.ErrorTimeout()}, err
 		}
-	}
+		return ctrl.Result{Requeue: false}, nil
 
-	if conf.Config.FeatureFlags().DeployNatsConnector() {
-		log.Info("Initiating Connector deployment")
-		connectorResults, err := r.deployConnector(ctx, astraConnector, &natsSyncClientStatus)
-		if err != nil {
-			// Note: Returning nil in error since we want to wait for the requeue to happen
-			// non nil errors triggers the requeue right away
-			log.Error(err, "Error deploying NatsConnector, requeueing after delay", "delay", conf.Config.ErrorTimeout())
-			return connectorResults, nil
-		}
+	} else {
+		log.Info("Actual state matches desired state", "registered", astraConnector.Status.NatsSyncClient.Registered, "desiredSpec", astraConnector.Spec)
+		return ctrl.Result{Requeue: false}, nil
 	}
-
-	if natsSyncClientStatus.AstraClusterId != "" {
-		log.Info(fmt.Sprintf("Updating CR status, clusterID: '%s'", natsSyncClientStatus.AstraClusterId))
-	}
-	_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
-	return ctrl.Result{Requeue: false}, nil
 }
 
 func (r *AstraConnectorController) updateAstraConnectorStatus(ctx context.Context, astraConnector *v1.AstraConnector, natsSyncClientStatus v1.NatsSyncClientStatus) error {
@@ -268,4 +283,16 @@ func (r *AstraConnectorController) validateAstraConnector(connector v1.AstraConn
 	}
 
 	return errors.New(fmt.Sprintf("Errors while validating AstraConnector CR: %s", strings.Join(fieldErrors, "; ")))
+}
+
+func (r *AstraConnectorController) needsReconcile(connector v1.AstraConnector, log logr.Logger) bool {
+	// Ensure that the cluster has registered successfully
+	if connector.Status.NatsSyncClient.Registered != "true" {
+		return true
+	}
+	// Ensure that the CR spec has not changed between reconciles
+	if connector.Status.ObservedSpec != connector.Spec {
+		return true
+	}
+	return false
 }
