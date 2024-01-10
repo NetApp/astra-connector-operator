@@ -202,7 +202,7 @@ func TestUnRegisterNatsSyncClient(t *testing.T) {
 		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{
 			StatusCode: 400,
 			Body:       ret,
-		}, nil).Once()
+		}, nil).Times(3)
 
 		err := clusterRegisterUtil.UnRegisterNatsSyncClient()
 		assert.ErrorContains(t, err, "Unexpected unregistration status code: 400")
@@ -218,7 +218,7 @@ func TestUnRegisterNatsSyncClient(t *testing.T) {
 		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{
 			StatusCode: 400,
 			Body:       &mockRead,
-		}, nil).Once()
+		}, nil).Times(3)
 
 		err := clusterRegisterUtil.UnRegisterNatsSyncClient()
 		assert.EqualError(t, err, "error reading")
@@ -267,7 +267,7 @@ func TestRegisterNatsSyncClient(t *testing.T) {
 		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{
 			StatusCode: 400,
 			Body:       ret,
-		}, nil).Once()
+		}, nil).Times(3)
 
 		connectorId, errorReason, err := clusterRegisterUtil.RegisterNatsSyncClient()
 
@@ -286,7 +286,7 @@ func TestRegisterNatsSyncClient(t *testing.T) {
 		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{
 			StatusCode: 400,
 			Body:       &mockRead,
-		}, nil).Once()
+		}, nil).Times(3)
 
 		connectorId, errorReason, err := clusterRegisterUtil.RegisterNatsSyncClient()
 
@@ -916,7 +916,7 @@ func TestCreateCluster(t *testing.T) {
 		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{
 			StatusCode: 400,
 			Body:       &mockRead,
-		}, nil).Once()
+		}, nil).Times(3)
 
 		clusterInfo, errorReason, err := clusterRegisterUtil.CreateCluster(host, cloudId, connectorId, apiToken)
 
@@ -933,7 +933,7 @@ func TestCreateCluster(t *testing.T) {
 		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{
 			StatusCode: 400,
 			Body:       ret,
-		}, nil).Once()
+		}, nil).Times(3)
 
 		clusterInfo, errorReason, err := clusterRegisterUtil.CreateCluster(host, cloudId, connectorId, apiToken)
 
@@ -950,7 +950,7 @@ func TestCreateCluster(t *testing.T) {
 		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{
 			StatusCode: 201,
 			Body:       ret,
-		}, nil).Once()
+		}, nil).Times(3)
 
 		clusterInfo, errorReason, err := clusterRegisterUtil.CreateCluster(host, cloudId, connectorId, apiToken)
 
@@ -967,7 +967,7 @@ func TestCreateCluster(t *testing.T) {
 		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{
 			StatusCode: 201,
 			Body:       ret,
-		}, nil).Once()
+		}, nil).Times(3)
 
 		clusterInfo, errorReason, err := clusterRegisterUtil.CreateCluster(host, cloudId, connectorId, apiToken)
 
@@ -1016,7 +1016,7 @@ func TestUpdateCluster(t *testing.T) {
 		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{
 			StatusCode: 400,
 			Body:       nil,
-		}, nil).Once()
+		}, nil).Times(3)
 
 		errorReason, err := clusterRegisterUtil.UpdateCluster(host, cloudId, clusterId, connectorId, apiToken)
 		assert.Contains(t, errorReason, "failed with http status code 400")
@@ -1247,7 +1247,7 @@ func TestUpdateManagedCluster(t *testing.T) {
 		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{
 			StatusCode: 400,
 			Body:       nil,
-		}, nil).Once()
+		}, nil).Times(3)
 
 		errorReason, err := clusterRegisterUtil.UpdateManagedCluster(host, clusterId, connectorId, connectorInstall, apiToken)
 		assert.Contains(t, errorReason, "failed with http status code 400")
@@ -1288,7 +1288,7 @@ func TestCreateManagedCluster(t *testing.T) {
 		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{
 			StatusCode: 400,
 			Body:       nil,
-		}, nil).Once()
+		}, nil).Times(3)
 
 		errorReason, err := clusterRegisterUtil.CreateManagedCluster(host, cloudId, clusterId, storageClass, connectorInstalled, apiToken)
 		assert.Contains(t, errorReason, "failed with http status code 400")
