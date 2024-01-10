@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"net"
 	"net/http"
 	"strconv"
@@ -58,19 +59,24 @@ func DoRequest(ctx context.Context, client HTTPClient, method, url string, body 
 
 	var httpResponse *http.Response
 	var err error
-
-	// Child context that can't exceed a deadline specified
-	childCtx, cancel := context.WithTimeout(ctx, 3*time.Minute) // TODO : Update timeout here
-
-	req, _ := http.NewRequestWithContext(childCtx, method, url, body)
-
-	req.Header.Add("Content-Type", "application/json")
-
-	if headerMap.Authorization != "" {
-		req.Header.Add("authorization", headerMap.Authorization)
-	}
+	var cancel context.CancelFunc
 
 	for i := 0; i < retries; i++ {
+		timeout := time.Duration(math.Pow(2, float64(i))) * time.Second
+
+		// Child context that can't exceed a deadline specified
+		var childCtx context.Context
+		childCtx, cancel = context.WithTimeout(ctx, timeout)
+		defer cancel()
+
+		req, _ := http.NewRequestWithContext(childCtx, method, url, body)
+
+		req.Header.Add("Content-Type", "application/json")
+
+		if headerMap.Authorization != "" {
+			req.Header.Add("authorization", headerMap.Authorization)
+		}
+
 		httpResponse, err = client.Do(req)
 		if err == nil {
 			break
