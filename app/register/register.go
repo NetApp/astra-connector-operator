@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023. NetApp, Inc. All Rights Reserved.
+ * Copyright (c) 2024. NetApp, Inc. All Rights Reserved.
  */
 
 package register
@@ -66,8 +66,7 @@ func DoRequest(ctx context.Context, client HTTPClient, method, url string, body 
 
 		// Child context that can't exceed a deadline specified
 		var childCtx context.Context
-		childCtx, cancel = context.WithTimeout(ctx, 2*time.Minute)
-		defer cancel()
+		childCtx, cancel = context.WithTimeout(ctx, 3*time.Minute)
 
 		req, _ := http.NewRequestWithContext(childCtx, method, url, body)
 
@@ -712,7 +711,7 @@ func (c clusterRegisterUtil) UpdateCluster(astraHost, cloudId, clusterId, astraC
 
 	clustersBodyJson, _ := json.Marshal(clustersBody)
 	headerMap := HeaderMap{Authorization: fmt.Sprintf("Bearer %s", apiToken)}
-	clustersResp, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodPut, url, bytes.NewBuffer(clustersBodyJson), headerMap)
+	clustersResp, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodPut, url, bytes.NewBuffer(clustersBodyJson), headerMap, 3)
 	defer cancel()
 
 	if err != nil {
@@ -835,7 +834,7 @@ func (c clusterRegisterUtil) UpdateManagedCluster(astraHost, clusterId, astraCon
 	manageClustersBodyJson, _ := json.Marshal(manageClustersBody)
 
 	headerMap := HeaderMap{Authorization: fmt.Sprintf("Bearer %s", apiToken)}
-	manageClustersResp, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodPut, url, bytes.NewBuffer(manageClustersBodyJson), headerMap)
+	manageClustersResp, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodPut, url, bytes.NewBuffer(manageClustersBodyJson), headerMap, 3)
 	defer cancel()
 
 	if err != nil {
