@@ -220,7 +220,7 @@ func (c clusterRegisterUtil) RegisterNatsSyncClient() (string, string, error) {
 		return "", errorReason, err
 	}
 
-	response, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodPost, natsSyncClientRegisterURL, bytes.NewBuffer(reqBodyBytes), HeaderMap{})
+	response, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodPost, natsSyncClientRegisterURL, bytes.NewBuffer(reqBodyBytes), HeaderMap{}, 3)
 	defer cancel()
 	if err != nil {
 		return "", fmt.Sprintf("Failed to make POST call to %s", natsSyncClientRegisterURL), err
@@ -646,7 +646,7 @@ func (c clusterRegisterUtil) CreateCluster(astraHost, cloudId, astraConnectorId,
 
 	clustersBodyJson, _ := json.Marshal(clustersBody)
 	headerMap := HeaderMap{Authorization: fmt.Sprintf("Bearer %s", apiToken)}
-	clustersResp, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodPost, url, bytes.NewBuffer(clustersBodyJson), headerMap)
+	clustersResp, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodPost, url, bytes.NewBuffer(clustersBodyJson), headerMap, 3)
 	defer cancel()
 
 	if err != nil {
@@ -857,7 +857,7 @@ func (c clusterRegisterUtil) CreateManagedCluster(astraHost, cloudId, clusterID,
 	manageClustersBodyJson, _ := json.Marshal(manageClustersBody)
 
 	headerMap := HeaderMap{Authorization: fmt.Sprintf("Bearer %s", apiToken)}
-	manageClustersResp, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodPost, url, bytes.NewBuffer(manageClustersBodyJson), headerMap)
+	manageClustersResp, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodPost, url, bytes.NewBuffer(manageClustersBodyJson), headerMap, 3)
 	defer cancel()
 
 	if err != nil {
