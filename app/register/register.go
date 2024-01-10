@@ -62,11 +62,11 @@ func DoRequest(ctx context.Context, client HTTPClient, method, url string, body 
 	var cancel context.CancelFunc
 
 	for i := 0; i < retries; i++ {
-		timeout := time.Duration(math.Pow(2, float64(i))) * time.Second
+		sleepTimeout := time.Duration(math.Pow(2, float64(i))) * time.Second
 
 		// Child context that can't exceed a deadline specified
 		var childCtx context.Context
-		childCtx, cancel = context.WithTimeout(ctx, timeout)
+		childCtx, cancel = context.WithTimeout(ctx, 2*time.Minute)
 		defer cancel()
 
 		req, _ := http.NewRequestWithContext(childCtx, method, url, body)
@@ -81,6 +81,9 @@ func DoRequest(ctx context.Context, client HTTPClient, method, url string, body 
 		if err == nil {
 			break
 		}
+
+		// If the request failed, wait before retrying
+		time.Sleep(sleepTimeout)
 	}
 
 	return httpResponse, err, cancel
