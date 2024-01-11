@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022. NetApp, Inc. All Rights Reserved.
+ * Copyright (c) 2024. NetApp, Inc. All Rights Reserved.
  */
 
 package v1
@@ -88,6 +88,8 @@ type AstraConnectorSpec struct {
 type AstraConnectorStatus struct {
 	Nodes          []string             `json:"nodes"`
 	NatsSyncClient NatsSyncClientStatus `json:"natsSyncClient"`
+	// ObservedSpec is the last observed Connector custom resource spec
+	ObservedSpec AstraConnectorSpec `json:"observedSpec,omitempty"`
 }
 
 // NatsSyncClientStatus defines the observed state of NatsSyncClient
@@ -113,6 +115,7 @@ type ImageRegistry struct {
 //+kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.natsSyncClient.status`
 
 // AstraConnector is the Schema for the astraconnectors API
+// +kubebuilder:subresource:status
 type AstraConnector struct {
 	metaV1.TypeMeta   `json:",inline"`
 	metaV1.ObjectMeta `json:"metadata,omitempty"`

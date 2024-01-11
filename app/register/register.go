@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023. NetApp, Inc. All Rights Reserved.
+ * Copyright (c) 2024. NetApp, Inc. All Rights Reserved.
  */
 
 package register
@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"net"
 	"net/http"
 	"strconv"
@@ -49,7 +50,7 @@ type HeaderMap struct {
 }
 
 // DoRequest Makes http request with the given parameters
-func DoRequest(ctx context.Context, client HTTPClient, method, url string, body io.Reader, headerMap HeaderMap, retryCount ...int) (*http.Response, error, context.CancelFunc) {
+func DoRequest(ctx context.Context, client HTTPClient, method, url string, body io.Reader, headerMap HeaderMap, log logr.Logger, retryCount ...int) (*http.Response, error, context.CancelFunc) {
 	// Default retry count
 	retries := 1
 	if len(retryCount) > 0 {
@@ -58,23 +59,38 @@ func DoRequest(ctx context.Context, client HTTPClient, method, url string, body 
 
 	var httpResponse *http.Response
 	var err error
-
-	// Child context that can't exceed a deadline specified
-	childCtx, cancel := context.WithTimeout(ctx, 3*time.Minute) // TODO : Update timeout here
-
-	req, _ := http.NewRequestWithContext(childCtx, method, url, body)
-
-	req.Header.Add("Content-Type", "application/json")
-
-	if headerMap.Authorization != "" {
-		req.Header.Add("authorization", headerMap.Authorization)
-	}
+	var cancel context.CancelFunc
 
 	for i := 0; i < retries; i++ {
+		sleepTimeout := time.Duration(math.Pow(2, float64(i))) * time.Second
+		log.Info(fmt.Sprintf("Retry %d, waiting for %v before next retry\n", i, sleepTimeout))
+
+		// Child context that can't exceed a deadline specified
+		var childCtx context.Context
+		childCtx, cancel = context.WithTimeout(ctx, 3*time.Minute)
+
+		req, _ := http.NewRequestWithContext(childCtx, method, url, body)
+
+		req.Header.Add("Content-Type", "application/json")
+
+		if headerMap.Authorization != "" {
+			req.Header.Add("authorization", headerMap.Authorization)
+		}
+
 		httpResponse, err = client.Do(req)
-		if err == nil {
+		if err == nil && httpResponse.StatusCode >= 200 && httpResponse.StatusCode < 300 {
+			log.Info("Request successful")
 			break
 		}
+
+		if err != nil {
+			log.Info(fmt.Sprintf("Request failed with error: %v\n", err))
+		} else {
+			log.Info(fmt.Sprintf("Request failed with error: %v\n", httpResponse.Status))
+		}
+
+		// If the request failed or the server returned a non-2xx status code, wait before retrying
+		time.Sleep(sleepTimeout)
 	}
 
 	return httpResponse, err, cancel
@@ -193,7 +209,7 @@ func (c clusterRegisterUtil) UnRegisterNatsSyncClient() error {
 		return err
 	}
 
-	response, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodPost, natsSyncClientUnregisterURL, bytes.NewBuffer(reqBodyBytes), HeaderMap{})
+	response, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodPost, natsSyncClientUnregisterURL, bytes.NewBuffer(reqBodyBytes), HeaderMap{}, c.Log)
 	defer cancel()
 
 	if err != nil {
@@ -220,7 +236,7 @@ func (c clusterRegisterUtil) RegisterNatsSyncClient() (string, string, error) {
 		return "", errorReason, err
 	}
 
-	response, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodPost, natsSyncClientRegisterURL, bytes.NewBuffer(reqBodyBytes), HeaderMap{})
+	response, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodPost, natsSyncClientRegisterURL, bytes.NewBuffer(reqBodyBytes), HeaderMap{}, c.Log, 3)
 	defer cancel()
 	if err != nil {
 		return "", fmt.Sprintf("Failed to make POST call to %s", natsSyncClientRegisterURL), err
@@ -326,7 +342,7 @@ func (c clusterRegisterUtil) CloudExists(astraHost, cloudID, apiToken string) bo
 	url := fmt.Sprintf("%s/accounts/%s/topology/v1/clouds/%s", astraHost, c.AstraConnector.Spec.Astra.AccountId, cloudID)
 
 	headerMap := HeaderMap{Authorization: fmt.Sprintf("Bearer %s", apiToken)}
-	response, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodGet, url, nil, headerMap)
+	response, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodGet, url, nil, headerMap, c.Log)
 	defer cancel()
 
 	if err != nil {
@@ -354,7 +370,7 @@ func (c clusterRegisterUtil) ListClouds(astraHost, apiToken string) (*http.Respo
 
 	c.Log.Info("Getting clouds")
 	headerMap := HeaderMap{Authorization: fmt.Sprintf("Bearer %s", apiToken)}
-	response, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodGet, url, nil, headerMap)
+	response, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodGet, url, nil, headerMap, c.Log)
 	defer cancel()
 
 	if err != nil {
@@ -447,7 +463,7 @@ func (c clusterRegisterUtil) CreateCloud(astraHost, cloudType, apiToken string) 
 
 	c.Log.WithValues("cloudType", cloudType).Info("Creating cloud")
 	headerMap := HeaderMap{Authorization: fmt.Sprintf("Bearer %s", apiToken)}
-	response, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodPost, url, bytes.NewBuffer(reqBodyBytes), headerMap)
+	response, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodPost, url, bytes.NewBuffer(reqBodyBytes), headerMap, c.Log)
 	defer cancel()
 
 	if err != nil {
@@ -559,7 +575,7 @@ func (c clusterRegisterUtil) GetClusters(astraHost, cloudId, apiToken string) (G
 	c.Log.Info("Getting Clusters")
 
 	headerMap := HeaderMap{Authorization: fmt.Sprintf("Bearer %s", apiToken)}
-	clustersResp, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodGet, url, nil, headerMap)
+	clustersResp, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodGet, url, nil, headerMap, c.Log)
 	defer cancel()
 
 	if err != nil {
@@ -606,7 +622,7 @@ func (c clusterRegisterUtil) GetCluster(astraHost, cloudId, clusterId, apiToken 
 	var clustersRespJson Cluster
 
 	headerMap := HeaderMap{Authorization: fmt.Sprintf("Bearer %s", apiToken)}
-	clustersResp, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodGet, url, nil, headerMap)
+	clustersResp, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodGet, url, nil, headerMap, c.Log)
 	defer cancel()
 
 	if err != nil {
@@ -646,7 +662,7 @@ func (c clusterRegisterUtil) CreateCluster(astraHost, cloudId, astraConnectorId,
 
 	clustersBodyJson, _ := json.Marshal(clustersBody)
 	headerMap := HeaderMap{Authorization: fmt.Sprintf("Bearer %s", apiToken)}
-	clustersResp, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodPost, url, bytes.NewBuffer(clustersBodyJson), headerMap)
+	clustersResp, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodPost, url, bytes.NewBuffer(clustersBodyJson), headerMap, c.Log, 3)
 	defer cancel()
 
 	if err != nil {
@@ -703,7 +719,7 @@ func (c clusterRegisterUtil) UpdateCluster(astraHost, cloudId, clusterId, astraC
 
 	clustersBodyJson, _ := json.Marshal(clustersBody)
 	headerMap := HeaderMap{Authorization: fmt.Sprintf("Bearer %s", apiToken)}
-	clustersResp, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodPut, url, bytes.NewBuffer(clustersBodyJson), headerMap)
+	clustersResp, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodPut, url, bytes.NewBuffer(clustersBodyJson), headerMap, c.Log, 3)
 	defer cancel()
 
 	if err != nil {
@@ -762,7 +778,7 @@ func (c clusterRegisterUtil) GetStorageClass(astraHost, cloudId, clusterId, apiT
 	c.Log.Info("Getting Storage Classes")
 
 	headerMap := HeaderMap{Authorization: fmt.Sprintf("Bearer %s", apiToken)}
-	storageClassesResp, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodGet, url, nil, headerMap)
+	storageClassesResp, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodGet, url, nil, headerMap, c.Log)
 	defer cancel()
 
 	if err != nil {
@@ -826,7 +842,7 @@ func (c clusterRegisterUtil) UpdateManagedCluster(astraHost, clusterId, astraCon
 	manageClustersBodyJson, _ := json.Marshal(manageClustersBody)
 
 	headerMap := HeaderMap{Authorization: fmt.Sprintf("Bearer %s", apiToken)}
-	manageClustersResp, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodPut, url, bytes.NewBuffer(manageClustersBodyJson), headerMap)
+	manageClustersResp, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodPut, url, bytes.NewBuffer(manageClustersBodyJson), headerMap, c.Log, 3)
 	defer cancel()
 
 	if err != nil {
@@ -857,7 +873,7 @@ func (c clusterRegisterUtil) CreateManagedCluster(astraHost, cloudId, clusterID,
 	manageClustersBodyJson, _ := json.Marshal(manageClustersBody)
 
 	headerMap := HeaderMap{Authorization: fmt.Sprintf("Bearer %s", apiToken)}
-	manageClustersResp, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodPost, url, bytes.NewBuffer(manageClustersBodyJson), headerMap)
+	manageClustersResp, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodPost, url, bytes.NewBuffer(manageClustersBodyJson), headerMap, c.Log, 3)
 	defer cancel()
 
 	if err != nil {
