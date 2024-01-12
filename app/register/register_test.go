@@ -195,17 +195,18 @@ func TestUnRegisterNatsSyncClient(t *testing.T) {
 		assert.EqualError(t, err, errorText)
 	})
 
-	t.Run("TestUnRegisterNatsSyncClient__HTTPPostRequestInvalidStatusCodeReturnError", func(t *testing.T) {
+	t.Run("TestUnRegisterNatsSyncClient__HTTPPostRequestInvalidStatusReturnError", func(t *testing.T) {
 		clusterRegisterUtil, mockHttpClient, _, _ := createClusterRegister(AstraConnectorInput{createTokenSecret: true})
 
 		ret := io.NopCloser(bytes.NewReader([]byte(`items:{"Name":"Joe","Body":"Hello","Time":1294706395881547069}`)))
 		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{
 			StatusCode: 400,
 			Body:       ret,
+			Status:     "Mock Error",
 		}, nil).Times(3)
 
 		err := clusterRegisterUtil.UnRegisterNatsSyncClient()
-		assert.ErrorContains(t, err, "Unexpected unregistration status code: 400")
+		assert.ErrorContains(t, err, "Unexpected unregistration status: Mock Error")
 	})
 
 	t.Run("TestUnRegisterNatsSyncClient__ReadResponseBodyErrorReturnError", func(t *testing.T) {
@@ -260,20 +261,21 @@ func TestRegisterNatsSyncClient(t *testing.T) {
 		assert.EqualError(t, err, errorText)
 	})
 
-	t.Run("TestUnRegisterNatsSyncClient__HTTPPostRequestInvalidStatusCodeReturnError", func(t *testing.T) {
+	t.Run("TestUnRegisterNatsSyncClient__HTTPPostRequestInvalidStatusReturnError", func(t *testing.T) {
 		clusterRegisterUtil, mockHttpClient, _, _ := createClusterRegister(AstraConnectorInput{createTokenSecret: true})
 
 		ret := io.NopCloser(bytes.NewReader([]byte(`items:{"Name":"Joe","Body":"Hello","Time":1294706395881547069}`)))
 		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{
 			StatusCode: 400,
 			Body:       ret,
+			Status:     "Mock Error",
 		}, nil).Times(3)
 
 		connectorId, errorReason, err := clusterRegisterUtil.RegisterNatsSyncClient()
 
 		assert.Equal(t, "", connectorId)
-		assert.Contains(t, errorReason, "failed with http status code 400")
-		assert.ErrorContains(t, err, "Unexpected registration status code: 400")
+		assert.Contains(t, errorReason, "failed with http status Mock Error")
+		assert.ErrorContains(t, err, "Unexpected registration status: Mock Error")
 	})
 
 	t.Run("TestUnRegisterNatsSyncClient__ReadResponseBodyErrorReturnError", func(t *testing.T) {
@@ -740,12 +742,13 @@ func TestGetClusters(t *testing.T) {
 		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{
 			StatusCode: 401,
 			Body:       nil,
+			Status:     "Mock Error",
 		}, nil).Once()
 
 		clusters, errorReason, err := clusterRegisterUtil.GetClusters(host, cloudId, apiToken)
 
 		assert.Equal(t, 0, len(clusters.Items))
-		assert.Contains(t, errorReason, "failed with http status code 401")
+		assert.Contains(t, errorReason, "failed with http status Mock Error")
 		assert.EqualError(t, err, "get clusters failed 401")
 	})
 
@@ -824,13 +827,14 @@ func TestGetCluster(t *testing.T) {
 		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{
 			StatusCode: 401,
 			Body:       nil,
+			Status:     "Mock Error",
 		}, nil).Once()
 
 		cluster, errorReason, err := clusterRegisterUtil.GetCluster(host, cloudId, clusterId, apiToken)
 
 		assert.Equal(t, "", cluster.ID)
 		assert.Equal(t, "", cluster.Name)
-		assert.Contains(t, errorReason, "failed with http status code 401")
+		assert.Contains(t, errorReason, "failed with http status Mock Error")
 		assert.EqualError(t, err, "get clusters failed with: 401")
 	})
 
@@ -933,13 +937,14 @@ func TestCreateCluster(t *testing.T) {
 		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{
 			StatusCode: 400,
 			Body:       ret,
+			Status:     "Mock Error",
 		}, nil).Times(3)
 
 		clusterInfo, errorReason, err := clusterRegisterUtil.CreateCluster(host, cloudId, connectorId, apiToken)
 
 		assert.Equal(t, "", clusterInfo.ID)
 		assert.Equal(t, "", clusterInfo.Name)
-		assert.Contains(t, errorReason, "failed with http status code 400")
+		assert.Contains(t, errorReason, "failed with http status Mock Error")
 		assert.EqualError(t, err, "add cluster failed with: 400")
 	})
 
@@ -1016,10 +1021,11 @@ func TestUpdateCluster(t *testing.T) {
 		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{
 			StatusCode: 400,
 			Body:       nil,
+			Status:     "Mock Error",
 		}, nil).Times(3)
 
 		errorReason, err := clusterRegisterUtil.UpdateCluster(host, cloudId, clusterId, connectorId, apiToken)
-		assert.Contains(t, errorReason, "failed with http status code 400")
+		assert.Contains(t, errorReason, "failed with http status Mock Error")
 		assert.EqualError(t, err, "update cluster failed with: 400")
 	})
 
@@ -1247,10 +1253,11 @@ func TestUpdateManagedCluster(t *testing.T) {
 		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{
 			StatusCode: 400,
 			Body:       nil,
+			Status:     "Mock Error",
 		}, nil).Times(3)
 
 		errorReason, err := clusterRegisterUtil.UpdateManagedCluster(host, clusterId, connectorId, connectorInstall, apiToken)
-		assert.Contains(t, errorReason, "failed with http status code 400")
+		assert.Contains(t, errorReason, "failed with http status Mock Error")
 		assert.EqualError(t, err, "manage cluster failed with: 400")
 	})
 
@@ -1288,10 +1295,11 @@ func TestCreateManagedCluster(t *testing.T) {
 		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{
 			StatusCode: 400,
 			Body:       nil,
+			Status:     "Mock Error",
 		}, nil).Times(3)
 
 		errorReason, err := clusterRegisterUtil.CreateManagedCluster(host, cloudId, clusterId, storageClass, connectorInstalled, apiToken)
-		assert.Contains(t, errorReason, "failed with http status code 400")
+		assert.Contains(t, errorReason, "failed with http status Mock Error")
 		assert.EqualError(t, err, "manage cluster failed with: 400")
 	})
 

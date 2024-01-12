@@ -221,7 +221,7 @@ func (c clusterRegisterUtil) UnRegisterNatsSyncClient() error {
 		if err != nil {
 			return err
 		}
-		errMsg := fmt.Sprintf("Unexpected unregistration status code: %d; %s", response.StatusCode, string(bodyBytes))
+		errMsg := fmt.Sprintf("Unexpected unregistration status: %s; %s", response.Status, string(bodyBytes))
 		return errors.New(errMsg)
 	}
 
@@ -247,8 +247,8 @@ func (c clusterRegisterUtil) RegisterNatsSyncClient() (string, string, error) {
 		if err != nil {
 			return "", fmt.Sprintf("Failed to read response from POST call to %s", natsSyncClientRegisterURL), err
 		}
-		errMsg := fmt.Sprintf("Unexpected registration status code: %d; %s", response.StatusCode, string(bodyBytes))
-		return "", fmt.Sprintf("POST call to %v failed with http status code %v", natsSyncClientRegisterURL, response.StatusCode), errors.New(errMsg)
+		errMsg := fmt.Sprintf("Unexpected registration status: %s; %s", response.Status, string(bodyBytes))
+		return "", fmt.Sprintf("POST call to %v failed with http status %v", natsSyncClientRegisterURL, response.Status), errors.New(errMsg)
 	}
 
 	astraConnector := &AstraConnector{}
@@ -289,7 +289,7 @@ func (c clusterRegisterUtil) logHttpError(response *http.Response) {
 	if err != nil {
 		c.Log.Error(err, "Error reading response body")
 	} else {
-		c.Log.Info("Received unexpected status code", "responseBody", string(bodyBytes), "statusCode", response.StatusCode)
+		c.Log.Info("Received unexpected status", "responseBody", string(bodyBytes), "status", response.Status)
 		err = response.Body.Close()
 		if err != nil {
 			c.Log.Error(err, "Error closing the response body")
@@ -356,8 +356,8 @@ func (c clusterRegisterUtil) CloudExists(astraHost, cloudID, apiToken string) bo
 	}
 
 	if response.StatusCode != http.StatusOK {
-		msg := fmt.Sprintf("Get Clouds call returned with status code: %v", response.StatusCode)
-		c.Log.Error(errors.New("Invalid Status Code"), msg)
+		msg := fmt.Sprintf("Get Clouds call returned with status: %s", response.Status)
+		c.Log.Error(errors.New("Invalid Status"), msg)
 		return false
 	}
 
@@ -583,7 +583,7 @@ func (c clusterRegisterUtil) GetClusters(astraHost, cloudId, apiToken string) (G
 	}
 
 	if clustersResp.StatusCode != http.StatusOK {
-		return clustersRespJson, fmt.Sprintf("GET call to %v failed with http status code %v", url, clustersResp.StatusCode), errors.New("get clusters failed " + strconv.Itoa(clustersResp.StatusCode))
+		return clustersRespJson, fmt.Sprintf("GET call to %v failed with http status %v", url, clustersResp.Status), errors.New("get clusters failed " + strconv.Itoa(clustersResp.StatusCode))
 	}
 
 	respBody, err := io.ReadAll(clustersResp.Body)
@@ -630,7 +630,7 @@ func (c clusterRegisterUtil) GetCluster(astraHost, cloudId, clusterId, apiToken 
 	}
 
 	if clustersResp.StatusCode != http.StatusOK {
-		return Cluster{}, fmt.Sprintf("GET call to %v failed with http status code %v", url, clustersResp.StatusCode), errors.New("get clusters failed with: " + strconv.Itoa(clustersResp.StatusCode))
+		return Cluster{}, fmt.Sprintf("GET call to %v failed with http status %v", url, clustersResp.Status), errors.New("get clusters failed with: " + strconv.Itoa(clustersResp.StatusCode))
 	}
 
 	respBody, err := io.ReadAll(clustersResp.Body)
@@ -677,7 +677,7 @@ func (c clusterRegisterUtil) CreateCluster(astraHost, cloudId, astraConnectorId,
 
 	if clustersResp.StatusCode != http.StatusCreated {
 		c.Log.WithValues("response", string(respBody)).Error(err, "error adding cluster")
-		return ClusterInfo{}, fmt.Sprintf("POST call to %v failed with http status code %v", url, clustersResp.StatusCode), errors.New("add cluster failed with: " + strconv.Itoa(clustersResp.StatusCode))
+		return ClusterInfo{}, fmt.Sprintf("POST call to %v failed with http status %v", url, clustersResp.Status), errors.New("add cluster failed with: " + strconv.Itoa(clustersResp.StatusCode))
 	}
 
 	err = json.Unmarshal(respBody, &clustersRespJson)
@@ -727,7 +727,7 @@ func (c clusterRegisterUtil) UpdateCluster(astraHost, cloudId, clusterId, astraC
 	}
 
 	if clustersResp.StatusCode > http.StatusNoContent {
-		return fmt.Sprintf("PUT call to %v failed with http status code %v", url, clustersResp.StatusCode), errors.New("update cluster failed with: " + strconv.Itoa(clustersResp.StatusCode))
+		return fmt.Sprintf("PUT call to %v failed with http status %v", url, clustersResp.Status), errors.New("update cluster failed with: " + strconv.Itoa(clustersResp.StatusCode))
 	}
 
 	c.Log.WithValues("clusterId", clusterId).Info("Cluster updated")
@@ -850,7 +850,7 @@ func (c clusterRegisterUtil) UpdateManagedCluster(astraHost, clusterId, astraCon
 	}
 
 	if manageClustersResp.StatusCode > http.StatusNoContent {
-		return fmt.Sprintf("PUT call to %v failed with http status code %v", url, manageClustersResp.StatusCode), errors.New("manage cluster failed with: " + strconv.Itoa(manageClustersResp.StatusCode))
+		return fmt.Sprintf("PUT call to %v failed with http status %v", url, manageClustersResp.Status), errors.New("manage cluster failed with: " + strconv.Itoa(manageClustersResp.StatusCode))
 	}
 
 	c.Log.WithValues("clusterId", clusterId).Info("Managed Cluster updated")
@@ -881,7 +881,7 @@ func (c clusterRegisterUtil) CreateManagedCluster(astraHost, cloudId, clusterID,
 	}
 
 	if manageClustersResp.StatusCode != http.StatusCreated {
-		return fmt.Sprintf("POST call to %v failed with http status code %v", url, manageClustersResp.StatusCode), errors.New("manage cluster failed with: " + strconv.Itoa(manageClustersResp.StatusCode))
+		return fmt.Sprintf("POST call to %v failed with http status %v", url, manageClustersResp.Status), errors.New("manage cluster failed with: " + strconv.Itoa(manageClustersResp.StatusCode))
 	}
 
 	respBody, err := io.ReadAll(manageClustersResp.Body)
