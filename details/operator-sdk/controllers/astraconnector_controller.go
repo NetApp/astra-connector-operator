@@ -234,7 +234,6 @@ func (r *AstraConnectorController) deleteNeptuneResources(ctx context.Context, n
 			}
 		}
 	}
-	return
 }
 
 func (r *AstraConnectorController) updateAstraConnectorStatus(ctx context.Context, astraConnector *v1.AstraConnector, natsSyncClientStatus v1.NatsSyncClientStatus) error {
