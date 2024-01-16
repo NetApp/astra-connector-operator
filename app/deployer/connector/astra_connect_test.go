@@ -98,7 +98,7 @@ func TestAstraConnectGetDeploymentObjectsUsingDefaults(t *testing.T) {
 	assert.Equal(t, common.AstraConnectName, deployment.Spec.Template.Spec.ServiceAccountName)
 
 	container := deployment.Spec.Template.Spec.Containers[0]
-	assert.Equal(t, "netappdownloads.jfrog.io/docker-astra-control-staging/arch30/neptune/astra-connector:1.0.202401052212", container.Image)
+	assert.Equal(t, "netappdownloads.jfrog.io/docker-astra-control-staging/arch30/neptune/astra-connector:1.0.202401122203", container.Image)
 	assert.Equal(t, common.AstraConnectName, container.Name)
 	assert.Equal(t, 4, len(container.Env))
 	assert.Equal(t, "NATS_SERVER_URL", container.Env[0].Name)
