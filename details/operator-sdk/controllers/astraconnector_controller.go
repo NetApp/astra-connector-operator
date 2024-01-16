@@ -217,7 +217,7 @@ func (r *AstraConnectorController) deleteNeptuneResources(ctx context.Context, n
 
 	for _, crd := range crdList.Items {
 		// Only look for the Neptune ones
-		if strings.Contains(crd.Name, "astra") && !strings.Contains(crd.Name, "astraconnectors.astra.netapp.io") {
+		if strings.Contains(crd.Name, "astra.netapp.io") && !strings.Contains(crd.Name, "astraconnectors.astra.netapp.io") {
 			gv := strings.Split(crd.Spec.Group, "/")
 			gvr := schema.GroupVersionResource{
 				Group:    gv[0],
