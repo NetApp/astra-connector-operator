@@ -7,6 +7,7 @@ package neptune
 import (
 	"context"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"strings"
@@ -69,19 +70,23 @@ func (n NeptuneClientDeployerV2) GetDeploymentObjects(m *v1.AstraConnector, ctx 
 	neptuneImage = fmt.Sprintf("%s/controller:%s", imageRegistry, containerImage)
 	log.Info("Using Neptune image", "image", neptuneImage)
 
+	labels := map[string]string{
+		"app.kubernetes.io/component":  "manager",
+		"app.kubernetes.io/created-by": "neptune",
+		"app.kubernetes.io/instance":   "controller-manager",
+		"app.kubernetes.io/managed-by": "kustomize",
+		"app.kubernetes.io/name":       "deployment",
+		"app.kubernetes.io/part-of":    "neptune",
+		"control-plane":                "controller-manager",
+	}
+	// add any labels user wants to use or override
+	maps.Copy(labels, m.Labels)
+
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      common.NeptuneName,
 			Namespace: m.Namespace,
-			Labels: map[string]string{
-				"app.kubernetes.io/component":  "manager",
-				"app.kubernetes.io/created-by": "neptune",
-				"app.kubernetes.io/instance":   "controller-manager",
-				"app.kubernetes.io/managed-by": "kustomize",
-				"app.kubernetes.io/name":       "deployment",
-				"app.kubernetes.io/part-of":    "neptune",
-				"control-plane":                "controller-manager",
-			},
+			Labels:    labels,
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: pointer.Int32(1),
