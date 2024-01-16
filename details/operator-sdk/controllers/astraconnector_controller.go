@@ -18,10 +18,14 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -40,7 +44,8 @@ import (
 // AstraConnectorController reconciles a AstraConnector object
 type AstraConnectorController struct {
 	client.Client
-	Scheme *runtime.Scheme
+	Scheme        *runtime.Scheme
+	DynamicClient dynamic.Interface
 }
 
 //+kubebuilder:rbac:groups=astra.netapp.io,resources=astraconnectors,verbs=get;list;watch;create;update;patch;delete
@@ -114,6 +119,9 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 
 			// delete any cluster scoped resources created by the operator
 			r.deleteConnectorClusterScopedResources(ctx, astraConnector)
+
+			// delete any Neptune resources from the namespace AstraConnector is installed
+			r.deleteNeptuneResources(ctx, astraConnector.GetNamespace())
 
 			// remove our finalizer from the list and update it.
 			controllerutil.RemoveFinalizer(astraConnector, finalizerName)
@@ -193,6 +201,38 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 	} else {
 		log.Info("Actual state matches desired state", "registered", astraConnector.Status.NatsSyncClient.Registered, "desiredSpec", astraConnector.Spec)
 		return ctrl.Result{Requeue: false}, nil
+	}
+}
+
+func (r *AstraConnectorController) deleteNeptuneResources(ctx context.Context, namespace string) {
+	log := ctrllog.FromContext(ctx)
+	log.Info("deleting neptune resources")
+
+	// Get a list of all installed CRDs
+	crdList := &apiextensionsv1.CustomResourceDefinitionList{}
+	if err := r.Client.List(ctx, crdList); err != nil {
+		log.Error(err, "Unable to list CRDs")
+		return
+	}
+
+	for _, crd := range crdList.Items {
+		// Only look for the Neptune ones
+		if strings.Contains(crd.Name, "astra.netapp.io") && !strings.Contains(crd.Name, "astraconnectors.astra.netapp.io") {
+			gv := strings.Split(crd.Spec.Group, "/")
+			gvr := schema.GroupVersionResource{
+				Group:    gv[0],
+				Version:  crd.Spec.Versions[0].Name,
+				Resource: strings.ToLower(crd.Spec.Names.Plural),
+			}
+
+			log.Info("Deleting resources", "GVR", gvr)
+
+			// Delete all resources of this CRD kind in the namespace AstraConnector is installed
+			if err := r.DynamicClient.Resource(gvr).Namespace(namespace).DeleteCollection(ctx, metav1.DeleteOptions{}, metav1.ListOptions{}); err != nil {
+				log.Error(err, "Unable to delete resources", "Resource", gvr.Resource)
+				return
+			}
+		}
 	}
 }
 
