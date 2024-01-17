@@ -212,6 +212,11 @@ func (d *AstraConnectDeployer) GetClusterRoleObjects(m *v1.AstraConnector, ctx c
 				Resources: []string{"tridentversions", "tridentorchestrators"},
 				Verbs:     []string{"watch", "list", "get"},
 			},
+			{
+				APIGroups: []string{"astra.netapp.io"},
+				Resources: []string{"applications", "appmirrorrelationships", "appmirrorupdates", "appvaults", "autosupportbundles", "backups", "backupinplacerestores", "backuprestores", "exechooks", "exechooksruns", "pvccopies", "pvcerases", "resourcebackups", "resourcedeletes", "resourcerestores", "resourcesummaryuploads", "resticvolumebackups", "resticvolumerestores", "schedules", "snapshotinplacerestores", "snapshotrestores", "snapshots", "astraconnectors"},
+				Verbs:     []string{"watch", "list", "get"},
+			},
 		},
 	}
 	return []client.Object{clusterRole}, nil
@@ -249,12 +254,12 @@ func (d *AstraConnectDeployer) GetRoleObjects(m *v1.AstraConnector, ctx context.
 			{
 				APIGroups: []string{""},
 				Resources: []string{"secrets"},
-				Verbs:     []string{"create", "update"},
+				Verbs:     []string{"create", "update", "list", "get"},
 			},
 			{
 				APIGroups: []string{"astra.netapp.io"},
 				Resources: []string{"applications", "appmirrorrelationships", "appmirrorupdates", "appvaults", "autosupportbundles", "backups", "backupinplacerestores", "backuprestores", "exechooks", "exechooksruns", "pvccopies", "pvcerases", "resourcebackups", "resourcedeletes", "resourcerestores", "resourcesummaryuploads", "resticvolumebackups", "resticvolumerestores", "schedules", "snapshotinplacerestores", "snapshotrestores", "snapshots", "astraconnectors"},
-				Verbs:     []string{"create", "update", "delete", "watch", "list", "get"},
+				Verbs:     []string{"create", "update", "delete"},
 			},
 		},
 	}
