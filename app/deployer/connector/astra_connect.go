@@ -188,66 +188,34 @@ func (d *AstraConnectDeployer) GetClusterRoleObjects(m *v1.AstraConnector, ctx c
 		},
 		Rules: []rbacv1.PolicyRule{
 			{
-				APIGroups: []string{"*"},
-				Resources: []string{"*"},
-				Verbs:     []string{"*"},
+				APIGroups: []string{""},
+				Resources: []string{"namespaces", "persistentvolumes", "nodes", "pods", "services"},
+				Verbs:     []string{"watch", "list", "get"},
 			},
 			{
-				APIGroups: []string{
-					"",
-					"apiextensions.k8s.io",
-					"apps",
-					"autoscaling",
-					"batch",
-					"crd.projectcalico.org",
-					"extensions",
-					"networking.k8s.io",
-					"policy",
-					"rbac.authorization.k8s.io",
-					"security.openshift.io",
-					"snapshot.storage.k8s.io",
-					"storage.k8s.io",
-					"trident.netapp.io",
-				},
-				Resources: []string{
-					"configmaps",
-					"cronjobs",
-					"customresourcedefinitions",
-					"daemonsets",
-					"deployments",
-					"horizontalpodautoscalers",
-					"ingresses",
-					"jobs",
-					"namespaces",
-					"networkpolicies",
-					"persistentvolumeclaims",
-					"poddisruptionbudgets",
-					"pods",
-					"podtemplates",
-					"podsecuritypolicies",
-					"replicasets",
-					"replicationcontrollers",
-					"replicationcontrollers/scale",
-					"rolebindings",
-					"roles",
-					"secrets",
-					"serviceaccounts",
-					"services",
-					"statefulsets",
-					"storageclasses",
-					"csidrivers",
-					"csinodes",
-					"securitycontextconstraints",
-					"tridentmirrorrelationships",
-					"tridentsnapshotinfos",
-					"tridentvolumes",
-					"volumesnapshots",
-					"volumesnapshotcontents",
-					"tridentversions",
-					"tridentbackends",
-					"tridentnodes",
-				},
-				Verbs: []string{"get", "list", "watch", "delete", "use", "create", "update", "patch"},
+				APIGroups: []string{"storage.k8s.io"},
+				Resources: []string{"storageclasses"},
+				Verbs:     []string{"update", "watch", "list", "get"},
+			},
+			{
+				APIGroups: []string{"storage.k8s.io"},
+				Resources: []string{"csidrivers"},
+				Verbs:     []string{"watch", "list", "get"},
+			},
+			{
+				APIGroups: []string{"snapshot.storage.k8s.io"},
+				Resources: []string{"volumesnapshotclasses"},
+				Verbs:     []string{"watch", "list", "get"},
+			},
+			{
+				APIGroups: []string{"trident.netapp.io"},
+				Resources: []string{"tridentversions", "tridentorchestrators"},
+				Verbs:     []string{"watch", "list", "get"},
+			},
+			{
+				APIGroups: []string{"astra.netapp.io"},
+				Resources: []string{"applications", "appmirrorrelationships", "appmirrorupdates", "appvaults", "autosupportbundles", "backups", "backupinplacerestores", "backuprestores", "exechooks", "exechooksruns", "pvccopies", "pvcerases", "resourcebackups", "resourcedeletes", "resourcerestores", "resourcesummaryuploads", "resticvolumebackups", "resticvolumerestores", "schedules", "snapshotinplacerestores", "snapshotrestores", "snapshots", "astraconnectors"},
+				Verbs:     []string{"watch", "list", "get"},
 			},
 		},
 	}
@@ -275,18 +243,53 @@ func (d *AstraConnectDeployer) GetClusterRoleBindingObjects(m *v1.AstraConnector
 	return []client.Object{clusterRoleBinding}, nil
 }
 
-// NIL RESOURCES BELOW
-
 // GetRoleObjects returns a ConfigMapRole object for Astra Connect
 func (d *AstraConnectDeployer) GetRoleObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, error) {
-	return nil, nil
+	role := &rbacv1.Role{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      common.AstraConnectName,
+			Namespace: m.Namespace,
+		},
+		Rules: []rbacv1.PolicyRule{
+			{
+				APIGroups: []string{""},
+				Resources: []string{"secrets"},
+				Verbs:     []string{"create", "update", "list", "get"},
+			},
+			{
+				APIGroups: []string{"astra.netapp.io"},
+				Resources: []string{"applications", "appmirrorrelationships", "appmirrorupdates", "appvaults", "autosupportbundles", "backups", "backupinplacerestores", "backuprestores", "exechooks", "exechooksruns", "pvccopies", "pvcerases", "resourcebackups", "resourcedeletes", "resourcerestores", "resourcesummaryuploads", "resticvolumebackups", "resticvolumerestores", "schedules", "snapshotinplacerestores", "snapshotrestores", "snapshots", "astraconnectors"},
+				Verbs:     []string{"create", "update", "delete"},
+			},
+		},
+	}
+	return []client.Object{role}, nil
 }
 
 // GetRoleBindingObjects returns a ConfigMapRoleBinding object
 func (d *AstraConnectDeployer) GetRoleBindingObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, error) {
-	return nil, nil
+	roleBinding := &rbacv1.RoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      common.AstraConnectName,
+			Namespace: m.Namespace,
+		},
+		Subjects: []rbacv1.Subject{
+			{
+				Kind:      "ServiceAccount",
+				Name:      common.AstraConnectName,
+				Namespace: m.Namespace,
+			},
+		},
+		RoleRef: rbacv1.RoleRef{
+			Kind:     "Role",
+			Name:     common.AstraConnectName,
+			APIGroup: "rbac.authorization.k8s.io",
+		},
+	}
+	return []client.Object{roleBinding}, nil
 }
 
+// NIL RESOURCES BELOW
 func (d *AstraConnectDeployer) GetStatefulSetObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, error) {
 	return nil, nil
 }
