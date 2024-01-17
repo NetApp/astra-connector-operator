@@ -242,6 +242,8 @@ func (c clusterRegisterUtil) RegisterNatsSyncClient() (string, string, error) {
 		return "", fmt.Sprintf("Failed to make POST call to %s", natsSyncClientRegisterURL), err
 	}
 
+	c.Log.Info(fmt.Sprintf("response %v, %v, %v", response.Body, response.Status, response.StatusCode))
+
 	if response.StatusCode != http.StatusCreated {
 		bodyBytes, err := io.ReadAll(response.Body)
 		if err != nil {
@@ -666,29 +668,30 @@ func (c clusterRegisterUtil) CreateCluster(astraHost, cloudId, astraConnectorId,
 	defer cancel()
 
 	if err != nil {
-		return ClusterInfo{}, fmt.Sprintf("Failed to make POST call to %v", url), errors.Wrap(err, "error on request post clusters")
+		errorMsg := CreateErrorMsg("CreateCluster", "make POST call", url, clustersResp.Status, "", err)
+		return ClusterInfo{}, errorMsg, fmt.Errorf("%s: %w", errorMsg, err)
 	}
 
 	respBody, err := io.ReadAll(clustersResp.Body)
 	if err != nil {
-		c.Log.WithValues("response", string(respBody)).Error(err, "error reading response")
-		return ClusterInfo{}, fmt.Sprintf("Failed to read response from POST call to %v", url), errors.Wrap(err, "error reading response from post clusters")
+		errorMsg := CreateErrorMsg("CreateCluster", "read response from POST call", url, clustersResp.Status, "", err)
+		return ClusterInfo{}, errorMsg, fmt.Errorf("%s", errorMsg)
 	}
 
 	if clustersResp.StatusCode != http.StatusCreated {
-		c.Log.WithValues("response", string(respBody)).Error(err, "error adding cluster")
-		return ClusterInfo{}, fmt.Sprintf("POST call to %v failed with http status %v", url, clustersResp.Status), errors.New("add cluster failed with: " + strconv.Itoa(clustersResp.StatusCode))
+		errorMsg := CreateErrorMsg("CreateCluster", "make POST call", url, clustersResp.Status, string(respBody), nil)
+		return ClusterInfo{}, errorMsg, fmt.Errorf("%s", errorMsg)
 	}
 
 	err = json.Unmarshal(respBody, &clustersRespJson)
 	if err != nil {
-		c.Log.WithValues("response", string(respBody)).Error(err, "error unmarshalling response")
-		return ClusterInfo{}, fmt.Sprintf("Failed to unmarshal response from POST call to %v", url), errors.Wrap(err, "unmarshall error when parsing post clusters response")
+		errorMsg := CreateErrorMsg("CreateCluster", "unmarshal response from POST call", url, clustersResp.Status, "", err)
+		return ClusterInfo{}, errorMsg, fmt.Errorf("%s: %w", errorMsg, err)
 	}
 
 	if clustersRespJson.ID == "" {
-		c.Log.WithValues("response", string(respBody)).Error(errors.New("got empty cluster id"), "invalid response")
-		return ClusterInfo{}, fmt.Sprintf("Got empty clusterId in response from POST call to %v", url), errors.New("got empty id from post clusters response")
+		errorMsg := CreateErrorMsg("CreateCluster", "get clusterId in response from POST call", url, clustersResp.Status, string(respBody), nil)
+		return ClusterInfo{}, errorMsg, fmt.Errorf("%s", errorMsg)
 	}
 
 	if clustersRespJson.ManagedState == clusterUnManagedState {
@@ -1091,4 +1094,22 @@ func (c clusterRegisterUtil) RegisterClusterWithAstra(astraConnectorId string, c
 
 	c.Log.WithValues("clusterId", clusterInfo.ID, "clusterName", clusterInfo.Name).Info("Cluster managed by Astra!!!!")
 	return clusterInfo.ID, "", nil
+}
+
+// CreateErrorMsg creates a standardized error message for HTTP requests.
+// This should be used in all cases that we want to format an error message for CR status updates.
+func CreateErrorMsg(functionName, action, url, status, responseBody string, err error) string {
+	errMessage := ""
+	if err != nil {
+		errMessage = fmt.Sprintf(": %s", err.Error())
+	}
+
+	respBodyMessage := ""
+	if responseBody != "" {
+		respBodyMessage = fmt.Sprintf("; Response Body: %s", responseBody)
+	}
+
+	errorMsg := fmt.Sprintf("%s: Failed to %s to %v with status %s%s%s", functionName, action, url, status, errMessage, respBodyMessage)
+
+	return errorMsg
 }

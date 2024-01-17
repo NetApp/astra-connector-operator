@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023. NetApp, Inc. All Rights Reserved.
+ * Copyright (c) 2024. NetApp, Inc. All Rights Reserved.
  */
 
 package register_test
@@ -900,14 +900,19 @@ func TestCreateCluster(t *testing.T) {
 		clusterRegisterUtil, mockHttpClient, _, _ := createClusterRegister(AstraConnectorInput{})
 
 		errorText := "error on post request create"
-		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{}, errors.New(errorText))
+		mockHttpClient.On("Do", mock.Anything).Return(
+			&http.Response{
+				Status: "Mock Error",
+			},
+			errors.New(errorText),
+		)
 
 		clusterInfo, errorReason, err := clusterRegisterUtil.CreateCluster(host, cloudId, connectorId, apiToken)
 
 		assert.Equal(t, "", clusterInfo.ID)
 		assert.Equal(t, "", clusterInfo.Name)
-		assert.Contains(t, errorReason, "Failed to make POST call to")
-		assert.EqualError(t, err, "error on request post clusters: error on post request create")
+		assert.Contains(t, errorReason, "CreateCluster: Failed to make POST call to")
+		assert.EqualError(t, err, "CreateCluster: Failed to make POST call to test_host/accounts//topology/v1/clouds/test_cloudId/clusters with status Mock Error: error on post request create: error on post request create")
 	})
 
 	t.Run("TestCreateCluster__ReadResponseBodyErrorReturnError", func(t *testing.T) {
@@ -920,14 +925,15 @@ func TestCreateCluster(t *testing.T) {
 		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{
 			StatusCode: 400,
 			Body:       &mockRead,
+			Status:     "Mock Error",
 		}, nil).Times(3)
 
 		clusterInfo, errorReason, err := clusterRegisterUtil.CreateCluster(host, cloudId, connectorId, apiToken)
 
 		assert.Equal(t, "", clusterInfo.ID)
 		assert.Equal(t, "", clusterInfo.Name)
-		assert.Contains(t, errorReason, "Failed to read response from POST call to")
-		assert.EqualError(t, err, "error reading response from post clusters: error reading")
+		assert.Contains(t, errorReason, "CreateCluster: Failed to read response from POST call to")
+		assert.EqualError(t, err, "CreateCluster: Failed to read response from POST call to test_host/accounts//topology/v1/clouds/test_cloudId/clusters with status Mock Error: error reading")
 	})
 
 	t.Run("TestCreateCluster__HTTPPostRequestInvalidStatusCodeReturnError", func(t *testing.T) {
@@ -944,8 +950,8 @@ func TestCreateCluster(t *testing.T) {
 
 		assert.Equal(t, "", clusterInfo.ID)
 		assert.Equal(t, "", clusterInfo.Name)
-		assert.Contains(t, errorReason, "failed with http status Mock Error")
-		assert.EqualError(t, err, "add cluster failed with: 400")
+		assert.Contains(t, errorReason, "CreateCluster: Failed to make POST call to")
+		assert.EqualError(t, err, "CreateCluster: Failed to make POST call to test_host/accounts//topology/v1/clouds/test_cloudId/clusters with status Mock Error; Response Body: items:{\"Name\":\"Joe\",\"Body\":\"Hello\",\"Time\":1294706395881547069}")
 	})
 
 	t.Run("TestCreateCluster__UnmarshalBodyErrorReturnError", func(t *testing.T) {
@@ -961,8 +967,8 @@ func TestCreateCluster(t *testing.T) {
 
 		assert.Equal(t, "", clusterInfo.ID)
 		assert.Equal(t, "", clusterInfo.Name)
-		assert.Contains(t, errorReason, "Failed to unmarshal response from POST call to")
-		assert.ErrorContains(t, err, "unmarshall error when parsing post clusters response")
+		assert.Contains(t, errorReason, "CreateCluster: Failed to unmarshal response from POST call to")
+		assert.EqualError(t, err, "CreateCluster: Failed to unmarshal response from POST call to test_host/accounts//topology/v1/clouds/test_cloudId/clusters with status : invalid character 'i' looking for beginning of value: invalid character 'i' looking for beginning of value")
 	})
 
 	t.Run("TestCreateCluster__GotEmptyClusterIDReturnError", func(t *testing.T) {
@@ -972,14 +978,15 @@ func TestCreateCluster(t *testing.T) {
 		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{
 			StatusCode: 201,
 			Body:       ret,
+			Status:     "201",
 		}, nil).Times(3)
 
 		clusterInfo, errorReason, err := clusterRegisterUtil.CreateCluster(host, cloudId, connectorId, apiToken)
 
 		assert.Equal(t, "", clusterInfo.ID)
 		assert.Equal(t, "", clusterInfo.Name)
-		assert.Contains(t, errorReason, "Got empty clusterId in response from POST call")
-		assert.EqualError(t, err, "got empty id from post clusters response")
+		assert.Contains(t, errorReason, "CreateCluster: Failed to get clusterId in response from POST call")
+		assert.EqualError(t, err, "CreateCluster: Failed to get clusterId in response from POST call to test_host/accounts//topology/v1/clouds/test_cloudId/clusters with status 201; Response Body: {\"id\":\"\",\"name\":\"\",\"managedState\":\"\"}")
 	})
 
 	t.Run("TestCreateCluster__ClusterAddedReturnClusterInfo", func(t *testing.T) {
@@ -1056,8 +1063,8 @@ func TestCreateOrUpdateCluster(t *testing.T) {
 
 		assert.Equal(t, "", clusterInfo.ID)
 		assert.Equal(t, "", clusterInfo.Name)
-		assert.Contains(t, errorReason, "Failed to make POST call to")
-		assert.EqualError(t, err, "error creating cluster: error on request post clusters: this is an error")
+		assert.Contains(t, errorReason, "CreateCluster: Failed to make POST call to")
+		assert.EqualError(t, err, "error creating cluster: CreateCluster: Failed to make POST call to test_host/accounts//topology/v1/clouds/test_cloudId/clusters with status : this is an error: this is an error")
 	})
 
 	t.Run("TestCreateOrUpdateCluster__ReturnsClusterInfoWhenClusterGetsCreated", func(t *testing.T) {
