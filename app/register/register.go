@@ -213,16 +213,15 @@ func (c clusterRegisterUtil) UnRegisterNatsSyncClient() error {
 	defer cancel()
 
 	if err != nil {
-		return err
+		return errors.New(CreateErrorMsg("UnRegisterNatsSyncClient", "make POST call", natsSyncClientUnregisterURL, response.Status, "", err))
 	}
 
 	if response.StatusCode != http.StatusNoContent {
 		bodyBytes, err := io.ReadAll(response.Body)
 		if err != nil {
-			return err
+			return errors.New(CreateErrorMsg("UnRegisterNatsSyncClient", "read response", natsSyncClientUnregisterURL, response.Status, "", err))
 		}
-		errMsg := fmt.Sprintf("Unexpected unregistration status: %s; %s", response.Status, string(bodyBytes))
-		return errors.New(errMsg)
+		return errors.New(CreateErrorMsg("UnRegisterNatsSyncClient", "check status code", natsSyncClientUnregisterURL, response.Status, string(bodyBytes), errors.New("Unexpected unregistration status")))
 	}
 
 	return nil
@@ -239,7 +238,7 @@ func (c clusterRegisterUtil) RegisterNatsSyncClient() (string, string, error) {
 	response, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodPost, natsSyncClientRegisterURL, bytes.NewBuffer(reqBodyBytes), HeaderMap{}, c.Log, 3)
 	defer cancel()
 	if err != nil {
-		return "", fmt.Sprintf("Failed to make POST call to %s", natsSyncClientRegisterURL), err
+		return "", CreateErrorMsg("RegisterNatsSyncClient", "make POST call", natsSyncClientRegisterURL, response.Status, "", err), err
 	}
 
 	c.Log.Info(fmt.Sprintf("response %v, %v, %v", response.Body, response.Status, response.StatusCode))
@@ -247,16 +246,15 @@ func (c clusterRegisterUtil) RegisterNatsSyncClient() (string, string, error) {
 	if response.StatusCode != http.StatusCreated {
 		bodyBytes, err := io.ReadAll(response.Body)
 		if err != nil {
-			return "", fmt.Sprintf("Failed to read response from POST call to %s", natsSyncClientRegisterURL), err
+			return "", CreateErrorMsg("RegisterNatsSyncClient", "read response", natsSyncClientRegisterURL, response.Status, "", err), err
 		}
-		errMsg := fmt.Sprintf("Unexpected registration status: %s; %s", response.Status, string(bodyBytes))
-		return "", fmt.Sprintf("POST call to %v failed with http status %v", natsSyncClientRegisterURL, response.Status), errors.New(errMsg)
+		return "", CreateErrorMsg("RegisterNatsSyncClient", "check status code", natsSyncClientRegisterURL, response.Status, string(bodyBytes), errors.New("Unexpected registration status")), errors.New(CreateErrorMsg("RegisterNatsSyncClient", "check status code", natsSyncClientRegisterURL, response.Status, string(bodyBytes), errors.New("Unexpected registration status")))
 	}
 
 	astraConnector := &AstraConnector{}
 	err = json.NewDecoder(response.Body).Decode(astraConnector)
 	if err != nil {
-		return "", fmt.Sprintf("Failed to decode astraConnector.Id from response body of POST %v", natsSyncClientRegisterURL), err
+		return "", CreateErrorMsg("RegisterNatsSyncClient", "decode response", natsSyncClientRegisterURL, response.Status, "", err), err
 	}
 
 	return astraConnector.Id, "", nil
@@ -469,7 +467,7 @@ func (c clusterRegisterUtil) CreateCloud(astraHost, cloudType, apiToken string) 
 	defer cancel()
 
 	if err != nil {
-		return "", fmt.Sprintf("Failed to make POST call to %v", url), err
+		return "", CreateErrorMsg("CreateCloud", "make POST call", url, response.Status, "", err), err
 	}
 
 	type CloudResp struct {
@@ -479,15 +477,13 @@ func (c clusterRegisterUtil) CreateCloud(astraHost, cloudType, apiToken string) 
 
 	respBody, err := c.readResponseBody(response)
 	if err != nil {
-		c.Log.WithValues("response", string(respBody)).Error(err, "error reading response")
-		return "", fmt.Sprintf("Failed to read response from POST call to %v", url), errors.Wrap(err, "error reading response")
+		return "", CreateErrorMsg("CreateCloud", "read response", url, response.Status, "", err), err
 	}
 
 	cloudResp := &CloudResp{}
 	err = json.Unmarshal(respBody, &cloudResp)
 	if err != nil {
-		c.Log.WithValues("response", string(respBody)).Error(err, "error unmarshalling response")
-		return "", fmt.Sprintf("Failed to unmarshal response from POST call to %v", url), errors.Wrap(err, "error unmarshalling response")
+		return "", CreateErrorMsg("CreateCloud", "unmarshal response", url, response.Status, string(respBody), err), err
 	}
 
 	if cloudResp.ID == "" {
@@ -577,25 +573,25 @@ func (c clusterRegisterUtil) GetClusters(astraHost, cloudId, apiToken string) (G
 	c.Log.Info("Getting Clusters")
 
 	headerMap := HeaderMap{Authorization: fmt.Sprintf("Bearer %s", apiToken)}
-	clustersResp, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodGet, url, nil, headerMap, c.Log)
+	response, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodGet, url, nil, headerMap, c.Log)
 	defer cancel()
 
 	if err != nil {
-		return clustersRespJson, fmt.Sprintf("Failed to make GET call to %v", url), errors.Wrap(err, "error on request get clusters")
+		return clustersRespJson, CreateErrorMsg("GetClusters", "make GET call", url, response.Status, "", err), err
 	}
 
-	if clustersResp.StatusCode != http.StatusOK {
-		return clustersRespJson, fmt.Sprintf("GET call to %v failed with http status %v", url, clustersResp.Status), errors.New("get clusters failed " + strconv.Itoa(clustersResp.StatusCode))
+	if response.StatusCode != http.StatusOK {
+		return clustersRespJson, CreateErrorMsg("GetClusters", "make GET call", url, response.Status, "", err), err
 	}
 
-	respBody, err := io.ReadAll(clustersResp.Body)
+	respBody, err := io.ReadAll(response.Body)
 	if err != nil {
-		return clustersRespJson, fmt.Sprintf("Failed to read response from GET call to %v", url), errors.Wrap(err, "error reading response from get clusters")
+		return clustersRespJson, CreateErrorMsg("GetClusters", "read response from GET call", url, response.Status, string(respBody), err), err
 	}
 
 	err = json.Unmarshal(respBody, &clustersRespJson)
 	if err != nil {
-		return clustersRespJson, fmt.Sprintf("Failed to unmarshal response from GET call to %v", url), errors.Wrap(err, "unmarshall error when getting clusters")
+		return clustersRespJson, CreateErrorMsg("GetClusters", "unmarshal response from GET call", url, response.Status, string(respBody), err), err
 	}
 
 	return clustersRespJson, "", nil
@@ -608,14 +604,14 @@ func (c clusterRegisterUtil) pollForClusterToBeInDesiredState(astraHost, cloudId
 		getCluster, _, getClusterErr := c.GetCluster(astraHost, cloudId, clusterId, apiToken)
 
 		if getClusterErr != nil {
-			return errors.Wrap(getClusterErr, "error on get cluster")
+			return errors.New(CreateErrorMsg("pollForClusterToBeInDesiredState", "get cluster", astraHost, "", "", getClusterErr))
 		}
 
 		if getCluster.ManagedState == desiredState {
 			return nil
 		}
 	}
-	return errors.New("cluster state not changed to desired state: " + clusterId)
+	return errors.New(CreateErrorMsg("pollForClusterToBeInDesiredState", "check cluster state", astraHost, "", "", errors.New("cluster state not changed to desired state: "+clusterId)))
 }
 
 // GetCluster Returns the details of the given clusterID (if it exists)
@@ -624,25 +620,25 @@ func (c clusterRegisterUtil) GetCluster(astraHost, cloudId, clusterId, apiToken 
 	var clustersRespJson Cluster
 
 	headerMap := HeaderMap{Authorization: fmt.Sprintf("Bearer %s", apiToken)}
-	clustersResp, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodGet, url, nil, headerMap, c.Log)
+	response, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodGet, url, nil, headerMap, c.Log)
 	defer cancel()
 
 	if err != nil {
-		return Cluster{}, fmt.Sprintf("Failed to make GET call to %v", url), errors.Wrap(err, "error on request get clusters")
+		return Cluster{}, CreateErrorMsg("GetCluster", "make GET call", url, response.Status, "", err), err
 	}
 
-	if clustersResp.StatusCode != http.StatusOK {
-		return Cluster{}, fmt.Sprintf("GET call to %v failed with http status %v", url, clustersResp.Status), errors.New("get clusters failed with: " + strconv.Itoa(clustersResp.StatusCode))
+	if response.StatusCode != http.StatusOK {
+		return clustersRespJson, CreateErrorMsg("GetCluster", "make GET call", url, response.Status, "", err), err
 	}
 
-	respBody, err := io.ReadAll(clustersResp.Body)
+	respBody, err := io.ReadAll(response.Body)
 	if err != nil {
-		return Cluster{}, fmt.Sprintf("Failed to read response from GET call to %v", url), errors.Wrap(err, "error reading response from get clusters")
+		return clustersRespJson, CreateErrorMsg("GetCluster", "read response from GET call", url, response.Status, string(respBody), err), err
 	}
 
 	err = json.Unmarshal(respBody, &clustersRespJson)
 	if err != nil {
-		return Cluster{}, fmt.Sprintf("Failed to unmarshal response from GET call to %v", url), errors.Wrap(err, "unmarshall error when parsing get clusters response")
+		return Cluster{}, CreateErrorMsg("GetCluster", "unmarshal response from GET call", url, response.Status, string(respBody), err), err
 	}
 
 	return clustersRespJson, "", nil
@@ -722,15 +718,15 @@ func (c clusterRegisterUtil) UpdateCluster(astraHost, cloudId, clusterId, astraC
 
 	clustersBodyJson, _ := json.Marshal(clustersBody)
 	headerMap := HeaderMap{Authorization: fmt.Sprintf("Bearer %s", apiToken)}
-	clustersResp, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodPut, url, bytes.NewBuffer(clustersBodyJson), headerMap, c.Log, 3)
+	response, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodPut, url, bytes.NewBuffer(clustersBodyJson), headerMap, c.Log, 3)
 	defer cancel()
 
 	if err != nil {
-		return fmt.Sprintf("Failed to make PUT call to %v", url), errors.Wrap(err, "error on request put clusters")
+		return CreateErrorMsg("UpdateCluster", "make PUT call", url, response.Status, "", err), err
 	}
 
-	if clustersResp.StatusCode > http.StatusNoContent {
-		return fmt.Sprintf("PUT call to %v failed with http status %v", url, clustersResp.Status), errors.New("update cluster failed with: " + strconv.Itoa(clustersResp.StatusCode))
+	if response.StatusCode > http.StatusNoContent {
+		return CreateErrorMsg("UpdateCluster", "check status code", url, response.Status, "", errors.New("update cluster failed with: "+strconv.Itoa(response.StatusCode))), errors.New(CreateErrorMsg("UpdateCluster", "check status code", url, response.Status, "", errors.New("update cluster failed with: "+strconv.Itoa(response.StatusCode))))
 	}
 
 	c.Log.WithValues("clusterId", clusterId).Info("Cluster updated")
@@ -781,27 +777,25 @@ func (c clusterRegisterUtil) GetStorageClass(astraHost, cloudId, clusterId, apiT
 	c.Log.Info("Getting Storage Classes")
 
 	headerMap := HeaderMap{Authorization: fmt.Sprintf("Bearer %s", apiToken)}
-	storageClassesResp, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodGet, url, nil, headerMap, c.Log)
+	response, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodGet, url, nil, headerMap, c.Log)
 	defer cancel()
 
 	if err != nil {
-		return "", errors.Wrap(err, "error on request get storage classes")
+		return "", errors.New(CreateErrorMsg("GetStorageClass", "making GET call", url, response.Status, "", err))
 	}
 
-	if storageClassesResp.StatusCode != http.StatusOK {
-		return "", errors.New("get storage classes failed " + strconv.Itoa(storageClassesResp.StatusCode))
+	if response.StatusCode != http.StatusOK {
+		return "", errors.New(CreateErrorMsg("GetStorageClass", "making GET call", url, response.Status, "", nil))
 	}
 
-	respBody, err := io.ReadAll(storageClassesResp.Body)
+	respBody, err := io.ReadAll(response.Body)
 	if err != nil {
-		c.Log.WithValues("response", string(respBody)).Error(err, "error reading response")
-		return "", errors.Wrap(err, "error reading response from get storage classes")
+		return "", errors.New(CreateErrorMsg("GetStorageClass", "reading response from GET call", url, response.Status, string(respBody), err))
 	}
 
 	err = json.Unmarshal(respBody, &storageClassesRespJson)
 	if err != nil {
-		c.Log.WithValues("response", string(respBody)).Error(err, "error unmarshalling response")
-		return "", errors.Wrap(err, "unmarshall error when getting storage classes")
+		return "", errors.New(CreateErrorMsg("GetStorageClass", "unmarshal response from GET call", url, response.Status, string(respBody), err))
 	}
 
 	var defaultStorageClassId string
@@ -845,15 +839,16 @@ func (c clusterRegisterUtil) UpdateManagedCluster(astraHost, clusterId, astraCon
 	manageClustersBodyJson, _ := json.Marshal(manageClustersBody)
 
 	headerMap := HeaderMap{Authorization: fmt.Sprintf("Bearer %s", apiToken)}
-	manageClustersResp, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodPut, url, bytes.NewBuffer(manageClustersBodyJson), headerMap, c.Log, 3)
+	response, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodPut, url, bytes.NewBuffer(manageClustersBodyJson), headerMap, c.Log, 3)
 	defer cancel()
 
 	if err != nil {
-		return fmt.Sprintf("Failed to make PUT call to %v", url), errors.Wrap(err, "error on request put manage clusters")
+		return CreateErrorMsg("UpdateManagedCluster", "make PUT call", url, response.Status, "", err), err
 	}
 
-	if manageClustersResp.StatusCode > http.StatusNoContent {
-		return fmt.Sprintf("PUT call to %v failed with http status %v", url, manageClustersResp.Status), errors.New("manage cluster failed with: " + strconv.Itoa(manageClustersResp.StatusCode))
+	if response.StatusCode > http.StatusNoContent {
+		errorMsg := CreateErrorMsg("UpdateManagedCluster", "check status code", url, response.Status, "", errors.New("update managed cluster failed with: "+strconv.Itoa(response.StatusCode)))
+		return errorMsg, errors.New(errorMsg)
 	}
 
 	c.Log.WithValues("clusterId", clusterId).Info("Managed Cluster updated")
@@ -876,32 +871,25 @@ func (c clusterRegisterUtil) CreateManagedCluster(astraHost, cloudId, clusterID,
 	manageClustersBodyJson, _ := json.Marshal(manageClustersBody)
 
 	headerMap := HeaderMap{Authorization: fmt.Sprintf("Bearer %s", apiToken)}
-	manageClustersResp, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodPost, url, bytes.NewBuffer(manageClustersBodyJson), headerMap, c.Log, 3)
+	response, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodPost, url, bytes.NewBuffer(manageClustersBodyJson), headerMap, c.Log, 3)
 	defer cancel()
 
 	if err != nil {
-		return fmt.Sprintf("Failed to make POST call to %v", url), errors.Wrap(err, "error on request post manage clusters")
+		return CreateErrorMsg("CreateManagedCluster", "make POST call", url, response.Status, "", err), err
 	}
 
-	if manageClustersResp.StatusCode != http.StatusCreated {
-		return fmt.Sprintf("POST call to %v failed with http status %v", url, manageClustersResp.Status), errors.New("manage cluster failed with: " + strconv.Itoa(manageClustersResp.StatusCode))
+	if response.StatusCode != http.StatusCreated {
+		return CreateErrorMsg("CreateManagedCluster", "check status code", url, response.Status, "", errors.New("manage cluster failed with: "+strconv.Itoa(response.StatusCode))), errors.New(CreateErrorMsg("CreateManagedCluster", "check status code", url, response.Status, "", errors.New("manage cluster failed with: "+strconv.Itoa(response.StatusCode))))
 	}
 
-	respBody, err := io.ReadAll(manageClustersResp.Body)
+	respBody, err := io.ReadAll(response.Body)
 	if err != nil {
-		c.Log.WithValues("response", string(respBody)).Error(err, "error reading response")
-		return fmt.Sprintf("Failed to read response from POST call to %v", url), errors.Wrap(err, "error reading response from post manage clusters")
+		return CreateErrorMsg("CreateManagedCluster", "read response from POST call", url, response.Status, "", err), err
 	}
 
 	err = json.Unmarshal(respBody, &manageClustersRespJson)
 	if err != nil {
-		c.Log.WithValues("response", string(respBody)).Error(err, "error unmarshalling response")
-		return fmt.Sprintf("Failed to unmarshal response from POST call to %v", url), errors.Wrap(err, "unmarshall error when parsing post manage clusters response")
-	}
-
-	if manageClustersRespJson.ManagedState == clusterManagedState {
-		c.Log.WithValues("clusterId", manageClustersRespJson.ID).Info("Cluster Managed")
-		return "", nil
+		return CreateErrorMsg("CreateManagedCluster", "unmarshal response from POST call", url, response.Status, string(respBody), err), err
 	}
 
 	err = c.pollForClusterToBeInDesiredState(astraHost, cloudId, clusterID, clusterManagedState, apiToken)
@@ -909,7 +897,7 @@ func (c clusterRegisterUtil) CreateManagedCluster(astraHost, cloudId, clusterID,
 		return "", nil
 	}
 
-	return "Cluster State not changed to managed", errors.New("cluster state not changed to managed")
+	return "Cluster State not changed to managed", errors.New(CreateErrorMsg("CreateManagedCluster", "check cluster state", astraHost, "", "", errors.New("cluster state not changed to managed")))
 }
 
 func (c clusterRegisterUtil) CreateOrUpdateManagedCluster(astraHost, cloudId, clusterId, astraConnectorId, managedClustersMethod, apiToken string) (ClusterInfo, string, error) {
