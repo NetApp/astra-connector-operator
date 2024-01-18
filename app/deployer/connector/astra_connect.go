@@ -9,6 +9,11 @@ import (
 	"fmt"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"strconv"
+	"os"
+	"path/filepath"
+	"strings"
+
+	"github.com/pkg/errors"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -35,7 +40,7 @@ func (d *AstraConnectDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx co
 
 	var imageRegistry string
 	var containerImage string
-	var natssyncClientImage string
+	var connectorImage string
 	if m.Spec.ImageRegistry.Name != "" {
 		imageRegistry = m.Spec.ImageRegistry.Name
 	} else {
@@ -45,13 +50,27 @@ func (d *AstraConnectDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx co
 	if m.Spec.AstraConnect.Image != "" {
 		containerImage = m.Spec.AstraConnect.Image
 	} else {
-		containerImage = common.AstraConnectDefaultImage
+		// Reading env variable for project root. This is to ensure that we can read this file in both test
+		//	and production environments. This variable will be set in test, and will be ignored for the app
+		//  running in docker.
+		rootDir := os.Getenv("PROJECT_ROOT")
+		if rootDir == "" {
+			rootDir = "."
+		}
+		filePath := filepath.Join(rootDir, "common/connector_version.txt")
+		imageBytes, err := os.ReadFile(filePath)
+		if err != nil {
+			return nil, errors.Wrap(err, "error reading connector version txt file")
+		}
+
+		containerImage = string(imageBytes)
+		containerImage = strings.TrimSpace(containerImage)
 	}
 
-	natssyncClientImage = fmt.Sprintf("%s/%s", imageRegistry, containerImage)
-	log.Info("Using AstraConnector image", "image", natssyncClientImage)
+	connectorImage = fmt.Sprintf("%s/astra-connector:%s", imageRegistry, containerImage)
+	log.Info("Using AstraConnector image", "image", connectorImage)
 
-	// TODO what is appropriate default size
+	// TODO remove option to set replica count in CRD. This should always only-ever be 1
 	var replicas int32
 	if m.Spec.AstraConnect.Replicas > 1 {
 		replicas = m.Spec.AstraConnect.Replicas
@@ -85,7 +104,7 @@ func (d *AstraConnectDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx co
 				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{{
-						Image: natssyncClientImage,
+						Image: connectorImage,
 						Name:  common.AstraConnectName,
 						Env: []corev1.EnvVar{
 							{
