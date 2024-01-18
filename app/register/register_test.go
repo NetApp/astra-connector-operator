@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"github.com/NetApp-Polaris/astra-connector-operator/details/k8s"
 	"io"
 	"net/http"
 	"testing"
@@ -22,6 +21,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/NetApp-Polaris/astra-connector-operator/app/register"
+	"github.com/NetApp-Polaris/astra-connector-operator/details/k8s"
 	v1 "github.com/NetApp-Polaris/astra-connector-operator/details/operator-sdk/api/v1"
 	"github.com/NetApp-Polaris/astra-connector-operator/mocks"
 	testutil "github.com/NetApp-Polaris/astra-connector-operator/test/test-util"
