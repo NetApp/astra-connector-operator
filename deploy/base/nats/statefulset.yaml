@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: nats
+  namespace: astra-connector
+spec:
+  serviceName: nats
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nats
+  template:
+    metadata:
+      labels:
+        app: nats
+    spec:
+      containers:
+      - name: nats
+        image: nats:latest
+        ports:
+        - name: client
+          containerPort: 4222
+        - name: cluster
+          containerPort: 6222
+        - name: monitor
+          containerPort: 8222
+        - name: metrics
+          containerPort: 7777
+        command:
+        - "nats-server"
+        - "--config"
+        - "/etc/nats/nats.conf"
+        volumeMounts:
+        - name: nats-config
+          mountPath: /etc/nats
+        - name: pid
+          mountPath: /var/run/nats
+        securityContext:
+          capabilities:
+            drop: ["ALL"]
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 1000740000
+      volumes:
+      - name: nats-config
+        configMap:
+          name: nats-config
+      - name: pid
+        emptyDir: {}

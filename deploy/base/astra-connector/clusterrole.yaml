@@ -1,0 +1,23 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: astra-connector
+rules:
+- apiGroups: [""]
+  resources: ["namespaces", "persistentvolumes", "nodes", "pods", "services", "secrets"]
+  verbs: ["watch", "list", "get"]
+- apiGroups: ["storage.k8s.io"]
+  resources: ["storageclasses"]
+  verbs: ["update", "watch", "list", "get"]
+- apiGroups: ["storage.k8s.io"]
+  resources: ["csidrivers"]
+  verbs: ["watch", "list", "get"]
+- apiGroups: ["snapshot.storage.k8s.io"]
+  resources: ["volumesnapshotclasses"]
+  verbs: ["watch", "list", "get"]
+- apiGroups: ["trident.netapp.io"]
+  resources: ["tridentversions", "tridentorchestrators"]
+  verbs: ["watch", "list", "get"]
+- apiGroups: ["astra.netapp.io"]
+  resources: ["applications", "appmirrorrelationships", "appmirrorupdates", "appvaults", "autosupportbundles", "backups", "backupinplacerestores", "backuprestores", "exechooks", "exechooksruns", "pvccopies", "pvcerases", "resourcebackups", "resourcedeletes", "resourcerestores", "resourcesummaryuploads", "resticvolumebackups", "resticvolumerestores", "schedules", "snapshotinplacerestores", "snapshotrestores", "snapshots", "astraconnectors"]
+  verbs: ["watch", "list", "get"]
