@@ -1770,7 +1770,7 @@ spec:
                 description: ApplicationRef is the reference to the Application to execute hooks against
                 type: string
               completionTimeout:
-                description: CompletionTimeout specifies the time to wait for the entire ExecHooksRun to complete before returning timeout error. The default value is 40 minutes.
+                description: CompletionTimeout specifies the time to wait for the entire ExecHooksRun to complete before returning timeout error. The default value is 30 minutes.
                 type: string
               resourceFilter:
                 description: ResourceFilter Should be populated by the user, if only certain resources should be considered for executing hooks, which is often useful when doing a selective restore
@@ -3507,6 +3507,9 @@ spec:
               applicationRef:
                 description: ApplicationRef is the reference to the Application being snapshotted.
                 type: string
+              completionTimeout:
+                description: CompletionTimeout specifies the time to wait for the entire Snapshot to complete before returning timeout error. The default value is 60 minutes.
+                type: string
               reclaimPolicy:
                 description: ReclaimPolicy defines what happens to the AppArchive of a snapshot when the snapshot CR is deleted Valid options are Retain, Delete (default).
                 type: string
@@ -4144,6 +4147,9 @@ spec:
                 type: string
               applicationRef:
                 description: ApplicationRef is the reference to the Application being snapshotted.
+                type: string
+              completionTimeout:
+                description: CompletionTimeout specifies the time to wait for the entire Snapshot to complete before returning timeout error. The default value is 60 minutes.
                 type: string
               reclaimPolicy:
                 description: ReclaimPolicy defines what happens to the AppArchive of a snapshot when the snapshot CR is deleted Valid options are Retain, Delete (default).
