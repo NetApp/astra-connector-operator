@@ -114,8 +114,7 @@ type ClusterRegisterUtil interface {
 	CreateCluster(astraHost, cloudId, astraConnectorId, apiToken string) (ClusterInfo, string, error)
 	UpdateCluster(astraHost, cloudId, clusterId, astraConnectorId, apiToken string) (string, error)
 	CreateOrUpdateCluster(astraHost, cloudId, clusterId, astraConnectorId, connectorInstall, clustersMethod, apiToken string) (ClusterInfo, string, error)
-	GetStorageClass(astraHost, cloudId, clusterId, apiToken string) (string, error)
-	CreateManagedCluster(astraHost, cloudId, clusterID, storageClass, connectorInstall, apiToken string) (string, error)
+	CreateManagedCluster(astraHost, cloudId, clusterID, connectorInstall, apiToken string) (string, error)
 	UpdateManagedCluster(astraHost, clusterId, astraConnectorId, connectorInstall, apiToken string) (string, error)
 	CreateOrUpdateManagedCluster(astraHost, cloudId, clusterId, astraConnectorId, managedClustersMethod, apiToken string) (ClusterInfo, string, error)
 	ValidateAndGetCluster(astraHost, cloudId, apiToken, clusterId string) (ClusterInfo, string, error)
@@ -553,7 +552,6 @@ type Cluster struct {
 	ConnectorInstall           string   `json:"connectorInstall,omitempty"`
 	TridentManagedStateDesired string   `json:"tridentManagedStateDesired,omitempty"`
 	ApiServiceID               string   `json:"apiServiceID,omitempty"`
-	DefaultStorageClass        string   `json:"defaultStorageClass,omitempty"`
 }
 
 type GetClustersResponse struct {
@@ -761,73 +759,6 @@ func (c clusterRegisterUtil) CreateOrUpdateCluster(astraHost, cloudId, clusterId
 	return ClusterInfo{ID: clusterId}, "", nil
 }
 
-type StorageClass struct {
-	ID        string `json:"id,omitempty"`
-	Name      string `json:"name,omitempty"`
-	IsDefault string `json:"isDefault"`
-}
-
-type GetStorageClassResponse struct {
-	Items []StorageClass `json:"items"`
-}
-
-func (c clusterRegisterUtil) GetStorageClass(astraHost, cloudId, clusterId, apiToken string) (string, error) {
-	url := fmt.Sprintf("%s/accounts/%s/topology/v1/clouds/%s/clusters/%s/storageClasses", astraHost, c.AstraConnector.Spec.Astra.AccountId, cloudId, clusterId)
-	var storageClassesRespJson GetStorageClassResponse
-
-	c.Log.Info("Getting Storage Classes")
-
-	headerMap := HeaderMap{Authorization: fmt.Sprintf("Bearer %s", apiToken)}
-	storageClassesResp, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodGet, url, nil, headerMap, c.Log)
-	defer cancel()
-
-	if err != nil {
-		return "", errors.Wrap(err, "error on request get storage classes")
-	}
-
-	if storageClassesResp.StatusCode != http.StatusOK {
-		return "", errors.New("get storage classes failed " + strconv.Itoa(storageClassesResp.StatusCode))
-	}
-
-	respBody, err := io.ReadAll(storageClassesResp.Body)
-	if err != nil {
-		c.Log.WithValues("response", string(respBody)).Error(err, "error reading response")
-		return "", errors.Wrap(err, "error reading response from get storage classes")
-	}
-
-	err = json.Unmarshal(respBody, &storageClassesRespJson)
-	if err != nil {
-		c.Log.WithValues("response", string(respBody)).Error(err, "error unmarshalling response")
-		return "", errors.Wrap(err, "unmarshall error when getting storage classes")
-	}
-
-	var defaultStorageClassId string
-	var defaultStorageClassName string
-	for _, sc := range storageClassesRespJson.Items {
-		if sc.Name == c.AstraConnector.Spec.Astra.StorageClassName {
-			c.Log.Info("Using the storage class specified in the CR Spec", "StorageClassName", sc.Name, "StorageClassID", sc.ID)
-			return sc.ID, nil
-		}
-
-		if sc.IsDefault == "true" {
-			defaultStorageClassId = sc.ID
-			defaultStorageClassName = sc.Name
-		}
-	}
-
-	if c.AstraConnector.Spec.Astra.StorageClassName != "" {
-		c.Log.Error(errors.New("invalid storage class specified"), "Storage Class Provided in the CR Spec is not valid : "+c.AstraConnector.Spec.Astra.StorageClassName)
-	}
-
-	if defaultStorageClassId == "" {
-		c.Log.Info("No Storage Class is set to default")
-		return "", errors.New("no default storage class in the system")
-	}
-
-	c.Log.Info("Using the default storage class", "StorageClassName", defaultStorageClassName, "StorageClassID", defaultStorageClassId)
-	return defaultStorageClassId, nil
-}
-
 // UpdateManagedCluster Updates the persisted record of the given managed cluster
 func (c clusterRegisterUtil) UpdateManagedCluster(astraHost, clusterId, astraConnectorId, connectorInstall, apiToken string) (string, error) {
 	url := fmt.Sprintf("%s/accounts/%s/topology/v1/managedClusters/%s", astraHost, c.AstraConnector.Spec.Astra.AccountId, clusterId)
@@ -858,7 +789,7 @@ func (c clusterRegisterUtil) UpdateManagedCluster(astraHost, clusterId, astraCon
 }
 
 // CreateManagedCluster Transitions a cluster from unmanaged state to managed state
-func (c clusterRegisterUtil) CreateManagedCluster(astraHost, cloudId, clusterID, storageClass, connectorInstall, apiToken string) (string, error) {
+func (c clusterRegisterUtil) CreateManagedCluster(astraHost, cloudId, clusterID, connectorInstall, apiToken string) (string, error) {
 	url := fmt.Sprintf("%s/accounts/%s/topology/v1/managedClusters", astraHost, c.AstraConnector.Spec.Astra.AccountId)
 	var manageClustersRespJson Cluster
 
@@ -867,7 +798,6 @@ func (c clusterRegisterUtil) CreateManagedCluster(astraHost, cloudId, clusterID,
 		Version:                    common.AstraManagedClustersAPIVersion,
 		ID:                         clusterID,
 		TridentManagedStateDesired: clusterManagedState,
-		DefaultStorageClass:        storageClass,
 		ConnectorInstall:           connectorInstall,
 	}
 	manageClustersBodyJson, _ := json.Marshal(manageClustersBody)
@@ -925,7 +855,7 @@ func (c clusterRegisterUtil) CreateOrUpdateManagedCluster(astraHost, cloudId, cl
 		c.Log.Info("Creating Managed Cluster")
 
 		// Note: we no longer set storageClass for arch3.0 clusters
-		errorReason, err := c.CreateManagedCluster(astraHost, cloudId, clusterId, "", connectorInstalled, apiToken)
+		errorReason, err := c.CreateManagedCluster(astraHost, cloudId, clusterId, connectorInstalled, apiToken)
 		if err != nil {
 			return ClusterInfo{ID: clusterId}, errorReason, errors.Wrap(err, "error creating managed cluster")
 		}
