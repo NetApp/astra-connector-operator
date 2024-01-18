@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: astra-connector
+  namespace: astra-connector
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      deployment: astra-connector
+  template:
+    metadata:
+      labels:
+        deployment: astra-connector
+    spec:
+      containers:
+      - name: astra-connector
+        image: acs-image-registry.netapp.astra.io/astra-connector:latest
+        env:
+        - name: LOG_LEVEL
+          value: "trace"
+        resources:
+          limits:
+            cpu: 10m
+            memory: 1280Mi
+        securityContext:
+          capabilities:
+            drop: ["ALL"]
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 1000740000
+      serviceAccountName: astra-connector
