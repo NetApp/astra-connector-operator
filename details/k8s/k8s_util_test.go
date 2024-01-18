@@ -6,6 +6,7 @@ package k8s_test
 
 import (
 	"context"
+	"k8s.io/client-go/kubernetes/fake"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -23,8 +24,9 @@ var ctx = context.Background()
 
 func createResourceHandlerWithFakeClient(t *testing.T, initObjs ...client.Object) (k8s.K8sUtilInterface, client.Client) {
 	fakeClient := testutil.CreateFakeClient(initObjs...)
+	fakeClientset := fake.NewSimpleClientset()
 	log := testutil.CreateLoggerForTesting(t)
-	k8sUtil := k8s.NewK8sUtil(fakeClient, log)
+	k8sUtil := k8s.NewK8sUtil(fakeClient, fakeClientset, log)
 	return k8sUtil, fakeClient
 }
 

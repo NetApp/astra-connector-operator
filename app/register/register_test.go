@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"github.com/NetApp-Polaris/astra-connector-operator/details/k8s"
 	"io"
 	"net/http"
 	"testing"
@@ -75,6 +76,8 @@ func createClusterRegister(astraConnectorInput AstraConnectorInput) (register.Cl
 	log := testutil.CreateLoggerForTesting()
 	mockHttpClient := &mocks.HTTPClient{}
 	fakeClient := testutil.CreateFakeClient()
+	k8sUtil := &mocks.K8sUtilInterface{}
+	k8sUtil.On("DetermineClusterType").Return(k8s.FlavorKubernetes)
 	apiTokenSecret := "astra-token"
 
 	astraConnector := &v1.AstraConnector{
@@ -124,7 +127,7 @@ func createClusterRegister(astraConnectorInput AstraConnectorInput) (register.Cl
 		astraConnector.Spec.NatsSyncClient.HostAliasIP = testIP
 	}
 
-	clusterRegisterUtil := register.NewClusterRegisterUtil(astraConnector, mockHttpClient, fakeClient, log, context.Background())
+	clusterRegisterUtil := register.NewClusterRegisterUtil(astraConnector, mockHttpClient, fakeClient, k8sUtil, log, context.Background())
 	return clusterRegisterUtil, mockHttpClient, apiTokenSecret, fakeClient
 }
 
