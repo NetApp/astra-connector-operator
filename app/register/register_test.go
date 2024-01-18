@@ -41,6 +41,18 @@ type mockRead struct {
 	mock.Mock
 }
 
+var mockHttpRes400 = &http.Response{
+	StatusCode: 400,
+	Body:       io.NopCloser(bytes.NewReader([]byte(`errorBody`))),
+	Status:     "Mock Error",
+}
+
+var mockHttpRes401 = &http.Response{
+	StatusCode: 400,
+	Body:       io.NopCloser(bytes.NewReader([]byte(`errorBody`))),
+	Status:     "Mock Error",
+}
+
 func (m *mockRead) Read(in []byte) (n int, err error) {
 	return m.Called(in).Int(0), m.Called(in).Error(1)
 }
@@ -189,24 +201,19 @@ func TestUnRegisterNatsSyncClient(t *testing.T) {
 		clusterRegisterUtil, mockHttpClient, _, _ := createClusterRegister(AstraConnectorInput{createTokenSecret: true})
 
 		errorText := "error on post request"
-		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{}, errors.New(errorText))
+		mockHttpClient.On("Do", mock.Anything).Return(mockHttpRes400, errors.New(errorText))
 
 		err := clusterRegisterUtil.UnRegisterNatsSyncClient()
-		assert.EqualError(t, err, errorText)
+		assert.EqualError(t, err, "UnRegisterNatsSyncClient: Failed to make POST call to http://natssync-client.test-namespace:8080/bridge-client/1/unregister with status Mock Error: error on post request")
 	})
 
 	t.Run("TestUnRegisterNatsSyncClient__HTTPPostRequestInvalidStatusReturnError", func(t *testing.T) {
 		clusterRegisterUtil, mockHttpClient, _, _ := createClusterRegister(AstraConnectorInput{createTokenSecret: true})
 
-		ret := io.NopCloser(bytes.NewReader([]byte(`items:{"Name":"Joe","Body":"Hello","Time":1294706395881547069}`)))
-		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{
-			StatusCode: 400,
-			Body:       ret,
-			Status:     "Mock Error",
-		}, nil).Times(3)
+		mockHttpClient.On("Do", mock.Anything).Return(mockHttpRes400, nil).Times(3)
 
 		err := clusterRegisterUtil.UnRegisterNatsSyncClient()
-		assert.ErrorContains(t, err, "Unexpected unregistration status: Mock Error")
+		assert.ErrorContains(t, err, "Unexpected unregistration status")
 	})
 
 	t.Run("TestUnRegisterNatsSyncClient__ReadResponseBodyErrorReturnError", func(t *testing.T) {
@@ -219,10 +226,11 @@ func TestUnRegisterNatsSyncClient(t *testing.T) {
 		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{
 			StatusCode: 400,
 			Body:       &mockRead,
+			Status:     "Mock Error",
 		}, nil).Times(3)
 
 		err := clusterRegisterUtil.UnRegisterNatsSyncClient()
-		assert.EqualError(t, err, "error reading")
+		assert.EqualError(t, err, "UnRegisterNatsSyncClient: Failed to read response to http://natssync-client.test-namespace:8080/bridge-client/1/unregister with status Mock Error: error reading")
 	})
 
 	t.Run("TestUnRegisterNatsSyncClient__OnSuccessReturnNil", func(t *testing.T) {
@@ -264,18 +272,13 @@ func TestRegisterNatsSyncClient(t *testing.T) {
 	t.Run("TestUnRegisterNatsSyncClient__HTTPPostRequestInvalidStatusReturnError", func(t *testing.T) {
 		clusterRegisterUtil, mockHttpClient, _, _ := createClusterRegister(AstraConnectorInput{createTokenSecret: true})
 
-		ret := io.NopCloser(bytes.NewReader([]byte(`items:{"Name":"Joe","Body":"Hello","Time":1294706395881547069}`)))
-		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{
-			StatusCode: 400,
-			Body:       ret,
-			Status:     "Mock Error",
-		}, nil).Times(3)
+		mockHttpClient.On("Do", mock.Anything).Return(mockHttpRes400, nil).Times(3)
 
 		connectorId, errorReason, err := clusterRegisterUtil.RegisterNatsSyncClient()
 
 		assert.Equal(t, "", connectorId)
-		assert.Contains(t, errorReason, "failed with http status Mock Error")
-		assert.ErrorContains(t, err, "Unexpected registration status: Mock Error")
+		assert.Contains(t, errorReason, "Failed to make POST call")
+		assert.ErrorContains(t, err, "Unexpected registration status")
 	})
 
 	t.Run("TestUnRegisterNatsSyncClient__ReadResponseBodyErrorReturnError", func(t *testing.T) {
@@ -288,6 +291,7 @@ func TestRegisterNatsSyncClient(t *testing.T) {
 		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{
 			StatusCode: 400,
 			Body:       &mockRead,
+			Status:     "Mock Error",
 		}, nil).Times(3)
 
 		connectorId, errorReason, err := clusterRegisterUtil.RegisterNatsSyncClient()
@@ -320,12 +324,13 @@ func TestRegisterNatsSyncClient(t *testing.T) {
 		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{
 			StatusCode: 201,
 			Body:       ret,
+			Status:     "201 Success",
 		}, nil).Once()
 
 		connectorId, errorReason, err := clusterRegisterUtil.RegisterNatsSyncClient()
 
 		assert.Equal(t, "", connectorId)
-		assert.Contains(t, errorReason, "Failed to decode astraConnector.Id from response body of POST")
+		assert.Contains(t, errorReason, "Failed to decode response")
 		assert.NotNil(t, err)
 	})
 }
@@ -535,13 +540,14 @@ func TestCreateCloud(t *testing.T) {
 		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{
 			StatusCode: 201,
 			Body:       &mockRead,
+			Status:     "201 Success",
 		}, nil).Once()
 
 		cloudId, errorReason, err := clusterRegisterUtil.CreateCloud(host, cloudType, apiToken)
 
 		assert.Equal(t, "", cloudId)
 		assert.Contains(t, errorReason, "Failed to read response from POST call to")
-		assert.EqualError(t, err, "error reading response: error reading")
+		assert.EqualError(t, err, "error reading")
 	})
 
 	t.Run("TestCreateCloud__UnmarshalBodyErrorReturnError", func(t *testing.T) {
@@ -557,7 +563,7 @@ func TestCreateCloud(t *testing.T) {
 
 		assert.Equal(t, "", cloudId)
 		assert.Contains(t, errorReason, "Failed to unmarshal response from POST call to")
-		assert.ErrorContains(t, err, "error unmarshalling response")
+		assert.ErrorContains(t, err, "invalid character 'i' looking for beginning of value")
 	})
 
 	t.Run("TestCreateCloud__GotEmptyCloudIDReturnError", func(t *testing.T) {
@@ -727,29 +733,25 @@ func TestGetClusters(t *testing.T) {
 		clusterRegisterUtil, mockHttpClient, _, _ := createClusterRegister(AstraConnectorInput{})
 
 		errorText := "error on get request"
-		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{}, errors.New(errorText))
+		mockHttpClient.On("Do", mock.Anything).Return(mockHttpRes401, errors.New(errorText))
 
 		clusters, errorReason, err := clusterRegisterUtil.GetClusters(host, cloudId, apiToken)
 
 		assert.Equal(t, 0, len(clusters.Items))
 		assert.Contains(t, errorReason, "Failed to make GET call to")
-		assert.EqualError(t, err, "error on request get clusters: error on get request")
+		assert.EqualError(t, err, "error on get request")
 	})
 
 	t.Run("TestGetClusters__HTTPGetRequestInvalidStatusCodeReturnError", func(t *testing.T) {
 		clusterRegisterUtil, mockHttpClient, _, _ := createClusterRegister(AstraConnectorInput{})
 
-		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{
-			StatusCode: 401,
-			Body:       nil,
-			Status:     "Mock Error",
-		}, nil).Once()
+		mockHttpClient.On("Do", mock.Anything).Return(mockHttpRes401, nil).Once()
 
 		clusters, errorReason, err := clusterRegisterUtil.GetClusters(host, cloudId, apiToken)
 
 		assert.Equal(t, 0, len(clusters.Items))
-		assert.Contains(t, errorReason, "failed with http status Mock Error")
-		assert.EqualError(t, err, "get clusters failed 401")
+		assert.Contains(t, errorReason, "Failed to make GET call")
+		assert.EqualError(t, err, "GetClusters: Failed to make GET call to test_host/accounts//topology/v1/clouds/test_cloudId/clusters with status Mock Error")
 	})
 
 	t.Run("TestGetClusters__ReadResponseBodyErrorReturnError", func(t *testing.T) {
@@ -768,7 +770,7 @@ func TestGetClusters(t *testing.T) {
 
 		assert.Equal(t, 0, len(clusters.Items))
 		assert.Contains(t, errorReason, "Failed to read response from GET call to")
-		assert.EqualError(t, err, "error reading response from get clusters: error reading")
+		assert.EqualError(t, err, "error reading")
 	})
 
 	t.Run("TestGetClusters__UnmarshalBodyErrorReturnError", func(t *testing.T) {
@@ -784,7 +786,7 @@ func TestGetClusters(t *testing.T) {
 
 		assert.Equal(t, 0, len(clusters.Items))
 		assert.Contains(t, errorReason, "Failed to unmarshal response from GET call to")
-		assert.EqualError(t, err, "unmarshall error when getting clusters: invalid character 'i' looking for beginning of value")
+		assert.EqualError(t, err, "invalid character 'i' looking for beginning of value")
 	})
 
 	t.Run("TestGetClusters__ReturnClusterResponse", func(t *testing.T) {
@@ -818,24 +820,20 @@ func TestGetCluster(t *testing.T) {
 		assert.Equal(t, "", cluster.ID)
 		assert.Equal(t, "", cluster.Name)
 		assert.Contains(t, errorReason, "Failed to make GET call to")
-		assert.EqualError(t, err, "error on request get clusters: error on get request")
+		assert.EqualError(t, err, "error on get request")
 	})
 
 	t.Run("TestGetCluster__HTTPGetRequestInvalidStatusCodeReturnError", func(t *testing.T) {
 		clusterRegisterUtil, mockHttpClient, _, _ := createClusterRegister(AstraConnectorInput{})
 
-		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{
-			StatusCode: 401,
-			Body:       nil,
-			Status:     "Mock Error",
-		}, nil).Once()
+		mockHttpClient.On("Do", mock.Anything).Return(mockHttpRes401, nil).Once()
 
 		cluster, errorReason, err := clusterRegisterUtil.GetCluster(host, cloudId, clusterId, apiToken)
 
 		assert.Equal(t, "", cluster.ID)
 		assert.Equal(t, "", cluster.Name)
-		assert.Contains(t, errorReason, "failed with http status Mock Error")
-		assert.EqualError(t, err, "get clusters failed with: 401")
+		assert.Contains(t, errorReason, "Failed to make GET call")
+		assert.EqualError(t, err, "GetCluster: Failed to make GET call to test_host/accounts//topology/v1/clouds/test_cloudId/clusters/test_clusterId with status Mock Error")
 	})
 
 	t.Run("TestGetCluster__ReadResponseBodyErrorReturnError", func(t *testing.T) {
@@ -855,7 +853,7 @@ func TestGetCluster(t *testing.T) {
 		assert.Equal(t, "", cluster.ID)
 		assert.Equal(t, "", cluster.Name)
 		assert.Contains(t, errorReason, "Failed to read response from GET call to")
-		assert.EqualError(t, err, "error reading response from get clusters: error reading")
+		assert.EqualError(t, err, "error reading")
 	})
 
 	t.Run("TestGetCluster__UnmarshalBodyErrorReturnError", func(t *testing.T) {
@@ -872,7 +870,7 @@ func TestGetCluster(t *testing.T) {
 		assert.Equal(t, "", cluster.ID)
 		assert.Equal(t, "", cluster.Name)
 		assert.Contains(t, errorReason, "Failed to unmarshal response from GET call to")
-		assert.EqualError(t, err, "unmarshall error when parsing get clusters response: invalid character 'i' looking for beginning of value")
+		assert.EqualError(t, err, "invalid character 'i' looking for beginning of value")
 	})
 
 	t.Run("TestGetCluster__ReturnClusterResponse", func(t *testing.T) {
@@ -1019,21 +1017,17 @@ func TestUpdateCluster(t *testing.T) {
 
 		errorReason, err := clusterRegisterUtil.UpdateCluster(host, cloudId, clusterId, connectorId, apiToken)
 		assert.Contains(t, errorReason, "Failed to make PUT call to")
-		assert.EqualError(t, err, "error on request put clusters: error on put request update")
+		assert.EqualError(t, err, "error on put request update")
 	})
 
 	t.Run("TestUpdateCluster__HTTPPutRequestInvalidStatusCodeReturnError", func(t *testing.T) {
 		clusterRegisterUtil, mockHttpClient, _, _ := createClusterRegister(AstraConnectorInput{})
 
-		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{
-			StatusCode: 400,
-			Body:       nil,
-			Status:     "Mock Error",
-		}, nil).Times(3)
+		mockHttpClient.On("Do", mock.Anything).Return(mockHttpRes400, nil).Times(3)
 
 		errorReason, err := clusterRegisterUtil.UpdateCluster(host, cloudId, clusterId, connectorId, apiToken)
-		assert.Contains(t, errorReason, "failed with http status Mock Error")
-		assert.EqualError(t, err, "update cluster failed with: 400")
+		assert.Contains(t, errorReason, "Failed to make PUT call to")
+		assert.EqualError(t, err, "UpdateCluster: Failed to make PUT call to test_host/accounts//topology/v1/clouds/test_cloudId/clusters/test_clusterId with status Mock Error")
 	})
 
 	t.Run("TestUpdateCluster__ClusterUpdatedReturnNil", func(t *testing.T) {
@@ -1096,7 +1090,7 @@ func TestCreateOrUpdateCluster(t *testing.T) {
 		assert.Equal(t, "", clusterInfo.ID)
 		assert.Equal(t, "", clusterInfo.Name)
 		assert.Contains(t, errorReason, "Failed to make PUT call to")
-		assert.EqualError(t, err, "error updating cluster: error on request put clusters: this is an error")
+		assert.EqualError(t, err, "error updating cluster: this is an error")
 	})
 
 	t.Run("TestCreateOrUpdateCluster__ReturnsClusterInfoWhenClusterGetsUpdated", func(t *testing.T) {
@@ -1124,26 +1118,23 @@ func TestGetStorageClass(t *testing.T) {
 		clusterRegisterUtil, mockHttpClient, _, _ := createClusterRegister(AstraConnectorInput{})
 
 		errorText := "error on get request"
-		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{}, errors.New(errorText))
+		mockHttpClient.On("Do", mock.Anything).Return(mockHttpRes401, errors.New(errorText))
 
 		storageClassId, err := clusterRegisterUtil.GetStorageClass(host, cloudId, clusterId, apiToken)
 
 		assert.Equal(t, "", storageClassId)
-		assert.EqualError(t, err, "error on request get storage classes: error on get request")
+		assert.EqualError(t, err, "GetStorageClass: Failed to make GET call to test_host/accounts//topology/v1/clouds/test_cloudId/clusters/test_clusterId/storageClasses with status Mock Error: error on get request")
 	})
 
 	t.Run("TestGetStorageClass__HTTPGetRequestInvalidStatusCodeReturnError", func(t *testing.T) {
 		clusterRegisterUtil, mockHttpClient, _, _ := createClusterRegister(AstraConnectorInput{})
 
-		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{
-			StatusCode: 401,
-			Body:       nil,
-		}, nil).Once()
+		mockHttpClient.On("Do", mock.Anything).Return(mockHttpRes401, nil).Once()
 
 		storageClassId, err := clusterRegisterUtil.GetStorageClass(host, cloudId, clusterId, apiToken)
 
 		assert.Equal(t, "", storageClassId)
-		assert.EqualError(t, err, "get storage classes failed 401")
+		assert.EqualError(t, err, "GetStorageClass: Failed to make GET call to test_host/accounts//topology/v1/clouds/test_cloudId/clusters/test_clusterId/storageClasses with status Mock Error")
 	})
 
 	t.Run("TestGetStorageClass__ReadResponseBodyErrorReturnError", func(t *testing.T) {
@@ -1156,12 +1147,13 @@ func TestGetStorageClass(t *testing.T) {
 		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{
 			StatusCode: 200,
 			Body:       &mockRead,
+			Status:     "200 Success",
 		}, nil).Once()
 
 		storageClassId, err := clusterRegisterUtil.GetStorageClass(host, cloudId, clusterId, apiToken)
 
 		assert.Equal(t, "", storageClassId)
-		assert.EqualError(t, err, "error reading response from get storage classes: error reading")
+		assert.EqualError(t, err, "GetStorageClass: Failed to read response from GET call to test_host/accounts//topology/v1/clouds/test_cloudId/clusters/test_clusterId/storageClasses with status 200 Success: error reading")
 	})
 
 	t.Run("TestGetStorageClass__UnmarshalBodyErrorReturnError", func(t *testing.T) {
@@ -1171,12 +1163,13 @@ func TestGetStorageClass(t *testing.T) {
 		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{
 			StatusCode: 200,
 			Body:       ret,
+			Status:     "200 Success",
 		}, nil).Once()
 
 		storageClassId, err := clusterRegisterUtil.GetStorageClass(host, cloudId, clusterId, apiToken)
 
 		assert.Equal(t, "", storageClassId)
-		assert.EqualError(t, err, "unmarshall error when getting storage classes: invalid character 'i' looking for beginning of value")
+		assert.EqualError(t, err, "GetStorageClass: Failed to unmarshal response from GET call to test_host/accounts//topology/v1/clouds/test_cloudId/clusters/test_clusterId/storageClasses with status 200 Success: invalid character 'i' looking for beginning of value; Response Body: items:{\"Name\":\"Joe\",\"Body\":\"Hello\",\"Time\":1294706395881547069")
 	})
 
 	t.Run("TestGetStorageClass__StorageClassSpecifiedInCRSpecAndIsValidReturnStorageClassId", func(t *testing.T) {
@@ -1251,21 +1244,17 @@ func TestUpdateManagedCluster(t *testing.T) {
 
 		errorReason, err := clusterRegisterUtil.UpdateManagedCluster(host, clusterId, connectorId, connectorInstall, apiToken)
 		assert.Contains(t, errorReason, "Failed to make PUT call to")
-		assert.EqualError(t, err, "error on request put manage clusters: error on put request update")
+		assert.EqualError(t, err, "error on put request update")
 	})
 
 	t.Run("TestUpdateManagedCluster__HTTPPutRequestInvalidStatusCodeReturnError", func(t *testing.T) {
 		clusterRegisterUtil, mockHttpClient, _, _ := createClusterRegister(AstraConnectorInput{})
 
-		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{
-			StatusCode: 400,
-			Body:       nil,
-			Status:     "Mock Error",
-		}, nil).Times(3)
+		mockHttpClient.On("Do", mock.Anything).Return(mockHttpRes400, nil).Times(3)
 
 		errorReason, err := clusterRegisterUtil.UpdateManagedCluster(host, clusterId, connectorId, connectorInstall, apiToken)
-		assert.Contains(t, errorReason, "failed with http status Mock Error")
-		assert.EqualError(t, err, "manage cluster failed with: 400")
+		assert.Contains(t, errorReason, "Failed to make PUT call")
+		assert.EqualError(t, err, "UpdateManagedCluster: Failed to make PUT call to test_host/accounts//topology/v1/managedClusters/test_clusterId with status Mock Error: update managed cluster failed with: 400")
 	})
 
 	t.Run("TestUpdateManagedCluster__ClusterUpdatedReturnNil", func(t *testing.T) {
@@ -1293,21 +1282,17 @@ func TestCreateManagedCluster(t *testing.T) {
 
 		errorReason, err := clusterRegisterUtil.CreateManagedCluster(host, cloudId, clusterId, storageClass, connectorInstalled, apiToken)
 		assert.Contains(t, errorReason, "Failed to make POST call to")
-		assert.EqualError(t, err, "error on request post manage clusters: error on post request create")
+		assert.EqualError(t, err, "error on post request create")
 	})
 
 	t.Run("TestCreateManagedCluster__HTTPPostRequestInvalidStatusCodeReturnError", func(t *testing.T) {
 		clusterRegisterUtil, mockHttpClient, _, _ := createClusterRegister(AstraConnectorInput{})
 
-		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{
-			StatusCode: 400,
-			Body:       nil,
-			Status:     "Mock Error",
-		}, nil).Times(3)
+		mockHttpClient.On("Do", mock.Anything).Return(mockHttpRes400, nil).Times(3)
 
 		errorReason, err := clusterRegisterUtil.CreateManagedCluster(host, cloudId, clusterId, storageClass, connectorInstalled, apiToken)
-		assert.Contains(t, errorReason, "failed with http status Mock Error")
-		assert.EqualError(t, err, "manage cluster failed with: 400")
+		assert.Contains(t, errorReason, "Failed to make POST call")
+		assert.EqualError(t, err, "CreateManagedCluster: Failed to make POST call to test_host/accounts//topology/v1/managedClusters with status Mock Error: manage cluster failed with: 400")
 	})
 
 	t.Run("TestCreateManagedCluster__ReadResponseBodyErrorReturnError", func(t *testing.T) {
@@ -1324,7 +1309,7 @@ func TestCreateManagedCluster(t *testing.T) {
 
 		errorReason, err := clusterRegisterUtil.CreateManagedCluster(host, cloudId, clusterId, storageClass, connectorInstalled, apiToken)
 		assert.Contains(t, errorReason, "Failed to read response from POST call to")
-		assert.EqualError(t, err, "error reading response from post manage clusters: error reading")
+		assert.EqualError(t, err, "error reading")
 	})
 
 	t.Run("TestCreateManagedCluster__UnmarshalBodyErrorReturnError", func(t *testing.T) {
@@ -1338,16 +1323,20 @@ func TestCreateManagedCluster(t *testing.T) {
 
 		errorReason, err := clusterRegisterUtil.CreateManagedCluster(host, cloudId, clusterId, storageClass, connectorInstalled, apiToken)
 		assert.Contains(t, errorReason, "Failed to unmarshal response from POST call to")
-		assert.ErrorContains(t, err, "unmarshall error when parsing post manage clusters response")
+		assert.ErrorContains(t, err, "invalid character 'i' looking for beginning of value")
 	})
 
 	t.Run("TestCreateManagedCluster__ClusterManagedReturnNil", func(t *testing.T) {
 		clusterRegisterUtil, mockHttpClient, _, _ := createClusterRegister(AstraConnectorInput{})
 
-		ret := io.NopCloser(bytes.NewReader([]byte(`{"id":"1234","name":"test-cluster","managedState":"managed"}`)))
 		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{
 			StatusCode: 201,
-			Body:       ret,
+			Body:       io.NopCloser(bytes.NewReader([]byte(`{"id":"1234","name":"test-cluster","managedState":"managed"}`))),
+		}, nil).Once()
+
+		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{
+			StatusCode: 200,
+			Body:       io.NopCloser(bytes.NewReader([]byte(`{"id":"1234","name":"test-cluster","managedState":"managed"}`))),
 		}, nil).Once()
 
 		errorReason, err := clusterRegisterUtil.CreateManagedCluster(host, cloudId, clusterId, storageClass, connectorInstalled, apiToken)
@@ -1370,7 +1359,7 @@ func TestCreateOrUpdateManagedCluster(t *testing.T) {
 		assert.Equal(t, clusterId, clusterInfo.ID)
 		assert.Equal(t, "", clusterInfo.Name)
 		assert.Contains(t, errorReason, "Failed to make PUT call to")
-		assert.EqualError(t, err, "error updating managed cluster: error on request put manage clusters: this is an error")
+		assert.EqualError(t, err, "error updating managed cluster: this is an error")
 	})
 
 	t.Run("TestCreateOrUpdateManagedCluster__ReturnsClusterInfoWhenManagedClusterGetsUpdated", func(t *testing.T) {
@@ -1401,7 +1390,7 @@ func TestCreateOrUpdateManagedCluster(t *testing.T) {
 		assert.Equal(t, clusterId, clusterInfo.ID)
 		assert.Equal(t, "", clusterInfo.Name)
 		assert.Contains(t, errorReason, "Failed to make POST call to")
-		assert.EqualError(t, err, "error creating managed cluster: error on request post manage clusters: this is an error")
+		assert.EqualError(t, err, "error creating managed cluster: this is an error")
 	})
 
 	t.Run("TestCreateOrUpdateManagedCluster__ReturnsClusterInfoWhenClusterGetsManaged", func(t *testing.T) {
@@ -1410,6 +1399,12 @@ func TestCreateOrUpdateManagedCluster(t *testing.T) {
 		ret := io.NopCloser(bytes.NewReader([]byte(`{"id":"test_cluster","name":"test-cluster","managedState":"managed"}`)))
 		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{
 			StatusCode: 201,
+			Body:       ret,
+		}, nil).Once()
+
+		ret = io.NopCloser(bytes.NewReader([]byte(`{"id":"test_cluster","name":"test-cluster","managedState":"managed"}`)))
+		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{
+			StatusCode: 200,
 			Body:       ret,
 		}, nil).Once()
 
@@ -1437,7 +1432,7 @@ func TestValidateAndGetCluster(t *testing.T) {
 		assert.Equal(t, "", clusterInfo.ID)
 		assert.Equal(t, "", clusterInfo.Name)
 		assert.Contains(t, errorReason, "Failed to make GET call to")
-		assert.EqualError(t, err, "error on get cluster: error on request get clusters: error on get request")
+		assert.EqualError(t, err, "error on get cluster: error on get request")
 	})
 
 	t.Run("TestValidateAndGetCluster__GetClusterReturnsEmptyClusterInfoReturnError", func(t *testing.T) {
@@ -1508,7 +1503,7 @@ func TestValidateAndGetCluster(t *testing.T) {
 		assert.Equal(t, "", clusterInfo.ID)
 		assert.Equal(t, "", clusterInfo.Name)
 		assert.Contains(t, errorReason, "Failed to make GET call to")
-		assert.EqualError(t, err, "error on get clusters: error on request get clusters: error on get request")
+		assert.EqualError(t, err, "error on get clusters: error on get request")
 	})
 
 	t.Run("TestValidateAndGetCluster__ClusterWithMatchingUUIDFoundReturnClusterInfo", func(t *testing.T) {
@@ -1695,8 +1690,8 @@ func TestRegisterClusterWithAstra(t *testing.T) {
 		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{}, errors.New(errorText))
 
 		_, errorReason, err := clusterRegisterUtil.RegisterClusterWithAstra(connectorId, "")
-		assert.Equal(t, "Failed to make PUT call to https://astra.netapp.io/accounts//topology/v1/clouds/9876/clusters/1234", errorReason)
-		assert.EqualError(t, err, "error updating cluster: error on request put clusters: error on create or update cluster")
+		assert.Equal(t, "UpdateCluster: Failed to make PUT call to https://astra.netapp.io/accounts//topology/v1/clouds/9876/clusters/1234 with status : error on create or update cluster", errorReason)
+		assert.EqualError(t, err, "error updating cluster: error on create or update cluster")
 	})
 
 	t.Run("TestRegisterClusterWithAstra__CreateOrUpdateManagedClusterFailsReturnError", func(t *testing.T) {
@@ -1736,8 +1731,8 @@ func TestRegisterClusterWithAstra(t *testing.T) {
 		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{}, errors.New(errorText))
 
 		_, errorReason, err := clusterRegisterUtil.RegisterClusterWithAstra(connectorId, "")
-		assert.Equal(t, "Failed to make POST call to https://astra.netapp.io/accounts//topology/v1/managedClusters", errorReason)
-		assert.EqualError(t, err, "error creating managed cluster: error on request post manage clusters: this is an error")
+		assert.Equal(t, "CreateManagedCluster: Failed to make POST call to https://astra.netapp.io/accounts//topology/v1/managedClusters with status : this is an error", errorReason)
+		assert.EqualError(t, err, "error creating managed cluster: this is an error")
 	})
 
 	t.Run("TestRegisterClusterWithAstra__EverythingWorksReturnNil", func(t *testing.T) {
@@ -1868,6 +1863,12 @@ func TestRegisterClusterWithAstra(t *testing.T) {
 		ret = io.NopCloser(bytes.NewReader([]byte(`{"id":"test_cluster","name":"test-cluster","managedState":"managed"}`)))
 		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{
 			StatusCode: 201,
+			Body:       ret,
+		}, nil).Once()
+
+		ret = io.NopCloser(bytes.NewReader([]byte(`{"id":"test_cluster","name":"test-cluster","managedState":"managed"}`)))
+		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{
+			StatusCode: 200,
 			Body:       ret,
 		}, nil).Once()
 
