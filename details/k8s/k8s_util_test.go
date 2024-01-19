@@ -6,13 +6,13 @@ package k8s_test
 
 import (
 	"context"
+	"k8s.io/client-go/kubernetes/fake"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/kubernetes/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/NetApp-Polaris/astra-connector-operator/details/k8s"
@@ -23,9 +23,9 @@ var ctx = context.Background()
 
 func createResourceHandlerWithFakeClient(t *testing.T, initObjs ...client.Object) (k8s.K8sUtilInterface, client.Client) {
 	fakeClient := testutil.CreateFakeClient(initObjs...)
-	fakeClientset := fake.NewSimpleClientset()
+	fakeClientSet := fake.NewSimpleClientset()
 	log := testutil.CreateLoggerForTesting(t)
-	k8sUtil := k8s.NewK8sUtil(fakeClient, fakeClientset, log)
+	k8sUtil := k8s.NewK8sUtil(fakeClient, fakeClientSet, log)
 	return k8sUtil, fakeClient
 }
 

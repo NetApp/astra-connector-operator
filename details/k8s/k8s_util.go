@@ -31,7 +31,8 @@ type K8sUtilInterface interface {
 	DeleteResource(context.Context, client.Object) error
 	VersionGet() (string, error)
 	IsCRDInstalled(string) bool
-	DetermineClusterType() string
+	RESTGet(string) ([]byte, error)
+	K8sClientset() kubernetes.Interface
 }
 
 func NewK8sUtil(c client.Client, i kubernetes.Interface, log logr.Logger) K8sUtilInterface {
@@ -111,4 +112,14 @@ func (r *K8sUtil) IsCRDInstalled(crdName string) bool {
 		return true
 
 	}
+}
+
+// RESTGet Makes a GET request on the K8s Rest Client and returns the raw byte array
+func (r *K8sUtil) RESTGet(path string) ([]byte, error) {
+	return r.Interface.Discovery().RESTClient().Get().AbsPath(path).DoRaw(context.TODO())
+}
+
+// K8sClientset Returns the k8s Clientset
+func (r *K8sUtil) K8sClientset() kubernetes.Interface {
+	return r.Interface
 }

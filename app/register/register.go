@@ -654,7 +654,8 @@ func (c clusterRegisterUtil) CreateCluster(astraHost, cloudId, astraConnectorId,
 	url := fmt.Sprintf("%s/accounts/%s/topology/v1/clouds/%s/clusters", astraHost, c.AstraConnector.Spec.Astra.AccountId, cloudId)
 	var clustersRespJson Cluster
 
-	clusterType := c.K8sUtil.DetermineClusterType()
+	clusterTypeChecker := k8s.ClusterTypeChecker{K8sUtil: c.K8sUtil, Log: c.Log}
+	clusterType := clusterTypeChecker.DetermineClusterType()
 
 	clustersBody := Cluster{
 		Type:                  "application/astra-cluster",
@@ -715,7 +716,8 @@ func (c clusterRegisterUtil) CreateCluster(astraHost, cloudId, astraConnectorId,
 func (c clusterRegisterUtil) UpdateCluster(astraHost, cloudId, clusterId, astraConnectorId, apiToken string) (string, error) {
 	url := fmt.Sprintf("%s/accounts/%s/topology/v1/clouds/%s/clusters/%s", astraHost, c.AstraConnector.Spec.Astra.AccountId, cloudId, clusterId)
 
-	clusterType := c.K8sUtil.DetermineClusterType()
+	clusterTypeChecker := &k8s.ClusterTypeChecker{K8sUtil: c.K8sUtil, Log: c.Log}
+	clusterType := clusterTypeChecker.DetermineClusterType()
 
 	clustersBody := Cluster{
 		Type:                  "application/astra-cluster",
