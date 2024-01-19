@@ -60,8 +60,6 @@ func (n *NatsDeployer) GetStatefulSetObjects(m *v1.AstraConnector, ctx context.C
 	natsImage = fmt.Sprintf("%s/%s", imageRegistry, containerImage)
 	log.Info("Using nats image", "image", natsImage)
 
-	// High UID to satisfy OCP requirements
-	userUID := int64(1000740000)
 	readOnlyRootFilesystem := true
 	runAsNonRoot := true
 	dep := &appsv1.StatefulSet{
@@ -135,7 +133,6 @@ func (n *NatsDeployer) GetStatefulSetObjects(m *v1.AstraConnector, ctx context.C
 							},
 							ReadOnlyRootFilesystem: &readOnlyRootFilesystem,
 							RunAsNonRoot:           &runAsNonRoot,
-							RunAsUser:              &userUID,
 						},
 					}},
 					Volumes: []corev1.Volume{

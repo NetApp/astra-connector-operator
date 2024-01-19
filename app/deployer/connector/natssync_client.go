@@ -66,8 +66,6 @@ func (d *NatsSyncClientDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx 
 		replicas = common.NatsSyncClientDefaultReplicas
 	}
 
-	// High UID to satisfy OCP requirements
-	userUID := int64(1000740000)
 	readOnlyRootFilesystem := true
 	runAsNonRoot := true
 	dep := &appsv1.Deployment{
@@ -129,7 +127,6 @@ func (d *NatsSyncClientDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx 
 							},
 							ReadOnlyRootFilesystem: &readOnlyRootFilesystem,
 							RunAsNonRoot:           &runAsNonRoot,
-							RunAsUser:              &userUID,
 						},
 					}},
 					ServiceAccountName: common.NatsSyncClientConfigMapServiceAccountName,

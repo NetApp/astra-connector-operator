@@ -69,8 +69,6 @@ func (n NeptuneClientDeployerV2) GetDeploymentObjects(m *v1.AstraConnector, ctx 
 	neptuneImage = fmt.Sprintf("%s/controller:%s", imageRegistry, containerImage)
 	log.Info("Using Neptune image", "image", neptuneImage)
 
-	// High UID to satisfy OCP requirements
-	userUID := int64(1000740000)
 	readOnlyRootFilesystem := true
 	runAsNonRoot := true
 	deployment := &appsv1.Deployment{
@@ -224,7 +222,6 @@ func (n NeptuneClientDeployerV2) GetDeploymentObjects(m *v1.AstraConnector, ctx 
 								},
 								ReadOnlyRootFilesystem: &readOnlyRootFilesystem,
 								RunAsNonRoot:           &runAsNonRoot,
-								RunAsUser:              &userUID,
 							},
 						},
 					},
