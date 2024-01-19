@@ -190,8 +190,9 @@ func (c *ClusterTypeChecker) isAnthosFlavor() bool {
 
 	if err != nil {
 		if errors.IsNotFound(err) {
-			c.Log.Error(err, "error querying the Anthos API")
+			return false
 		}
+		c.Log.Error(err, "error querying the Anthos API")
 		return false
 	}
 	return true
