@@ -144,7 +144,8 @@ func TestDeleteNeptuneResources(t *testing.T) {
 	}
 
 	// Call the function
-	controller.deleteNeptuneResources(context.Background(), "test-namespace")
+	err := controller.deleteNeptuneResources(context.Background(), "test-namespace")
+	assert.NoError(t, err)
 
 	// Check that the function deleted the resources
 	list, err := mockDynamicClient.Namespace("test-namespace").List(context.Background(), metav1.ListOptions{})
