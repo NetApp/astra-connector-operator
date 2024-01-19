@@ -164,9 +164,7 @@ func (c *ClusterTypeChecker) isTanzuFlavor() bool {
 func (c *ClusterTypeChecker) isAKSFlavor() bool {
 	const aksService = "aks-service"
 	aksRoleBinding, err := c.K8sUtil.K8sClientset().RbacV1().ClusterRoles().Get(context.Background(), aksService, metav1.GetOptions{})
-	blah, err := c.K8sUtil.K8sClientset().RbacV1().ClusterRoles().List(context.TODO(), metav1.ListOptions{})
 
-	c.Log.WithValues(blah).Info("Hi")
 	if err != nil {
 		c.Log.Error(err, "Unable to get AKS cluster role. Assuming not AKS")
 		return false
