@@ -1,0 +1,36 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# (Optional) Set this to deploy into some existing namespace
+namespace: my-namespace
+
+# (Optional) Set this to append a prefix to every resource name
+namePrefix: dev-
+
+# (Optional) Set this to append a suffix to every resource name
+nameSuffix: "-001"
+
+# (Optional) Set this to add labels to every resource name
+commonLabels:
+  app: my-app
+
+# (Optional) Set this to add annotations to every resource name
+commonAnnotations:
+  app: my-app
+
+# (Optional) Select a subset of resources to create
+resources:
+- ../../base/astra-connector
+- ../../base/nats
+# e.g. ommitting namespace because one already exists
+
+# (Optional) Override specific base resource fields
+patches:
+- ./astra-connector/deployment.yaml
+
+# (Optional) Generate secrets from existing files to reference within your above patches
+secretGenerator:
+- name: my-image-registry-secret
+  type: kubernetes.io/dockerconfigjson
+  files:
+  - my-image-registry-cred.json
