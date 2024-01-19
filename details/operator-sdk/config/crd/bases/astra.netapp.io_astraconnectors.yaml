@@ -61,8 +61,6 @@ spec:
                     type: string
                   skipTLSValidation:
                     type: boolean
-                  storageClassName:
-                    type: string
                   tokenRef:
                     type: string
                   unregister:
@@ -167,8 +165,6 @@ spec:
                         type: string
                       skipTLSValidation:
                         type: boolean
-                      storageClassName:
-                        type: string
                       tokenRef:
                         type: string
                       unregister:
