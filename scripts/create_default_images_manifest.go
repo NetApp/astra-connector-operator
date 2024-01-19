@@ -24,11 +24,12 @@ func main() {
 
 	// Gather the full image name and versions
 	defaultImageRegistry := common.DefaultImageRegistry
+	astraConnectorTag := getAstraConnectorTag()
 	neptuneTag := getNeptuneTag()
 
 	// Connector images
 	images := []string{
-		fmt.Sprintf("%s/%s", defaultImageRegistry, common.AstraConnectDefaultImage),
+		fmt.Sprintf("%s/astra-connector:%s", defaultImageRegistry, astraConnectorTag),
 		fmt.Sprintf("%s/%s", defaultImageRegistry, common.NatsSyncClientDefaultImage),
 		fmt.Sprintf("%s/%s", defaultImageRegistry, common.NatsDefaultImage),
 		fmt.Sprintf("%s:%s", common.AstraConnectorOperatorRepository, connectorOperatorVersion),
@@ -56,6 +57,29 @@ func main() {
 			os.Exit(1)
 		}
 	}
+}
+
+func getAstraConnectorTag() string {
+	astraConnectorTag := ""
+	file, err := os.Open(common.AstraConnectTagFile)
+	if err != nil {
+		fmt.Printf("error opening file to get astra connector tag")
+		os.Exit(2)
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+
+	// scan the contents of the file and return first line
+	// astra connector tag is present in the first line
+	for scanner.Scan() {
+		astraConnectorTag = scanner.Text()
+		fmt.Println("astra connector tag : " + astraConnectorTag)
+		return astraConnectorTag
+	}
+
+	fmt.Println("Using default astra connector tag, error reading from file")
+	return astraConnectorTag
 }
 
 func getNeptuneTag() string {
