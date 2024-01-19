@@ -1774,6 +1774,13 @@ func TestRegisterClusterWithAstra(t *testing.T) {
 			Body:       ret,
 		}, nil).Once()
 
+		// For poll call
+		ret = io.NopCloser(bytes.NewReader([]byte(`{"id":"test_cluster","name":"test-cluster","managedState":"managed"}`)))
+		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{
+			StatusCode: 200,
+			Body:       ret,
+		}, nil).Once()
+
 		_, errorReason, err := clusterRegisterUtil.RegisterClusterWithAstra(connectorId, "")
 		assert.Equal(t, "", errorReason)
 		assert.Nil(t, err)
