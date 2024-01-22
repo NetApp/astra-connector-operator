@@ -56,6 +56,7 @@ func createNeptuneDeployerV2() (neptune.NeptuneClientDeployerV2, *v1.AstraConnec
 			AutoSupport: v1.AutoSupport{
 				Enrolled: true,
 				URL:      "https://my-asup"},
+			Labels: map[string]string{"Label1": "Value1"},
 		},
 	}
 
