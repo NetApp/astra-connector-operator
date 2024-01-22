@@ -7,6 +7,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"k8s.io/client-go/kubernetes"
 	"os"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
@@ -83,8 +84,17 @@ func main() {
 		os.Exit(1)
 	}
 
+	// create config and clientset
+	config := mgr.GetConfig()
+	clientset, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		setupLog.Error(err, "unable to create clientset")
+		os.Exit(1)
+	}
+
 	if err = (&controllers.AstraConnectorController{
 		Client:        mgr.GetClient(),
+		Clientset:     clientset,
 		Scheme:        mgr.GetScheme(),
 		DynamicClient: dynamicClient,
 	}).SetupWithManager(mgr); err != nil {

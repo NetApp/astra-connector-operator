@@ -7,6 +7,8 @@ import (
 
 	client "sigs.k8s.io/controller-runtime/pkg/client"
 
+	kubernetes "k8s.io/client-go/kubernetes"
+
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -55,6 +57,45 @@ func (_m *K8sUtilInterface) IsCRDInstalled(_a0 string) bool {
 	}
 
 	return r0
+}
+
+// K8sClientset provides a mock function with given fields:
+func (_m *K8sUtilInterface) K8sClientset() kubernetes.Interface {
+	ret := _m.Called()
+
+	var r0 kubernetes.Interface
+	if rf, ok := ret.Get(0).(func() kubernetes.Interface); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(kubernetes.Interface)
+		}
+	}
+
+	return r0
+}
+
+// RESTGet provides a mock function with given fields: _a0
+func (_m *K8sUtilInterface) RESTGet(_a0 string) ([]byte, error) {
+	ret := _m.Called(_a0)
+
+	var r0 []byte
+	if rf, ok := ret.Get(0).(func(string) []byte); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]byte)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(string) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
 }
 
 // VersionGet provides a mock function with given fields:
