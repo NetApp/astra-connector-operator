@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"strconv"
 	"strings"
 
@@ -33,7 +34,7 @@ func NewNatsSyncClientDeployer() model.Deployer {
 // GetDeploymentObjects returns a NatsSyncClient Deployment object
 func (d *NatsSyncClientDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, error) {
 	log := ctrllog.FromContext(ctx)
-	ls := LabelsForNatsSyncClient(common.NatsSyncClientName)
+	ls := LabelsForNatsSyncClient(common.NatsSyncClientName, m.Spec.Labels)
 
 	var imageRegistry string
 	var containerImage string
@@ -199,8 +200,10 @@ func (d *NatsSyncClientDeployer) GetServiceObjects(m *v1.AstraConnector, ctx con
 }
 
 // LabelsForNatsSyncClient returns the labels for selecting the NatsSyncClient
-func LabelsForNatsSyncClient(name string) map[string]string {
-	return map[string]string{"app": name}
+func LabelsForNatsSyncClient(name string, mLabels map[string]string) map[string]string {
+	labels := map[string]string{"app": name}
+	maps.Copy(labels, mLabels)
+	return labels
 }
 
 // GetConfigMapObjects returns a ConfigMap object for NatsSyncClient
