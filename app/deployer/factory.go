@@ -26,7 +26,7 @@ func Factory(
 	case common.AstraConnectName:
 		return connector.NewAstraConnectorDeployer(), nil
 	case common.NeptuneName:
-		return neptune.NewNeptuneClientDeployer(), nil
+		return neptune.NewNeptuneClientDeployerV2(), nil
 
 	default:
 		return nil, fmt.Errorf("unknown deployer %s", deploymentName)
