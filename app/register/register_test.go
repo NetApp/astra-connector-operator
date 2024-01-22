@@ -108,6 +108,7 @@ func createClusterRegister(astraConnectorInput AstraConnectorInput) (register.Cl
 				Image:    "test-image",
 				Replicas: 2,
 			},
+			Labels: map[string]string{"Label1": "value1"},
 		},
 	}
 
