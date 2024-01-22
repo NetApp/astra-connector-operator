@@ -11,7 +11,7 @@ const (
 
 	AstraConnectName                 = "astraconnect"
 	AstraConnectDefaultReplicas      = 1
-	AstraConnectDefaultImage         = "astra-connector:1.0.202311291720"
+	AstraConnectDefaultImage         = "astra-connector:1.0.202401122203"
 	AstraConnectorOperatorRepository = "netapp/astra-connector-operator"
 
 	NatsSyncClientName                  = "natssync-client"
@@ -57,7 +57,7 @@ const (
 	AstraPrivateCloudName = "private"
 
 	ConnectorNeptuneCapability = "neptuneV1"
-	ConnectorRelayCapability   = "relayV1"
+	ConnectorV2Capability      = "connectorV2" // V2 refers specifically to Arch 3.0 connector and beyond
 	ConnectorWatcherCapability = "watcherV1"
 
 	AstraClustersAPIVersion        = "1.4"
@@ -70,7 +70,7 @@ func GetNeptuneRepositories() []string {
 
 func GetConnectorCapabilities() []string {
 	capabilities := []string{
-		ConnectorRelayCapability,
+		ConnectorV2Capability,
 		ConnectorWatcherCapability,
 	}
 

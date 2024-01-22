@@ -188,6 +188,11 @@ spec:
               protectionState:
                 description: 'ProtectionState determines protection state of the app based upon different parameters The current logic for protectionState is as follows: Fully Protected: someScheduleIsActive && hasScheduleWithSuccessfulLastBackup Partially Protected: someScheduleIsActive || someSuccessfulBackupExists || someSuccessfulSnapshotExists Not Protected: default'
                 type: string
+              protectionStateDetails:
+                description: ProtectionStateDetails add additional information regarding the protection state of an application
+                items:
+                  type: string
+                type: array
             required:
             - conditions
             type: object
@@ -1684,6 +1689,11 @@ spec:
                 - pre
                 - post
                 type: string
+              timeout:
+                default: 25
+                description: Timeout int that defines the max time in minutes an execution hook will be allowed to run. Min is 1 minute. Defaults to 25 min if not specified
+                minimum: 1
+                type: integer
             required:
             - action
             - applicationRef
@@ -1760,7 +1770,7 @@ spec:
                 description: ApplicationRef is the reference to the Application to execute hooks against
                 type: string
               completionTimeout:
-                description: CompletionTimeout specifies the time to wait for the entire ExecHooksRun to complete before returning timeout error. The default value is 40 minutes.
+                description: CompletionTimeout specifies the time to wait for the entire ExecHooksRun to complete before returning timeout error. The default value is 30 minutes.
                 type: string
               resourceFilter:
                 description: ResourceFilter Should be populated by the user, if only certain resources should be considered for executing hooks, which is often useful when doing a selective restore
@@ -3497,6 +3507,9 @@ spec:
               applicationRef:
                 description: ApplicationRef is the reference to the Application being snapshotted.
                 type: string
+              completionTimeout:
+                description: CompletionTimeout specifies the time to wait for the entire Snapshot to complete before returning timeout error. The default value is 60 minutes.
+                type: string
               reclaimPolicy:
                 description: ReclaimPolicy defines what happens to the AppArchive of a snapshot when the snapshot CR is deleted Valid options are Retain, Delete (default).
                 type: string
@@ -4134,6 +4147,9 @@ spec:
                 type: string
               applicationRef:
                 description: ApplicationRef is the reference to the Application being snapshotted.
+                type: string
+              completionTimeout:
+                description: CompletionTimeout specifies the time to wait for the entire Snapshot to complete before returning timeout error. The default value is 60 minutes.
                 type: string
               reclaimPolicy:
                 description: ReclaimPolicy defines what happens to the AppArchive of a snapshot when the snapshot CR is deleted Valid options are Retain, Delete (default).

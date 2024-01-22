@@ -10,6 +10,8 @@ kind: Deployment
 metadata:
   name: controller-manager
   namespace: system
+  annotations:
+    seccomp.security.alpha.kubernetes.io/pod: 'runtime/default'
   labels:
     control-plane: controller-manager
 spec:

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023. NetApp, Inc. All Rights Reserved.
+ * Copyright (c) 2024. NetApp, Inc. All Rights Reserved.
  */
 
 package controllers
@@ -10,17 +10,23 @@ import (
 	"net/http"
 	"reflect"
 	"strings"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
-
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -39,7 +45,9 @@ import (
 // AstraConnectorController reconciles a AstraConnector object
 type AstraConnectorController struct {
 	client.Client
-	Scheme *runtime.Scheme
+	*kubernetes.Clientset
+	Scheme        *runtime.Scheme
+	DynamicClient dynamic.Interface
 }
 
 //+kubebuilder:rbac:groups=astra.netapp.io,resources=astraconnectors,verbs=get;list;watch;create;update;patch;delete
@@ -64,14 +72,14 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 			// Return and don't requeue
 			log.Info("AstraConnector resource not found. Ignoring since object must be deleted")
-			return ctrl.Result{}, nil
+			return ctrl.Result{Requeue: false}, nil
 		}
 		// Error reading the object - requeue the request.
 		log.Error(err, FailedAstraConnectorGet)
 		natsSyncClientStatus.Status = FailedAstraConnectorGet
 		_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
 		// Do not requeue
-		return ctrl.Result{}, err
+		return ctrl.Result{Requeue: false}, err
 	}
 	natsSyncClientStatus.AstraClusterId = astraConnector.Status.NatsSyncClient.AstraClusterId
 
@@ -79,7 +87,7 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 	err = r.validateAstraConnector(*astraConnector, log)
 	if err != nil {
 		// Do not requeue. This is a user input error
-		return ctrl.Result{}, err
+		return ctrl.Result{Requeue: false}, err
 	}
 
 	// name of our custom finalizer
@@ -101,7 +109,8 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 	} else {
 		// The object is being deleted
 		if controllerutil.ContainsFinalizer(astraConnector, finalizerName) {
-			registerUtil := register.NewClusterRegisterUtil(astraConnector, &http.Client{}, r.Client, log, context.Background())
+			k8sUtil := k8s.NewK8sUtil(r.Client, r.Clientset, log)
+			registerUtil := register.NewClusterRegisterUtil(astraConnector, &http.Client{}, r.Client, k8sUtil, log, context.Background())
 			log.Info("Unregistering natsSyncClient upon CRD delete")
 			err = registerUtil.UnRegisterNatsSyncClient()
 			if err != nil {
@@ -113,6 +122,13 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 
 			// delete any cluster scoped resources created by the operator
 			r.deleteConnectorClusterScopedResources(ctx, astraConnector)
+
+			// delete any Neptune resources from the namespace AstraConnector is installed
+			if err := r.deleteNeptuneResources(ctx, astraConnector.GetNamespace()); err != nil {
+				log.Error(err, "unable to remove neptune resources")
+				// Requeue in order to try again to remove resources
+				return ctrl.Result{Requeue: true}, err
+			}
 
 			// remove our finalizer from the list and update it.
 			controllerutil.RemoveFinalizer(astraConnector, finalizerName)
@@ -129,56 +145,202 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 		return ctrl.Result{Requeue: false}, nil
 	}
 
-	if !astraConnector.Spec.SkipPreCheck {
-		k8sUtil := k8s.NewK8sUtil(r.Client, log)
-		preCheckClient := precheck.NewPrecheckClient(log, k8sUtil)
-		errList := preCheckClient.Run()
-		if errList != nil {
-			errString := ""
-			for i, err := range errList {
-				if i > 0 {
-					errString = errString + ", "
+	if r.needsReconcile(*astraConnector, log) {
+		log.Info("Actual state does not match desired state", "registered", astraConnector.Status.NatsSyncClient.Registered, "desiredSpec", astraConnector.Spec)
+		if !astraConnector.Spec.SkipPreCheck {
+			k8sUtil := k8s.NewK8sUtil(r.Client, r.Clientset, log)
+			preCheckClient := precheck.NewPrecheckClient(log, k8sUtil)
+			errList := preCheckClient.Run()
+			if errList != nil {
+				errString := ""
+				for i, err := range errList {
+					if i > 0 {
+						errString = errString + ", "
+					}
+
+					log.Error(err, "Pre-check Error")
+					errString = errString + err.Error()
 				}
-
-				log.Error(err, "Pre-check Error")
-				errString = errString + err.Error()
+				errString = "Pre-check errors: " + errString
+				natsSyncClientStatus.Status = errString
+				_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
+				// Do not requeue. Item is being deleted
+				return ctrl.Result{}, errors.New(errString)
 			}
-			errString = "Pre-check errors: " + errString
-			natsSyncClientStatus.Status = errString
-			_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
-			// Do not requeue. Item is being deleted
-			return ctrl.Result{}, errors.New(errString)
 		}
-	}
 
-	// deploy Neptune
-	if conf.Config.FeatureFlags().DeployNeptune() {
-		log.Info("Initiating Neptune deployment")
-		neptuneResult, err := r.deployNeptune(ctx, astraConnector, &natsSyncClientStatus)
+		// deploy Neptune
+		if conf.Config.FeatureFlags().DeployNeptune() {
+			log.Info("Initiating Neptune deployment")
+			neptuneResult, err := r.deployNeptune(ctx, astraConnector, &natsSyncClientStatus)
+			if err != nil {
+				// Note: Returning nil in error since we want to wait for the requeue to happen
+				// non nil errors triggers the requeue right away
+				log.Error(err, "Error deploying Neptune, requeueing after delay", "delay", conf.Config.ErrorTimeout())
+				return neptuneResult, nil
+			}
+		}
+
+		if conf.Config.FeatureFlags().DeployNatsConnector() {
+			log.Info("Initiating Connector deployment")
+			connectorResults, err := r.deployConnector(ctx, astraConnector, &natsSyncClientStatus)
+			if err != nil {
+				// Note: Returning nil in error since we want to wait for the requeue to happen
+				// non nil errors triggers the requeue right away
+				log.Error(err, "Error deploying NatsConnector, requeueing after delay", "delay", conf.Config.ErrorTimeout())
+				return connectorResults, nil
+			}
+		}
+
+		if natsSyncClientStatus.AstraClusterId != "" {
+			log.Info(fmt.Sprintf("Updating CR status, clusterID: '%s'", natsSyncClientStatus.AstraClusterId))
+		}
+		_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
+		log.Info("assignging to status", "spec", astraConnector.Spec)
+		astraConnector.Status.ObservedSpec = astraConnector.Spec
+		err = r.Status().Update(ctx, astraConnector)
 		if err != nil {
-			// Note: Returning nil in error since we want to wait for the requeue to happen
-			// non nil errors triggers the requeue right away
-			log.Error(err, "Error deploying Neptune, requeueing after delay", "delay", conf.Config.ErrorTimeout())
-			return neptuneResult, nil
+			log.Error(err, "Failed to update AstraConnector status")
+			return ctrl.Result{RequeueAfter: time.Minute * conf.Config.ErrorTimeout()}, err
 		}
+		return ctrl.Result{Requeue: false}, nil
+
+	} else {
+		log.Info("Actual state matches desired state", "registered", astraConnector.Status.NatsSyncClient.Registered, "desiredSpec", astraConnector.Spec)
+		return ctrl.Result{Requeue: false}, nil
+	}
+}
+
+func (r *AstraConnectorController) deleteNeptuneResources(ctx context.Context, namespace string) error {
+	log := ctrllog.FromContext(ctx)
+	log.Info("deleting neptune resources")
+
+	// Get a list of all installed CRDs
+	crdList := &apiextensionsv1.CustomResourceDefinitionList{}
+	if err := r.Client.List(ctx, crdList); err != nil {
+		log.Error(err, "Unable to list CRDs")
+		return err
 	}
 
-	if conf.Config.FeatureFlags().DeployNatsConnector() {
-		log.Info("Initiating Connector deployment")
-		connectorResults, err := r.deployConnector(ctx, astraConnector, &natsSyncClientStatus)
+	// Originally, we were listing the CRDs available on the cluster, and then iterating
+	// through them. However, there are certain implications to deleting one resource before
+	// deleting another. Eg. - deleting an AppVault CR before deleting a ResourceBackup CR
+	// will block the ResourceBackup's finalizer clean-up from running b/c it must be
+	// removing some data from the bucket.
+	//
+	// That being the case, we can tailor our deletion steps to delete the the resources
+	// in some logical ordering instead of whatever order is returned to us from the k8s api.
+	for _, gvr := range neptuneGVRs {
+		// Check to see if there are any resources to begin with. We may not need to enter the loop below.
+		if !r.gvrContainsResources(ctx, gvr, namespace) {
+			log.Info("List returned no resources", "GVR", gvr)
+			continue
+		}
+
+		// Delete all resources of this CRD kind in the namespace AstraConnector is installed
+		if err := r.DynamicClient.Resource(gvr).Namespace(namespace).DeleteCollection(ctx, metav1.DeleteOptions{}, metav1.ListOptions{}); err != nil {
+			log.Error(err, "Unable to delete resources", "Resource", gvr.Resource)
+			return err
+		}
+
+		timeout := time.After(120 * time.Second)
+		ticker := time.NewTicker(5 * time.Second)
+
+		// Start a loop that periodically checks to see if the resources for a particular
+		// resource are properly cleaned up as to not leave dangling resources behind.
+		func(gvr schema.GroupVersionResource) {
+			for {
+				select {
+				case <-timeout:
+					log.Info("cleaning up resources for GVR timed out", "GVR", gvr)
+					if err := r.removeResourcesFinalizer(gvr, namespace); err != nil {
+						log.Error(err, "unable to remove finalizers", "GVR", gvr)
+					}
+
+					// Keep trying to delete the resources for this GVR
+					if err := r.DynamicClient.Resource(gvr).Namespace(namespace).DeleteCollection(ctx, metav1.DeleteOptions{}, metav1.ListOptions{}); err != nil {
+						log.Error(err, "Unable to delete resources", "Resource", gvr.Resource)
+					}
+					return
+				case <-ticker.C:
+					if !r.gvrContainsResources(ctx, gvr, namespace) {
+						log.Info("Deleted all resources", "GVR", gvr)
+						ticker.Stop()
+						return
+					}
+
+					// Keep trying to delete the resources for this GVR
+					if err := r.DynamicClient.Resource(gvr).Namespace(namespace).DeleteCollection(ctx, metav1.DeleteOptions{}, metav1.ListOptions{}); err != nil {
+						log.Error(err, "Unable to delete resources", "Resource", gvr.Resource)
+						return
+					}
+					log.Info("Resource not cleaned up yet", "GVR", gvr)
+				}
+			}
+		}(gvr)
+	}
+	log.Info("Cleaned up neptune resources")
+	return nil
+}
+
+// removeResourcesFinalizer removes the finalizer from neptune CRs as a last-ditch effort to remove resources.
+func (r *AstraConnectorController) removeResourcesFinalizer(gvr schema.GroupVersionResource, namespace string) error {
+	resourceList, err := r.DynamicClient.Resource(gvr).Namespace(namespace).List(context.Background(), metav1.ListOptions{})
+	if err != nil {
+		return err
+	}
+
+	// Iterate over the resources
+	for _, resource := range resourceList.Items {
+		// Get the finalizers
+		finalizers, found, err := unstructured.NestedStringSlice(resource.Object, "metadata", "finalizers")
 		if err != nil {
-			// Note: Returning nil in error since we want to wait for the requeue to happen
-			// non nil errors triggers the requeue right away
-			log.Error(err, "Error deploying NatsConnector, requeueing after delay", "delay", conf.Config.ErrorTimeout())
-			return connectorResults, nil
+			return err
+		}
+
+		if found {
+			finalizers = removeString(finalizers, "astra.netapp.io/finalizer")
+
+			// Update the finalizers in the resource
+			if err := unstructured.SetNestedStringSlice(resource.Object, finalizers, "metadata", "finalizers"); err != nil {
+				return err
+			}
+
+			_, err = r.DynamicClient.Resource(gvr).Namespace(namespace).Update(context.Background(), &resource, metav1.UpdateOptions{})
+			if err != nil {
+				return err
+			}
 		}
 	}
+	return err
+}
 
-	if natsSyncClientStatus.AstraClusterId != "" {
-		log.Info(fmt.Sprintf("Updating CR status, clusterID: '%s'", natsSyncClientStatus.AstraClusterId))
+// gvrContainsResources takes in a GVR and a namespace to check if at least one resource for that GVR in the
+// namespace exists.
+func (r *AstraConnectorController) gvrContainsResources(ctx context.Context, gvr schema.GroupVersionResource, namespace string) bool {
+	log := ctrllog.FromContext(ctx)
+
+	// We only need to check if at least one resource still exists for this CRD
+	resourceList, err := r.DynamicClient.Resource(gvr).Namespace(namespace).List(ctx, metav1.ListOptions{Limit: 1})
+	if err != nil {
+		log.Error(err, "Unable to list resources", "Resource", gvr.Resource)
+		return false
 	}
-	_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
-	return ctrl.Result{Requeue: false}, nil
+	if len(resourceList.Items) == 0 {
+		log.Info("Deleted all resources", "GVR", gvr)
+		return false
+	}
+	return true
+}
+
+// removeString removes a string from a slice of strings.
+func removeString(slice []string, s string) []string {
+	for i, v := range slice {
+		if v == s {
+			return append(slice[:i], slice[i+1:]...)
+		}
+	}
+	return slice
 }
 
 func (r *AstraConnectorController) updateAstraConnectorStatus(ctx context.Context, astraConnector *v1.AstraConnector, natsSyncClientStatus v1.NatsSyncClientStatus) error {
@@ -268,4 +430,16 @@ func (r *AstraConnectorController) validateAstraConnector(connector v1.AstraConn
 	}
 
 	return errors.New(fmt.Sprintf("Errors while validating AstraConnector CR: %s", strings.Join(fieldErrors, "; ")))
+}
+
+func (r *AstraConnectorController) needsReconcile(connector v1.AstraConnector, log logr.Logger) bool {
+	// Ensure that the cluster has registered successfully
+	if connector.Status.NatsSyncClient.Registered != "true" {
+		return true
+	}
+	// Ensure that the CR spec has not changed between reconciles
+	if connector.Status.ObservedSpec != connector.Spec {
+		return true
+	}
+	return false
 }
