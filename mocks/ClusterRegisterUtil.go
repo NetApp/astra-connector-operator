@@ -86,20 +86,20 @@ func (_m *ClusterRegisterUtil) CreateCluster(astraHost string, cloudId string, a
 	return r0, r1, r2
 }
 
-// CreateManagedCluster provides a mock function with given fields: astraHost, cloudId, clusterID, storageClass, connectorInstall, apiToken
-func (_m *ClusterRegisterUtil) CreateManagedCluster(astraHost string, cloudId string, clusterID string, storageClass string, connectorInstall string, apiToken string) (string, error) {
-	ret := _m.Called(astraHost, cloudId, clusterID, storageClass, connectorInstall, apiToken)
+// CreateManagedCluster provides a mock function with given fields: astraHost, cloudId, clusterID, connectorInstall, apiToken
+func (_m *ClusterRegisterUtil) CreateManagedCluster(astraHost string, cloudId string, clusterID string, connectorInstall string, apiToken string) (string, error) {
+	ret := _m.Called(astraHost, cloudId, clusterID, connectorInstall, apiToken)
 
 	var r0 string
-	if rf, ok := ret.Get(0).(func(string, string, string, string, string, string) string); ok {
-		r0 = rf(astraHost, cloudId, clusterID, storageClass, connectorInstall, apiToken)
+	if rf, ok := ret.Get(0).(func(string, string, string, string, string) string); ok {
+		r0 = rf(astraHost, cloudId, clusterID, connectorInstall, apiToken)
 	} else {
 		r0 = ret.Get(0).(string)
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(string, string, string, string, string, string) error); ok {
-		r1 = rf(astraHost, cloudId, clusterID, storageClass, connectorInstall, apiToken)
+	if rf, ok := ret.Get(1).(func(string, string, string, string, string) error); ok {
+		r1 = rf(astraHost, cloudId, clusterID, connectorInstall, apiToken)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -357,27 +357,6 @@ func (_m *ClusterRegisterUtil) GetOrCreateCloud(astraHost string, cloudType stri
 	}
 
 	return r0, r1, r2
-}
-
-// GetStorageClass provides a mock function with given fields: astraHost, cloudId, clusterId, apiToken
-func (_m *ClusterRegisterUtil) GetStorageClass(astraHost string, cloudId string, clusterId string, apiToken string) (string, error) {
-	ret := _m.Called(astraHost, cloudId, clusterId, apiToken)
-
-	var r0 string
-	if rf, ok := ret.Get(0).(func(string, string, string, string) string); ok {
-		r0 = rf(astraHost, cloudId, clusterId, apiToken)
-	} else {
-		r0 = ret.Get(0).(string)
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func(string, string, string, string) error); ok {
-		r1 = rf(astraHost, cloudId, clusterId, apiToken)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
 }
 
 // ListClouds provides a mock function with given fields: astraHost, apiToken
