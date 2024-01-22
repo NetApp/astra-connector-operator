@@ -6,10 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	"github.com/NetApp-Polaris/astra-connector-operator/details/k8s"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -40,8 +38,10 @@ func (r *AstraConnectorController) deployConnector(ctx context.Context,
 		}
 	}
 
+	k8sUtil := k8s.NewK8sUtil(r.Client, r.Clientset, log)
+
 	// Let's register the cluster now
-	registerUtil := register.NewClusterRegisterUtil(astraConnector, &http.Client{}, r.Client, log, context.Background())
+	registerUtil := register.NewClusterRegisterUtil(astraConnector, &http.Client{}, r.Client, k8sUtil, log, context.Background())
 	registered := false
 	log.Info("Checking for natsSyncClient configmap")
 	foundCM := &corev1.ConfigMap{}
@@ -145,7 +145,7 @@ func (r *AstraConnectorController) deployConnector(ctx context.Context,
 
 	// if we are registered and have a clusterid let's set up the asup cr
 	if natsSyncClientStatus.Registered == "true" && natsSyncClientStatus.AstraClusterId != "" {
-		err = createASUPCR(ctx, astraConnector, r.Client, natsSyncClientStatus.AstraClusterId)
+		err = r.createASUPCR(ctx, astraConnector, natsSyncClientStatus.AstraClusterId)
 		if err != nil {
 			log.Error(err, FailedASUPCreation)
 			natsSyncClientStatus.Status = FailedASUPCreation
@@ -169,9 +169,9 @@ func (r *AstraConnectorController) deleteConnectorClusterScopedResources(ctx con
 	}
 }
 
-func createASUPCR(ctx context.Context, astraConnector *v1.AstraConnector, client client.Client, astraClusterID string) error {
+func (r *AstraConnectorController) createASUPCR(ctx context.Context, astraConnector *v1.AstraConnector, astraClusterID string) error {
 	log := ctrllog.FromContext(ctx)
-	k8sUtil := k8s.NewK8sUtil(client, log)
+	k8sUtil := k8s.NewK8sUtil(r.Client, r.Clientset, log)
 
 	cr := &unstructured.Unstructured{
 		Object: map[string]interface{}{

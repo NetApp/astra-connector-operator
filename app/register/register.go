@@ -26,6 +26,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/NetApp-Polaris/astra-connector-operator/common"
+	"github.com/NetApp-Polaris/astra-connector-operator/details/k8s"
 	v1 "github.com/NetApp-Polaris/astra-connector-operator/details/operator-sdk/api/v1"
 )
 
@@ -124,15 +125,17 @@ type clusterRegisterUtil struct {
 	AstraConnector *v1.AstraConnector
 	Client         HTTPClient
 	K8sClient      client.Client
+	K8sUtil        k8s.K8sUtilInterface
 	Ctx            context.Context
 	Log            logr.Logger
 }
 
-func NewClusterRegisterUtil(astraConnector *v1.AstraConnector, client HTTPClient, k8sClient client.Client, log logr.Logger, ctx context.Context) ClusterRegisterUtil {
+func NewClusterRegisterUtil(astraConnector *v1.AstraConnector, client HTTPClient, k8sClient client.Client, k8sUtil k8s.K8sUtilInterface, log logr.Logger, ctx context.Context) ClusterRegisterUtil {
 	return &clusterRegisterUtil{
 		AstraConnector: astraConnector,
 		Client:         client,
 		K8sClient:      k8sClient,
+		K8sUtil:        k8sUtil,
 		Log:            log,
 		Ctx:            ctx,
 	}
@@ -650,6 +653,9 @@ func (c clusterRegisterUtil) CreateCluster(astraHost, cloudId, astraConnectorId,
 	url := fmt.Sprintf("%s/accounts/%s/topology/v1/clouds/%s/clusters", astraHost, c.AstraConnector.Spec.Astra.AccountId, cloudId)
 	var clustersRespJson Cluster
 
+	clusterTypeChecker := k8s.ClusterTypeChecker{K8sUtil: c.K8sUtil, Log: c.Log}
+	clusterType := clusterTypeChecker.DetermineClusterType()
+
 	clustersBody := Cluster{
 		Type:                  "application/astra-cluster",
 		Version:               common.AstraClustersAPIVersion,
@@ -657,6 +663,7 @@ func (c clusterRegisterUtil) CreateCluster(astraHost, cloudId, astraConnectorId,
 		ConnectorCapabilities: common.GetConnectorCapabilities(),
 		PrivateRouteID:        astraConnectorId,
 		ConnectorInstall:      connectorInstallPending,
+		ClusterType:           clusterType,
 	}
 
 	clustersBodyJson, _ := json.Marshal(clustersBody)
@@ -709,12 +716,16 @@ func (c clusterRegisterUtil) CreateCluster(astraHost, cloudId, astraConnectorId,
 func (c clusterRegisterUtil) UpdateCluster(astraHost, cloudId, clusterId, astraConnectorId, apiToken string) (string, error) {
 	url := fmt.Sprintf("%s/accounts/%s/topology/v1/clouds/%s/clusters/%s", astraHost, c.AstraConnector.Spec.Astra.AccountId, cloudId, clusterId)
 
+	clusterTypeChecker := &k8s.ClusterTypeChecker{K8sUtil: c.K8sUtil, Log: c.Log}
+	clusterType := clusterTypeChecker.DetermineClusterType()
+
 	clustersBody := Cluster{
 		Type:                  "application/astra-cluster",
 		Version:               common.AstraClustersAPIVersion,
 		Name:                  c.AstraConnector.Spec.Astra.ClusterName,
 		ConnectorCapabilities: common.GetConnectorCapabilities(),
 		PrivateRouteID:        astraConnectorId,
+		ClusterType:           clusterType,
 	}
 
 	clustersBodyJson, _ := json.Marshal(clustersBody)

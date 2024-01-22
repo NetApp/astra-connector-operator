@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"k8s.io/client-go/kubernetes/fake"
 	"net/http"
 	"testing"
 	"time"
@@ -85,6 +86,10 @@ func createClusterRegister(astraConnectorInput AstraConnectorInput) (register.Cl
 	log := testutil.CreateLoggerForTesting()
 	mockHttpClient := &mocks.HTTPClient{}
 	fakeClient := testutil.CreateFakeClient()
+	k8sUtil := &mocks.K8sUtilInterface{}
+	k8sUtil.On("RESTGet", mock.Anything).Return(nil, errors.New("test"))
+	k8sUtil.On("VersionGet").Return("1.0.0", nil)
+	k8sUtil.On("K8sClientset").Return(fake.NewSimpleClientset())
 	apiTokenSecret := "astra-token"
 
 	astraConnector := &v1.AstraConnector{
@@ -130,7 +135,7 @@ func createClusterRegister(astraConnectorInput AstraConnectorInput) (register.Cl
 		astraConnector.Spec.NatsSyncClient.HostAliasIP = testIP
 	}
 
-	clusterRegisterUtil := register.NewClusterRegisterUtil(astraConnector, mockHttpClient, fakeClient, log, context.Background())
+	clusterRegisterUtil := register.NewClusterRegisterUtil(astraConnector, mockHttpClient, fakeClient, k8sUtil, log, context.Background())
 	return clusterRegisterUtil, mockHttpClient, apiTokenSecret, fakeClient
 }
 

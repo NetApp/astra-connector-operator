@@ -14,7 +14,6 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
-
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -27,6 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -45,6 +45,7 @@ import (
 // AstraConnectorController reconciles a AstraConnector object
 type AstraConnectorController struct {
 	client.Client
+	*kubernetes.Clientset
 	Scheme        *runtime.Scheme
 	DynamicClient dynamic.Interface
 }
@@ -108,7 +109,8 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 	} else {
 		// The object is being deleted
 		if controllerutil.ContainsFinalizer(astraConnector, finalizerName) {
-			registerUtil := register.NewClusterRegisterUtil(astraConnector, &http.Client{}, r.Client, log, context.Background())
+			k8sUtil := k8s.NewK8sUtil(r.Client, r.Clientset, log)
+			registerUtil := register.NewClusterRegisterUtil(astraConnector, &http.Client{}, r.Client, k8sUtil, log, context.Background())
 			log.Info("Unregistering natsSyncClient upon CRD delete")
 			err = registerUtil.UnRegisterNatsSyncClient()
 			if err != nil {
@@ -146,7 +148,7 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 	if r.needsReconcile(*astraConnector, log) {
 		log.Info("Actual state does not match desired state", "registered", astraConnector.Status.NatsSyncClient.Registered, "desiredSpec", astraConnector.Spec)
 		if !astraConnector.Spec.SkipPreCheck {
-			k8sUtil := k8s.NewK8sUtil(r.Client, log)
+			k8sUtil := k8s.NewK8sUtil(r.Client, r.Clientset, log)
 			preCheckClient := precheck.NewPrecheckClient(log, k8sUtil)
 			errList := preCheckClient.Run()
 			if errList != nil {
