@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"k8s.io/apimachinery/pkg/api/resource"
+	"maps"
 	"strconv"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -31,7 +32,7 @@ func NewAstraConnectorDeployer() model.Deployer {
 // GetDeploymentObjects returns a Astra Connect Deployment object
 func (d *AstraConnectDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, error) {
 	log := ctrllog.FromContext(ctx)
-	ls := LabelsForAstraConnectClient(common.AstraConnectName)
+	ls := LabelsForAstraConnectClient(common.AstraConnectName, m.Spec.Labels)
 
 	var imageRegistry string
 	var containerImage string
@@ -151,8 +152,10 @@ func (d *AstraConnectDeployer) GetServiceObjects(m *v1.AstraConnector, ctx conte
 }
 
 // LabelsForAstraConnectClient returns the labels for selecting the AstraConnectClient
-func LabelsForAstraConnectClient(name string) map[string]string {
-	return map[string]string{"type": name, "role": name}
+func LabelsForAstraConnectClient(name string, mLabels map[string]string) map[string]string {
+	labels := map[string]string{"type": name, "role": name}
+	maps.Copy(labels, mLabels)
+	return labels
 }
 
 // GetConfigMapObjects returns a ConfigMap object for Astra Connect

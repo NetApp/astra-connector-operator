@@ -7,6 +7,7 @@ package connector
 import (
 	"context"
 	"fmt"
+	"maps"
 	"strings"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -286,8 +287,10 @@ func (n *NatsDeployer) GetServiceObjects(m *v1.AstraConnector, ctx context.Conte
 }
 
 // labelsForNats returns the labels for selecting the nats resources
-func labelsForNats(name string) map[string]string {
-	return map[string]string{"app": name}
+func labelsForNats(name string, mLabels map[string]string) map[string]string {
+	labels := map[string]string{"app": name}
+	maps.Copy(labels, mLabels)
+	return labels
 }
 
 func (n *NatsDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, error) {

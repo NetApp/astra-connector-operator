@@ -81,6 +81,9 @@ type AstraConnectorSpec struct {
 	// SkipPreCheck determines if you want to skip pre-checks and go ahead with the installation.
 	// +kubebuilder:default:=false
 	SkipPreCheck bool `json:"skipPreCheck"`
+
+	// Labels any additional labels wanted to be added to resources
+	Labels map[string]string `json:"labels"`
 }
 
 // AstraConnectorStatus defines the observed state of AstraConnector

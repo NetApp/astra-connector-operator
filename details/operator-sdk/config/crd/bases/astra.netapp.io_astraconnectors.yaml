@@ -99,6 +99,11 @@ spec:
                   secret:
                     type: string
                 type: object
+              labels:
+                additionalProperties:
+                  type: string
+                description: Labels any additional labels wanted to be added to resources
+                type: object
               nats:
                 properties:
                   image:
@@ -204,6 +209,12 @@ spec:
                         type: string
                       secret:
                         type: string
+                    type: object
+                  labels:
+                    additionalProperties:
+                      type: string
+                    description: Labels any additional labels wanted to be added to
+                      resources
                     type: object
                   nats:
                     properties:

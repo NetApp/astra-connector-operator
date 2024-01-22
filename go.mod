@@ -1,6 +1,6 @@
 module github.com/NetApp-Polaris/astra-connector-operator
 
-go 1.20
+go 1.21
 
 require (
 	github.com/docker/docker v24.0.2+incompatible
