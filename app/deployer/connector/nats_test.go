@@ -115,7 +115,7 @@ func TestNatsGetServiceAccountObjects(t *testing.T) {
 
 	assert.Equal(t, common.NatsServiceAccountName, serviceAccount.Name)
 	assert.Equal(t, m.Namespace, serviceAccount.Namespace)
-	assert.Equal(t, map[string]string{"app": "nats"}, serviceAccount.Labels)
+	assert.Equal(t, map[string]string{"Label1": "Value1", "app": "nats"}, serviceAccount.Labels)
 }
 
 func TestNatsGetServiceObjects(t *testing.T) {
@@ -134,7 +134,7 @@ func TestNatsGetServiceObjects(t *testing.T) {
 
 	assert.Equal(t, common.NatsName, service.Name)
 	assert.Equal(t, m.Namespace, service.Namespace)
-	assert.Equal(t, map[string]string{"app": "nats"}, service.Labels)
+	assert.Equal(t, map[string]string{"Label1": "Value1", "app": "nats"}, service.Labels)
 	assert.Equal(t, corev1.ServiceTypeClusterIP, service.Spec.Type)
 
 	// now test the second service nats-cluster
@@ -143,7 +143,7 @@ func TestNatsGetServiceObjects(t *testing.T) {
 
 	assert.Equal(t, common.NatsClusterServiceName, service.Name)
 	assert.Equal(t, m.Namespace, service.Namespace)
-	assert.Equal(t, map[string]string{"app": "nats"}, service.Labels)
+	assert.Equal(t, map[string]string{"Label1": "Value1", "app": "nats"}, service.Labels)
 
 }
 

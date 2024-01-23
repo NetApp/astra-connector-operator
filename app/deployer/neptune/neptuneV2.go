@@ -6,7 +6,10 @@ package neptune
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"log"
+	"maps"
 	"os"
 	"path/filepath"
 	"strings"
@@ -69,6 +72,24 @@ func (n NeptuneClientDeployerV2) GetDeploymentObjects(m *v1.AstraConnector, ctx 
 	neptuneImage = fmt.Sprintf("%s/controller:%s", imageRegistry, containerImage)
 	log.Info("Using Neptune image", "image", neptuneImage)
 
+	deploymentLabels := map[string]string{
+		"app.kubernetes.io/component":  "manager",
+		"app.kubernetes.io/created-by": "neptune",
+		"app.kubernetes.io/instance":   "controller-manager",
+		"app.kubernetes.io/managed-by": "kustomize",
+		"app.kubernetes.io/name":       "deployment",
+		"app.kubernetes.io/part-of":    "neptune",
+		"control-plane":                "controller-manager",
+	}
+	// add any labels user wants to use or override
+	maps.Copy(deploymentLabels, m.Spec.Labels)
+
+	podLabels := map[string]string{
+		"control-plane": "controller-manager",
+		"app":           "controller.neptune.netapp.io",
+	}
+	maps.Copy(podLabels, m.Spec.Labels)
+
 	// High UID to satisfy OCP requirements
 	userUID := int64(1000740000)
 	readOnlyRootFilesystem := true
@@ -77,20 +98,13 @@ func (n NeptuneClientDeployerV2) GetDeploymentObjects(m *v1.AstraConnector, ctx 
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      common.NeptuneName,
 			Namespace: m.Namespace,
-			Labels: map[string]string{
-				"app.kubernetes.io/component":  "manager",
-				"app.kubernetes.io/created-by": "neptune",
-				"app.kubernetes.io/instance":   "controller-manager",
-				"app.kubernetes.io/managed-by": "kustomize",
-				"app.kubernetes.io/name":       "deployment",
-				"app.kubernetes.io/part-of":    "neptune",
-				"control-plane":                "controller-manager",
-			},
+			Labels:    deploymentLabels,
 			Annotations: map[string]string{
 				"container.seccomp.security.alpha.kubernetes.io/pod": "runtime/default",
 			},
 		},
 		Spec: appsv1.DeploymentSpec{
+
 			Replicas: pointer.Int32(1),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
@@ -102,10 +116,7 @@ func (n NeptuneClientDeployerV2) GetDeploymentObjects(m *v1.AstraConnector, ctx 
 					Annotations: map[string]string{
 						"kubectl.kubernetes.io/default-container": "manager",
 					},
-					Labels: map[string]string{
-						"control-plane": "controller-manager",
-						"app":           "controller.neptune.netapp.io",
-					},
+					Labels: podLabels,
 				},
 				Spec: corev1.PodSpec{
 					Affinity: &corev1.Affinity{
@@ -183,7 +194,7 @@ func (n NeptuneClientDeployerV2) GetDeploymentObjects(m *v1.AstraConnector, ctx 
 								"/manager",
 							},
 							Image: neptuneImage,
-							Env:   getNeptuneEnvVars(imageRegistry, containerImage, m.Spec.ImageRegistry.Secret, m.Spec.AutoSupport.URL),
+							Env:   getNeptuneEnvVars(imageRegistry, containerImage, m.Spec.ImageRegistry.Secret, m.Spec.AutoSupport.URL, m.Spec.Labels),
 							LivenessProbe: &corev1.Probe{
 								ProbeHandler: corev1.ProbeHandler{
 									HTTPGet: &corev1.HTTPGetAction{
@@ -250,7 +261,7 @@ func (n NeptuneClientDeployerV2) GetDeploymentObjects(m *v1.AstraConnector, ctx 
 	return deps, nil
 }
 
-func getNeptuneEnvVars(imageRegistry, containerImage, pullSecret, asupUrl string) []corev1.EnvVar {
+func getNeptuneEnvVars(imageRegistry, containerImage, pullSecret, asupUrl string, mLabels map[string]string) []corev1.EnvVar {
 	var envVars []corev1.EnvVar
 
 	//DefaultImageRegistry := "netappdownloads.jfrog.io/docker-astra-control-staging/arch30/neptune"
@@ -296,6 +307,19 @@ func getNeptuneEnvVars(imageRegistry, containerImage, pullSecret, asupUrl string
 			Name:  "NEPTUNE_AUTOSUPPORT_URL",
 			Value: asupUrl,
 		})
+	}
+
+	if mLabels != nil {
+		jsonData, err := json.Marshal(mLabels)
+		if err != nil {
+			log.Fatalf("JSON marshaling (LABELS) failed: %s", err)
+		} else {
+			jsonString := string(jsonData)
+			envVars = append(envVars, corev1.EnvVar{
+				Name:  "NEPTUNE_LABELS",
+				Value: jsonString,
+			})
+		}
 	}
 
 	return envVars

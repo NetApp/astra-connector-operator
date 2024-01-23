@@ -7,6 +7,7 @@ package connector
 import (
 	"context"
 	"fmt"
+	"maps"
 	"strings"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -32,7 +33,7 @@ func NewNatsDeployer() model.Deployer {
 // GetStatefulSetObjects returns a NATS Statefulset object
 func (n *NatsDeployer) GetStatefulSetObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, error) {
 	log := ctrllog.FromContext(ctx)
-	ls := labelsForNats(common.NatsName)
+	ls := labelsForNats(common.NatsName, m.Spec.Labels)
 
 	var replicas int32
 	if m.Spec.Nats.Replicas > 2 {
@@ -220,7 +221,7 @@ func (n *NatsDeployer) GetServiceAccountObjects(m *v1.AstraConnector, ctx contex
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      common.NatsServiceAccountName,
 			Namespace: m.Namespace,
-			Labels:    labelsForNats(common.NatsName),
+			Labels:    labelsForNats(common.NatsName, m.Spec.Labels),
 		},
 	}
 	return []client.Object{sa}, nil
@@ -228,7 +229,7 @@ func (n *NatsDeployer) GetServiceAccountObjects(m *v1.AstraConnector, ctx contex
 
 // GetServiceObjects returns a Service object for nats
 func (n *NatsDeployer) GetServiceObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, error) {
-	ls := labelsForNats(common.NatsName)
+	ls := labelsForNats(common.NatsName, m.Spec.Labels)
 	var services []client.Object
 
 	natsService := &corev1.Service{
@@ -286,8 +287,10 @@ func (n *NatsDeployer) GetServiceObjects(m *v1.AstraConnector, ctx context.Conte
 }
 
 // labelsForNats returns the labels for selecting the nats resources
-func labelsForNats(name string) map[string]string {
-	return map[string]string{"app": name}
+func labelsForNats(name string, mLabels map[string]string) map[string]string {
+	labels := map[string]string{"app": name}
+	maps.Copy(labels, mLabels)
+	return labels
 }
 
 func (n *NatsDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, error) {
