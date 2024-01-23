@@ -19,6 +19,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
+	"github.com/NetApp-Polaris/astra-connector-operator/app/conf"
 	"github.com/NetApp-Polaris/astra-connector-operator/app/deployer/model"
 	"github.com/NetApp-Polaris/astra-connector-operator/app/register"
 	"github.com/NetApp-Polaris/astra-connector-operator/common"
@@ -67,10 +68,6 @@ func (d *NatsSyncClientDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx 
 		replicas = common.NatsSyncClientDefaultReplicas
 	}
 
-	// High UID to satisfy OCP requirements
-	userUID := int64(1000740000)
-	readOnlyRootFilesystem := true
-	runAsNonRoot := true
 	dep := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      common.NatsSyncClientName,
@@ -124,14 +121,7 @@ func (d *NatsSyncClientDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx 
 								MountPath: keyStoreURLSplit[1],
 							},
 						},
-						SecurityContext: &corev1.SecurityContext{
-							Capabilities: &corev1.Capabilities{
-								Drop: []corev1.Capability{"ALL"},
-							},
-							ReadOnlyRootFilesystem: &readOnlyRootFilesystem,
-							RunAsNonRoot:           &runAsNonRoot,
-							RunAsUser:              &userUID,
-						},
+						SecurityContext: conf.GetSecurityContext(),
 					}},
 					ServiceAccountName: common.NatsSyncClientConfigMapServiceAccountName,
 					Volumes: []corev1.Volume{
@@ -229,6 +219,11 @@ func (d *NatsSyncClientDeployer) GetRoleObjects(m *v1.AstraConnector, ctx contex
 				APIGroups: []string{""},
 				Resources: []string{"configmaps"},
 				Verbs:     []string{"get", "list", "patch"},
+			},
+			{
+				APIGroups: []string{"security.openshift.io"},
+				Resources: []string{"securitycontextconstraints"},
+				Verbs:     []string{"use"},
 			},
 		},
 	}

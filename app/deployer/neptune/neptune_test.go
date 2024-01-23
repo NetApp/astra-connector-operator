@@ -133,7 +133,7 @@ func TestUnimplemenyeObjectsV2(t *testing.T) {
 	assert.NoError(t, err)
 
 	ret, err = n.GetServiceAccountObjects(m, ctx)
-	assert.Nil(t, ret)
+	assert.NotNil(t, ret)
 	assert.NoError(t, err)
 
 	ret, err = n.GetClusterRoleObjects(m, ctx)
@@ -241,6 +241,11 @@ func TestGetRoleObjects(t *testing.T) {
 			APIGroups: []string{""},
 			Resources: []string{"events"},
 			Verbs:     []string{"create", "patch"},
+		},
+		{
+			APIGroups: []string{"security.openshift.io"},
+			Resources: []string{"securitycontextconstraints"},
+			Verbs:     []string{"use"},
 		},
 	}
 	assert.Equal(t, expectedRules, role.Rules)
