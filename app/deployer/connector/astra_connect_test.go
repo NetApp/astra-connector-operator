@@ -37,6 +37,7 @@ func TestAstraConnectGetDeploymentObjects(t *testing.T) {
 				Image:    "test-image",
 				Replicas: 3,
 			},
+			Labels: map[string]string{"Label1": "Value1"},
 		},
 	}
 
@@ -127,6 +128,7 @@ func DummyAstraConnector() v1.AstraConnector {
 			AutoSupport: v1.AutoSupport{
 				Enrolled: true,
 				URL:      "https://my-asup"},
+			Labels: map[string]string{"Label1": "Value1"},
 		},
 	}
 }

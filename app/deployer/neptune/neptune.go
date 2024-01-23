@@ -3,6 +3,7 @@ package neptune
 import (
 	"context"
 	"fmt"
+
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -14,6 +15,7 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/NetApp-Polaris/astra-connector-operator/app/conf"
 	"github.com/NetApp-Polaris/astra-connector-operator/app/deployer/model"
 	"github.com/NetApp-Polaris/astra-connector-operator/common"
 	v1 "github.com/NetApp-Polaris/astra-connector-operator/details/operator-sdk/api/v1"
@@ -136,11 +138,6 @@ func (n NeptuneClientDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx co
 							},
 							SecurityContext: &corev1.SecurityContext{
 								AllowPrivilegeEscalation: pointer.Bool(false),
-								Capabilities: &corev1.Capabilities{
-									Drop: []corev1.Capability{
-										"ALL",
-									},
-								},
 							},
 						},
 						{
@@ -186,17 +183,10 @@ func (n NeptuneClientDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx co
 							},
 							SecurityContext: &corev1.SecurityContext{
 								AllowPrivilegeEscalation: pointer.Bool(false),
-								Capabilities: &corev1.Capabilities{
-									Drop: []corev1.Capability{
-										"ALL",
-									},
-								},
 							},
 						},
 					},
-					SecurityContext: &corev1.PodSecurityContext{
-						RunAsNonRoot: pointer.Bool(true),
-					},
+					SecurityContext:               conf.GetPodSecurityContext(),
 					ServiceAccountName:            "neptune-controller-manager",
 					TerminationGracePeriodSeconds: pointer.Int64(10),
 				},
@@ -309,6 +299,11 @@ func (n NeptuneClientDeployer) GetRoleObjects(m *v1.AstraConnector, ctx context.
 				APIGroups: []string{""},
 				Resources: []string{"events"},
 				Verbs:     []string{"create", "patch"},
+			},
+			{
+				APIGroups: []string{"security.openshift.io"},
+				Resources: []string{"securitycontextconstraints"},
+				Verbs:     []string{"use"},
 			},
 		},
 	}
