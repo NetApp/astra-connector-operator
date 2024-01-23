@@ -14,7 +14,7 @@ import (
 const (
 	FlavorAKS        = "aks"
 	FlavorGKE        = "gke"
-	FlavorKubernetes = "k8s"
+	FlavorKubernetes = "kubernetes"
 	FlavorOpenShift  = "openshift"
 	FlavorRKE        = "rke"
 	FlavorRKE2       = "rke2"

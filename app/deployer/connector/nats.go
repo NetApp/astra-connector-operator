@@ -7,16 +7,19 @@ package connector
 import (
 	"context"
 	"fmt"
+	"maps"
 	"strings"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/NetApp-Polaris/astra-connector-operator/app/conf"
 	"github.com/NetApp-Polaris/astra-connector-operator/app/deployer/model"
 
 	"github.com/NetApp-Polaris/astra-connector-operator/common"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
@@ -32,7 +35,7 @@ func NewNatsDeployer() model.Deployer {
 // GetStatefulSetObjects returns a NATS Statefulset object
 func (n *NatsDeployer) GetStatefulSetObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, error) {
 	log := ctrllog.FromContext(ctx)
-	ls := labelsForNats(common.NatsName)
+	ls := labelsForNats(common.NatsName, m.Spec.Labels)
 
 	var replicas int32
 	if m.Spec.Nats.Replicas > 2 {
@@ -60,10 +63,6 @@ func (n *NatsDeployer) GetStatefulSetObjects(m *v1.AstraConnector, ctx context.C
 	natsImage = fmt.Sprintf("%s/%s", imageRegistry, containerImage)
 	log.Info("Using nats image", "image", natsImage)
 
-	// High UID to satisfy OCP requirements
-	userUID := int64(1000740000)
-	readOnlyRootFilesystem := true
-	runAsNonRoot := true
 	dep := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      common.NatsName,
@@ -129,14 +128,7 @@ func (n *NatsDeployer) GetStatefulSetObjects(m *v1.AstraConnector, ctx context.C
 								MountPath: "/var/run/nats",
 							},
 						},
-						SecurityContext: &corev1.SecurityContext{
-							Capabilities: &corev1.Capabilities{
-								Drop: []corev1.Capability{"ALL"},
-							},
-							ReadOnlyRootFilesystem: &readOnlyRootFilesystem,
-							RunAsNonRoot:           &runAsNonRoot,
-							RunAsUser:              &userUID,
-						},
+						SecurityContext: conf.GetSecurityContext(),
 					}},
 					Volumes: []corev1.Volume{
 						{
@@ -220,7 +212,7 @@ func (n *NatsDeployer) GetServiceAccountObjects(m *v1.AstraConnector, ctx contex
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      common.NatsServiceAccountName,
 			Namespace: m.Namespace,
-			Labels:    labelsForNats(common.NatsName),
+			Labels:    labelsForNats(common.NatsName, m.Spec.Labels),
 		},
 	}
 	return []client.Object{sa}, nil
@@ -228,7 +220,7 @@ func (n *NatsDeployer) GetServiceAccountObjects(m *v1.AstraConnector, ctx contex
 
 // GetServiceObjects returns a Service object for nats
 func (n *NatsDeployer) GetServiceObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, error) {
-	ls := labelsForNats(common.NatsName)
+	ls := labelsForNats(common.NatsName, m.Spec.Labels)
 	var services []client.Object
 
 	natsService := &corev1.Service{
@@ -286,8 +278,10 @@ func (n *NatsDeployer) GetServiceObjects(m *v1.AstraConnector, ctx context.Conte
 }
 
 // labelsForNats returns the labels for selecting the nats resources
-func labelsForNats(name string) map[string]string {
-	return map[string]string{"app": name}
+func labelsForNats(name string, mLabels map[string]string) map[string]string {
+	labels := map[string]string{"app": name}
+	maps.Copy(labels, mLabels)
+	return labels
 }
 
 func (n *NatsDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, error) {
@@ -295,11 +289,41 @@ func (n *NatsDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx context.Co
 }
 
 func (n *NatsDeployer) GetRoleObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, error) {
-	return nil, nil
+	role := &rbacv1.Role{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: m.Namespace,
+			Name:      common.NatsRoleName,
+		},
+		Rules: []rbacv1.PolicyRule{
+			{
+				APIGroups: []string{"security.openshift.io"},
+				Resources: []string{"securitycontextconstraints"},
+				Verbs:     []string{"use"},
+			},
+		},
+	}
+	return []client.Object{role}, nil
 }
 
 func (n *NatsDeployer) GetRoleBindingObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, error) {
-	return nil, nil
+	roleBinding := &rbacv1.RoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: m.Namespace,
+			Name:      common.NatsRoleBindingName,
+		},
+		Subjects: []rbacv1.Subject{
+			{
+				Kind: "ServiceAccount",
+				Name: common.NatsServiceAccountName,
+			},
+		},
+		RoleRef: rbacv1.RoleRef{
+			Kind:     "Role",
+			Name:     common.NatsRoleName,
+			APIGroup: "rbac.authorization.k8s.io",
+		},
+	}
+	return []client.Object{roleBinding}, nil
 }
 
 func (n *NatsDeployer) GetClusterRoleObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, error) {

@@ -2,6 +2,8 @@ package connector_test
 
 import (
 	"context"
+	"testing"
+
 	"github.com/NetApp-Polaris/astra-connector-operator/app/deployer/connector"
 	"github.com/NetApp-Polaris/astra-connector-operator/common"
 	v1 "github.com/NetApp-Polaris/astra-connector-operator/details/operator-sdk/api/v1"
@@ -9,7 +11,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
-	"testing"
 )
 
 func TestNatsSyncGetDeploymentObjects(t *testing.T) {
@@ -132,7 +133,7 @@ func TestNatsSyncGetRoleObjects(t *testing.T) {
 	assert.True(t, ok)
 
 	assert.Equal(t, common.NatsSyncClientConfigMapRoleName, role.Name)
-	assert.Len(t, role.Rules, 1)
+	assert.Len(t, role.Rules, 2)
 	assert.Equal(t, []string{""}, role.Rules[0].APIGroups)
 	assert.Equal(t, []string{"configmaps"}, role.Rules[0].Resources)
 	assert.Equal(t, []string{"get", "list", "patch"}, role.Rules[0].Verbs)

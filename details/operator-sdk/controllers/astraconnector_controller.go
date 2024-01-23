@@ -442,7 +442,7 @@ func (r *AstraConnectorController) needsReconcile(connector v1.AstraConnector, l
 		return true
 	}
 	// Ensure that the CR spec has not changed between reconciles
-	if connector.Status.ObservedSpec != connector.Spec {
+	if !reflect.DeepEqual(connector.Status.ObservedSpec, connector.Spec) {
 		return true
 	}
 	return false

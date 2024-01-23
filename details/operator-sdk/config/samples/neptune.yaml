@@ -5345,7 +5345,14 @@ rules:
   - get
   - list
   - patch
+  - update
   - watch
+- apiGroups:
+  - security.openshift.io
+  resources:
+  - securitycontextconstraints
+  verbs:
+  - use
 - apiGroups:
   - snapshot.storage.k8s.io
   resources:
@@ -5498,6 +5505,7 @@ rules:
   verbs:
   - get
   - list
+  - use
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -5515,6 +5523,7 @@ rules:
   - '*'
   verbs:
   - delete
+  - use
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -5544,6 +5553,7 @@ rules:
   verbs:
   - get
   - list
+  - use
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
