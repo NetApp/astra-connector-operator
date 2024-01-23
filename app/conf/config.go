@@ -15,9 +15,13 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
 	"gopkg.in/yaml.v2"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/utils/pointer"
 )
 
 var Config *ImmutableConfiguration = nil
+var runAsUser = pointer.Int64(10001)
+var runAsGroup = pointer.Int64(20000)
 
 /*
 ImmutableConfiguration
@@ -229,4 +233,33 @@ func appRoot() string {
 	} else {
 		return cwd
 	}
+}
+
+func GetRunAsUser() *int64 {
+	return runAsUser
+}
+
+func GetRunAsGroup() *int64 {
+	return runAsGroup
+}
+
+var sc = corev1.SecurityContext{
+	ReadOnlyRootFilesystem: pointer.Bool(true),
+	RunAsNonRoot:           pointer.Bool(true),
+	RunAsUser:              GetRunAsUser(),
+	RunAsGroup:             GetRunAsGroup(),
+}
+
+func GetSecurityContext() *corev1.SecurityContext {
+	return &sc
+}
+
+var pc = corev1.PodSecurityContext{
+	RunAsNonRoot: pointer.Bool(true),
+	RunAsUser:    GetRunAsUser(),
+	RunAsGroup:   GetRunAsGroup(),
+}
+
+func GetPodSecurityContext() *corev1.PodSecurityContext {
+	return &pc
 }

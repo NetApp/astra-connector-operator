@@ -26,6 +26,8 @@ const (
 	NatsClusterServiceName = "nats-cluster"
 	NatsConfigMapName      = "nats-configmap"
 	NatsServiceAccountName = "nats-serviceaccount"
+	NatsRoleName           = "nats-role"
+	NatsRoleBindingName    = "nats-rolebinding"
 	NatsVolumeName         = "nats-configmap-volume"
 	NatsClientPort         = 4222
 	NatsClusterPort        = 6222
