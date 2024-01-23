@@ -256,8 +256,6 @@ func GetSecurityContext() *corev1.SecurityContext {
 
 var pc = corev1.PodSecurityContext{
 	RunAsNonRoot: pointer.Bool(true),
-	RunAsUser:    GetRunAsUser(),
-	RunAsGroup:   GetRunAsGroup(),
 }
 
 func GetPodSecurityContext() *corev1.PodSecurityContext {
