@@ -25,6 +25,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
+	"github.com/NetApp-Polaris/astra-connector-operator/app/conf"
 	"github.com/NetApp-Polaris/astra-connector-operator/app/deployer/model"
 	"github.com/NetApp-Polaris/astra-connector-operator/common"
 	v1 "github.com/NetApp-Polaris/astra-connector-operator/details/operator-sdk/api/v1"
@@ -90,10 +91,6 @@ func (n NeptuneClientDeployerV2) GetDeploymentObjects(m *v1.AstraConnector, ctx 
 	}
 	maps.Copy(podLabels, m.Spec.Labels)
 
-	// High UID to satisfy OCP requirements
-	userUID := int64(1000740000)
-	readOnlyRootFilesystem := true
-	runAsNonRoot := true
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      common.NeptuneName,
@@ -177,11 +174,6 @@ func (n NeptuneClientDeployerV2) GetDeploymentObjects(m *v1.AstraConnector, ctx 
 							},
 							SecurityContext: &corev1.SecurityContext{
 								AllowPrivilegeEscalation: pointer.Bool(false),
-								Capabilities: &corev1.Capabilities{
-									Drop: []corev1.Capability{
-										"ALL",
-									},
-								},
 							},
 						},
 						{
@@ -228,20 +220,11 @@ func (n NeptuneClientDeployerV2) GetDeploymentObjects(m *v1.AstraConnector, ctx 
 							},
 							SecurityContext: &corev1.SecurityContext{
 								AllowPrivilegeEscalation: pointer.Bool(false),
-								Capabilities: &corev1.Capabilities{
-									Drop: []corev1.Capability{
-										"ALL",
-									},
-								},
-								ReadOnlyRootFilesystem: &readOnlyRootFilesystem,
-								RunAsNonRoot:           &runAsNonRoot,
-								RunAsUser:              &userUID,
+								ReadOnlyRootFilesystem:   pointer.Bool(true),
 							},
 						},
 					},
-					SecurityContext: &corev1.PodSecurityContext{
-						RunAsNonRoot: pointer.Bool(true),
-					},
+					SecurityContext:               conf.GetPodSecurityContext(),
 					ServiceAccountName:            "neptune-controller-manager",
 					TerminationGracePeriodSeconds: pointer.Int64(10),
 				},
@@ -338,7 +321,13 @@ func (n NeptuneClientDeployerV2) GetConfigMapObjects(m *v1.AstraConnector, ctx c
 }
 
 func (n NeptuneClientDeployerV2) GetServiceAccountObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, error) {
-	return nil, nil
+	sa := &corev1.ServiceAccount{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      common.NeptuneName,
+			Namespace: m.Namespace,
+		},
+	}
+	return []client.Object{sa}, nil
 }
 
 func (n NeptuneClientDeployerV2) GetRoleObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, error) {
