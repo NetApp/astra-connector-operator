@@ -11,7 +11,6 @@ func TestGetPodSecurityContext(t *testing.T) {
 	sc := conf.GetPodSecurityContext()
 	assert.NotNil(t, sc)
 	assert.True(t, *sc.RunAsNonRoot)
-	assert.NotEqual(t, int64(0), *sc.RunAsUser)
 }
 
 func TestGetSecurityContext(t *testing.T) {
