@@ -5347,7 +5347,6 @@ rules:
   - patch
   - update
   - watch
-  - update
 - apiGroups:
   - security.openshift.io
   resources:
