@@ -52,7 +52,7 @@ func (ai *AstraConnector) ValidateNamespace() *field.Error {
 func (ai *AstraConnector) validateClusterName() *field.Error {
 	// Validate that the name is non-empty and is a valid Kubernetes label.
 	name := ai.Spec.Astra.ClusterName
-	if !util.IsValidKubernetesLabel(name) {
+	if !util.IsValidDNS1123Label(name) {
 		fieldPath := util.GetJSONFieldName(&ai.Spec.Astra, &ai.Spec.Astra.ClusterName)
 		return field.Invalid(field.NewPath(fieldPath), name,
 			"names must consist of lower case alphanumeric characters or '-', "+

@@ -1,12 +1,11 @@
 package util_test
 
 import (
-	"fmt"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/rand"
 
 	v1 "github.com/NetApp-Polaris/astra-connector-operator/details/operator-sdk/api/v1"
 	"github.com/NetApp-Polaris/astra-connector-operator/util"
@@ -93,56 +92,62 @@ func TestGetJSONFieldName(t *testing.T) {
 	})
 }
 
-func TestIsValidKubernetesLabel(t *testing.T) {
+func TestIsValidDNS1123Label(t *testing.T) {
 	tests := map[string]struct {
-		name     string
+		input    string
 		expected bool
 	}{
-		"name contains a number at end": {
-			"valid-astra-cluster-name-0",
+		"input contains a number at end": {
+			"valid-astra-cluster-input-0",
 			true,
 		},
-		"name contains a number at beginning": {
+		"input contains a number at beginning": {
 			// "-" is not valid for end of Kubernetes names.
-			"0-valid-astra-cluster-name",
+			"0-valid-astra-cluster-input",
 			true,
 		},
-		"name is greater than 64 characters": {
-			fmt.Sprintf("resource-name%v", strings.Join(make([]string, 15), "-test")),
+		"input is within the max character count": {
+			rand.String(63),
+			true,
+		},
+		"input is greater than the max character count": {
+			rand.String(64),
 			false,
 		},
-		"name is empty": {
+		"input is empty": {
 			// "" is not valid for Kubernetes names.
 			"",
 			false,
 		},
-		"name contains illegal character at beginning": {
+		"input contains illegal character at beginning": {
 			// "-" is not valid for end of Kubernetes names.
-			"-invalid-astra-cluster-name",
+			"-invalid-astra-cluster-input",
 			false,
 		},
 
-		"name contains illegal character within": {
+		"input contains illegal character within": {
 			// "_" is not valid for Kubernetes names.
 			"invalid-astra-cluster_name",
 			false,
 		},
-		"name contains illegal character at end": {
+		"input contains illegal character at end": {
 			// "-" is not valid for end of Kubernetes names.
-			"invalid-astra-cluster-name-",
+			"invalid-astra-cluster-input-",
 			false,
 		},
-		"name contains uppercase illegal character at beginning": {
-			// Uppercase letters are not valid for Kubernetes names.
-			"Invalid-astra-cluster-name",
+		"input contains illegal uppercase character at beginning": {
+			"Invalid-astra-cluster-input",
+			false,
+		},
+		"input is a dns subdomain and not a input": {
+			"example.com",
 			false,
 		},
 	}
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			isValid := util.IsValidKubernetesLabel(test.name)
-			assert.Equal(t, test.expected, isValid)
+			assert.Equal(t, test.expected, util.IsValidDNS1123Label(test.input))
 		})
 	}
 }
