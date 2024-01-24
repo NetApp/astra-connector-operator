@@ -195,19 +195,18 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 		if natsSyncClientStatus.AstraClusterId != "" {
 			log.Info(fmt.Sprintf("Updating CR status, clusterID: '%s'", natsSyncClientStatus.AstraClusterId))
 		}
-		_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
-		log.Info("assignging to status", "spec", astraConnector.Spec)
+		log.Info("assigning to status", "spec", astraConnector.Spec)
 		astraConnector.Status.ObservedSpec = astraConnector.Spec
-		err = r.Status().Update(ctx, astraConnector)
+		_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
 		if err != nil {
 			log.Error(err, "Failed to update AstraConnector status")
 			return ctrl.Result{RequeueAfter: time.Minute * conf.Config.ErrorTimeout()}, err
 		}
-		return ctrl.Result{Requeue: false}, nil
+		return ctrl.Result{}, nil
 
 	} else {
 		log.Info("Actual state matches desired state", "registered", astraConnector.Status.NatsSyncClient.Registered, "desiredSpec", astraConnector.Spec)
-		return ctrl.Result{Requeue: false}, nil
+		return ctrl.Result{}, nil
 	}
 }
 
