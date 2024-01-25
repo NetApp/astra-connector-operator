@@ -73,14 +73,14 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 			// Return and don't requeue
 			log.Info("AstraConnector resource not found. Ignoring since object must be deleted")
-			return ctrl.Result{Requeue: false}, nil
+			return ctrl.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
 		log.Error(err, FailedAstraConnectorGet)
 		natsSyncClientStatus.Status = FailedAstraConnectorGet
 		_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
 		// Do not requeue
-		return ctrl.Result{Requeue: false}, err
+		return ctrl.Result{}, err
 	}
 	natsSyncClientStatus.AstraClusterId = astraConnector.Status.NatsSyncClient.AstraClusterId
 
@@ -88,7 +88,7 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 	err = r.validateAstraConnector(*astraConnector, log)
 	if err != nil {
 		// Do not requeue. This is a user input error
-		return ctrl.Result{Requeue: false}, err
+		return ctrl.Result{}, err
 	}
 
 	// name of our custom finalizer
@@ -143,7 +143,7 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 
 		// Stop reconciliation as the item is being deleted
 		// Do not requeue
-		return ctrl.Result{Requeue: false}, nil
+		return ctrl.Result{}, nil
 	}
 
 	if r.needsReconcile(*astraConnector, log) {
@@ -205,18 +205,18 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 			log.Info(fmt.Sprintf("Updating CR status, clusterID: '%s'", natsSyncClientStatus.AstraClusterId))
 		}
 		_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
-		log.Info("assignging to status", "spec", astraConnector.Spec)
+		log.Info("assigning to status", "spec", astraConnector.Spec)
 		astraConnector.Status.ObservedSpec = astraConnector.Spec
 		err = r.Status().Update(ctx, astraConnector)
 		if err != nil {
 			log.Error(err, "Failed to update AstraConnector status")
 			return ctrl.Result{RequeueAfter: time.Minute * conf.Config.ErrorTimeout()}, err
 		}
-		return ctrl.Result{Requeue: false}, nil
+		return ctrl.Result{}, nil
 
 	} else {
 		log.Info("Actual state matches desired state", "registered", astraConnector.Status.NatsSyncClient.Registered, "desiredSpec", astraConnector.Spec)
-		return ctrl.Result{Requeue: false}, nil
+		return ctrl.Result{}, nil
 	}
 }
 
