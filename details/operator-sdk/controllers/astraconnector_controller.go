@@ -146,7 +146,7 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 		return ctrl.Result{}, nil
 	}
 
-	if r.needsReconcile(*astraConnector, log) {
+	if r.needsReconcile(*astraConnector) {
 		log.Info("Actual state does not match desired state", "registered", astraConnector.Status.NatsSyncClient.Registered, "desiredSpec", astraConnector.Spec)
 		if !astraConnector.Spec.SkipPreCheck {
 			k8sUtil := k8s.NewK8sUtil(r.Client, r.Clientset, log)
@@ -204,14 +204,19 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 		if natsSyncClientStatus.AstraClusterId != "" {
 			log.Info(fmt.Sprintf("Updating CR status, clusterID: '%s'", natsSyncClientStatus.AstraClusterId))
 		}
-		_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
-		log.Info("assigning to status", "spec", astraConnector.Spec)
 		astraConnector.Status.ObservedSpec = astraConnector.Spec
-		err = r.Status().Update(ctx, astraConnector)
+		err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			err := r.Status().Update(ctx, astraConnector)
+			if err != nil {
+				return err
+			}
+			return nil
+		})
 		if err != nil {
 			log.Error(err, "Failed to update AstraConnector status")
 			return ctrl.Result{RequeueAfter: time.Minute * conf.Config.ErrorTimeout()}, err
 		}
+		_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
 		return ctrl.Result{}, nil
 
 	} else {
@@ -441,7 +446,7 @@ func (r *AstraConnectorController) validateAstraConnector(connector v1.AstraConn
 	return errors.New(fmt.Sprintf("Errors while validating AstraConnector CR: %s", strings.Join(fieldErrors, "; ")))
 }
 
-func (r *AstraConnectorController) needsReconcile(connector v1.AstraConnector, log logr.Logger) bool {
+func (r *AstraConnectorController) needsReconcile(connector v1.AstraConnector) bool {
 	// Ensure that the cluster has registered successfully
 	if connector.Status.NatsSyncClient.Registered != "true" {
 		return true
