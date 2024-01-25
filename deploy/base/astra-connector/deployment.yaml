@@ -24,8 +24,9 @@ spec:
             cpu: 10m
             memory: 1280Mi
         securityContext:
+          capabilities:
+            drop: ["ALL"]
           readOnlyRootFilesystem: true
           runAsNonRoot: true
-          runAsUser: 10001
-          runAsGroup: 20000
+          runAsUser: 1000740000
       serviceAccountName: astra-connector
