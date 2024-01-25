@@ -153,7 +153,7 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 			preCheckClient := precheck.NewPrecheckClient(log, k8sUtil)
 			errList := preCheckClient.Run()
 
-			acpInstalled, err := acp.CheckForACP(ctx, r.RESTClient())
+			acpInstalled, err := acp.CheckForACP(ctx, r.DynamicClient)
 			if err != nil {
 				errList = append(errList, err)
 			}

@@ -2,32 +2,39 @@ package acp
 
 import (
 	"context"
-	log "github.com/sirupsen/logrus"
-	"k8s.io/client-go/rest"
-	"time"
-
 	torcV1 "github.com/netapp/trident/operator/controllers/orchestrator/apis/netapp/v1"
+	log "github.com/sirupsen/logrus"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/dynamic"
 )
 
-func CheckForACP(ctx context.Context, client rest.Interface) (bool, error) {
-	torcResources := &torcV1.TridentOrchestratorList{}
-	err := client.Get().
-		Resource("tridentorchestrators").
-		Timeout(time.Second * 15).
-		Do(ctx).
-		Into(torcResources)
-	if err != nil {
-		return false, err
+func CheckForACP(ctx context.Context, client dynamic.Interface) (bool, error) {
+	gvr := schema.GroupVersionResource{
+		Group:    torcV1.GroupName,
+		Version:  torcV1.GroupVersion,
+		Resource: "tridentorchestrators",
 	}
 
-	if len(torcResources.Items) == 0 {
+	unstructuredList, err := client.Resource(gvr).Namespace("").List(ctx, metav1.ListOptions{})
+	torcResources := make([]*torcV1.TridentOrchestrator, len(unstructuredList.Items))
+	for i, tor := range unstructuredList.Items {
+		torcResources[i] = new(torcV1.TridentOrchestrator)
+		err = runtime.DefaultUnstructuredConverter.FromUnstructured(tor.Object, torcResources[i])
+		if err != nil {
+			return false, err
+		}
+	}
+
+	if len(torcResources) == 0 {
 		// This is likely the TORC was removed from the cluster
 		log.Debugf("No TORC resources could be found on cluster.")
 		return false, nil
-	} else if torcResources.Items[0].Status.ACPVersion == "" {
+	} else if torcResources[0].Status.ACPVersion == "" {
 		// ACP is either disabled, uninstalled, or failed
-		log.WithField("TORC Installation Status:", torcResources.Items[0].Status.Status).
-			Infof("Cluster Protection State is partial since ACP is not detected")
+		log.WithField("TORC Installation Status:", torcResources[0].Status.Status).
+			Infof("ACP is not detected")
 		return false, nil
 	}
 	return true, nil
