@@ -18,6 +18,10 @@ func CheckForACP(ctx context.Context, client dynamic.Interface) (bool, error) {
 	}
 
 	unstructuredList, err := client.Resource(gvr).Namespace("").List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return false, err
+	}
+
 	torcResources := make([]*torcV1.TridentOrchestrator, len(unstructuredList.Items))
 	for i, tor := range unstructuredList.Items {
 		torcResources[i] = new(torcV1.TridentOrchestrator)

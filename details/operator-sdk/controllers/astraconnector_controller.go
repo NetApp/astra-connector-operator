@@ -156,8 +156,7 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 			acpInstalled, err := acp.CheckForACP(ctx, r.DynamicClient)
 			if err != nil {
 				errList = append(errList, err)
-			}
-			if !acpInstalled {
+			} else if !acpInstalled {
 				errList = append(errList, errors.New("Trident (ACP) not installed."))
 			}
 
