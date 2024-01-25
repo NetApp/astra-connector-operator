@@ -7,6 +7,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"github.com/NetApp-Polaris/astra-connector-operator/app/acp"
 	"net/http"
 	"reflect"
 	"strings"
@@ -151,6 +152,15 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 			k8sUtil := k8s.NewK8sUtil(r.Client, r.Clientset, log)
 			preCheckClient := precheck.NewPrecheckClient(log, k8sUtil)
 			errList := preCheckClient.Run()
+
+			acpInstalled, err := acp.CheckForACP(ctx, r.RESTClient())
+			if err != nil {
+				errList = append(errList, err)
+			}
+			if !acpInstalled {
+				errList = append(errList, errors.New("Trident (ACP) not installed."))
+			}
+
 			if errList != nil {
 				errString := ""
 				for i, err := range errList {
