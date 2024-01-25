@@ -6,7 +6,6 @@ import (
 	"github.com/NetApp-Polaris/astra-connector-operator/app/conf"
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"reflect"
 	"time"
 
@@ -59,10 +58,6 @@ func (r *AstraConnectorController) deployResources(ctx context.Context, deployer
 		}
 
 		for _, kubeObject := range resourceList {
-			if r.isResourceReady(ctx, kubeObject) {
-				log.Info("Resource already exists and is ready, skipping...", "Resource", kubeObject)
-				continue
-			}
 			key := client.ObjectKeyFromObject(kubeObject)
 			statusMsg := fmt.Sprintf(funcList.createMessage, key.Namespace, key.Name)
 			log.Info(statusMsg)
@@ -136,7 +131,21 @@ func (r *AstraConnectorController) waitForResourceReady(ctx context.Context, kub
 				return fmt.Errorf("controller updated, requeue to handle changes")
 			}
 
-			isReady := r.isResourceReady(ctx, kubeObject)
+			err := r.Client.Get(ctx, client.ObjectKeyFromObject(kubeObject), kubeObject)
+			if err != nil {
+				log.Error(err, "Error getting resource", "namespace", kubeObject.GetNamespace(), "name", kubeObject.GetName())
+				continue
+			}
+
+			isReady := false
+			switch obj := kubeObject.(type) {
+			case *appsv1.Deployment:
+				isReady = obj.Status.ReadyReplicas == obj.Status.Replicas
+			case *appsv1.StatefulSet:
+				isReady = obj.Status.ReadyReplicas == obj.Status.Replicas && obj.Status.CurrentReplicas == obj.Status.Replicas
+			default:
+				isReady = true
+			}
 
 			if isReady {
 				log.Info("Resource is ready", "namespace", kubeObject.GetNamespace(), "name", kubeObject.GetName())
@@ -144,32 +153,6 @@ func (r *AstraConnectorController) waitForResourceReady(ctx context.Context, kub
 			}
 		}
 	}
-}
-
-// Checks if the kubeObject resource exists and is ready
-func (r *AstraConnectorController) isResourceReady(ctx context.Context, kubeObject client.Object) bool {
-	log := ctrllog.FromContext(ctx)
-	err := r.Client.Get(ctx, client.ObjectKeyFromObject(kubeObject), kubeObject)
-	if err != nil {
-		if k8serrors.IsNotFound(err) {
-			// On first reconcile the resource will not exist and therefore is not ready.
-			return false
-		}
-		log.Error(err, "Error getting resource", "namespace", kubeObject.GetNamespace(), "name", kubeObject.GetName())
-		return false
-	}
-
-	isReady := false
-	switch obj := kubeObject.(type) {
-	case *appsv1.Deployment:
-		isReady = obj.Status.ReadyReplicas == obj.Status.Replicas
-	case *appsv1.StatefulSet:
-		isReady = obj.Status.ReadyReplicas == obj.Status.Replicas && obj.Status.CurrentReplicas == obj.Status.Replicas
-	default:
-		isReady = true
-	}
-
-	return isReady
 }
 
 func (r *AstraConnectorController) formatError(ctx context.Context, astraConnector *installer.AstraConnector,
