@@ -146,8 +146,6 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 		return ctrl.Result{}, nil
 	}
 
-	log.Info("observedSpec", "spec", astraConnector.Status.ObservedSpec)
-	log.Info("actualSpec", "spec", astraConnector.Spec)
 	if r.needsReconcile(*astraConnector) {
 		log.Info("Actual state does not match desired state", "registered", astraConnector.Status.NatsSyncClient.Registered, "desiredSpec", astraConnector.Spec)
 		if !astraConnector.Spec.SkipPreCheck {
@@ -219,8 +217,6 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 			return ctrl.Result{RequeueAfter: time.Minute * conf.Config.ErrorTimeout()}, err
 		}
 		_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
-		_ = r.Get(ctx, req.NamespacedName, astraConnector)
-		log.Info("after update from get", "spec", astraConnector.Status.ObservedSpec)
 		return ctrl.Result{}, nil
 
 	} else {
