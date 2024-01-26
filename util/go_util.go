@@ -2,15 +2,10 @@ package util
 
 import (
 	"reflect"
-	"regexp"
 	"strings"
+
+	"k8s.io/apimachinery/pkg/util/validation"
 )
-
-// dns1123LabelMaxLength is the maximum possible length of a Kubernetes resource label.
-// https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#dns-subdomain-names
-const dns1123LabelMaxLength = 63
-
-var dns1123Regex = regexp.MustCompile(`^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`)
 
 // IsNil Return true if the interface value is actually nil, or the value is a nil pointer.
 // In golang an interface value is equal to nil only if both it's value and type are nil.
@@ -37,11 +32,8 @@ func GetJSONFieldName(sourceStruct interface{}, fieldPointer interface{}) string
 	return ""
 }
 
-// IsValidDNS1123Label checks if the supplied string satisfies Kubernetes label requirements.
+// IsValidDNS1123Label checks if the supplied string satisfies Kubernetes DNS label requirements.
 // https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#dns-label-names
 func IsValidDNS1123Label(label string) bool {
-	if len(label) > dns1123LabelMaxLength {
-		return false
-	}
-	return dns1123Regex.MatchString(label)
+	return len(validation.IsDNS1123Label(label)) == 0
 }
