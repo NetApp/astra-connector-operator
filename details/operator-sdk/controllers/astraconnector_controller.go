@@ -51,11 +51,11 @@ type AstraConnectorController struct {
 	DynamicClient dynamic.Interface
 }
 
-//+kubebuilder:rbac:groups=astra.netapp.io,resources=astraconnectors,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=astra.netapp.io,resources=astraconnectors/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=astra.netapp.io,resources=astraconnectors/finalizers,verbs=update
-//+kubebuilder:rbac:groups=*,resources=*,verbs=*
-//+kubebuilder:rbac:groups="";apiextensions.k8s.io;apps;autoscaling;batch;crd.projectcalico.org;extensions;networking.k8s.io;policy;rbac.authorization.k8s.io;security.openshift.io;snapshot.storage.k8s.io;storage.k8s.io;trident.netapp.io,resources=configmaps;cronjobs;customresourcedefinitions;daemonsets;deployments;horizontalpodautoscalers;ingresses;jobs;namespaces;networkpolicies;persistentvolumeclaims;poddisruptionbudgets;pods;podtemplates;podsecuritypolicies;replicasets;replicationcontrollers;replicationcontrollers/scale;rolebindings;roles;secrets;serviceaccounts;services;statefulsets;storageclasses;csidrivers;csinodes;securitycontextconstraints;tridentmirrorrelationships;tridentsnapshotinfos;tridentvolumes;volumesnapshots;volumesnapshotcontents;tridentversions;tridentbackends;tridentnodes,verbs=get;list;watch;delete;use;create;update;patch
+// +kubebuilder:rbac:groups=astra.netapp.io,resources=astraconnectors,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=astra.netapp.io,resources=astraconnectors/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=astra.netapp.io,resources=astraconnectors/finalizers,verbs=update
+// +kubebuilder:rbac:groups=*,resources=*,verbs=*
+// +kubebuilder:rbac:groups="";apiextensions.k8s.io;apps;autoscaling;batch;crd.projectcalico.org;extensions;networking.k8s.io;policy;rbac.authorization.k8s.io;security.openshift.io;snapshot.storage.k8s.io;storage.k8s.io;trident.netapp.io,resources=configmaps;cronjobs;customresourcedefinitions;daemonsets;deployments;horizontalpodautoscalers;ingresses;jobs;namespaces;networkpolicies;persistentvolumeclaims;poddisruptionbudgets;pods;podtemplates;podsecuritypolicies;replicasets;replicationcontrollers;replicationcontrollers/scale;rolebindings;roles;secrets;serviceaccounts;services;statefulsets;storageclasses;csidrivers;csinodes;securitycontextconstraints;tridentmirrorrelationships;tridentsnapshotinfos;tridentvolumes;volumesnapshots;volumesnapshotcontents;tridentversions;tridentbackends;tridentnodes,verbs=get;list;watch;delete;use;create;update;patch
 // +kubebuilder:rbac:urls=/metrics,verbs=get;list;watch
 
 func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -87,8 +87,12 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 	// Validate AstraConnector CR for any errors
 	err = r.validateAstraConnector(*astraConnector, log)
 	if err != nil {
+		// Error validating the connector object. Do not requeue and update the connector status.
+		log.Error(err, FailedAstraConnectorValidation)
+		natsSyncClientStatus.Status = FailedAstraConnectorValidation
+		_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
 		// Do not requeue. This is a user input error
-		return ctrl.Result{}, err
+		return ctrl.Result{Requeue: false}, fmt.Errorf("%s; %w", natsSyncClientStatus.Status, err)
 	}
 
 	// name of our custom finalizer
