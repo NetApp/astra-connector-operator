@@ -22,9 +22,10 @@ const (
 	ErrorCreateRoles               = "Error creating Roles  %s/%s"
 	ErrorCreateClusterRoles        = "Error creating ClusterRoles %s/%s"
 
-	FailedFinalizerAdd      = "Failed to add finalizer"
-	FailedFinalizerRemove   = "Failed to remove finalizer"
-	FailedAstraConnectorGet = "Failed to get AstraConnector"
+	FailedFinalizerAdd             = "Failed to add finalizer"
+	FailedFinalizerRemove          = "Failed to remove finalizer"
+	FailedAstraConnectorGet        = "Failed to get AstraConnector"
+	FailedAstraConnectorValidation = "Failed to validate AstraConnector"
 
 	FailedLocationIDGet = "Failed to get the locationID from ConfigMap"
 	EmptyLocationIDGet  = "Got an empty location ID from ConfigMap"

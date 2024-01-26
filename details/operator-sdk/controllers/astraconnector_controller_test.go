@@ -61,7 +61,8 @@ var _ = Describe("Astraconnector controller", func() {
 		AfterEach(func() {
 			By("Removing the finalizer from the AstraConnector custom resource")
 			astraConnector := &v1.AstraConnector{}
-			err := k8sClient.Get(ctx, types.NamespacedName{Name: connectorName, Namespace: namespace.Name}, astraConnector)
+			err := k8sClient.Get(ctx, types.NamespacedName{Name: connectorName, Namespace: namespace.Name},
+				astraConnector)
 			if err == nil {
 				astraConnector.Finalizers = nil
 				Expect(k8sClient.Update(ctx, astraConnector)).To(Succeed())
@@ -90,6 +91,9 @@ var _ = Describe("Astraconnector controller", func() {
 						Namespace: namespace.Name,
 					},
 					Spec: v1.AstraConnectorSpec{
+						Astra: v1.Astra{
+							ClusterName: "managed-cluster",
+						},
 						AutoSupport: v1.AutoSupport{
 							Enrolled: false,
 						},
