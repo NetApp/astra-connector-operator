@@ -190,10 +190,7 @@ func (r *AstraConnectorController) createASUPCR(ctx context.Context, astraConnec
 	}
 	// Define the MutateFn function
 	mutateFn := func() error {
-		// TODO https://jira.ngage.netapp.com/browse/ASTRACTL-27555
-		// Apply any desired changes to the deployment object here
-		// For example, you can update the environment variables, container image, etc.
-		// want to remove duplicated code like each deployer setting image and secret can be do once here
+		cr.Object["spec"].(map[string]interface{})["enabled"] = astraConnector.Spec.AutoSupport.Enrolled
 		return nil
 	}
 	result, err := k8sUtil.CreateOrUpdateResource(ctx, cr, astraConnector, mutateFn)

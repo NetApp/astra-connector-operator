@@ -242,7 +242,28 @@ func (n NeptuneClientDeployerV2) GetDeploymentObjects(m *v1.AstraConnector, ctx 
 	}
 
 	deps = append(deps, deployment)
-	return deps, model.NonMutateFn, nil
+
+	mutateFunc := func() error {
+		// Get the containers
+		containers := deployment.Spec.Template.Spec.Containers
+
+		for i, container := range containers {
+			if container.Name == "manager" {
+				for j, envVar := range container.Env {
+					if envVar.Name == "NEPTUNE_AUTOSUPPORT_URL" {
+						containers[i].Env[j].Value = m.Spec.AutoSupport.URL
+					}
+				}
+			}
+		}
+
+		// Update the containers in the deployment
+		deployment.Spec.Template.Spec.Containers = containers
+
+		return nil
+	}
+
+	return deps, mutateFunc, nil
 }
 
 func getNeptuneEnvVars(imageRegistry, containerImage, pullSecret, asupUrl string, mLabels map[string]string) []corev1.EnvVar {
