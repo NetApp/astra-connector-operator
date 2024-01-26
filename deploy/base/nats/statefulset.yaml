@@ -36,10 +36,11 @@ spec:
         - name: pid
           mountPath: /var/run/nats
         securityContext:
+          capabilities:
+            drop: ["ALL"]
           readOnlyRootFilesystem: true
           runAsNonRoot: true
-          runAsUser: 10001
-          runAsGroup: 20000
+          runAsUser: 1000740000
       volumes:
       - name: nats-config
         configMap:

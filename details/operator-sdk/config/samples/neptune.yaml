@@ -855,8 +855,11 @@ spec:
                     description: ResourceMatchers is a list of matchers where each matcher matches one or more resources
                     items:
                       properties:
-                        groupKind:
-                          description: GroupKind kubernetes group kind of the resource that has to be matched
+                        group:
+                          description: Group of the kubernetes resource that has to be matched
+                          type: string
+                        kind:
+                          description: Kind of the kubernetes resource that has to be matched
                           type: string
                         labelSelectors:
                           description: LabelSelectors  is used to match resource(s) based on the metadata.labels field of the kubernetes resource
@@ -876,8 +879,6 @@ spec:
                         version:
                           description: Version of the kubernetes resource that has to be matched.
                           type: string
-                      required:
-                      - groupKind
                       type: object
                     type: array
                   resourceSelectionCriteria:
@@ -1028,8 +1029,11 @@ spec:
                     description: ResourceMatchers is a list of matchers where each matcher matches one or more resources
                     items:
                       properties:
-                        groupKind:
-                          description: GroupKind kubernetes group kind of the resource that has to be matched
+                        group:
+                          description: Group of the kubernetes resource that has to be matched
+                          type: string
+                        kind:
+                          description: Kind of the kubernetes resource that has to be matched
                           type: string
                         labelSelectors:
                           description: LabelSelectors  is used to match resource(s) based on the metadata.labels field of the kubernetes resource
@@ -1049,8 +1053,6 @@ spec:
                         version:
                           description: Version of the kubernetes resource that has to be matched.
                           type: string
-                      required:
-                      - groupKind
                       type: object
                     type: array
                   resourceSelectionCriteria:
@@ -1779,8 +1781,11 @@ spec:
                     description: ResourceMatchers is a list of matchers where each matcher matches one or more resources
                     items:
                       properties:
-                        groupKind:
-                          description: GroupKind kubernetes group kind of the resource that has to be matched
+                        group:
+                          description: Group of the kubernetes resource that has to be matched
+                          type: string
+                        kind:
+                          description: Kind of the kubernetes resource that has to be matched
                           type: string
                         labelSelectors:
                           description: LabelSelectors  is used to match resource(s) based on the metadata.labels field of the kubernetes resource
@@ -1800,8 +1805,6 @@ spec:
                         version:
                           description: Version of the kubernetes resource that has to be matched.
                           type: string
-                      required:
-                      - groupKind
                       type: object
                     type: array
                   resourceSelectionCriteria:
@@ -2365,8 +2368,11 @@ spec:
                     description: ResourceMatchers is a list of matchers where each matcher matches one or more resources
                     items:
                       properties:
-                        groupKind:
-                          description: GroupKind kubernetes group kind of the resource that has to be matched
+                        group:
+                          description: Group of the kubernetes resource that has to be matched
+                          type: string
+                        kind:
+                          description: Kind of the kubernetes resource that has to be matched
                           type: string
                         labelSelectors:
                           description: LabelSelectors  is used to match resource(s) based on the metadata.labels field of the kubernetes resource
@@ -2386,8 +2392,6 @@ spec:
                         version:
                           description: Version of the kubernetes resource that has to be matched.
                           type: string
-                      required:
-                      - groupKind
                       type: object
                     type: array
                   resourceSelectionCriteria:
@@ -2524,8 +2528,11 @@ spec:
                     description: ResourceMatchers is a list of matchers where each matcher matches one or more resources
                     items:
                       properties:
-                        groupKind:
-                          description: GroupKind kubernetes group kind of the resource that has to be matched
+                        group:
+                          description: Group of the kubernetes resource that has to be matched
+                          type: string
+                        kind:
+                          description: Kind of the kubernetes resource that has to be matched
                           type: string
                         labelSelectors:
                           description: LabelSelectors  is used to match resource(s) based on the metadata.labels field of the kubernetes resource
@@ -2545,8 +2552,6 @@ spec:
                         version:
                           description: Version of the kubernetes resource that has to be matched.
                           type: string
-                      required:
-                      - groupKind
                       type: object
                     type: array
                   resourceSelectionCriteria:
@@ -3806,8 +3811,11 @@ spec:
                     description: ResourceMatchers is a list of matchers where each matcher matches one or more resources
                     items:
                       properties:
-                        groupKind:
-                          description: GroupKind kubernetes group kind of the resource that has to be matched
+                        group:
+                          description: Group of the kubernetes resource that has to be matched
+                          type: string
+                        kind:
+                          description: Kind of the kubernetes resource that has to be matched
                           type: string
                         labelSelectors:
                           description: LabelSelectors  is used to match resource(s) based on the metadata.labels field of the kubernetes resource
@@ -3827,8 +3835,6 @@ spec:
                         version:
                           description: Version of the kubernetes resource that has to be matched.
                           type: string
-                      required:
-                      - groupKind
                       type: object
                     type: array
                   resourceSelectionCriteria:
@@ -3977,8 +3983,11 @@ spec:
                     description: ResourceMatchers is a list of matchers where each matcher matches one or more resources
                     items:
                       properties:
-                        groupKind:
-                          description: GroupKind kubernetes group kind of the resource that has to be matched
+                        group:
+                          description: Group of the kubernetes resource that has to be matched
+                          type: string
+                        kind:
+                          description: Kind of the kubernetes resource that has to be matched
                           type: string
                         labelSelectors:
                           description: LabelSelectors  is used to match resource(s) based on the metadata.labels field of the kubernetes resource
@@ -3998,8 +4007,6 @@ spec:
                         version:
                           description: Version of the kubernetes resource that has to be matched.
                           type: string
-                      required:
-                      - groupKind
                       type: object
                     type: array
                   resourceSelectionCriteria:

@@ -82,7 +82,8 @@ func (r *AstraConnectorController) deployConnector(ctx context.Context,
 			log.Info("natsSyncClient already registered", "astraConnectorID", astraConnectorID)
 		} else {
 			log.Info("Registering natsSyncClient")
-			astraConnectorID, errorReason, err := registerUtil.RegisterNatsSyncClient()
+			var errorReason string
+			astraConnectorID, errorReason, err = registerUtil.RegisterNatsSyncClient()
 			if err != nil {
 				log.Error(err, FailedRegisterNSClient)
 				natsSyncClientStatus.Status = errorReason

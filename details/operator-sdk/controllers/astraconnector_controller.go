@@ -7,6 +7,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"github.com/NetApp-Polaris/astra-connector-operator/app/acp"
 	"net/http"
 	"reflect"
 	"strings"
@@ -72,14 +73,14 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 			// Return and don't requeue
 			log.Info("AstraConnector resource not found. Ignoring since object must be deleted")
-			return ctrl.Result{Requeue: false}, nil
+			return ctrl.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
 		log.Error(err, FailedAstraConnectorGet)
 		natsSyncClientStatus.Status = FailedAstraConnectorGet
 		_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
 		// Do not requeue
-		return ctrl.Result{Requeue: false}, err
+		return ctrl.Result{}, err
 	}
 	natsSyncClientStatus.AstraClusterId = astraConnector.Status.NatsSyncClient.AstraClusterId
 
@@ -87,7 +88,7 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 	err = r.validateAstraConnector(*astraConnector, log)
 	if err != nil {
 		// Do not requeue. This is a user input error
-		return ctrl.Result{Requeue: false}, err
+		return ctrl.Result{}, err
 	}
 
 	// name of our custom finalizer
@@ -142,15 +143,23 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 
 		// Stop reconciliation as the item is being deleted
 		// Do not requeue
-		return ctrl.Result{Requeue: false}, nil
+		return ctrl.Result{}, nil
 	}
 
-	if r.needsReconcile(*astraConnector, log) {
+	if r.needsReconcile(*astraConnector) {
 		log.Info("Actual state does not match desired state", "registered", astraConnector.Status.NatsSyncClient.Registered, "desiredSpec", astraConnector.Spec)
 		if !astraConnector.Spec.SkipPreCheck {
 			k8sUtil := k8s.NewK8sUtil(r.Client, r.Clientset, log)
 			preCheckClient := precheck.NewPrecheckClient(log, k8sUtil)
 			errList := preCheckClient.Run()
+
+			acpInstalled, err := acp.CheckForACP(ctx, r.DynamicClient)
+			if err != nil {
+				errList = append(errList, err)
+			} else if !acpInstalled {
+				errList = append(errList, errors.New("Trident (ACP) not installed."))
+			}
+
 			if errList != nil {
 				errString := ""
 				for i, err := range errList {
@@ -195,19 +204,24 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 		if natsSyncClientStatus.AstraClusterId != "" {
 			log.Info(fmt.Sprintf("Updating CR status, clusterID: '%s'", natsSyncClientStatus.AstraClusterId))
 		}
-		_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
-		log.Info("assignging to status", "spec", astraConnector.Spec)
 		astraConnector.Status.ObservedSpec = astraConnector.Spec
-		err = r.Status().Update(ctx, astraConnector)
+		err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			err := r.Status().Update(ctx, astraConnector)
+			if err != nil {
+				return err
+			}
+			return nil
+		})
 		if err != nil {
 			log.Error(err, "Failed to update AstraConnector status")
 			return ctrl.Result{RequeueAfter: time.Minute * conf.Config.ErrorTimeout()}, err
 		}
-		return ctrl.Result{Requeue: false}, nil
+		_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
+		return ctrl.Result{}, nil
 
 	} else {
 		log.Info("Actual state matches desired state", "registered", astraConnector.Status.NatsSyncClient.Registered, "desiredSpec", astraConnector.Spec)
-		return ctrl.Result{Requeue: false}, nil
+		return ctrl.Result{}, nil
 	}
 }
 
@@ -432,7 +446,7 @@ func (r *AstraConnectorController) validateAstraConnector(connector v1.AstraConn
 	return errors.New(fmt.Sprintf("Errors while validating AstraConnector CR: %s", strings.Join(fieldErrors, "; ")))
 }
 
-func (r *AstraConnectorController) needsReconcile(connector v1.AstraConnector, log logr.Logger) bool {
+func (r *AstraConnectorController) needsReconcile(connector v1.AstraConnector) bool {
 	// Ensure that the cluster has registered successfully
 	if connector.Status.NatsSyncClient.Registered != "true" {
 		return true
