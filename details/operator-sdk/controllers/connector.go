@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -186,6 +187,19 @@ func (r *AstraConnectorController) createASUPCR(ctx context.Context, astraConnec
 			},
 		},
 	}
+	// Define the MutateFn function
+	mutateFn := func() error {
+		// TODO https://jira.ngage.netapp.com/browse/ASTRACTL-27555
+		// Apply any desired changes to the deployment object here
+		// For example, you can update the environment variables, container image, etc.
+		// want to remove duplicated code like each deployer setting image and secret can be do once here
+		return nil
+	}
+	result, err := k8sUtil.CreateOrUpdateResource(ctx, cr, astraConnector, mutateFn)
+	if err != nil {
+		return err
+	}
 
-	return k8sUtil.CreateOrUpdateResource(ctx, cr, astraConnector)
+	log.Info(fmt.Sprintf("Successfully %s AutoSupportBundleSchedule", result))
+	return nil
 }

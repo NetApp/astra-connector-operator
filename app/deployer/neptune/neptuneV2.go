@@ -12,6 +12,7 @@ import (
 	"maps"
 	"os"
 	"path/filepath"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -37,7 +38,7 @@ func NewNeptuneClientDeployerV2() model.Deployer {
 	return &NeptuneClientDeployerV2{}
 }
 
-func (n NeptuneClientDeployerV2) GetDeploymentObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, error) {
+func (n NeptuneClientDeployerV2) GetDeploymentObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
 	var deps []client.Object
 	log := ctrllog.FromContext(ctx)
 
@@ -63,7 +64,7 @@ func (n NeptuneClientDeployerV2) GetDeploymentObjects(m *v1.AstraConnector, ctx 
 		filePath := filepath.Join(rootDir, "common/neptune_manager_tag.txt")
 		imageBytes, err := os.ReadFile(filePath)
 		if err != nil {
-			return nil, errors.Wrap(err, "error reading neptune manager tag")
+			return nil, nil, errors.Wrap(err, "error reading neptune manager tag")
 		}
 
 		containerImage = string(imageBytes)
@@ -241,7 +242,7 @@ func (n NeptuneClientDeployerV2) GetDeploymentObjects(m *v1.AstraConnector, ctx 
 	}
 
 	deps = append(deps, deployment)
-	return deps, nil
+	return deps, model.NonMutateFn, nil
 }
 
 func getNeptuneEnvVars(imageRegistry, containerImage, pullSecret, asupUrl string, mLabels map[string]string) []corev1.EnvVar {
@@ -308,40 +309,40 @@ func getNeptuneEnvVars(imageRegistry, containerImage, pullSecret, asupUrl string
 	return envVars
 }
 
-func (n NeptuneClientDeployerV2) GetStatefulSetObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, error) {
-	return nil, nil
+func (n NeptuneClientDeployerV2) GetStatefulSetObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
+	return nil, model.NonMutateFn, nil
 }
 
-func (n NeptuneClientDeployerV2) GetServiceObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, error) {
-	return nil, nil
+func (n NeptuneClientDeployerV2) GetServiceObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
+	return nil, model.NonMutateFn, nil
 }
 
-func (n NeptuneClientDeployerV2) GetConfigMapObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, error) {
-	return nil, nil
+func (n NeptuneClientDeployerV2) GetConfigMapObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
+	return nil, model.NonMutateFn, nil
 }
 
-func (n NeptuneClientDeployerV2) GetServiceAccountObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, error) {
+func (n NeptuneClientDeployerV2) GetServiceAccountObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
 	sa := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      common.NeptuneName,
 			Namespace: m.Namespace,
 		},
 	}
-	return []client.Object{sa}, nil
+	return []client.Object{sa}, model.NonMutateFn, nil
 }
 
-func (n NeptuneClientDeployerV2) GetRoleObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, error) {
-	return nil, nil
+func (n NeptuneClientDeployerV2) GetRoleObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
+	return nil, model.NonMutateFn, nil
 }
 
-func (n NeptuneClientDeployerV2) GetClusterRoleObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, error) {
-	return nil, nil
+func (n NeptuneClientDeployerV2) GetClusterRoleObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
+	return nil, model.NonMutateFn, nil
 }
 
-func (n NeptuneClientDeployerV2) GetRoleBindingObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, error) {
-	return nil, nil
+func (n NeptuneClientDeployerV2) GetRoleBindingObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
+	return nil, model.NonMutateFn, nil
 }
 
-func (n NeptuneClientDeployerV2) GetClusterRoleBindingObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, error) {
-	return nil, nil
+func (n NeptuneClientDeployerV2) GetClusterRoleBindingObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
+	return nil, model.NonMutateFn, nil
 }

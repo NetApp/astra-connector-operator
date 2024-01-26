@@ -36,7 +36,7 @@ func TestNatsGetStatefulSetObjects(t *testing.T) {
 		},
 	}
 
-	objects, err := deployer.GetStatefulSetObjects(m, ctx)
+	objects, _, err := deployer.GetStatefulSetObjects(m, ctx)
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(objects))
 
@@ -67,7 +67,7 @@ func TestNatsGetStatefulSetObjectsUseDefaults(t *testing.T) {
 		},
 	}
 
-	objects, err := deployer.GetStatefulSetObjects(m, ctx)
+	objects, _, err := deployer.GetStatefulSetObjects(m, ctx)
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(objects))
 
@@ -87,7 +87,7 @@ func TestNatsGetConfigMapObjects(t *testing.T) {
 
 	m := DummyAstraConnector()
 
-	objects, err := deployer.GetConfigMapObjects(&m, ctx)
+	objects, _, err := deployer.GetConfigMapObjects(&m, ctx)
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(objects))
 
@@ -107,7 +107,7 @@ func TestNatsGetServiceAccountObjects(t *testing.T) {
 
 	m := DummyAstraConnector()
 
-	objects, err := deployer.GetServiceAccountObjects(&m, ctx)
+	objects, _, err := deployer.GetServiceAccountObjects(&m, ctx)
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(objects))
 
@@ -125,7 +125,7 @@ func TestNatsGetServiceObjects(t *testing.T) {
 
 	m := DummyAstraConnector()
 
-	objects, err := deployer.GetServiceObjects(&m, ctx)
+	objects, _, err := deployer.GetServiceObjects(&m, ctx)
 	assert.NoError(t, err)
 	assert.Equal(t, 2, len(objects))
 
@@ -156,23 +156,28 @@ func TestNatsK8sObjectsNotCreated(t *testing.T) {
 
 	m := DummyAstraConnector()
 
-	objects, err := deployer.GetDeploymentObjects(&m, ctx)
+	objects, fn, err := deployer.GetDeploymentObjects(&m, ctx)
 	assert.Nil(t, objects)
+	assert.NotNil(t, fn)
 	assert.Nil(t, err)
 
-	objects, err = deployer.GetRoleObjects(&m, ctx)
+	objects, fn, err = deployer.GetRoleObjects(&m, ctx)
 	assert.NotNil(t, objects)
+	assert.NotNil(t, fn)
 	assert.Nil(t, err)
 
-	objects, err = deployer.GetRoleBindingObjects(&m, ctx)
+	objects, fn, err = deployer.GetRoleBindingObjects(&m, ctx)
 	assert.NotNil(t, objects)
+	assert.NotNil(t, fn)
 	assert.Nil(t, err)
 
-	objects, err = deployer.GetClusterRoleObjects(&m, ctx)
+	objects, fn, err = deployer.GetClusterRoleObjects(&m, ctx)
 	assert.Nil(t, objects)
+	assert.NotNil(t, fn)
 	assert.Nil(t, err)
 
-	objects, err = deployer.GetClusterRoleBindingObjects(&m, ctx)
+	objects, fn, err = deployer.GetClusterRoleBindingObjects(&m, ctx)
 	assert.Nil(t, objects)
+	assert.NotNil(t, fn)
 	assert.Nil(t, err)
 }

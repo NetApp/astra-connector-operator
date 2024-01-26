@@ -7,6 +7,7 @@ import (
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	"reflect"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"time"
 
 	"github.com/pkg/errors"
@@ -19,7 +20,7 @@ import (
 )
 
 // getK8sResources of function type
-type getK8sResources func(model.Deployer, *installer.AstraConnector, context.Context) ([]client.Object, error)
+type getK8sResources func(model.Deployer, *installer.AstraConnector, context.Context) ([]client.Object, controllerutil.MutateFn, error)
 
 type createResourceParams struct {
 	getResource   getK8sResources
@@ -49,7 +50,7 @@ func (r *AstraConnectorController) deployResources(ctx context.Context, deployer
 
 	for _, funcList := range resources {
 
-		resourceList, err := funcList.getResource(deployer, astraConnector, ctx)
+		resourceList, mutateFunc, err := funcList.getResource(deployer, astraConnector, ctx)
 		if err != nil {
 			return errors.Wrapf(err, "Unable to get resource")
 		}
@@ -64,7 +65,7 @@ func (r *AstraConnectorController) deployResources(ctx context.Context, deployer
 			natsSyncClientStatus.Status = statusMsg
 			_ = r.updateAstraConnectorStatus(ctx, astraConnector, *natsSyncClientStatus)
 
-			err = k8sUtil.CreateOrUpdateResource(ctx, kubeObject, astraConnector)
+			result, err := k8sUtil.CreateOrUpdateResource(ctx, kubeObject, astraConnector, mutateFunc)
 			if err != nil {
 				return r.formatError(ctx, astraConnector, log, funcList.errorMessage, key.Namespace, key.Name, err, natsSyncClientStatus)
 			} else {
@@ -74,7 +75,7 @@ func (r *AstraConnectorController) deployResources(ctx context.Context, deployer
 				if err != nil {
 					return r.formatError(ctx, astraConnector, log, funcList.errorMessage, key.Namespace, key.Name, err, natsSyncClientStatus)
 				}
-				log.Info("Successfully deployed resources")
+				log.Info(fmt.Sprintf("Successfully %s resources", result))
 			}
 		}
 
@@ -92,7 +93,7 @@ func (r *AstraConnectorController) deleteClusterScopedResources(ctx context.Cont
 			continue
 		}
 
-		resourceList, _ := funcList.getResource(deployer, astraConnector, ctx)
+		resourceList, _, _ := funcList.getResource(deployer, astraConnector, ctx)
 		if resourceList == nil {
 			continue
 		}

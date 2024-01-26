@@ -7,6 +7,8 @@ import (
 
 	client "sigs.k8s.io/controller-runtime/pkg/client"
 
+	controllerutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
 	kubernetes "k8s.io/client-go/kubernetes"
 
 	mock "github.com/stretchr/testify/mock"
@@ -17,18 +19,25 @@ type K8sUtilInterface struct {
 	mock.Mock
 }
 
-// CreateOrUpdateResource provides a mock function with given fields: _a0, _a1, _a2
-func (_m *K8sUtilInterface) CreateOrUpdateResource(_a0 context.Context, _a1 client.Object, _a2 client.Object) error {
-	ret := _m.Called(_a0, _a1, _a2)
+// CreateOrUpdateResource provides a mock function with given fields: _a0, _a1, _a2, _a3
+func (_m *K8sUtilInterface) CreateOrUpdateResource(_a0 context.Context, _a1 client.Object, _a2 client.Object, _a3 controllerutil.MutateFn) (string, error) {
+	ret := _m.Called(_a0, _a1, _a2, _a3)
 
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, client.Object, client.Object) error); ok {
-		r0 = rf(_a0, _a1, _a2)
+	var r0 string
+	if rf, ok := ret.Get(0).(func(context.Context, client.Object, client.Object, controllerutil.MutateFn) string); ok {
+		r0 = rf(_a0, _a1, _a2, _a3)
 	} else {
-		r0 = ret.Error(0)
+		r0 = ret.Get(0).(string)
 	}
 
-	return r0
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, client.Object, client.Object, controllerutil.MutateFn) error); ok {
+		r1 = rf(_a0, _a1, _a2, _a3)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
 }
 
 // DeleteResource provides a mock function with given fields: _a0, _a1
