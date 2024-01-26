@@ -46,12 +46,13 @@ func (c *ClusterTypeChecker) DetermineClusterType() string {
 		return FlavorOpenShift
 	}
 
-	if c.isRKEFlavor() {
-		return FlavorRKE
-	}
-
+	// RKE2 check must come before the RKE check
 	if c.isRKE2Flavor() {
 		return FlavorRKE2
+	}
+
+	if c.isRKEFlavor() {
+		return FlavorRKE
 	}
 
 	if c.isTanzuFlavor() {
