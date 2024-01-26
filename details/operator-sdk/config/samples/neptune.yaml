@@ -9,7 +9,7 @@ metadata:
     app.kubernetes.io/name: namespace
     app.kubernetes.io/part-of: neptune
     control-plane: controller-manager
-  name: neptune-system
+  name: astra-connector
 ---
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
@@ -855,8 +855,11 @@ spec:
                     description: ResourceMatchers is a list of matchers where each matcher matches one or more resources
                     items:
                       properties:
-                        groupKind:
-                          description: GroupKind kubernetes group kind of the resource that has to be matched
+                        group:
+                          description: Group of the kubernetes resource that has to be matched
+                          type: string
+                        kind:
+                          description: Kind of the kubernetes resource that has to be matched
                           type: string
                         labelSelectors:
                           description: LabelSelectors  is used to match resource(s) based on the metadata.labels field of the kubernetes resource
@@ -876,8 +879,6 @@ spec:
                         version:
                           description: Version of the kubernetes resource that has to be matched.
                           type: string
-                      required:
-                      - groupKind
                       type: object
                     type: array
                   resourceSelectionCriteria:
@@ -1028,8 +1029,11 @@ spec:
                     description: ResourceMatchers is a list of matchers where each matcher matches one or more resources
                     items:
                       properties:
-                        groupKind:
-                          description: GroupKind kubernetes group kind of the resource that has to be matched
+                        group:
+                          description: Group of the kubernetes resource that has to be matched
+                          type: string
+                        kind:
+                          description: Kind of the kubernetes resource that has to be matched
                           type: string
                         labelSelectors:
                           description: LabelSelectors  is used to match resource(s) based on the metadata.labels field of the kubernetes resource
@@ -1049,8 +1053,6 @@ spec:
                         version:
                           description: Version of the kubernetes resource that has to be matched.
                           type: string
-                      required:
-                      - groupKind
                       type: object
                     type: array
                   resourceSelectionCriteria:
@@ -1779,8 +1781,11 @@ spec:
                     description: ResourceMatchers is a list of matchers where each matcher matches one or more resources
                     items:
                       properties:
-                        groupKind:
-                          description: GroupKind kubernetes group kind of the resource that has to be matched
+                        group:
+                          description: Group of the kubernetes resource that has to be matched
+                          type: string
+                        kind:
+                          description: Kind of the kubernetes resource that has to be matched
                           type: string
                         labelSelectors:
                           description: LabelSelectors  is used to match resource(s) based on the metadata.labels field of the kubernetes resource
@@ -1800,8 +1805,6 @@ spec:
                         version:
                           description: Version of the kubernetes resource that has to be matched.
                           type: string
-                      required:
-                      - groupKind
                       type: object
                     type: array
                   resourceSelectionCriteria:
@@ -2365,8 +2368,11 @@ spec:
                     description: ResourceMatchers is a list of matchers where each matcher matches one or more resources
                     items:
                       properties:
-                        groupKind:
-                          description: GroupKind kubernetes group kind of the resource that has to be matched
+                        group:
+                          description: Group of the kubernetes resource that has to be matched
+                          type: string
+                        kind:
+                          description: Kind of the kubernetes resource that has to be matched
                           type: string
                         labelSelectors:
                           description: LabelSelectors  is used to match resource(s) based on the metadata.labels field of the kubernetes resource
@@ -2386,8 +2392,6 @@ spec:
                         version:
                           description: Version of the kubernetes resource that has to be matched.
                           type: string
-                      required:
-                      - groupKind
                       type: object
                     type: array
                   resourceSelectionCriteria:
@@ -2524,8 +2528,11 @@ spec:
                     description: ResourceMatchers is a list of matchers where each matcher matches one or more resources
                     items:
                       properties:
-                        groupKind:
-                          description: GroupKind kubernetes group kind of the resource that has to be matched
+                        group:
+                          description: Group of the kubernetes resource that has to be matched
+                          type: string
+                        kind:
+                          description: Kind of the kubernetes resource that has to be matched
                           type: string
                         labelSelectors:
                           description: LabelSelectors  is used to match resource(s) based on the metadata.labels field of the kubernetes resource
@@ -2545,8 +2552,6 @@ spec:
                         version:
                           description: Version of the kubernetes resource that has to be matched.
                           type: string
-                      required:
-                      - groupKind
                       type: object
                     type: array
                   resourceSelectionCriteria:
@@ -3806,8 +3811,11 @@ spec:
                     description: ResourceMatchers is a list of matchers where each matcher matches one or more resources
                     items:
                       properties:
-                        groupKind:
-                          description: GroupKind kubernetes group kind of the resource that has to be matched
+                        group:
+                          description: Group of the kubernetes resource that has to be matched
+                          type: string
+                        kind:
+                          description: Kind of the kubernetes resource that has to be matched
                           type: string
                         labelSelectors:
                           description: LabelSelectors  is used to match resource(s) based on the metadata.labels field of the kubernetes resource
@@ -3827,8 +3835,6 @@ spec:
                         version:
                           description: Version of the kubernetes resource that has to be matched.
                           type: string
-                      required:
-                      - groupKind
                       type: object
                     type: array
                   resourceSelectionCriteria:
@@ -3977,8 +3983,11 @@ spec:
                     description: ResourceMatchers is a list of matchers where each matcher matches one or more resources
                     items:
                       properties:
-                        groupKind:
-                          description: GroupKind kubernetes group kind of the resource that has to be matched
+                        group:
+                          description: Group of the kubernetes resource that has to be matched
+                          type: string
+                        kind:
+                          description: Kind of the kubernetes resource that has to be matched
                           type: string
                         labelSelectors:
                           description: LabelSelectors  is used to match resource(s) based on the metadata.labels field of the kubernetes resource
@@ -3998,8 +4007,6 @@ spec:
                         version:
                           description: Version of the kubernetes resource that has to be matched.
                           type: string
-                      required:
-                      - groupKind
                       type: object
                     type: array
                   resourceSelectionCriteria:
@@ -4387,7 +4394,7 @@ metadata:
     app.kubernetes.io/name: serviceaccount
     app.kubernetes.io/part-of: neptune
   name: neptune-autosupportbundle
-  namespace: neptune-system
+  namespace: astra-connector
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -4400,7 +4407,7 @@ metadata:
     app.kubernetes.io/name: serviceaccount
     app.kubernetes.io/part-of: neptune
   name: neptune-controller-manager
-  namespace: neptune-system
+  namespace: astra-connector
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -4412,7 +4419,7 @@ metadata:
     app.kubernetes.io/name: serviceaccount
     app.kubernetes.io/part-of: neptune
   name: neptune-exechook
-  namespace: neptune-system
+  namespace: astra-connector
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -4424,7 +4431,7 @@ metadata:
     app.kubernetes.io/name: serviceaccount
     app.kubernetes.io/part-of: neptune
   name: neptune-resourcebackup
-  namespace: neptune-system
+  namespace: astra-connector
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -4436,7 +4443,7 @@ metadata:
     app.kubernetes.io/name: serviceaccount
     app.kubernetes.io/part-of: neptune
   name: neptune-resourcedelete
-  namespace: neptune-system
+  namespace: astra-connector
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -4448,7 +4455,7 @@ metadata:
     app.kubernetes.io/name: serviceaccount
     app.kubernetes.io/part-of: neptune
   name: neptune-resourcerestore
-  namespace: neptune-system
+  namespace: astra-connector
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -4460,7 +4467,7 @@ metadata:
     app.kubernetes.io/name: serviceaccount
     app.kubernetes.io/part-of: neptune
   name: neptune-resourcesummaryupload
-  namespace: neptune-system
+  namespace: astra-connector
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
@@ -4473,7 +4480,7 @@ metadata:
     app.kubernetes.io/name: role
     app.kubernetes.io/part-of: neptune
   name: neptune-leader-election-role
-  namespace: neptune-system
+  namespace: astra-connector
 rules:
 - apiGroups:
   - ""
@@ -4512,7 +4519,7 @@ kind: Role
 metadata:
   creationTimestamp: null
   name: neptune-manager-role
-  namespace: neptune-system
+  namespace: astra-connector
 rules:
 - apiGroups:
   - '*'
@@ -5566,7 +5573,7 @@ metadata:
     app.kubernetes.io/name: rolebinding
     app.kubernetes.io/part-of: neptune
   name: neptune-leader-election-rolebinding
-  namespace: neptune-system
+  namespace: astra-connector
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -5574,7 +5581,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: neptune-controller-manager
-  namespace: neptune-system
+  namespace: astra-connector
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
@@ -5587,7 +5594,7 @@ metadata:
     app.kubernetes.io/name: rolebinding
     app.kubernetes.io/part-of: neptune
   name: neptune-manager-rolebinding
-  namespace: neptune-system
+  namespace: astra-connector
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -5595,7 +5602,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: neptune-controller-manager
-  namespace: neptune-system
+  namespace: astra-connector
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -5614,7 +5621,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: neptune-autosupportbundle
-  namespace: neptune-system
+  namespace: astra-connector
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -5633,7 +5640,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: neptune-autosupportbundle
-  namespace: neptune-system
+  namespace: astra-connector
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -5652,7 +5659,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: neptune-exechook
-  namespace: neptune-system
+  namespace: astra-connector
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -5672,7 +5679,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: neptune-controller-manager
-  namespace: neptune-system
+  namespace: astra-connector
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -5692,7 +5699,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: neptune-controller-manager
-  namespace: neptune-system
+  namespace: astra-connector
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -5711,7 +5718,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: neptune-resourcebackup
-  namespace: neptune-system
+  namespace: astra-connector
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -5730,7 +5737,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: neptune-resourcedelete
-  namespace: neptune-system
+  namespace: astra-connector
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -5749,7 +5756,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: neptune-resourcerestore
-  namespace: neptune-system
+  namespace: astra-connector
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -5768,7 +5775,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: neptune-resourcesummaryupload
-  namespace: neptune-system
+  namespace: astra-connector
 ---
 apiVersion: v1
 kind: Service
@@ -5782,7 +5789,7 @@ metadata:
     app.kubernetes.io/part-of: neptune
     control-plane: controller-manager
   name: neptune-controller-manager-metrics-service
-  namespace: neptune-system
+  namespace: astra-connector
 spec:
   ports:
   - name: https
