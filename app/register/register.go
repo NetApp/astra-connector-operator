@@ -93,13 +93,7 @@ func DoRequest(ctx context.Context, client HTTPClient, method, url string, body 
 		// If the request failed or the server returned a non-2xx status code, wait before retrying
 		time.Sleep(sleepTimeout)
 	}
-
-	log.Info("HELLO ****")
-	if httpResponse == nil {
-		log.Info("It is nill")
-	} else {
-		log.Info("dsnjkdn", httpResponse)
-	}
+	
 	return httpResponse, err, cancel
 }
 
