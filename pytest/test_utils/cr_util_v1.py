@@ -41,34 +41,33 @@ class CrUtilV1:
             },
         }
 
-
-    def get_app_vault_cr(self, name, endpoint, bucket_name, access_key_secret_name, access_key_secret_key,
-                         secret_access_key_secret_name, secret_access_key_secret_key, provider_type):
-        return {
-            "apiVersion": "astra.netapp.io/v1",
-            "kind": "AppVault",
-            "metadata": {
-                "name": name,
-            },
-            "spec": {
-                "providerType": provider_type,
-                "providerConfig": {
-                    "endpoint": endpoint,
-                    "bucketName": bucket_name,
-                },
-                "providerCredentials": {
-                    "accessKeyID": {
-                        "valueFromSecret": {
-                            "name": access_key_secret_name,
-                            "key": access_key_secret_key,
-                        }
-                    },
-                    "secretAccessKey": {
-                        "valueFromSecret": {
-                            "name": secret_access_key_secret_name,
-                            "key": secret_access_key_secret_key,
-                        }
-                    },
-                },
-            },
-        }
+    # def get_app_vault_cr(self, name, endpoint, bucket_name, access_key_secret_name, access_key_secret_key,
+    #                      secret_access_key_secret_name, secret_access_key_secret_key, provider_type):
+    #     return {
+    #         "apiVersion": "astra.netapp.io/v1",
+    #         "kind": "AppVault",
+    #         "metadata": {
+    #             "name": name,
+    #         },
+    #         "spec": {
+    #             "providerType": provider_type,
+    #             "providerConfig": {
+    #                 "endpoint": endpoint,
+    #                 "bucketName": bucket_name,
+    #             },
+    #             "providerCredentials": {
+    #                 "accessKeyID": {
+    #                     "valueFromSecret": {
+    #                         "name": access_key_secret_name,
+    #                         "key": access_key_secret_key,
+    #                     }
+    #                 },
+    #                 "secretAccessKey": {
+    #                     "valueFromSecret": {
+    #                         "name": secret_access_key_secret_name,
+    #                         "key": secret_access_key_secret_key,
+    #                     }
+    #                 },
+    #             },
+    #         },
+    #     }

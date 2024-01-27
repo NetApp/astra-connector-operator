@@ -1,3 +1,4 @@
 kubernetes
 uuid
 pyyaml
+minio

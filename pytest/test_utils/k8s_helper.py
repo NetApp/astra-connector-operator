@@ -2,9 +2,9 @@ from kubernetes import client, config, utils
 import yaml
 
 
-# K8sCRManager todo comment. This is a top level classed used by other classes (or directly if needed) to
+# K8sHelper todo comment. This is a top level classed used by other classes (or directly if needed) to
 # manipulate CRs
-class K8sCRManager:
+class K8sHelper:
     def __init__(self, kubeconfig):
         self.api_client = config.new_client_from_config(config_file=kubeconfig)
         self.custom_object_api = client.CustomObjectsApi()
@@ -60,3 +60,9 @@ class K8sCRManager:
     def create_from_file(self, file_path):
         # Create resources from the YAML file. NOTE: will error if a resource already exists
         utils.create_from_yaml(self.api_client, file_path)
+
+    def create_secret(self, namespace, body):
+        self.api_client.create_namespaced_secret(
+            namespace=namespace,
+            body=body,
+        )
