@@ -71,5 +71,6 @@ def shared_bucket(bucket_manager) -> buckets.Bucket:
 
 
 @pytest.fixture(scope="session")
-def shared_app_vault(k8s_helper):
-    k8s_helper.apply_cr(config.DEFAULT_CONNECTOR_NAMESPACE, )
+def shared_app_vault(app_vault_manager):
+    app_vault_manager.create_app_vault_secret()
+    app_vault_manager.create_app_vault()

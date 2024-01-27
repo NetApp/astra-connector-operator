@@ -1,5 +1,6 @@
 import k8s_helper
 import buckets
+import base64
 
 class AppVault:
     def __init__(self, name):
@@ -14,8 +15,7 @@ class AppVaultManager:
         self.bucket_manager = bucket_manager
 
     @staticmethod
-    def get_app_vault_cr(name, endpoint, bucket_name, access_key_secret_name, access_key_secret_key,
-                         secret_access_key_secret_name, secret_access_key_secret_key, provider_type):
+    def get_app_vault_cr(name, endpoint, bucket_name, secret_name, provider_type="generic-s3"):
         return {
             "apiVersion": "astra.netapp.io/v1",
             "kind": "AppVault",
@@ -31,14 +31,14 @@ class AppVaultManager:
                 "providerCredentials": {
                     "accessKeyID": {
                         "valueFromSecret": {
-                            "name": access_key_secret_name,
-                            "key": access_key_secret_key,
+                            "name": secret_name,
+                            "key": "accessKeyID",
                         }
                     },
                     "secretAccessKey": {
                         "valueFromSecret": {
-                            "name": secret_access_key_secret_name,
-                            "key": secret_access_key_secret_key,
+                            "name": secret_name,
+                            "key": "secretAccessKey"
                         }
                     },
                 },
@@ -49,6 +49,20 @@ class AppVaultManager:
         app_vault_def = self.get_app_vault_cr(name, self.bucket_manager.host, self.bucket_manager.)
 
 
-    def create_app_vault_secret(self, secret_name, value):
-        pass
-        # self.k8s_helper.create_secret()
+    def create_app_vault_secret(self, namespace, secret_name, access_key, secret_key):
+        access_key_encoded = base64.b64encode(access_key.encode()).decode()
+        secret_key_encoded = base64.b64encode(secret_key.encode()).decode()
+        secret_def = {
+            "apiVersion": "v1",
+            "kind": "Secret",
+            "metadata": {
+                "name": secret_name,
+                "namespace": namespace,
+            },
+            "type": "Opaque",
+            "data": {
+                "accessKeyID": access_key_encoded,
+                "secretAccessKey": secret_key_encoded,
+            },
+        }
+        self.k8s_helper.create_secret(namespace, secret_def)
