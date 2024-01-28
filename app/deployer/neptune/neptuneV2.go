@@ -15,7 +15,6 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
-
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -54,8 +53,8 @@ func (n NeptuneClientDeployerV2) GetDeploymentObjects(m *v1.AstraConnector, ctx 
 		containerImage = m.Spec.Neptune.Image
 	} else {
 		// Reading env variable for project root. This is to ensure that we can read this file in both test
-		//	and production environments. This variable will be set in test, and will be ignored for the app
-		//  running in docker.
+		// and production environments. This variable will be set in test, and will be ignored for the app
+		// running in docker.
 		rootDir := os.Getenv("PROJECT_ROOT")
 		if rootDir == "" {
 			rootDir = "."
@@ -275,6 +274,11 @@ func getNeptuneEnvVars(imageRegistry, containerImage, pullSecret, asupUrl string
 		envVars = append(envVars, corev1.EnvVar{
 			Name:  "NEPTUNE_TAG",
 			Value: splitImageName[1],
+		})
+	} else {
+		envVars = append(envVars, corev1.EnvVar{
+			Name:  "NEPTUNE_TAG",
+			Value: containerImage,
 		})
 	}
 
