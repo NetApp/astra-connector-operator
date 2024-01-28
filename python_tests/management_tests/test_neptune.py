@@ -1,4 +1,3 @@
-import pytest
 import uuid
 from python_tests import config
 
@@ -13,7 +12,7 @@ def test_create_app_vault(cr_helper, shared_bucket):
     )
 
     app_vault_name = f"test-app-vault-{str(uuid.uuid4())[:8]}"
-    return cr_helper.app_vault.create_app_vault(
+    cr_helper.app_vault.create_app_vault(
         name=app_vault_name,
         namespace=config.DEFAULT_CONNECTOR_NAMESPACE,
         bucket_name=shared_bucket.bucket_name,

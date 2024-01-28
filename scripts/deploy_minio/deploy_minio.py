@@ -1,7 +1,5 @@
 from kubernetes import client, config
 import argparse
-import pprint
-import secrets
 import time
 
 
@@ -56,7 +54,7 @@ def get_minio_pod_def(pvc_name, namespace):
     }
 
 
-def get_minio_service_def(namespace):
+def get_minio_service_def(namespace, node_port):
     return {
         "apiVersion": "v1",
         "kind": "Service",
@@ -65,6 +63,7 @@ def get_minio_service_def(namespace):
             "namespace": namespace,
         },
         "spec": {
+            "type": "NodePort",
             "selector": {
                 "app": "minio",
             },
@@ -73,6 +72,7 @@ def get_minio_service_def(namespace):
                     "protocol": "TCP",
                     "port": 9000,
                     "targetPort": 9000,
+                    "nodePort": node_port,
                 }
             ],
         },
@@ -112,14 +112,16 @@ def get_minio_secret_def(access_key, secret_key):
         },
     }
 
-
+# ------
 # Main #
+# ------
 
 # Required command line arguments
 parser = argparse.ArgumentParser(description='Create a MinIO Pod in Kubernetes.')
 parser.add_argument('--access_key', type=str, required=True, help='Access key for MinIO.')
 parser.add_argument('--secret_key', type=str, required=True, help='Secret key for MinIO.')
 # Optional command line arguments
+parser.add_argument('--node_port', type=int, default="30001", help='Port to expose MinIO on.')
 parser.add_argument('--kubeconfig', type=str, default='~/.kube/config', help='Path to the kubeconfig file.')
 parser.add_argument('--namespace', type=str, default='minio', help='Namespace to create the MinIO Pod in.')
 parser.add_argument('--timeout', type=int, default=120, help='MinIO deploy timeout in seconds.')
@@ -146,12 +148,6 @@ v1.create_namespaced_persistent_volume_claim(
     body=get_create_minio_pvc_def(pvc_name, args.namespace),
 )
 
-# # Generate a 20-character access key
-# access_key = secrets.token_urlsafe(15)
-#
-# # Generate a 40-character secret key
-# secret_key = secrets.token_urlsafe(30)
-
 # Create the Secret
 secret_def = get_minio_secret_def(args.access_key, args.secret_key)
 v1.create_namespaced_secret(
@@ -160,7 +156,8 @@ v1.create_namespaced_secret(
 )
 
 # Create the Service
-minio_service = get_minio_service_def(namespace=args.namespace)
+minio_service = get_minio_service_def(namespace=args.namespace, node_port=args.node_port)
+print(f"Creating k8s service...")
 v1.create_namespaced_service(
     namespace=args.namespace,
     body=minio_service,
@@ -169,7 +166,6 @@ v1.create_namespaced_service(
 # Define the MinIO Pod
 minio_pod_def = get_minio_pod_def(pvc_name ,namespace=args.namespace)
 print("Creating MinIO Pod")
-pprint.pprint(minio_pod_def)
 
 # Create the MinIO Pod
 v1.create_namespaced_pod(

@@ -3,8 +3,8 @@ import pytest
 from test_utils.k8s_helper import K8sHelper
 from test_utils import app_vault, buckets, astra_connector
 import uuid
-from pytest.management_tests import config
 from collections import namedtuple
+from python_tests import config
 
 # Add custom pytest args
 def pytest_addoption(parser):
@@ -80,11 +80,19 @@ def cr_helper(k8s_helper):
 # End cr_helper Fixture and Class
 # -------------------------------
 
+@pytest.fixture(scope="session")
+def bucket_manager(s3_creds):
+    bucket_manager = buckets.BucketManager(s3_creds.host, s3_creds.access_key, s3_creds.secret_key)
+    yield bucket_manager
+    bucket_manager.cleanup_buckets()
+
+
 
 @pytest.fixture(scope="session")
-def shared_bucket(s3_creds) -> buckets.Bucket:
+def shared_bucket(bucket_manager) -> buckets.Bucket:
     bucket_name = f"test-bucket-{str(uuid.uuid4())[:8]}"
-    return buckets.Bucket(bucket_name, s3_creds.host, s3_creds.access_key, s3_creds.secret_key)
+    bucket = bucket_manager.create_bucket(bucket_name)
+    return bucket
 
 
 @pytest.fixture(scope="session")
@@ -97,7 +105,7 @@ def shared_app_vault(cr_helper, shared_bucket):
         secret_key=shared_bucket.secret_key
     )
     app_vault_name = f"test-app-vault-{str(uuid.uuid4())[:8]}"
-    return cr_helper.app_vault.create_app_vault(
+    yield cr_helper.app_vault.create_app_vault(
         name=app_vault_name,
         namespace=config.DEFAULT_CONNECTOR_NAMESPACE,
         bucket_name=shared_bucket.bucket_name,

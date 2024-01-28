@@ -1,6 +1,4 @@
 from kubernetes import client, config, utils
-import yaml
-
 
 # K8sHelper todo comment. This is a top level classed used by other classes (or directly if needed) to
 # manipulate CRs
