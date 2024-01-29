@@ -14,6 +14,7 @@ import (
 const (
 	FlavorAKS        = "aks"
 	FlavorGKE        = "gke"
+	FlavorEKS        = "eks"
 	FlavorKubernetes = "kubernetes"
 	FlavorOpenShift  = "openshift"
 	FlavorRKE        = "rke"
@@ -65,6 +66,10 @@ func (c *ClusterTypeChecker) DetermineClusterType() string {
 
 	if c.isAKSFlavor() {
 		return FlavorAKS
+	}
+
+	if c.isEKSFlavor() {
+		return FlavorEKS
 	}
 
 	return FlavorKubernetes
@@ -183,6 +188,15 @@ func (c *ClusterTypeChecker) isGKEFlavor() bool {
 	}
 
 	return strings.Contains(strings.ToLower(version), FlavorGKE)
+}
+
+func (c *ClusterTypeChecker) isEKSFlavor() bool {
+	version, err := c.K8sUtil.VersionGet()
+	if err != nil {
+		return false
+	}
+
+	return strings.Contains(strings.ToLower(version), FlavorEKS)
 }
 
 // isAnthosFlavor - checks for the presence of the Anthos API
