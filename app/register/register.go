@@ -119,7 +119,7 @@ type ClusterRegisterUtil interface {
 	UpdateManagedCluster(astraHost, clusterId, astraConnectorId, connectorInstall, apiToken string) (string, error)
 	CreateOrUpdateManagedCluster(astraHost, cloudId, clusterId, astraConnectorId, managedClustersMethod, apiToken string) (ClusterInfo, string, error)
 	ValidateAndGetCluster(astraHost, cloudId, apiToken, clusterId string) (ClusterInfo, string, error)
-	UnmanageCluster(astraHost string, cloudID string, clusterID string, apiToken string) error
+	UnmanageCluster(clusterID string) error
 }
 
 type clusterRegisterUtil struct {
@@ -958,6 +958,9 @@ func (c clusterRegisterUtil) ValidateAndGetCluster(astraHost, cloudId, apiToken,
 	return ClusterInfo{}, "", nil
 }
 
+// UnmanageCluster unmanages and removes a cluster from Astra.
+// It accomplishes this by sending two DELETE requests to the Astra platform cluster:
+// one to unmanage the cluster and another to remove the cluster record.
 func (c clusterRegisterUtil) UnmanageCluster(clusterID string) error {
 	astraHost := GetAstraHostURL(c.AstraConnector)
 	c.Log.WithValues("URL", astraHost).Info("Astra Host Info")
@@ -972,18 +975,19 @@ func (c clusterRegisterUtil) UnmanageCluster(clusterID string) error {
 		return err
 	}
 
+	headerMap := HeaderMap{Authorization: fmt.Sprintf("Bearer %s", apiToken)}
+
 	// Un-managing cluster
 	url := fmt.Sprintf("%s/accounts/%s/topology/v1/managedClusters/%s", astraHost, c.AstraConnector.Spec.Astra.AccountId, clusterID)
-	headerMap := HeaderMap{Authorization: fmt.Sprintf("Bearer %s", apiToken)}
 	resp, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodDelete, url, nil, headerMap, c.Log)
-	defer cancel()
-
 	if err != nil {
-		return errors.New(CreateErrorMsg("UnmanageCluster", "make DELETE call", url, resp.Status, "", err))
+		return errors.New(CreateErrorMsg("UnmanageCluster", "make DELETE call", url, "", "", err))
 	}
-
-	if resp.StatusCode != http.StatusOK {
-		return errors.New(CreateErrorMsg("UnmanageCluster", "make DELETE call", url, resp.Status, "", err))
+	if resp != nil {
+		defer cancel()
+		if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusAccepted {
+			return errors.New(CreateErrorMsg("UnmanageCluster", "make DELETE call", url, resp.Status, "", err))
+		}
 	}
 
 	// Removing cluster
@@ -992,11 +996,14 @@ func (c clusterRegisterUtil) UnmanageCluster(clusterID string) error {
 	defer cancel()
 
 	if err != nil {
-		return errors.New(CreateErrorMsg("UnmanageCluster", "make DELETE call", url, resp.Status, "", err))
+		return errors.New(CreateErrorMsg("UnmanageCluster", "make DELETE call", url, "", "", err))
 	}
 
-	if resp.StatusCode != http.StatusOK {
-		return errors.New(CreateErrorMsg("UnmanageCluster", "make DELETE call", url, resp.Status, "", err))
+	if resp != nil {
+		defer cancel()
+		if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusAccepted {
+			return errors.New(CreateErrorMsg("UnmanageCluster", "make DELETE call", url, resp.Status, "", err))
+		}
 	}
 
 	return nil
