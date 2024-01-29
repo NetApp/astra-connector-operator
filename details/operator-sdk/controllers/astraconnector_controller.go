@@ -125,6 +125,8 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 				log.Info("Unregistered natsSyncClient upon CRD delete")
 			}
 
+			err = registerUtil.UnmanageCluster(natsSyncClientStatus.AstraClusterId)
+
 			// delete any cluster scoped resources created by the operator
 			r.deleteConnectorClusterScopedResources(ctx, astraConnector)
 
