@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -187,6 +188,16 @@ func (r *AstraConnectorController) createASUPCR(ctx context.Context, astraConnec
 			},
 		},
 	}
+	// Define the MutateFn function
+	mutateFn := func() error {
+		cr.Object["spec"].(map[string]interface{})["enabled"] = astraConnector.Spec.AutoSupport.Enrolled
+		return nil
+	}
+	result, err := k8sUtil.CreateOrUpdateResource(ctx, cr, astraConnector, mutateFn)
+	if err != nil {
+		return err
+	}
 
-	return k8sUtil.CreateOrUpdateResource(ctx, cr, astraConnector)
+	log.Info(fmt.Sprintf("Successfully %s AutoSupportBundleSchedule", result))
+	return nil
 }
