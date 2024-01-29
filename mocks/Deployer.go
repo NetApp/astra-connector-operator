@@ -7,6 +7,8 @@ import (
 
 	client "sigs.k8s.io/controller-runtime/pkg/client"
 
+	controllerutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
 	mock "github.com/stretchr/testify/mock"
 
 	v1 "github.com/NetApp-Polaris/astra-connector-operator/details/operator-sdk/api/v1"
@@ -18,7 +20,7 @@ type Deployer struct {
 }
 
 // GetClusterRoleBindingObjects provides a mock function with given fields: m, ctx
-func (_m *Deployer) GetClusterRoleBindingObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, error) {
+func (_m *Deployer) GetClusterRoleBindingObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
 	ret := _m.Called(m, ctx)
 
 	var r0 []client.Object
@@ -30,18 +32,27 @@ func (_m *Deployer) GetClusterRoleBindingObjects(m *v1.AstraConnector, ctx conte
 		}
 	}
 
-	var r1 error
-	if rf, ok := ret.Get(1).(func(*v1.AstraConnector, context.Context) error); ok {
+	var r1 controllerutil.MutateFn
+	if rf, ok := ret.Get(1).(func(*v1.AstraConnector, context.Context) controllerutil.MutateFn); ok {
 		r1 = rf(m, ctx)
 	} else {
-		r1 = ret.Error(1)
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(controllerutil.MutateFn)
+		}
 	}
 
-	return r0, r1
+	var r2 error
+	if rf, ok := ret.Get(2).(func(*v1.AstraConnector, context.Context) error); ok {
+		r2 = rf(m, ctx)
+	} else {
+		r2 = ret.Error(2)
+	}
+
+	return r0, r1, r2
 }
 
 // GetClusterRoleObjects provides a mock function with given fields: m, ctx
-func (_m *Deployer) GetClusterRoleObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, error) {
+func (_m *Deployer) GetClusterRoleObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
 	ret := _m.Called(m, ctx)
 
 	var r0 []client.Object
@@ -53,18 +64,27 @@ func (_m *Deployer) GetClusterRoleObjects(m *v1.AstraConnector, ctx context.Cont
 		}
 	}
 
-	var r1 error
-	if rf, ok := ret.Get(1).(func(*v1.AstraConnector, context.Context) error); ok {
+	var r1 controllerutil.MutateFn
+	if rf, ok := ret.Get(1).(func(*v1.AstraConnector, context.Context) controllerutil.MutateFn); ok {
 		r1 = rf(m, ctx)
 	} else {
-		r1 = ret.Error(1)
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(controllerutil.MutateFn)
+		}
 	}
 
-	return r0, r1
+	var r2 error
+	if rf, ok := ret.Get(2).(func(*v1.AstraConnector, context.Context) error); ok {
+		r2 = rf(m, ctx)
+	} else {
+		r2 = ret.Error(2)
+	}
+
+	return r0, r1, r2
 }
 
 // GetConfigMapObjects provides a mock function with given fields: m, ctx
-func (_m *Deployer) GetConfigMapObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, error) {
+func (_m *Deployer) GetConfigMapObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
 	ret := _m.Called(m, ctx)
 
 	var r0 []client.Object
@@ -76,18 +96,27 @@ func (_m *Deployer) GetConfigMapObjects(m *v1.AstraConnector, ctx context.Contex
 		}
 	}
 
-	var r1 error
-	if rf, ok := ret.Get(1).(func(*v1.AstraConnector, context.Context) error); ok {
+	var r1 controllerutil.MutateFn
+	if rf, ok := ret.Get(1).(func(*v1.AstraConnector, context.Context) controllerutil.MutateFn); ok {
 		r1 = rf(m, ctx)
 	} else {
-		r1 = ret.Error(1)
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(controllerutil.MutateFn)
+		}
 	}
 
-	return r0, r1
+	var r2 error
+	if rf, ok := ret.Get(2).(func(*v1.AstraConnector, context.Context) error); ok {
+		r2 = rf(m, ctx)
+	} else {
+		r2 = ret.Error(2)
+	}
+
+	return r0, r1, r2
 }
 
 // GetDeploymentObjects provides a mock function with given fields: m, ctx
-func (_m *Deployer) GetDeploymentObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, error) {
+func (_m *Deployer) GetDeploymentObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
 	ret := _m.Called(m, ctx)
 
 	var r0 []client.Object
@@ -99,18 +128,27 @@ func (_m *Deployer) GetDeploymentObjects(m *v1.AstraConnector, ctx context.Conte
 		}
 	}
 
-	var r1 error
-	if rf, ok := ret.Get(1).(func(*v1.AstraConnector, context.Context) error); ok {
+	var r1 controllerutil.MutateFn
+	if rf, ok := ret.Get(1).(func(*v1.AstraConnector, context.Context) controllerutil.MutateFn); ok {
 		r1 = rf(m, ctx)
 	} else {
-		r1 = ret.Error(1)
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(controllerutil.MutateFn)
+		}
 	}
 
-	return r0, r1
+	var r2 error
+	if rf, ok := ret.Get(2).(func(*v1.AstraConnector, context.Context) error); ok {
+		r2 = rf(m, ctx)
+	} else {
+		r2 = ret.Error(2)
+	}
+
+	return r0, r1, r2
 }
 
 // GetRoleBindingObjects provides a mock function with given fields: m, ctx
-func (_m *Deployer) GetRoleBindingObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, error) {
+func (_m *Deployer) GetRoleBindingObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
 	ret := _m.Called(m, ctx)
 
 	var r0 []client.Object
@@ -122,18 +160,27 @@ func (_m *Deployer) GetRoleBindingObjects(m *v1.AstraConnector, ctx context.Cont
 		}
 	}
 
-	var r1 error
-	if rf, ok := ret.Get(1).(func(*v1.AstraConnector, context.Context) error); ok {
+	var r1 controllerutil.MutateFn
+	if rf, ok := ret.Get(1).(func(*v1.AstraConnector, context.Context) controllerutil.MutateFn); ok {
 		r1 = rf(m, ctx)
 	} else {
-		r1 = ret.Error(1)
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(controllerutil.MutateFn)
+		}
 	}
 
-	return r0, r1
+	var r2 error
+	if rf, ok := ret.Get(2).(func(*v1.AstraConnector, context.Context) error); ok {
+		r2 = rf(m, ctx)
+	} else {
+		r2 = ret.Error(2)
+	}
+
+	return r0, r1, r2
 }
 
 // GetRoleObjects provides a mock function with given fields: m, ctx
-func (_m *Deployer) GetRoleObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, error) {
+func (_m *Deployer) GetRoleObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
 	ret := _m.Called(m, ctx)
 
 	var r0 []client.Object
@@ -145,18 +192,27 @@ func (_m *Deployer) GetRoleObjects(m *v1.AstraConnector, ctx context.Context) ([
 		}
 	}
 
-	var r1 error
-	if rf, ok := ret.Get(1).(func(*v1.AstraConnector, context.Context) error); ok {
+	var r1 controllerutil.MutateFn
+	if rf, ok := ret.Get(1).(func(*v1.AstraConnector, context.Context) controllerutil.MutateFn); ok {
 		r1 = rf(m, ctx)
 	} else {
-		r1 = ret.Error(1)
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(controllerutil.MutateFn)
+		}
 	}
 
-	return r0, r1
+	var r2 error
+	if rf, ok := ret.Get(2).(func(*v1.AstraConnector, context.Context) error); ok {
+		r2 = rf(m, ctx)
+	} else {
+		r2 = ret.Error(2)
+	}
+
+	return r0, r1, r2
 }
 
 // GetServiceAccountObjects provides a mock function with given fields: m, ctx
-func (_m *Deployer) GetServiceAccountObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, error) {
+func (_m *Deployer) GetServiceAccountObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
 	ret := _m.Called(m, ctx)
 
 	var r0 []client.Object
@@ -168,18 +224,27 @@ func (_m *Deployer) GetServiceAccountObjects(m *v1.AstraConnector, ctx context.C
 		}
 	}
 
-	var r1 error
-	if rf, ok := ret.Get(1).(func(*v1.AstraConnector, context.Context) error); ok {
+	var r1 controllerutil.MutateFn
+	if rf, ok := ret.Get(1).(func(*v1.AstraConnector, context.Context) controllerutil.MutateFn); ok {
 		r1 = rf(m, ctx)
 	} else {
-		r1 = ret.Error(1)
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(controllerutil.MutateFn)
+		}
 	}
 
-	return r0, r1
+	var r2 error
+	if rf, ok := ret.Get(2).(func(*v1.AstraConnector, context.Context) error); ok {
+		r2 = rf(m, ctx)
+	} else {
+		r2 = ret.Error(2)
+	}
+
+	return r0, r1, r2
 }
 
 // GetServiceObjects provides a mock function with given fields: m, ctx
-func (_m *Deployer) GetServiceObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, error) {
+func (_m *Deployer) GetServiceObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
 	ret := _m.Called(m, ctx)
 
 	var r0 []client.Object
@@ -191,18 +256,27 @@ func (_m *Deployer) GetServiceObjects(m *v1.AstraConnector, ctx context.Context)
 		}
 	}
 
-	var r1 error
-	if rf, ok := ret.Get(1).(func(*v1.AstraConnector, context.Context) error); ok {
+	var r1 controllerutil.MutateFn
+	if rf, ok := ret.Get(1).(func(*v1.AstraConnector, context.Context) controllerutil.MutateFn); ok {
 		r1 = rf(m, ctx)
 	} else {
-		r1 = ret.Error(1)
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(controllerutil.MutateFn)
+		}
 	}
 
-	return r0, r1
+	var r2 error
+	if rf, ok := ret.Get(2).(func(*v1.AstraConnector, context.Context) error); ok {
+		r2 = rf(m, ctx)
+	} else {
+		r2 = ret.Error(2)
+	}
+
+	return r0, r1, r2
 }
 
 // GetStatefulSetObjects provides a mock function with given fields: m, ctx
-func (_m *Deployer) GetStatefulSetObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, error) {
+func (_m *Deployer) GetStatefulSetObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
 	ret := _m.Called(m, ctx)
 
 	var r0 []client.Object
@@ -214,14 +288,23 @@ func (_m *Deployer) GetStatefulSetObjects(m *v1.AstraConnector, ctx context.Cont
 		}
 	}
 
-	var r1 error
-	if rf, ok := ret.Get(1).(func(*v1.AstraConnector, context.Context) error); ok {
+	var r1 controllerutil.MutateFn
+	if rf, ok := ret.Get(1).(func(*v1.AstraConnector, context.Context) controllerutil.MutateFn); ok {
 		r1 = rf(m, ctx)
 	} else {
-		r1 = ret.Error(1)
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(controllerutil.MutateFn)
+		}
 	}
 
-	return r0, r1
+	var r2 error
+	if rf, ok := ret.Get(2).(func(*v1.AstraConnector, context.Context) error); ok {
+		r2 = rf(m, ctx)
+	} else {
+		r2 = ret.Error(2)
+	}
+
+	return r0, r1, r2
 }
 
 type mockConstructorTestingTNewDeployer interface {
