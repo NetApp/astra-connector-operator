@@ -967,11 +967,13 @@ func (c clusterRegisterUtil) UnmanageCluster(clusterID string) error {
 
 	apiToken, _, err := c.GetAPITokenFromSecret(c.AstraConnector.Spec.Astra.TokenRef)
 	if err != nil {
+		c.Log.Error(err, "Failed to get API token")
 		return err
 	}
 
 	cloudId, _, err := c.GetCloudId(astraHost, common.AstraPrivateCloudType, apiToken)
 	if err != nil {
+		c.Log.Error(err, "Failed to get Cloud ID")
 		return err
 	}
 
@@ -981,11 +983,13 @@ func (c clusterRegisterUtil) UnmanageCluster(clusterID string) error {
 	url := fmt.Sprintf("%s/accounts/%s/topology/v1/managedClusters/%s", astraHost, c.AstraConnector.Spec.Astra.AccountId, clusterID)
 	resp, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodDelete, url, nil, headerMap, c.Log)
 	if err != nil {
+		c.Log.Error(err, "Failed to unmanage cluster")
 		return errors.New(CreateErrorMsg("UnmanageCluster", "make DELETE call", url, "", "", err))
 	}
 	if resp != nil {
 		defer cancel()
 		if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusAccepted {
+			c.Log.Error(err, "Failed to unmanage cluster, received non-OK response")
 			return errors.New(CreateErrorMsg("UnmanageCluster", "make DELETE call", url, resp.Status, "", err))
 		}
 	}
@@ -996,12 +1000,14 @@ func (c clusterRegisterUtil) UnmanageCluster(clusterID string) error {
 	defer cancel()
 
 	if err != nil {
+		c.Log.Error(err, "Failed to remove cluster")
 		return errors.New(CreateErrorMsg("UnmanageCluster", "make DELETE call", url, "", "", err))
 	}
 
 	if resp != nil {
 		defer cancel()
 		if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusAccepted {
+			c.Log.Error(err, "Failed to remove cluster, received non-OK response")
 			return errors.New(CreateErrorMsg("UnmanageCluster", "make DELETE call", url, resp.Status, "", err))
 		}
 	}
