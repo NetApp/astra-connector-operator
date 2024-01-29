@@ -93,7 +93,7 @@ func DoRequest(ctx context.Context, client HTTPClient, method, url string, body 
 		// If the request failed or the server returned a non-2xx status code, wait before retrying
 		time.Sleep(sleepTimeout)
 	}
-
+	
 	return httpResponse, err, cancel
 }
 
@@ -215,7 +215,10 @@ func (c clusterRegisterUtil) UnRegisterNatsSyncClient() error {
 	defer cancel()
 
 	if err != nil {
-		return errors.New(CreateErrorMsg("UnRegisterNatsSyncClient", "make POST call", natsSyncClientUnregisterURL, response.Status, "", err))
+		if response != nil {
+			return errors.New(CreateErrorMsg("UnRegisterNatsSyncClient", "make POST call", natsSyncClientUnregisterURL, response.Status, "", err))
+		}
+		return errors.New(CreateErrorMsg("UnRegisterNatsSyncClient", "make POST call", natsSyncClientUnregisterURL, "", "", err))
 	}
 
 	if response.StatusCode != http.StatusNoContent {
@@ -240,7 +243,10 @@ func (c clusterRegisterUtil) RegisterNatsSyncClient() (string, string, error) {
 	response, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodPost, natsSyncClientRegisterURL, bytes.NewBuffer(reqBodyBytes), HeaderMap{}, c.Log, 3)
 	defer cancel()
 	if err != nil {
-		return "", CreateErrorMsg("RegisterNatsSyncClient", "make POST call", natsSyncClientRegisterURL, response.Status, "", err), err
+		if response != nil {
+			return "", CreateErrorMsg("RegisterNatsSyncClient", "make POST call", natsSyncClientRegisterURL, response.Status, "", err), err
+		}
+		return "", CreateErrorMsg("RegisterNatsSyncClient", "make POST call", natsSyncClientRegisterURL, "", "", err), err
 	}
 
 	c.Log.Info(fmt.Sprintf("response %v, %v, %v", response.Body, response.Status, response.StatusCode))
@@ -470,7 +476,10 @@ func (c clusterRegisterUtil) CreateCloud(astraHost, cloudType, apiToken string) 
 	defer cancel()
 
 	if err != nil {
-		return "", CreateErrorMsg("CreateCloud", "make POST call", url, response.Status, "", err), err
+		if response != nil {
+			return "", CreateErrorMsg("CreateCloud", "make POST call", url, response.Status, "", err), err
+		}
+		return "", CreateErrorMsg("CreateCloud", "make POST call", url, "", "", err), err
 	}
 
 	type CloudResp struct {
@@ -579,7 +588,10 @@ func (c clusterRegisterUtil) GetClusters(astraHost, cloudId, apiToken string) (G
 	defer cancel()
 
 	if err != nil {
-		return clustersRespJson, CreateErrorMsg("GetClusters", "make GET call", url, response.Status, "", err), err
+		if response != nil {
+			return clustersRespJson, CreateErrorMsg("GetClusters", "make GET call", url, response.Status, "", err), err
+		}
+		return clustersRespJson, CreateErrorMsg("GetClusters", "make GET call", url, "", "", err), err
 	}
 
 	if response.StatusCode != http.StatusOK {
@@ -627,7 +639,10 @@ func (c clusterRegisterUtil) GetCluster(astraHost, cloudId, clusterId, apiToken 
 	defer cancel()
 
 	if err != nil {
-		return Cluster{}, CreateErrorMsg("GetCluster", "make GET call", url, response.Status, "", err), err
+		if response != nil {
+			return Cluster{}, CreateErrorMsg("GetCluster", "make GET call", url, response.Status, "", err), err
+		}
+		return Cluster{}, CreateErrorMsg("GetCluster", "make GET call", url, "", "", err), err
 	}
 
 	if response.StatusCode != http.StatusOK {
@@ -672,7 +687,13 @@ func (c clusterRegisterUtil) CreateCluster(astraHost, cloudId, astraConnectorId,
 	defer cancel()
 
 	if err != nil {
-		errorMsg := CreateErrorMsg("CreateCluster", "make POST call", url, clustersResp.Status, "", err)
+		errorMsg := ""
+		if clustersResp != nil {
+			errorMsg = CreateErrorMsg("CreateCluster", "make POST call", url, clustersResp.Status, "", err)
+		} else {
+			errorMsg = CreateErrorMsg("CreateCluster", "make POST call", url, "", "", err)
+		}
+
 		return ClusterInfo{}, errorMsg, fmt.Errorf("%s: %w", errorMsg, err)
 	}
 
@@ -734,7 +755,10 @@ func (c clusterRegisterUtil) UpdateCluster(astraHost, cloudId, clusterId, astraC
 	defer cancel()
 
 	if err != nil {
-		return CreateErrorMsg("UpdateCluster", "make PUT call", url, response.Status, "", err), err
+		if response != nil {
+			return CreateErrorMsg("UpdateCluster", "make PUT call", url, response.Status, "", err), err
+		}
+		return CreateErrorMsg("UpdateCluster", "make PUT call", url, "", "", err), err
 	}
 
 	if response.StatusCode > http.StatusNoContent {
@@ -791,7 +815,10 @@ func (c clusterRegisterUtil) UpdateManagedCluster(astraHost, clusterId, astraCon
 	defer cancel()
 
 	if err != nil {
-		return CreateErrorMsg("UpdateManagedCluster", "make PUT call", url, response.Status, "", err), err
+		if response != nil {
+			return CreateErrorMsg("UpdateManagedCluster", "make PUT call", url, response.Status, "", err), err
+		}
+		return CreateErrorMsg("UpdateManagedCluster", "make PUT call", url, "", "", err), err
 	}
 
 	if response.StatusCode > http.StatusNoContent {
@@ -822,7 +849,10 @@ func (c clusterRegisterUtil) CreateManagedCluster(astraHost, cloudId, clusterID,
 	defer cancel()
 
 	if err != nil {
-		return CreateErrorMsg("CreateManagedCluster", "make POST call", url, response.Status, "", err), err
+		if response != nil {
+			return CreateErrorMsg("CreateManagedCluster", "make POST call", url, response.Status, "", err), err
+		}
+		return CreateErrorMsg("CreateManagedCluster", "make POST call", url, "", "", err), err
 	}
 
 	if response.StatusCode != http.StatusCreated {

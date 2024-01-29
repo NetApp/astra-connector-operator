@@ -855,8 +855,11 @@ spec:
                     description: ResourceMatchers is a list of matchers where each matcher matches one or more resources
                     items:
                       properties:
-                        groupKind:
-                          description: GroupKind kubernetes group kind of the resource that has to be matched
+                        group:
+                          description: Group of the kubernetes resource that has to be matched
+                          type: string
+                        kind:
+                          description: Kind of the kubernetes resource that has to be matched
                           type: string
                         labelSelectors:
                           description: LabelSelectors  is used to match resource(s) based on the metadata.labels field of the kubernetes resource
@@ -876,8 +879,6 @@ spec:
                         version:
                           description: Version of the kubernetes resource that has to be matched.
                           type: string
-                      required:
-                      - groupKind
                       type: object
                     type: array
                   resourceSelectionCriteria:
@@ -1028,8 +1029,11 @@ spec:
                     description: ResourceMatchers is a list of matchers where each matcher matches one or more resources
                     items:
                       properties:
-                        groupKind:
-                          description: GroupKind kubernetes group kind of the resource that has to be matched
+                        group:
+                          description: Group of the kubernetes resource that has to be matched
+                          type: string
+                        kind:
+                          description: Kind of the kubernetes resource that has to be matched
                           type: string
                         labelSelectors:
                           description: LabelSelectors  is used to match resource(s) based on the metadata.labels field of the kubernetes resource
@@ -1049,8 +1053,6 @@ spec:
                         version:
                           description: Version of the kubernetes resource that has to be matched.
                           type: string
-                      required:
-                      - groupKind
                       type: object
                     type: array
                   resourceSelectionCriteria:
@@ -1268,6 +1270,9 @@ spec:
                       description: CompletionTimestamp the time the exec hook run was finished regardless of failures
                       format: date-time
                       type: string
+                    containerImage:
+                      description: ContainerImage the image of the container the exec hook is run on
+                      type: string
                     containerName:
                       description: ContainerName the name of the container the exec hook is run on
                       type: string
@@ -1317,7 +1322,12 @@ spec:
                     podUID:
                       description: PodUID the uid of the pod where the exec hook will be run
                       type: string
+                    startTimestamp:
+                      description: StartedTimestamp the time the exec hook started running
+                      format: date-time
+                      type: string
                   required:
+                  - containerImage
                   - containerName
                   - execHookRef
                   - execHookUID
@@ -1334,6 +1344,9 @@ spec:
                       description: CompletionTimestamp the time the exec hook run was finished regardless of failures
                       format: date-time
                       type: string
+                    containerImage:
+                      description: ContainerImage the image of the container the exec hook is run on
+                      type: string
                     containerName:
                       description: ContainerName the name of the container the exec hook is run on
                       type: string
@@ -1383,7 +1396,12 @@ spec:
                     podUID:
                       description: PodUID the uid of the pod where the exec hook will be run
                       type: string
+                    startTimestamp:
+                      description: StartedTimestamp the time the exec hook started running
+                      format: date-time
+                      type: string
                   required:
+                  - containerImage
                   - containerName
                   - execHookRef
                   - execHookUID
@@ -1400,6 +1418,9 @@ spec:
                       description: CompletionTimestamp the time the exec hook run was finished regardless of failures
                       format: date-time
                       type: string
+                    containerImage:
+                      description: ContainerImage the image of the container the exec hook is run on
+                      type: string
                     containerName:
                       description: ContainerName the name of the container the exec hook is run on
                       type: string
@@ -1449,7 +1470,12 @@ spec:
                     podUID:
                       description: PodUID the uid of the pod where the exec hook will be run
                       type: string
+                    startTimestamp:
+                      description: StartedTimestamp the time the exec hook started running
+                      format: date-time
+                      type: string
                   required:
+                  - containerImage
                   - containerName
                   - execHookRef
                   - execHookUID
@@ -1466,6 +1492,9 @@ spec:
                       description: CompletionTimestamp the time the exec hook run was finished regardless of failures
                       format: date-time
                       type: string
+                    containerImage:
+                      description: ContainerImage the image of the container the exec hook is run on
+                      type: string
                     containerName:
                       description: ContainerName the name of the container the exec hook is run on
                       type: string
@@ -1515,7 +1544,12 @@ spec:
                     podUID:
                       description: PodUID the uid of the pod where the exec hook will be run
                       type: string
+                    startTimestamp:
+                      description: StartedTimestamp the time the exec hook started running
+                      format: date-time
+                      type: string
                   required:
+                  - containerImage
                   - containerName
                   - execHookRef
                   - execHookUID
@@ -1779,8 +1813,11 @@ spec:
                     description: ResourceMatchers is a list of matchers where each matcher matches one or more resources
                     items:
                       properties:
-                        groupKind:
-                          description: GroupKind kubernetes group kind of the resource that has to be matched
+                        group:
+                          description: Group of the kubernetes resource that has to be matched
+                          type: string
+                        kind:
+                          description: Kind of the kubernetes resource that has to be matched
                           type: string
                         labelSelectors:
                           description: LabelSelectors  is used to match resource(s) based on the metadata.labels field of the kubernetes resource
@@ -1800,8 +1837,6 @@ spec:
                         version:
                           description: Version of the kubernetes resource that has to be matched.
                           type: string
-                      required:
-                      - groupKind
                       type: object
                     type: array
                   resourceSelectionCriteria:
@@ -1886,6 +1921,9 @@ spec:
                       description: CompletionTimestamp the time the exec hook run was finished regardless of failures
                       format: date-time
                       type: string
+                    containerImage:
+                      description: ContainerImage the image of the container the exec hook is run on
+                      type: string
                     containerName:
                       description: ContainerName the name of the container the exec hook is run on
                       type: string
@@ -1935,7 +1973,12 @@ spec:
                     podUID:
                       description: PodUID the uid of the pod where the exec hook will be run
                       type: string
+                    startTimestamp:
+                      description: StartedTimestamp the time the exec hook started running
+                      format: date-time
+                      type: string
                   required:
+                  - containerImage
                   - containerName
                   - execHookRef
                   - execHookUID
@@ -2365,8 +2408,11 @@ spec:
                     description: ResourceMatchers is a list of matchers where each matcher matches one or more resources
                     items:
                       properties:
-                        groupKind:
-                          description: GroupKind kubernetes group kind of the resource that has to be matched
+                        group:
+                          description: Group of the kubernetes resource that has to be matched
+                          type: string
+                        kind:
+                          description: Kind of the kubernetes resource that has to be matched
                           type: string
                         labelSelectors:
                           description: LabelSelectors  is used to match resource(s) based on the metadata.labels field of the kubernetes resource
@@ -2386,8 +2432,6 @@ spec:
                         version:
                           description: Version of the kubernetes resource that has to be matched.
                           type: string
-                      required:
-                      - groupKind
                       type: object
                     type: array
                   resourceSelectionCriteria:
@@ -2524,8 +2568,11 @@ spec:
                     description: ResourceMatchers is a list of matchers where each matcher matches one or more resources
                     items:
                       properties:
-                        groupKind:
-                          description: GroupKind kubernetes group kind of the resource that has to be matched
+                        group:
+                          description: Group of the kubernetes resource that has to be matched
+                          type: string
+                        kind:
+                          description: Kind of the kubernetes resource that has to be matched
                           type: string
                         labelSelectors:
                           description: LabelSelectors  is used to match resource(s) based on the metadata.labels field of the kubernetes resource
@@ -2545,8 +2592,6 @@ spec:
                         version:
                           description: Version of the kubernetes resource that has to be matched.
                           type: string
-                      required:
-                      - groupKind
                       type: object
                     type: array
                   resourceSelectionCriteria:
@@ -3586,6 +3631,9 @@ spec:
                       description: CompletionTimestamp the time the exec hook run was finished regardless of failures
                       format: date-time
                       type: string
+                    containerImage:
+                      description: ContainerImage the image of the container the exec hook is run on
+                      type: string
                     containerName:
                       description: ContainerName the name of the container the exec hook is run on
                       type: string
@@ -3635,7 +3683,12 @@ spec:
                     podUID:
                       description: PodUID the uid of the pod where the exec hook will be run
                       type: string
+                    startTimestamp:
+                      description: StartedTimestamp the time the exec hook started running
+                      format: date-time
+                      type: string
                   required:
+                  - containerImage
                   - containerName
                   - execHookRef
                   - execHookUID
@@ -3652,6 +3705,9 @@ spec:
                       description: CompletionTimestamp the time the exec hook run was finished regardless of failures
                       format: date-time
                       type: string
+                    containerImage:
+                      description: ContainerImage the image of the container the exec hook is run on
+                      type: string
                     containerName:
                       description: ContainerName the name of the container the exec hook is run on
                       type: string
@@ -3701,7 +3757,12 @@ spec:
                     podUID:
                       description: PodUID the uid of the pod where the exec hook will be run
                       type: string
+                    startTimestamp:
+                      description: StartedTimestamp the time the exec hook started running
+                      format: date-time
+                      type: string
                   required:
+                  - containerImage
                   - containerName
                   - execHookRef
                   - execHookUID
@@ -3806,8 +3867,11 @@ spec:
                     description: ResourceMatchers is a list of matchers where each matcher matches one or more resources
                     items:
                       properties:
-                        groupKind:
-                          description: GroupKind kubernetes group kind of the resource that has to be matched
+                        group:
+                          description: Group of the kubernetes resource that has to be matched
+                          type: string
+                        kind:
+                          description: Kind of the kubernetes resource that has to be matched
                           type: string
                         labelSelectors:
                           description: LabelSelectors  is used to match resource(s) based on the metadata.labels field of the kubernetes resource
@@ -3827,8 +3891,6 @@ spec:
                         version:
                           description: Version of the kubernetes resource that has to be matched.
                           type: string
-                      required:
-                      - groupKind
                       type: object
                     type: array
                   resourceSelectionCriteria:
@@ -3977,8 +4039,11 @@ spec:
                     description: ResourceMatchers is a list of matchers where each matcher matches one or more resources
                     items:
                       properties:
-                        groupKind:
-                          description: GroupKind kubernetes group kind of the resource that has to be matched
+                        group:
+                          description: Group of the kubernetes resource that has to be matched
+                          type: string
+                        kind:
+                          description: Kind of the kubernetes resource that has to be matched
                           type: string
                         labelSelectors:
                           description: LabelSelectors  is used to match resource(s) based on the metadata.labels field of the kubernetes resource
@@ -3998,8 +4063,6 @@ spec:
                         version:
                           description: Version of the kubernetes resource that has to be matched.
                           type: string
-                      required:
-                      - groupKind
                       type: object
                     type: array
                   resourceSelectionCriteria:
@@ -4227,6 +4290,9 @@ spec:
                       description: CompletionTimestamp the time the exec hook run was finished regardless of failures
                       format: date-time
                       type: string
+                    containerImage:
+                      description: ContainerImage the image of the container the exec hook is run on
+                      type: string
                     containerName:
                       description: ContainerName the name of the container the exec hook is run on
                       type: string
@@ -4276,7 +4342,12 @@ spec:
                     podUID:
                       description: PodUID the uid of the pod where the exec hook will be run
                       type: string
+                    startTimestamp:
+                      description: StartedTimestamp the time the exec hook started running
+                      format: date-time
+                      type: string
                   required:
+                  - containerImage
                   - containerName
                   - execHookRef
                   - execHookUID
@@ -4293,6 +4364,9 @@ spec:
                       description: CompletionTimestamp the time the exec hook run was finished regardless of failures
                       format: date-time
                       type: string
+                    containerImage:
+                      description: ContainerImage the image of the container the exec hook is run on
+                      type: string
                     containerName:
                       description: ContainerName the name of the container the exec hook is run on
                       type: string
@@ -4342,7 +4416,12 @@ spec:
                     podUID:
                       description: PodUID the uid of the pod where the exec hook will be run
                       type: string
+                    startTimestamp:
+                      description: StartedTimestamp the time the exec hook started running
+                      format: date-time
+                      type: string
                   required:
+                  - containerImage
                   - containerName
                   - execHookRef
                   - execHookUID
