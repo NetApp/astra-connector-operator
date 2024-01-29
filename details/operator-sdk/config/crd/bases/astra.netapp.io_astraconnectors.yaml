@@ -133,7 +133,7 @@ spec:
                     type: string
                 type: object
               skipPreCheck:
-                default: true
+                default: false
                 description: SkipPreCheck determines if you want to skip pre-checks
                   and go ahead with the installation.
                 type: boolean
@@ -248,7 +248,7 @@ spec:
                         type: string
                     type: object
                   skipPreCheck:
-                    default: true
+                    default: false
                     description: SkipPreCheck determines if you want to skip pre-checks
                       and go ahead with the installation.
                     type: boolean
