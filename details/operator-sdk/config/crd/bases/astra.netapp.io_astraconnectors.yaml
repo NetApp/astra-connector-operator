@@ -75,6 +75,9 @@ spec:
                     type: integer
                 type: object
               autoSupport:
+                default:
+                  enrolled: true
+                  url: https://stagesupport.netapp.com/put/AsupPut
                 description: AutoSupport indicates willingness to participate in NetApp's
                   proactive support application, NetApp Active IQ. An internet connection
                   is required (port 442) and all support data is anonymized. The default
@@ -130,7 +133,7 @@ spec:
                     type: string
                 type: object
               skipPreCheck:
-                default: false
+                default: true
                 description: SkipPreCheck determines if you want to skip pre-checks
                   and go ahead with the installation.
                 type: boolean
@@ -184,6 +187,9 @@ spec:
                         type: integer
                     type: object
                   autoSupport:
+                    default:
+                      enrolled: true
+                      url: https://stagesupport.netapp.com/put/AsupPut
                     description: AutoSupport indicates willingness to participate
                       in NetApp's proactive support application, NetApp Active IQ.
                       An internet connection is required (port 442) and all support
@@ -242,7 +248,7 @@ spec:
                         type: string
                     type: object
                   skipPreCheck:
-                    default: false
+                    default: true
                     description: SkipPreCheck determines if you want to skip pre-checks
                       and go ahead with the installation.
                     type: boolean
