@@ -1270,6 +1270,9 @@ spec:
                       description: CompletionTimestamp the time the exec hook run was finished regardless of failures
                       format: date-time
                       type: string
+                    containerImage:
+                      description: ContainerImage the image of the container the exec hook is run on
+                      type: string
                     containerName:
                       description: ContainerName the name of the container the exec hook is run on
                       type: string
@@ -1319,7 +1322,12 @@ spec:
                     podUID:
                       description: PodUID the uid of the pod where the exec hook will be run
                       type: string
+                    startTimestamp:
+                      description: StartedTimestamp the time the exec hook started running
+                      format: date-time
+                      type: string
                   required:
+                  - containerImage
                   - containerName
                   - execHookRef
                   - execHookUID
@@ -1336,6 +1344,9 @@ spec:
                       description: CompletionTimestamp the time the exec hook run was finished regardless of failures
                       format: date-time
                       type: string
+                    containerImage:
+                      description: ContainerImage the image of the container the exec hook is run on
+                      type: string
                     containerName:
                       description: ContainerName the name of the container the exec hook is run on
                       type: string
@@ -1385,7 +1396,12 @@ spec:
                     podUID:
                       description: PodUID the uid of the pod where the exec hook will be run
                       type: string
+                    startTimestamp:
+                      description: StartedTimestamp the time the exec hook started running
+                      format: date-time
+                      type: string
                   required:
+                  - containerImage
                   - containerName
                   - execHookRef
                   - execHookUID
@@ -1402,6 +1418,9 @@ spec:
                       description: CompletionTimestamp the time the exec hook run was finished regardless of failures
                       format: date-time
                       type: string
+                    containerImage:
+                      description: ContainerImage the image of the container the exec hook is run on
+                      type: string
                     containerName:
                       description: ContainerName the name of the container the exec hook is run on
                       type: string
@@ -1451,7 +1470,12 @@ spec:
                     podUID:
                       description: PodUID the uid of the pod where the exec hook will be run
                       type: string
+                    startTimestamp:
+                      description: StartedTimestamp the time the exec hook started running
+                      format: date-time
+                      type: string
                   required:
+                  - containerImage
                   - containerName
                   - execHookRef
                   - execHookUID
@@ -1468,6 +1492,9 @@ spec:
                       description: CompletionTimestamp the time the exec hook run was finished regardless of failures
                       format: date-time
                       type: string
+                    containerImage:
+                      description: ContainerImage the image of the container the exec hook is run on
+                      type: string
                     containerName:
                       description: ContainerName the name of the container the exec hook is run on
                       type: string
@@ -1517,7 +1544,12 @@ spec:
                     podUID:
                       description: PodUID the uid of the pod where the exec hook will be run
                       type: string
+                    startTimestamp:
+                      description: StartedTimestamp the time the exec hook started running
+                      format: date-time
+                      type: string
                   required:
+                  - containerImage
                   - containerName
                   - execHookRef
                   - execHookUID
@@ -1889,6 +1921,9 @@ spec:
                       description: CompletionTimestamp the time the exec hook run was finished regardless of failures
                       format: date-time
                       type: string
+                    containerImage:
+                      description: ContainerImage the image of the container the exec hook is run on
+                      type: string
                     containerName:
                       description: ContainerName the name of the container the exec hook is run on
                       type: string
@@ -1938,7 +1973,12 @@ spec:
                     podUID:
                       description: PodUID the uid of the pod where the exec hook will be run
                       type: string
+                    startTimestamp:
+                      description: StartedTimestamp the time the exec hook started running
+                      format: date-time
+                      type: string
                   required:
+                  - containerImage
                   - containerName
                   - execHookRef
                   - execHookUID
@@ -3591,6 +3631,9 @@ spec:
                       description: CompletionTimestamp the time the exec hook run was finished regardless of failures
                       format: date-time
                       type: string
+                    containerImage:
+                      description: ContainerImage the image of the container the exec hook is run on
+                      type: string
                     containerName:
                       description: ContainerName the name of the container the exec hook is run on
                       type: string
@@ -3640,7 +3683,12 @@ spec:
                     podUID:
                       description: PodUID the uid of the pod where the exec hook will be run
                       type: string
+                    startTimestamp:
+                      description: StartedTimestamp the time the exec hook started running
+                      format: date-time
+                      type: string
                   required:
+                  - containerImage
                   - containerName
                   - execHookRef
                   - execHookUID
@@ -3657,6 +3705,9 @@ spec:
                       description: CompletionTimestamp the time the exec hook run was finished regardless of failures
                       format: date-time
                       type: string
+                    containerImage:
+                      description: ContainerImage the image of the container the exec hook is run on
+                      type: string
                     containerName:
                       description: ContainerName the name of the container the exec hook is run on
                       type: string
@@ -3706,7 +3757,12 @@ spec:
                     podUID:
                       description: PodUID the uid of the pod where the exec hook will be run
                       type: string
+                    startTimestamp:
+                      description: StartedTimestamp the time the exec hook started running
+                      format: date-time
+                      type: string
                   required:
+                  - containerImage
                   - containerName
                   - execHookRef
                   - execHookUID
@@ -4234,6 +4290,9 @@ spec:
                       description: CompletionTimestamp the time the exec hook run was finished regardless of failures
                       format: date-time
                       type: string
+                    containerImage:
+                      description: ContainerImage the image of the container the exec hook is run on
+                      type: string
                     containerName:
                       description: ContainerName the name of the container the exec hook is run on
                       type: string
@@ -4283,7 +4342,12 @@ spec:
                     podUID:
                       description: PodUID the uid of the pod where the exec hook will be run
                       type: string
+                    startTimestamp:
+                      description: StartedTimestamp the time the exec hook started running
+                      format: date-time
+                      type: string
                   required:
+                  - containerImage
                   - containerName
                   - execHookRef
                   - execHookUID
@@ -4300,6 +4364,9 @@ spec:
                       description: CompletionTimestamp the time the exec hook run was finished regardless of failures
                       format: date-time
                       type: string
+                    containerImage:
+                      description: ContainerImage the image of the container the exec hook is run on
+                      type: string
                     containerName:
                       description: ContainerName the name of the container the exec hook is run on
                       type: string
@@ -4349,7 +4416,12 @@ spec:
                     podUID:
                       description: PodUID the uid of the pod where the exec hook will be run
                       type: string
+                    startTimestamp:
+                      description: StartedTimestamp the time the exec hook started running
+                      format: date-time
+                      type: string
                   required:
+                  - containerImage
                   - containerName
                   - execHookRef
                   - execHookUID
