@@ -988,7 +988,7 @@ func (c clusterRegisterUtil) UnmanageCluster(clusterID string) error {
 	}
 	if resp != nil {
 		defer cancel()
-		if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusAccepted {
+		if resp.StatusCode != http.StatusNoContent {
 			c.Log.Error(err, "Failed to unmanage cluster, received non-OK response")
 			return errors.New(CreateErrorMsg("UnmanageCluster", "make DELETE call", url, resp.Status, "", err))
 		}
@@ -1006,7 +1006,7 @@ func (c clusterRegisterUtil) UnmanageCluster(clusterID string) error {
 
 	if resp != nil {
 		defer cancel()
-		if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusAccepted {
+		if resp.StatusCode != http.StatusNoContent {
 			c.Log.Error(err, "Failed to remove cluster, received non-OK response")
 			return errors.New(CreateErrorMsg("UnmanageCluster", "make DELETE call", url, resp.Status, "", err))
 		}
