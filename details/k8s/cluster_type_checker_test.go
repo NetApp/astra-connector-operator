@@ -85,6 +85,14 @@ func TestDetermineClusterType(t *testing.T) {
 		assert.Equal(t, k8s.FlavorGKE, clusterTypeChecker.DetermineClusterType())
 	})
 
+	t.Run("EKS", func(t *testing.T) {
+		clusterTypeChecker, k8sUtil, _ := createHandler(t)
+		k8sUtil.On("RESTGet", mock.Anything).Return(nil, errors.New("testing"))
+		k8sUtil.On("VersionGet").Return("v1.28.5-eks-5e0fdde", nil)
+
+		assert.Equal(t, k8s.FlavorEKS, clusterTypeChecker.DetermineClusterType())
+	})
+
 	t.Run("openshift", func(t *testing.T) {
 		clusterTypeChecker, k8sUtil, _ := createHandler(t)
 		versionBytes := []byte(`{"Status": {"Versions": [{"Name": "openshift-apiserver", "Version": "1.0.0"}]}}`)

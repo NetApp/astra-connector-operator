@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"maps"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"strconv"
 	"strings"
 
@@ -33,7 +34,7 @@ func NewNatsSyncClientDeployer() model.Deployer {
 }
 
 // GetDeploymentObjects returns a NatsSyncClient Deployment object
-func (d *NatsSyncClientDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, error) {
+func (d *NatsSyncClientDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
 	log := ctrllog.FromContext(ctx)
 	ls := LabelsForNatsSyncClient(common.NatsSyncClientName, m.Spec.Labels)
 
@@ -57,7 +58,7 @@ func (d *NatsSyncClientDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx 
 	natsSyncCloudBridgeURL := register.GetAstraHostURL(m)
 	keyStoreURLSplit := strings.Split(common.NatsSyncClientKeystoreUrl, "://")
 	if len(keyStoreURLSplit) < 2 {
-		return nil, errors.New("invalid keyStoreURLSplit provided, format - configmap:///configmap-data")
+		return nil, nil, errors.New("invalid keyStoreURLSplit provided, format - configmap:///configmap-data")
 	}
 
 	var replicas int32
@@ -144,7 +145,7 @@ func (d *NatsSyncClientDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx 
 	if m.Spec.NatsSyncClient.HostAliasIP != "" {
 		hostNamesSplit := strings.Split(natsSyncCloudBridgeURL, "://")
 		if len(hostNamesSplit) < 2 {
-			return nil, errors.New("invalid hostname provided, hostname format - https://hostname")
+			return nil, nil, errors.New("invalid hostname provided, hostname format - https://hostname")
 		}
 		dep.Spec.Template.Spec.HostAliases = []corev1.HostAlias{
 			{
@@ -160,11 +161,11 @@ func (d *NatsSyncClientDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx 
 			},
 		}
 	}
-	return []client.Object{dep}, nil
+	return []client.Object{dep}, model.NonMutateFn, nil
 }
 
 // GetServiceObjects returns a NatsSyncClient Service object
-func (d *NatsSyncClientDeployer) GetServiceObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, error) {
+func (d *NatsSyncClientDeployer) GetServiceObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      common.NatsSyncClientName,
@@ -186,7 +187,7 @@ func (d *NatsSyncClientDeployer) GetServiceObjects(m *v1.AstraConnector, ctx con
 			},
 		},
 	}
-	return []client.Object{service}, nil
+	return []client.Object{service}, model.NonMutateFn, nil
 }
 
 // LabelsForNatsSyncClient returns the labels for selecting the NatsSyncClient
@@ -197,18 +198,18 @@ func LabelsForNatsSyncClient(name string, mLabels map[string]string) map[string]
 }
 
 // GetConfigMapObjects returns a ConfigMap object for NatsSyncClient
-func (d *NatsSyncClientDeployer) GetConfigMapObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, error) {
+func (d *NatsSyncClientDeployer) GetConfigMapObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
 	configMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: m.Namespace,
 			Name:      common.NatsSyncClientConfigMapName,
 		},
 	}
-	return []client.Object{configMap}, nil
+	return []client.Object{configMap}, model.NonMutateFn, nil
 }
 
 // GetRoleObjects returns a ConfigMapRole object for NatsSyncClient
-func (d *NatsSyncClientDeployer) GetRoleObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, error) {
+func (d *NatsSyncClientDeployer) GetRoleObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
 	configMapRole := &rbacv1.Role{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: m.Namespace,
@@ -227,11 +228,11 @@ func (d *NatsSyncClientDeployer) GetRoleObjects(m *v1.AstraConnector, ctx contex
 			},
 		},
 	}
-	return []client.Object{configMapRole}, nil
+	return []client.Object{configMapRole}, model.NonMutateFn, nil
 }
 
 // GetRoleBindingObjects returns a NatsSyncClient ConfigMapRoleBinding object
-func (d *NatsSyncClientDeployer) GetRoleBindingObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, error) {
+func (d *NatsSyncClientDeployer) GetRoleBindingObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
 	configMapRoleBinding := &rbacv1.RoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: m.Namespace,
@@ -249,28 +250,28 @@ func (d *NatsSyncClientDeployer) GetRoleBindingObjects(m *v1.AstraConnector, ctx
 			APIGroup: "rbac.authorization.k8s.io",
 		},
 	}
-	return []client.Object{configMapRoleBinding}, nil
+	return []client.Object{configMapRoleBinding}, model.NonMutateFn, nil
 }
 
 // GetServiceAccountObjects returns a ServiceAccount object for NatsSyncClient
-func (d *NatsSyncClientDeployer) GetServiceAccountObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, error) {
+func (d *NatsSyncClientDeployer) GetServiceAccountObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
 	sa := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      common.NatsSyncClientConfigMapServiceAccountName,
 			Namespace: m.Namespace,
 		},
 	}
-	return []client.Object{sa}, nil
+	return []client.Object{sa}, model.NonMutateFn, nil
 }
 
-func (d *NatsSyncClientDeployer) GetStatefulSetObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, error) {
-	return nil, nil
+func (d *NatsSyncClientDeployer) GetStatefulSetObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
+	return nil, model.NonMutateFn, nil
 }
 
-func (d *NatsSyncClientDeployer) GetClusterRoleObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, error) {
-	return nil, nil
+func (d *NatsSyncClientDeployer) GetClusterRoleObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
+	return nil, model.NonMutateFn, nil
 }
 
-func (d *NatsSyncClientDeployer) GetClusterRoleBindingObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, error) {
-	return nil, nil
+func (d *NatsSyncClientDeployer) GetClusterRoleBindingObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
+	return nil, model.NonMutateFn, nil
 }
