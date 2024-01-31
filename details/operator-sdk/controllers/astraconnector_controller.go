@@ -167,7 +167,7 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 
 			acpInstalled, err := acp.CheckForACP(ctx, r.DynamicClient)
 			if err != nil {
-				errList = append(errList, err)
+				errList = append(errList, errors.New("Trident Orchestrator not found. Trident (ACP) installation via Trident Orchestrator required."))
 			} else if !acpInstalled {
 				errList = append(errList, errors.New("Trident (ACP) not installed."))
 			}
