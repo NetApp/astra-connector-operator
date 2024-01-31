@@ -7,11 +7,12 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"github.com/NetApp-Polaris/astra-connector-operator/app/acp"
 	"net/http"
 	"reflect"
 	"strings"
 	"time"
+
+	"github.com/NetApp-Polaris/astra-connector-operator/app/acp"
 
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
@@ -89,7 +90,7 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 	if err != nil {
 		// Error validating the connector object. Do not requeue and update the connector status.
 		log.Error(err, FailedAstraConnectorValidation)
-		natsSyncClientStatus.Status = FailedAstraConnectorValidation
+		natsSyncClientStatus.Status = fmt.Sprintf("%s; %s", FailedAstraConnectorValidation, err.Error())
 		_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
 		// Do not requeue. This is a user input error
 		return ctrl.Result{Requeue: false}, fmt.Errorf("%s; %w", natsSyncClientStatus.Status, err)
