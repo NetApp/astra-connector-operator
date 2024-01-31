@@ -7,11 +7,12 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"github.com/NetApp-Polaris/astra-connector-operator/app/acp"
 	"net/http"
 	"reflect"
 	"strings"
 	"time"
+
+	"github.com/NetApp-Polaris/astra-connector-operator/app/acp"
 
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
@@ -89,7 +90,7 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 	if err != nil {
 		// Error validating the connector object. Do not requeue and update the connector status.
 		log.Error(err, FailedAstraConnectorValidation)
-		natsSyncClientStatus.Status = FailedAstraConnectorValidation
+		natsSyncClientStatus.Status = fmt.Sprintf("%s; %s", FailedAstraConnectorValidation, err.Error())
 		_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
 		// Do not requeue. This is a user input error
 		return ctrl.Result{Requeue: false}, fmt.Errorf("%s; %w", natsSyncClientStatus.Status, err)
@@ -116,6 +117,13 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 		if controllerutil.ContainsFinalizer(astraConnector, finalizerName) {
 			k8sUtil := k8s.NewK8sUtil(r.Client, r.Clientset, log)
 			registerUtil := register.NewClusterRegisterUtil(astraConnector, &http.Client{}, r.Client, k8sUtil, log, context.Background())
+
+			log.Info("Removing cluster from Astra upon CRD delete")
+			err = registerUtil.UnmanageCluster(natsSyncClientStatus.AstraClusterId)
+			if err != nil {
+				log.Error(err, "Failed to unmanage cluster, ignoring...")
+			}
+
 			log.Info("Unregistering natsSyncClient upon CRD delete")
 			err = registerUtil.UnRegisterNatsSyncClient()
 			if err != nil {

@@ -93,7 +93,7 @@ func DoRequest(ctx context.Context, client HTTPClient, method, url string, body 
 		// If the request failed or the server returned a non-2xx status code, wait before retrying
 		time.Sleep(sleepTimeout)
 	}
-	
+
 	return httpResponse, err, cancel
 }
 
@@ -119,6 +119,7 @@ type ClusterRegisterUtil interface {
 	UpdateManagedCluster(astraHost, clusterId, astraConnectorId, connectorInstall, apiToken string) (string, error)
 	CreateOrUpdateManagedCluster(astraHost, cloudId, clusterId, astraConnectorId, managedClustersMethod, apiToken string) (ClusterInfo, string, error)
 	ValidateAndGetCluster(astraHost, cloudId, apiToken, clusterId string) (ClusterInfo, string, error)
+	UnmanageCluster(clusterID string) error
 }
 
 type clusterRegisterUtil struct {
@@ -955,6 +956,63 @@ func (c clusterRegisterUtil) ValidateAndGetCluster(astraHost, cloudId, apiToken,
 	// This is the case for creation of cluster with POST calls to /clusters and /managedClusters
 	c.Log.WithValues("cloudID", cloudId).Info("ClusterId not specified in CR Spec and an existing cluster doesn't exist in the system")
 	return ClusterInfo{}, "", nil
+}
+
+// UnmanageCluster unmanages and removes a cluster from Astra.
+// It accomplishes this by sending two DELETE requests to the Astra platform cluster:
+// one to unmanage the cluster and another to remove the cluster record.
+func (c clusterRegisterUtil) UnmanageCluster(clusterID string) error {
+	astraHost := GetAstraHostURL(c.AstraConnector)
+	c.Log.WithValues("URL", astraHost).Info("Astra Host Info")
+
+	apiToken, _, err := c.GetAPITokenFromSecret(c.AstraConnector.Spec.Astra.TokenRef)
+	if err != nil {
+		c.Log.Error(err, "Failed to get API token")
+		return err
+	}
+
+	cloudId, _, err := c.GetCloudId(astraHost, common.AstraPrivateCloudType, apiToken)
+	if err != nil {
+		c.Log.Error(err, "Failed to get Cloud ID")
+		return err
+	}
+
+	headerMap := HeaderMap{Authorization: fmt.Sprintf("Bearer %s", apiToken)}
+
+	// Un-managing cluster
+	url := fmt.Sprintf("%s/accounts/%s/topology/v1/managedClusters/%s", astraHost, c.AstraConnector.Spec.Astra.AccountId, clusterID)
+	resp, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodDelete, url, nil, headerMap, c.Log)
+	if err != nil {
+		c.Log.Error(err, "Failed to unmanage cluster")
+		return errors.New(CreateErrorMsg("UnmanageCluster", "make DELETE call", url, "", "", err))
+	}
+	if resp != nil {
+		defer cancel()
+		if resp.StatusCode != http.StatusNoContent {
+			c.Log.Error(err, "Failed to unmanage cluster, received non-OK response")
+			return errors.New(CreateErrorMsg("UnmanageCluster", "make DELETE call", url, resp.Status, "", err))
+		}
+	}
+
+	// Removing cluster
+	url = fmt.Sprintf("%s/accounts/%s/topology/v1/clouds/%s/clusters/%s", astraHost, c.AstraConnector.Spec.Astra.AccountId, cloudId, clusterID)
+	resp, err, cancel = DoRequest(c.Ctx, c.Client, http.MethodDelete, url, nil, headerMap, c.Log)
+	defer cancel()
+
+	if err != nil {
+		c.Log.Error(err, "Failed to remove cluster")
+		return errors.New(CreateErrorMsg("UnmanageCluster", "make DELETE call", url, "", "", err))
+	}
+
+	if resp != nil {
+		defer cancel()
+		if resp.StatusCode != http.StatusNoContent {
+			c.Log.Error(err, "Failed to remove cluster, received non-OK response")
+			return errors.New(CreateErrorMsg("UnmanageCluster", "make DELETE call", url, resp.Status, "", err))
+		}
+	}
+
+	return nil
 }
 
 // GetAPITokenFromSecret Gets Secret provided in the ACC Spec and returns api token string of the data in secret
