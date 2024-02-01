@@ -8,7 +8,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"net/http"
 	"reflect"
 	"strings"
@@ -17,6 +16,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
 
+	"k8s.io/apimachinery/pkg/util/wait"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -92,7 +92,7 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 	if err != nil {
 		// Error validating the connector object. Do not requeue and update the connector status.
 		log.Error(err, FailedAstraConnectorValidation)
-		natsSyncClientStatus.Status = FailedAstraConnectorValidation
+		natsSyncClientStatus.Status = fmt.Sprintf("%s; %s", FailedAstraConnectorValidation, err.Error())
 		_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
 		// Do not requeue. This is a user input error
 		return ctrl.Result{Requeue: false}, fmt.Errorf("%s; %w", natsSyncClientStatus.Status, err)
@@ -169,7 +169,7 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 
 			acpInstalled, err := acp.CheckForACP(ctx, r.DynamicClient)
 			if err != nil {
-				errList = append(errList, err)
+				errList = append(errList, errors.New("Trident Orchestrator not found. Trident (ACP) installation via Trident Orchestrator required."))
 			} else if !acpInstalled {
 				errList = append(errList, errors.New("Trident (ACP) not installed."))
 			}
