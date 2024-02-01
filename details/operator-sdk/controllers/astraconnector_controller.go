@@ -6,8 +6,9 @@ package controllers
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
-	"github.com/NetApp-Polaris/astra-connector-operator/app/acp"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"net/http"
 	"reflect"
 	"strings"
@@ -15,6 +16,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
+
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -36,6 +38,7 @@ import (
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
+	"github.com/NetApp-Polaris/astra-connector-operator/app/acp"
 	"github.com/NetApp-Polaris/astra-connector-operator/app/conf"
 	"github.com/NetApp-Polaris/astra-connector-operator/app/register"
 	"github.com/NetApp-Polaris/astra-connector-operator/details/k8s"
@@ -158,7 +161,7 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 	}
 
 	if r.needsReconcile(*astraConnector) {
-		log.Info("Actual state does not match desired state", "registered", astraConnector.Status.NatsSyncClient.Registered, "desiredSpec", astraConnector.Spec)
+		log.Info("Actual state does not match desired state", "registered", astraConnector.Status.NatsSyncClient.Registered, "desiredSpec", astraConnector.Spec, "observedSpec", astraConnector.Status.ObservedSpec)
 		if !astraConnector.Spec.SkipPreCheck {
 			k8sUtil := k8s.NewK8sUtil(r.Client, r.Clientset, log)
 			preCheckClient := precheck.NewPrecheckClient(log, k8sUtil)
@@ -217,6 +220,11 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 		}
 
 		_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus, true)
+		err := r.waitForStatusUpdate(astraConnector, log)
+		if err != nil {
+			log.Error(err, "Failed to update status, ignoring since this will be fixed on a future reconcile.")
+		}
+
 		return ctrl.Result{}, nil
 
 	} else {
@@ -384,20 +392,24 @@ func (r *AstraConnectorController) updateAstraConnectorStatus(
 			return err
 		}
 
-		// Merge the changes with the current status
-		astraConnector.Status = current.Status
-
+		// Update status.Nodes if needed
 		if !reflect.DeepEqual(podNames, astraConnector.Status.Nodes) {
 			astraConnector.Status.Nodes = podNames
 		}
+
+		// FIXME Status should never be nil
 		if astraConnector.Status.Nodes == nil {
 			astraConnector.Status.Nodes = []string{""}
 		}
+
 		if !reflect.DeepEqual(natsSyncClientStatus, astraConnector.Status.NatsSyncClient) {
 			astraConnector.Status.NatsSyncClient = natsSyncClientStatus
 		}
+
 		if len(updateObservedSpec) > 0 && updateObservedSpec[0] {
 			astraConnector.Status.ObservedSpec = astraConnector.Spec
+		} else {
+			astraConnector.Status.ObservedSpec = current.Status.ObservedSpec
 		}
 
 		// Update the status
@@ -466,4 +478,53 @@ func (r *AstraConnectorController) needsReconcile(connector v1.AstraConnector) b
 		return true
 	}
 	return false
+}
+
+// waitForStatusUpdate waits for the status of an AstraConnector to be updated in Kubernetes.
+// Status().Update() function returns even though the update is still in progress on k8s.
+// Polling to make sure this function exits only after status subresource update is reflected in k8s.
+func (r *AstraConnectorController) waitForStatusUpdate(astraConnector *v1.AstraConnector, log logr.Logger) error {
+	interval := 2 * time.Second
+	timeout := 2 * time.Minute
+
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	// Start polling process
+	err := errors.Wrap(wait.PollUntilContextTimeout(ctx, interval, timeout, true,
+		func(ctx context.Context) (bool, error) {
+			current := astraConnector.DeepCopy()
+			err := r.Get(ctx, types.NamespacedName{Name: astraConnector.Name, Namespace: astraConnector.Namespace}, current)
+			if err != nil {
+				log.Error(err, "Failed to get the current status of the AstraConnector. Retrying...")
+				return false, nil
+			}
+
+			astraConnectorStatusJson, err := json.Marshal(astraConnector.Status)
+			if err != nil {
+				log.Error(err, "Failed to marshal astraConnector.Status to JSON")
+				return false, nil
+			}
+
+			currentStatusJson, err := json.Marshal(current.Status)
+			if err != nil {
+				log.Error(err, "Failed to marshal current.Status to JSON")
+				return false, nil
+			}
+
+			// If the status has not been updated yet, log the current and expected statuses and continue polling.
+			if string(astraConnectorStatusJson) != string(currentStatusJson) {
+				log.Info("AstraControlCenter instance status subresource update is in progress... retrying",
+					"Expected status", astraConnector.Status, "Actual status", current.Status)
+				return false, nil
+			}
+
+			// Otherwise stop polling
+			return true, nil
+		}), fmt.Sprintf("AstraConnector status is not updated even after %s", timeout))
+
+	if err == nil {
+		log.Info("Updated AstraConnector status successfully")
+	}
+	return err
 }
