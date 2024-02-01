@@ -172,6 +172,9 @@ func (c *ClusterTypeChecker) isAKSFlavor() bool {
 	aksRoleBinding, err := c.K8sUtil.K8sClientset().RbacV1().ClusterRoles().Get(context.Background(), aksService, metav1.GetOptions{})
 
 	if err != nil {
+		if errors.IsNotFound(err) {
+			return false
+		}
 		c.Log.Error(err, "Unable to get AKS cluster role. Assuming not AKS")
 		return false
 	}
