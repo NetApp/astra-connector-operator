@@ -166,14 +166,6 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 			preCheckClient := precheck.NewPrecheckClient(log, k8sUtil)
 			errList := preCheckClient.Run()
 
-			// ACP is not a requirement of 24.02 commenting this out for now.
-			//acpInstalled, err := acp.CheckForACP(ctx, r.DynamicClient)
-			//if err != nil {
-			//	errList = append(errList, errors.New("Trident Orchestrator not found. Trident (ACP) installation via Trident Orchestrator required."))
-			//} else if !acpInstalled {
-			//	errList = append(errList, errors.New("Trident (ACP) not installed."))
-			//}
-
 			if errList != nil {
 				errString := ""
 				for i, err := range errList {
