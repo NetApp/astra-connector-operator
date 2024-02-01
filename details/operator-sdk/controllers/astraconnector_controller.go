@@ -493,7 +493,7 @@ func (r *AstraConnectorController) waitForStatusUpdate(astraConnector *v1.AstraC
 	// Start polling process
 	err := errors.Wrap(wait.PollUntilContextTimeout(ctx, interval, timeout, true,
 		func(ctx context.Context) (bool, error) {
-			current := astraConnector.DeepCopy()
+			current := &v1.AstraConnector{}
 			err := r.Get(ctx, types.NamespacedName{Name: astraConnector.Name, Namespace: astraConnector.Namespace}, current)
 			if err != nil {
 				log.Error(err, "Failed to get the current status of the AstraConnector. Retrying...")
