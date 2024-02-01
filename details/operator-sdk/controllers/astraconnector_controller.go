@@ -524,7 +524,7 @@ func (r *AstraConnectorController) waitForStatusUpdate(astraConnector *v1.AstraC
 		}), fmt.Sprintf("AstraConnector status is not updated even after %s", timeout))
 
 	if err == nil {
-		log.Info("Updated AstraConnector status successfully")
+		log.Info("AstraConnector status reflected in k8s")
 	}
 	return err
 }
