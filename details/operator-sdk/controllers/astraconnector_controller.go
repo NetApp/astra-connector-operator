@@ -38,7 +38,6 @@ import (
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	"github.com/NetApp-Polaris/astra-connector-operator/app/acp"
 	"github.com/NetApp-Polaris/astra-connector-operator/app/conf"
 	"github.com/NetApp-Polaris/astra-connector-operator/app/register"
 	"github.com/NetApp-Polaris/astra-connector-operator/details/k8s"
@@ -166,13 +165,6 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 			k8sUtil := k8s.NewK8sUtil(r.Client, r.Clientset, log)
 			preCheckClient := precheck.NewPrecheckClient(log, k8sUtil)
 			errList := preCheckClient.Run()
-
-			acpInstalled, err := acp.CheckForACP(ctx, r.DynamicClient)
-			if err != nil {
-				errList = append(errList, errors.New("Trident Orchestrator not found. Trident (ACP) installation via Trident Orchestrator required."))
-			} else if !acpInstalled {
-				errList = append(errList, errors.New("Trident (ACP) not installed."))
-			}
 
 			if errList != nil {
 				errString := ""
