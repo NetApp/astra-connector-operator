@@ -23,6 +23,7 @@ FROM gcr.io/distroless/static:nonroot
 WORKDIR /
 COPY --from=builder /workspace/manager .
 COPY --from=builder /workspace/common/neptune_manager_tag.txt ./common/
+COPY --from=builder /workspace/common/connector_version.txt ./common/
 USER 65532:65532
 
 ENTRYPOINT ["/manager"]
