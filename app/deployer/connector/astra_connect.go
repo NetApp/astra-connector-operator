@@ -8,10 +8,9 @@ import (
 	"context"
 	"fmt"
 	"maps"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"strconv"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -23,6 +22,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/NetApp-Polaris/astra-connector-operator/app/conf"
@@ -64,7 +64,7 @@ func (d *AstraConnectDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx co
 		filePath := filepath.Join(rootDir, "common/connector_version.txt")
 		imageBytes, err := os.ReadFile(filePath)
 		if err != nil {
-			return nil, errors.Wrap(err, "error reading connector version txt file")
+			return nil, model.NonMutateFn, errors.Wrap(err, "error reading connector version txt file")
 		}
 
 		containerImage = string(imageBytes)
