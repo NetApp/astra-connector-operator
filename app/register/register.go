@@ -947,7 +947,8 @@ func (c clusterRegisterUtil) ValidateAndGetCluster(astraHost, cloudId, apiToken,
 
 	c.Log.WithValues("cloudID", cloudId).Info("Checking existing records for current cluster's record")
 	for _, value := range getClustersResp.Items {
-		if value.ApiServiceID == k8sServiceUUID {
+		// We want to allow dual management of a cluster across different architectures to support migration from v2 to v3. Only reuse existing clusterID if v3 i.e. ConnectorInstall is true
+		if value.ApiServiceID == k8sServiceUUID && value.ConnectorInstall == "true" {
 			c.Log.WithValues("ClusterId", value.ID, "Name", value.Name, "ManagedState", value.ManagedState).Info("Cluster Info found in the existing records")
 			return ClusterInfo{ID: value.ID, Name: value.Name, ManagedState: value.ManagedState}, "", nil
 		}
