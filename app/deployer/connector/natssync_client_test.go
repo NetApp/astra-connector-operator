@@ -33,7 +33,7 @@ func TestNatsSyncGetDeploymentObjects(t *testing.T) {
 
 	deployer := connector.NewNatsSyncClientDeployer()
 
-	objects, err := deployer.GetDeploymentObjects(mockAstraConnector, context.Background())
+	objects, _, err := deployer.GetDeploymentObjects(mockAstraConnector, context.Background())
 	assert.NoError(t, err)
 	assert.Len(t, objects, 1)
 
@@ -61,7 +61,7 @@ func TestNatsSyncGetDeploymentObjectsDefault(t *testing.T) {
 		},
 	}
 	deployer := connector.NewNatsSyncClientDeployer()
-	objects, err := deployer.GetDeploymentObjects(mockAstraConnector, context.Background())
+	objects, _, err := deployer.GetDeploymentObjects(mockAstraConnector, context.Background())
 	assert.NoError(t, err)
 	assert.Len(t, objects, 1)
 
@@ -94,7 +94,7 @@ func TestGetServiceObjects(t *testing.T) {
 	}
 
 	deployer := connector.NewNatsSyncClientDeployer()
-	objects, err := deployer.GetServiceObjects(mockAstraConnector, context.Background())
+	objects, _, err := deployer.GetServiceObjects(mockAstraConnector, context.Background())
 	assert.NoError(t, err)
 	assert.Len(t, objects, 1)
 
@@ -111,7 +111,7 @@ func TestNatsSyncGetConfigMapObjects(t *testing.T) {
 	mockAstraConnector := DummyAstraConnector()
 	deployer := connector.NewNatsSyncClientDeployer()
 
-	objects, err := deployer.GetConfigMapObjects(&mockAstraConnector, context.Background())
+	objects, _, err := deployer.GetConfigMapObjects(&mockAstraConnector, context.Background())
 	assert.NoError(t, err)
 	assert.Len(t, objects, 1)
 
@@ -125,7 +125,7 @@ func TestNatsSyncGetRoleObjects(t *testing.T) {
 	mockAstraConnector := DummyAstraConnector()
 	deployer := connector.NewNatsSyncClientDeployer()
 
-	objects, err := deployer.GetRoleObjects(&mockAstraConnector, context.Background())
+	objects, _, err := deployer.GetRoleObjects(&mockAstraConnector, context.Background())
 	assert.NoError(t, err)
 	assert.Len(t, objects, 1)
 
@@ -142,7 +142,7 @@ func TestNatsSyncGetRoleObjects(t *testing.T) {
 func TestGetRoleBindingObjects(t *testing.T) {
 	mockAstraConnector := DummyAstraConnector()
 	deployer := connector.NewNatsSyncClientDeployer()
-	objects, err := deployer.GetRoleBindingObjects(&mockAstraConnector, context.Background())
+	objects, _, err := deployer.GetRoleBindingObjects(&mockAstraConnector, context.Background())
 	assert.NoError(t, err)
 
 	assert.Len(t, objects, 1)
@@ -163,7 +163,7 @@ func TestNatsSyncGetServiceAccountObjects(t *testing.T) {
 	// Create a mock AstraConnector object
 	m := DummyAstraConnector()
 	deployer := connector.NewNatsSyncClientDeployer()
-	objects, err := deployer.GetServiceAccountObjects(&m, context.Background())
+	objects, _, err := deployer.GetServiceAccountObjects(&m, context.Background())
 	assert.NoError(t, err)
 
 	assert.Len(t, objects, 1)
@@ -180,15 +180,18 @@ func TestNatsSyncK8sObjectsNotCreated(t *testing.T) {
 
 	m := DummyAstraConnector()
 
-	objects, err := deployer.GetStatefulSetObjects(&m, ctx)
+	objects, fn, err := deployer.GetStatefulSetObjects(&m, ctx)
 	assert.Nil(t, objects)
+	assert.NotNil(t, fn)
 	assert.Nil(t, err)
 
-	objects, err = deployer.GetClusterRoleObjects(&m, ctx)
+	objects, fn, err = deployer.GetClusterRoleObjects(&m, ctx)
 	assert.Nil(t, objects)
+	assert.NotNil(t, fn)
 	assert.Nil(t, err)
 
-	objects, err = deployer.GetClusterRoleBindingObjects(&m, ctx)
+	objects, fn, err = deployer.GetClusterRoleBindingObjects(&m, ctx)
 	assert.Nil(t, objects)
+	assert.NotNil(t, fn)
 	assert.Nil(t, err)
 }

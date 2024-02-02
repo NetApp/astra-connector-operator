@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"maps"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"strings"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -33,7 +34,7 @@ func NewNatsDeployer() model.Deployer {
 }
 
 // GetStatefulSetObjects returns a NATS Statefulset object
-func (n *NatsDeployer) GetStatefulSetObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, error) {
+func (n *NatsDeployer) GetStatefulSetObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
 	log := ctrllog.FromContext(ctx)
 	ls := labelsForNats(common.NatsName, m.Spec.Labels)
 
@@ -161,11 +162,11 @@ func (n *NatsDeployer) GetStatefulSetObjects(m *v1.AstraConnector, ctx context.C
 			},
 		}
 	}
-	return []client.Object{dep}, nil
+	return []client.Object{dep}, model.NonMutateFn, nil
 }
 
 // GetConfigMapObjects returns a ConfigMap object for nats
-func (n *NatsDeployer) GetConfigMapObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, error) {
+func (n *NatsDeployer) GetConfigMapObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
 	log := ctrllog.FromContext(ctx)
 
 	routes := make([]string, 0)
@@ -203,11 +204,11 @@ func (n *NatsDeployer) GetConfigMapObjects(m *v1.AstraConnector, ctx context.Con
 			"nats.conf": fmt.Sprintf(natsConf, common.NatsMonitorPort, common.NatsMaxPayload, common.NatsClusterPort, routeConfig),
 		},
 	}
-	return []client.Object{configMap}, nil
+	return []client.Object{configMap}, model.NonMutateFn, nil
 }
 
 // GetServiceAccountObjects returns a ServiceAccount object for nats
-func (n *NatsDeployer) GetServiceAccountObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, error) {
+func (n *NatsDeployer) GetServiceAccountObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
 	sa := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      common.NatsServiceAccountName,
@@ -215,11 +216,11 @@ func (n *NatsDeployer) GetServiceAccountObjects(m *v1.AstraConnector, ctx contex
 			Labels:    labelsForNats(common.NatsName, m.Spec.Labels),
 		},
 	}
-	return []client.Object{sa}, nil
+	return []client.Object{sa}, model.NonMutateFn, nil
 }
 
 // GetServiceObjects returns a Service object for nats
-func (n *NatsDeployer) GetServiceObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, error) {
+func (n *NatsDeployer) GetServiceObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
 	ls := labelsForNats(common.NatsName, m.Spec.Labels)
 	var services []client.Object
 
@@ -274,7 +275,7 @@ func (n *NatsDeployer) GetServiceObjects(m *v1.AstraConnector, ctx context.Conte
 		},
 	}
 	services = append(services, natsService, natsClusterService)
-	return services, nil
+	return services, model.NonMutateFn, nil
 }
 
 // labelsForNats returns the labels for selecting the nats resources
@@ -284,11 +285,11 @@ func labelsForNats(name string, mLabels map[string]string) map[string]string {
 	return labels
 }
 
-func (n *NatsDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, error) {
-	return nil, nil
+func (n *NatsDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
+	return nil, model.NonMutateFn, nil
 }
 
-func (n *NatsDeployer) GetRoleObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, error) {
+func (n *NatsDeployer) GetRoleObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
 	role := &rbacv1.Role{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: m.Namespace,
@@ -302,10 +303,10 @@ func (n *NatsDeployer) GetRoleObjects(m *v1.AstraConnector, ctx context.Context)
 			},
 		},
 	}
-	return []client.Object{role}, nil
+	return []client.Object{role}, model.NonMutateFn, nil
 }
 
-func (n *NatsDeployer) GetRoleBindingObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, error) {
+func (n *NatsDeployer) GetRoleBindingObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
 	roleBinding := &rbacv1.RoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: m.Namespace,
@@ -323,15 +324,15 @@ func (n *NatsDeployer) GetRoleBindingObjects(m *v1.AstraConnector, ctx context.C
 			APIGroup: "rbac.authorization.k8s.io",
 		},
 	}
-	return []client.Object{roleBinding}, nil
+	return []client.Object{roleBinding}, model.NonMutateFn, nil
 }
 
-func (n *NatsDeployer) GetClusterRoleObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, error) {
-	return nil, nil
+func (n *NatsDeployer) GetClusterRoleObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
+	return nil, model.NonMutateFn, nil
 }
 
-func (n *NatsDeployer) GetClusterRoleBindingObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, error) {
-	return nil, nil
+func (n *NatsDeployer) GetClusterRoleBindingObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
+	return nil, model.NonMutateFn, nil
 }
 
 // GetNatsURL returns the nats URL

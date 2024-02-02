@@ -41,7 +41,7 @@ func TestAstraConnectGetDeploymentObjects(t *testing.T) {
 		},
 	}
 
-	objects, err := deployer.GetDeploymentObjects(astraConnector, ctx)
+	objects, _, err := deployer.GetDeploymentObjects(astraConnector, ctx)
 	assert.NoError(t, err)
 	assert.NotNil(t, objects)
 	assert.Equal(t, 1, len(objects))
@@ -84,12 +84,12 @@ func TestAstraConnectGetDeploymentObjects(t *testing.T) {
 // 			},
 // 		},
 // 	}
-
-// 	objects, err := deployer.GetDeploymentObjects(astraConnector, ctx)
-// 	assert.NoError(t, err)
-// 	assert.NotNil(t, objects)
-// 	assert.Equal(t, 1, len(objects))
-
+//
+//	objects, _, err := deployer.GetDeploymentObjects(astraConnector, ctx)
+//	assert.NoError(t, err)
+//	assert.NotNil(t, objects)
+//	assert.Equal(t, 1, len(objects))
+//
 // 	deployment, ok := objects[0].(*appsv1.Deployment)
 // 	assert.True(t, ok)
 
@@ -149,7 +149,7 @@ func TestAstraConnectGetConfigMapObjectsSkipTLSValidationTrue(t *testing.T) {
 		},
 	}
 
-	objects, err := deployer.GetConfigMapObjects(m, ctx)
+	objects, _, err := deployer.GetConfigMapObjects(m, ctx)
 	assert.NoError(t, err)
 	assert.NotNil(t, objects)
 	assert.Equal(t, 1, len(objects))
@@ -182,7 +182,7 @@ func TestAstraConnectGetConfigMapObjectsSkipTLSValidationFalse(t *testing.T) {
 		},
 	}
 
-	objects, err := deployer.GetConfigMapObjects(m, ctx)
+	objects, _, err := deployer.GetConfigMapObjects(m, ctx)
 	assert.NoError(t, err)
 	assert.NotNil(t, objects)
 	assert.Equal(t, 1, len(objects))
@@ -205,7 +205,7 @@ func TestAstraConnectGetServiceAccountObjects(t *testing.T) {
 
 	m := DummyAstraConnector()
 
-	objects, err := deployer.GetServiceAccountObjects(&m, ctx)
+	objects, _, err := deployer.GetServiceAccountObjects(&m, ctx)
 	assert.NoError(t, err)
 	assert.NotNil(t, objects)
 	assert.Equal(t, 1, len(objects))
@@ -222,7 +222,7 @@ func TestAstraConnectGetClusterRoleObjects(t *testing.T) {
 
 	m := DummyAstraConnector()
 
-	objects, err := deployer.GetClusterRoleObjects(&m, ctx)
+	objects, _, err := deployer.GetClusterRoleObjects(&m, ctx)
 	assert.NoError(t, err)
 	assert.NotNil(t, objects)
 	assert.Equal(t, 1, len(objects))
@@ -246,7 +246,7 @@ func TestAstraConnectGetClusterRoleBindingObjects(t *testing.T) {
 
 	m := DummyAstraConnector()
 
-	objects, err := deployer.GetClusterRoleBindingObjects(&m, ctx)
+	objects, _, err := deployer.GetClusterRoleBindingObjects(&m, ctx)
 	assert.NoError(t, err)
 	assert.NotNil(t, objects)
 	assert.Equal(t, 1, len(objects))
@@ -278,7 +278,7 @@ func TestAstraConnectGetRoleObjects(t *testing.T) {
 
 	m := DummyAstraConnector()
 
-	objects, err := deployer.GetRoleObjects(&m, ctx)
+	objects, _, err := deployer.GetRoleObjects(&m, ctx)
 	assert.NoError(t, err)
 	assert.NotNil(t, objects)
 	assert.Equal(t, 1, len(objects))
@@ -303,7 +303,7 @@ func TestAstraConnectGetRoleBindingObjects(t *testing.T) {
 
 	m := DummyAstraConnector()
 
-	objects, err := deployer.GetRoleBindingObjects(&m, ctx)
+	objects, _, err := deployer.GetRoleBindingObjects(&m, ctx)
 	assert.NoError(t, err)
 	assert.NotNil(t, objects)
 	assert.Equal(t, 1, len(objects))
@@ -331,11 +331,13 @@ func TestAstraConnectK8sObjectsNotCreated(t *testing.T) {
 
 	m := DummyAstraConnector()
 
-	objects, err := deployer.GetServiceObjects(&m, ctx)
+	objects, fn, err := deployer.GetServiceObjects(&m, ctx)
 	assert.Nil(t, objects)
+	assert.NotNil(t, fn)
 	assert.Nil(t, err)
 
-	objects, err = deployer.GetStatefulSetObjects(&m, ctx)
+	objects, fn, err = deployer.GetStatefulSetObjects(&m, ctx)
 	assert.Nil(t, objects)
+	assert.NotNil(t, fn)
 	assert.Nil(t, err)
 }

@@ -1442,6 +1442,133 @@ func TestValidateAndGetCluster(t *testing.T) {
 	})
 }
 
+func TestUnmanageCluster(t *testing.T) {
+	t.Run("TestUnManageCluster_GetApiTokenFromSecretError", func(t *testing.T) {
+		clusterRegisterUtil, _, _, _ := createClusterRegister(AstraConnectorInput{})
+
+		err := clusterRegisterUtil.UnmanageCluster("1234")
+
+		assert.Error(t, err)
+		assert.EqualError(t, err, "secrets \"astra-token\" not found")
+	})
+
+	t.Run("TestUnManageCluster_GetCloudIdError", func(t *testing.T) {
+		clusterRegisterUtil, mockHttpClient, _, _ := createClusterRegister(AstraConnectorInput{createTokenSecret: true})
+
+		errorText := "error on get request"
+		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{}, errors.New(errorText))
+
+		err := clusterRegisterUtil.UnmanageCluster("1234")
+
+		assert.Error(t, err)
+		assert.EqualError(t, err, "timed out querying Astra API")
+	})
+
+	t.Run("TestUnManageCluster_UnmanageRequestError", func(t *testing.T) {
+		clusterRegisterUtil, mockHttpClient, _, _ := createClusterRegister(AstraConnectorInput{createTokenSecret: true})
+
+		ret := io.NopCloser(bytes.NewReader([]byte(`{"items":[{"id":"1234","name":"cloud1", "cloudType":"private"}, {"id":"5678","name":"cloud2","cloudType":"not-private"}]}`)))
+		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{
+			StatusCode: 200,
+			Body:       ret,
+		}, nil).Once()
+
+		errorText := "error on DELETE request"
+		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{}, errors.New(errorText)).Once()
+
+		err := clusterRegisterUtil.UnmanageCluster("1234")
+
+		assert.Error(t, err)
+		assert.EqualError(t, err, "UnmanageCluster: Failed to make DELETE call to https://astra.netapp.io/accounts//topology/v1/managedClusters/1234 with status : error on DELETE request")
+	})
+
+	t.Run("TestUnManageCluster_UnmanageRequestNonOkStatus", func(t *testing.T) {
+		clusterRegisterUtil, mockHttpClient, _, _ := createClusterRegister(AstraConnectorInput{createTokenSecret: true})
+
+		ret := io.NopCloser(bytes.NewReader([]byte(`{"items":[{"id":"1234","name":"cloud1", "cloudType":"private"}, {"id":"5678","name":"cloud2","cloudType":"not-private"}]}`)))
+		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{
+			StatusCode: 200,
+			Body:       ret,
+		}, nil).Once()
+
+		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{
+			StatusCode: 400,
+		}, nil).Once()
+
+		err := clusterRegisterUtil.UnmanageCluster("1234")
+
+		assert.Error(t, err)
+		assert.EqualError(t, err, "UnmanageCluster: Failed to make DELETE call to https://astra.netapp.io/accounts//topology/v1/managedClusters/1234 with status ")
+	})
+
+	t.Run("TestUnManageCluster_RemoveRequestError", func(t *testing.T) {
+		clusterRegisterUtil, mockHttpClient, _, _ := createClusterRegister(AstraConnectorInput{createTokenSecret: true})
+
+		ret := io.NopCloser(bytes.NewReader([]byte(`{"items":[{"id":"1234","name":"cloud1", "cloudType":"private"}, {"id":"5678","name":"cloud2","cloudType":"not-private"}]}`)))
+		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{
+			StatusCode: 200,
+			Body:       ret,
+		}, nil).Once()
+
+		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{
+			StatusCode: 204,
+		}, nil).Once()
+
+		errorText := "error on DELETE request"
+		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{}, errors.New(errorText)).Once()
+
+		err := clusterRegisterUtil.UnmanageCluster("1234")
+
+		assert.Error(t, err)
+		assert.EqualError(t, err, "UnmanageCluster: Failed to make DELETE call to https://astra.netapp.io/accounts//topology/v1/clouds/1234/clusters/1234 with status : error on DELETE request")
+	})
+
+	t.Run("TestUnManageCluster_RemoveRequestNonOkStatus", func(t *testing.T) {
+		clusterRegisterUtil, mockHttpClient, _, _ := createClusterRegister(AstraConnectorInput{createTokenSecret: true})
+
+		ret := io.NopCloser(bytes.NewReader([]byte(`{"items":[{"id":"1234","name":"cloud1", "cloudType":"private"}, {"id":"5678","name":"cloud2","cloudType":"not-private"}]}`)))
+		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{
+			StatusCode: 200,
+			Body:       ret,
+		}, nil).Once()
+
+		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{
+			StatusCode: 204,
+		}, nil).Once()
+
+		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{
+			StatusCode: 400,
+		}, nil).Once()
+
+		err := clusterRegisterUtil.UnmanageCluster("1234")
+
+		assert.Error(t, err)
+		assert.EqualError(t, err, "UnmanageCluster: Failed to make DELETE call to https://astra.netapp.io/accounts//topology/v1/clouds/1234/clusters/1234 with status ")
+	})
+
+	t.Run("TestUnManageCluster_Success", func(t *testing.T) {
+		clusterRegisterUtil, mockHttpClient, _, _ := createClusterRegister(AstraConnectorInput{createTokenSecret: true})
+
+		ret := io.NopCloser(bytes.NewReader([]byte(`{"items":[{"id":"1234","name":"cloud1", "cloudType":"private"}, {"id":"5678","name":"cloud2","cloudType":"not-private"}]}`)))
+		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{
+			StatusCode: 200,
+			Body:       ret,
+		}, nil).Once()
+
+		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{
+			StatusCode: 204,
+		}, nil).Once()
+
+		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{
+			StatusCode: 204,
+		}, nil).Once()
+
+		err := clusterRegisterUtil.UnmanageCluster("1234")
+
+		assert.NoError(t, err)
+	})
+}
+
 func TestGetAPITokenFromSecret(t *testing.T) {
 	t.Run("GetAPITokenFromSecret__SecretNotPresentReturnsError", func(t *testing.T) {
 		clusterRegisterUtil, _, _, _ := createClusterRegister(AstraConnectorInput{})

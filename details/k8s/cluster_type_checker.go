@@ -14,6 +14,7 @@ import (
 const (
 	FlavorAKS        = "aks"
 	FlavorGKE        = "gke"
+	FlavorEKS        = "eks"
 	FlavorKubernetes = "kubernetes"
 	FlavorOpenShift  = "openshift"
 	FlavorRKE        = "rke"
@@ -46,12 +47,13 @@ func (c *ClusterTypeChecker) DetermineClusterType() string {
 		return FlavorOpenShift
 	}
 
-	if c.isRKEFlavor() {
-		return FlavorRKE
-	}
-
+	// RKE2 check must come before the RKE check
 	if c.isRKE2Flavor() {
 		return FlavorRKE2
+	}
+
+	if c.isRKEFlavor() {
+		return FlavorRKE
 	}
 
 	if c.isTanzuFlavor() {
@@ -64,6 +66,10 @@ func (c *ClusterTypeChecker) DetermineClusterType() string {
 
 	if c.isAKSFlavor() {
 		return FlavorAKS
+	}
+
+	if c.isEKSFlavor() {
+		return FlavorEKS
 	}
 
 	return FlavorKubernetes
@@ -166,6 +172,9 @@ func (c *ClusterTypeChecker) isAKSFlavor() bool {
 	aksRoleBinding, err := c.K8sUtil.K8sClientset().RbacV1().ClusterRoles().Get(context.Background(), aksService, metav1.GetOptions{})
 
 	if err != nil {
+		if errors.IsNotFound(err) {
+			return false
+		}
 		c.Log.Error(err, "Unable to get AKS cluster role. Assuming not AKS")
 		return false
 	}
@@ -182,6 +191,15 @@ func (c *ClusterTypeChecker) isGKEFlavor() bool {
 	}
 
 	return strings.Contains(strings.ToLower(version), FlavorGKE)
+}
+
+func (c *ClusterTypeChecker) isEKSFlavor() bool {
+	version, err := c.K8sUtil.VersionGet()
+	if err != nil {
+		return false
+	}
+
+	return strings.Contains(strings.ToLower(version), FlavorEKS)
 }
 
 // isAnthosFlavor - checks for the presence of the Anthos API

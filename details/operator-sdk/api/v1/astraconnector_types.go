@@ -76,6 +76,7 @@ type AstraConnectorSpec struct {
 	// The default election is true and indicates support data will be sent to NetApp.
 	// An empty or blank election is the same as a default election.
 	// Air gapped installations should enter false.
+	// +kubebuilder:default={"enrolled":true, "url":"https://stagesupport.netapp.com/put/AsupPut"}
 	AutoSupport AutoSupport `json:"autoSupport"`
 
 	// SkipPreCheck determines if you want to skip pre-checks and go ahead with the installation.

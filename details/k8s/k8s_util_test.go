@@ -6,6 +6,7 @@ package k8s_test
 
 import (
 	"context"
+	"github.com/NetApp-Polaris/astra-connector-operator/app/deployer/model"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -49,8 +50,9 @@ func TestCreateOrUpdateResource(t *testing.T) {
 			},
 		}
 
-		err := k8sUtil.CreateOrUpdateResource(ctx, role, nil)
+		resultString, err := k8sUtil.CreateOrUpdateResource(ctx, role, nil, model.NonMutateFn)
 		assert.NoError(t, err)
+		assert.Equal(t, "created", resultString)
 
 		var createdRole rbacv1.Role
 		err = k8sClient.Get(ctx, client.ObjectKey{Name: role.Name, Namespace: role.Namespace}, &createdRole)
@@ -65,8 +67,9 @@ func TestCreateOrUpdateResource(t *testing.T) {
 			},
 		}
 
-		err := k8sUtil.CreateOrUpdateResource(ctx, clusterRole, nil)
+		resultString, err := k8sUtil.CreateOrUpdateResource(ctx, clusterRole, nil, model.NonMutateFn)
 		assert.NoError(t, err)
+		assert.Equal(t, "created", resultString)
 
 		var createdClusterRole rbacv1.ClusterRole
 		err = k8sClient.Get(ctx, client.ObjectKey{Name: clusterRole.Name}, &createdClusterRole)
@@ -89,8 +92,9 @@ func TestCreateOrUpdateResource(t *testing.T) {
 			},
 		}
 
-		err := k8sUtil.CreateOrUpdateResource(ctx, role, nil)
+		resultString, err := k8sUtil.CreateOrUpdateResource(ctx, role, nil, model.NonMutateFn)
 		assert.NoError(t, err)
+		assert.Equal(t, "unchanged", resultString)
 
 		var updatedRole rbacv1.Role
 		err = k8sClient.Get(ctx, client.ObjectKey{Name: role.Name, Namespace: role.Namespace}, &updatedRole)
@@ -113,8 +117,9 @@ func TestCreateOrUpdateResource(t *testing.T) {
 			},
 		}
 
-		err := k8sUtil.CreateOrUpdateResource(ctx, clusterRole, nil)
+		resultString, err := k8sUtil.CreateOrUpdateResource(ctx, clusterRole, nil, model.NonMutateFn)
 		assert.NoError(t, err)
+		assert.Equal(t, "unchanged", resultString)
 
 		var updatedClusterRole rbacv1.ClusterRole
 		err = k8sClient.Get(ctx, client.ObjectKey{Name: clusterRole.Name}, &updatedClusterRole)
@@ -138,8 +143,9 @@ func TestDeleteResource(t *testing.T) {
 		}
 
 		// Create and verify the resource
-		err := k8sUtil.CreateOrUpdateResource(ctx, clusterRole, nil)
+		resultString, err := k8sUtil.CreateOrUpdateResource(ctx, clusterRole, nil, model.NonMutateFn)
 		assert.NoError(t, err)
+		assert.Equal(t, "created", resultString)
 
 		var createdClusterRole rbacv1.ClusterRole
 		err = k8sClient.Get(ctx, client.ObjectKey{Name: clusterRole.Name}, &createdClusterRole)

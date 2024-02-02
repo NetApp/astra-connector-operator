@@ -38,7 +38,7 @@ func TestFactory(t *testing.T) {
 		{
 			name:           "NeptuneName",
 			deploymentName: common.NeptuneName,
-			expectedType:   &neptune.NeptuneClientDeployer{},
+			expectedType:   &neptune.NeptuneClientDeployerV2{},
 			expectError:    false,
 		},
 		{

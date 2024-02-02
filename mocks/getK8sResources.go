@@ -7,6 +7,8 @@ import (
 
 	client "sigs.k8s.io/controller-runtime/pkg/client"
 
+	controllerutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
 	mock "github.com/stretchr/testify/mock"
 
 	model "github.com/NetApp-Polaris/astra-connector-operator/app/deployer/model"
@@ -20,7 +22,7 @@ type getK8sResources struct {
 }
 
 // Execute provides a mock function with given fields: _a0, _a1, _a2
-func (_m *getK8sResources) Execute(_a0 model.Deployer, _a1 *v1.AstraConnector, _a2 context.Context) ([]client.Object, error) {
+func (_m *getK8sResources) Execute(_a0 model.Deployer, _a1 *v1.AstraConnector, _a2 context.Context) ([]client.Object, controllerutil.MutateFn, error) {
 	ret := _m.Called(_a0, _a1, _a2)
 
 	var r0 []client.Object
@@ -32,14 +34,23 @@ func (_m *getK8sResources) Execute(_a0 model.Deployer, _a1 *v1.AstraConnector, _
 		}
 	}
 
-	var r1 error
-	if rf, ok := ret.Get(1).(func(model.Deployer, *v1.AstraConnector, context.Context) error); ok {
+	var r1 controllerutil.MutateFn
+	if rf, ok := ret.Get(1).(func(model.Deployer, *v1.AstraConnector, context.Context) controllerutil.MutateFn); ok {
 		r1 = rf(_a0, _a1, _a2)
 	} else {
-		r1 = ret.Error(1)
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(controllerutil.MutateFn)
+		}
 	}
 
-	return r0, r1
+	var r2 error
+	if rf, ok := ret.Get(2).(func(model.Deployer, *v1.AstraConnector, context.Context) error); ok {
+		r2 = rf(_a0, _a1, _a2)
+	} else {
+		r2 = ret.Error(2)
+	}
+
+	return r0, r1, r2
 }
 
 type mockConstructorTestingTnewGetK8sResources interface {
