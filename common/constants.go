@@ -4,7 +4,11 @@
 
 package common
 
-import "github.com/NetApp-Polaris/astra-connector-operator/app/conf"
+import (
+	_ "embed"
+	"github.com/NetApp-Polaris/astra-connector-operator/app/conf"
+	"strings"
+)
 
 const (
 	DefaultImageRegistry = "netappdownloads.jfrog.io/docker-astra-control-staging/arch30/neptune"
@@ -45,15 +49,9 @@ const (
 	NatsSyncClientConfigMapServiceAccountName = "natssync-client-configmap-serviceaccount"
 	NatsSyncClientConfigMapVolumeName         = "natssync-client-configmap-volume"
 
-	NeptuneName                          = "neptune-controller-manager"
-	NeptuneLeaderElectionRoleName        = "neptune-leader-election-role"
-	NeptuneLeaderElectionRoleBindingName = "neptune-leader-election-rolebinding"
-	NeptuneClusterRoleName               = "neptune-manager-role"
-	NeptuneMetricServicePort             = 8443
-	NeptuneMetricServiceProtocol         = "TCP"
-	NeptuneDefaultImage                  = "controller:e056f69"
-	NeptuneDefaultTag                    = "e056f69"
-	NeptuneTagFile                       = "common/neptune_manager_tag.txt"
+	NeptuneName       = "neptune-controller-manager"
+	NeptuneDefaultTag = "e056f69"
+	NeptuneTagFile    = "common/neptune_manager_tag.txt"
 
 	AstraPrivateCloudType = "private"
 	AstraPrivateCloudName = "private"
@@ -64,6 +62,20 @@ const (
 
 	AstraClustersAPIVersion        = "1.4"
 	AstraManagedClustersAPIVersion = "1.2"
+)
+
+// Embed neptune tag and connector tag
+//
+//go:embed "neptune_manager_tag.txt"
+var embeddedNeptuneImageTag string
+
+//go:embed "connector_version.txt"
+var embeddedConnectorImageTag string
+
+var (
+	// NeptuneImageTag is the trimmed version of the embedded string.
+	NeptuneImageTag   = strings.TrimSpace(embeddedNeptuneImageTag)
+	ConnectorImageTag = strings.TrimSpace(embeddedConnectorImageTag)
 )
 
 func GetNeptuneRepositories() []string {

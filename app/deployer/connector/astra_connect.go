@@ -7,15 +7,9 @@ package connector
 import (
 	"context"
 	"fmt"
-	"maps"
-	"os"
-	"path/filepath"
-	"strconv"
-	"strings"
-
-	"github.com/pkg/errors"
-
 	"k8s.io/apimachinery/pkg/api/resource"
+	"maps"
+	"strconv"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -54,21 +48,7 @@ func (d *AstraConnectDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx co
 	if m.Spec.AstraConnect.Image != "" {
 		containerImage = m.Spec.AstraConnect.Image
 	} else {
-		// Reading env variable for project root. This is to ensure that we can read this file in both test
-		//	and production environments. This variable will be set in test, and will be ignored for the app
-		//  running in docker.
-		rootDir := os.Getenv("PROJECT_ROOT")
-		if rootDir == "" {
-			rootDir = "."
-		}
-		filePath := filepath.Join(rootDir, "common/connector_version.txt")
-		imageBytes, err := os.ReadFile(filePath)
-		if err != nil {
-			return nil, model.NonMutateFn, errors.Wrap(err, "error reading connector version txt file")
-		}
-
-		containerImage = string(imageBytes)
-		containerImage = strings.TrimSpace(containerImage)
+		containerImage = common.ConnectorImageTag
 	}
 
 	connectorImage = fmt.Sprintf("%s/astra-connector:%s", imageRegistry, containerImage)

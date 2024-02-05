@@ -6,16 +6,14 @@ package neptune
 
 import (
 	"context"
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"log"
 	"maps"
-	"os"
-	"path/filepath"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"strings"
 
-	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -53,24 +51,11 @@ func (n NeptuneClientDeployerV2) GetDeploymentObjects(m *v1.AstraConnector, ctx 
 	if m.Spec.Neptune.Image != "" {
 		containerImage = m.Spec.Neptune.Image
 	} else {
-		// Reading env variable for project root. This is to ensure that we can read this file in both test
-		// and production environments. This variable will be set in test, and will be ignored for the app
-		// running in docker.
-		rootDir := os.Getenv("PROJECT_ROOT")
-		if rootDir == "" {
-			rootDir = "."
-		}
-		filePath := filepath.Join(rootDir, "common/neptune_manager_tag.txt")
-		imageBytes, err := os.ReadFile(filePath)
-		if err != nil {
-			return nil, nil, errors.Wrap(err, "error reading neptune manager tag")
-		}
-
-		containerImage = string(imageBytes)
-		containerImage = strings.TrimSpace(containerImage)
+		containerImage = common.NeptuneImageTag
 	}
 
 	neptuneImage = fmt.Sprintf("%s/controller:%s", imageRegistry, containerImage)
+	rbacProxyImage := fmt.Sprintf("%s/kube-rbac-proxy:v0.14.1", imageRegistry)
 	log.Info("Using Neptune image", "image", neptuneImage)
 
 	deploymentLabels := map[string]string{
@@ -153,7 +138,7 @@ func (n NeptuneClientDeployerV2) GetDeploymentObjects(m *v1.AstraConnector, ctx 
 								"--logtostderr=true",
 								"--v=0",
 							},
-							Image: "gcr.io/kubebuilder/kube-rbac-proxy:v0.14.1",
+							Image: rbacProxyImage,
 							Name:  "kube-rbac-proxy",
 							Ports: []corev1.ContainerPort{
 								{
