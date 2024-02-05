@@ -242,7 +242,7 @@ func (r *AstraConnectorController) deleteNeptuneResources(ctx context.Context, n
 	// will block the ResourceBackup's finalizer clean-up from running b/c it must be
 	// removing some data from the bucket.
 	//
-	// That being the case, we can tailor our deletion steps to delete the the resources
+	// That being the case, we can tailor our deletion steps to delete the resources
 	// in some logical ordering instead of whatever order is returned to us from the k8s api.
 	for _, gvr := range neptuneGVRs {
 		// Check to see if there are any resources to begin with. We may not need to enter the loop below.
