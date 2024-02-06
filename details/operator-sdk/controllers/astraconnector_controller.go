@@ -508,7 +508,7 @@ func (r *AstraConnectorController) waitForStatusUpdate(astraConnector *v1.AstraC
 
 			// If the status has not been updated yet, log the current and expected statuses and continue polling.
 			if string(astraConnectorStatusJson) != string(currentStatusJson) {
-				log.Info("AstraControlCenter instance status subresource update is in progress... retrying",
+				log.Info("AstraConnector instance status subresource update is in progress... retrying",
 					"Expected status", astraConnector.Status, "Actual status", current.Status)
 				return false, nil
 			}
