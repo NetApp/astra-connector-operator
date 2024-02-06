@@ -65,8 +65,8 @@ const (
 	AstraManagedClustersAPIVersion = "1.2"
 )
 
-// Embed neptune tag and connector tag
-//
+// Embed image tags
+
 //go:embed "neptune_manager_tag.txt"
 var embeddedNeptuneImageTag string
 
