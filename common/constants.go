@@ -6,8 +6,9 @@ package common
 
 import (
 	_ "embed"
-	"github.com/NetApp-Polaris/astra-connector-operator/app/conf"
 	"strings"
+
+	"github.com/NetApp-Polaris/astra-connector-operator/app/conf"
 )
 
 const (
@@ -64,18 +65,22 @@ const (
 	AstraManagedClustersAPIVersion = "1.2"
 )
 
-// Embed neptune tag and connector tag
-//
+// Embed image tags
+
 //go:embed "neptune_manager_tag.txt"
 var embeddedNeptuneImageTag string
 
 //go:embed "connector_version.txt"
 var embeddedConnectorImageTag string
 
+//go:embed "neptune_asup_tag.txt"
+var embeddedAsupImageTag string
+
 var (
 	// NeptuneImageTag is the trimmed version of the embedded string.
 	NeptuneImageTag   = strings.TrimSpace(embeddedNeptuneImageTag)
 	ConnectorImageTag = strings.TrimSpace(embeddedConnectorImageTag)
+	AsupImageTag      = strings.TrimSpace(embeddedAsupImageTag)
 )
 
 func GetNeptuneRepositories() []string {
