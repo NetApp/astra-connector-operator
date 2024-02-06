@@ -119,7 +119,7 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 			k8sUtil := k8s.NewK8sUtil(r.Client, r.Clientset, log)
 			registerUtil := register.NewClusterRegisterUtil(astraConnector, &http.Client{}, r.Client, k8sUtil, log, context.Background())
 
-			if natsSyncClientStatus.Registered == "true" {
+			if astraConnector.Status.NatsSyncClient.Registered == "true" {
 				log.Info("Removing cluster from Astra upon CRD delete")
 				err = registerUtil.UnmanageCluster(natsSyncClientStatus.AstraClusterId)
 				if err != nil {
@@ -508,7 +508,7 @@ func (r *AstraConnectorController) waitForStatusUpdate(astraConnector *v1.AstraC
 
 			// If the status has not been updated yet, log the current and expected statuses and continue polling.
 			if string(astraConnectorStatusJson) != string(currentStatusJson) {
-				log.Info("AstraControlCenter instance status subresource update is in progress... retrying",
+				log.Info("AstraConnector instance status subresource update is in progress... retrying",
 					"Expected status", astraConnector.Status, "Actual status", current.Status)
 				return false, nil
 			}

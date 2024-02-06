@@ -6,7 +6,6 @@ const (
 	CreateServiceAccount     = "Creating ServiceAccount %s/%s"
 	CreateConfigMap          = "Creating ConfigMap %s/%s"
 	CreateDeployment         = "Creating Deployment %s/%s"
-	UpdateDeployment         = "Updating Deployment %s/%s"
 	CreateService            = "Creating Service %s/%s"
 	CreateRole               = "Creating Role %s/%s"
 	CreateClusterRole        = "Creating ClusterRole %s/%s"
@@ -37,8 +36,7 @@ const (
 	FailedASUPCreation       = "Failed to create ASUP CR"
 
 	DeployedComponents  = "Deployed all the connector components"
-	UnregisterFromAstra = "Unregistered the cluster with Astra"
+	RegisteredWithAstra = "Registered with Astra"
 
-	FailedConnectorIDAdd    = "Failed to add cluster to Astra"
-	FailedConnectorIDRemove = "Failed to remove the ConnectorID from Astra"
+	FailedConnectorIDAdd = "Failed to add cluster to Astra"
 )
