@@ -119,7 +119,7 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 			k8sUtil := k8s.NewK8sUtil(r.Client, r.Clientset, log)
 			registerUtil := register.NewClusterRegisterUtil(astraConnector, &http.Client{}, r.Client, k8sUtil, log, context.Background())
 
-			if natsSyncClientStatus.Registered == "true" {
+			if astraConnector.Status.NatsSyncClient.Registered == "true" {
 				log.Info("Removing cluster from Astra upon CRD delete")
 				err = registerUtil.UnmanageCluster(natsSyncClientStatus.AstraClusterId)
 				if err != nil {
