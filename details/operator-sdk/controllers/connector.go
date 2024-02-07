@@ -125,7 +125,7 @@ func (r *AstraConnectorController) deployConnector(ctx context.Context,
 			log.Info("Registered cluster with Astra")
 		}
 		natsSyncClientStatus.Registered = "true"
-		natsSyncClientStatus.Status = "Registered with Astra"
+		natsSyncClientStatus.Status = RegisteredWithAstra
 	} else {
 		if registered {
 			log.Info("Unregistering natsSyncClient")

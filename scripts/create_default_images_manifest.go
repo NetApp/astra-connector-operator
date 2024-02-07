@@ -4,7 +4,6 @@ Used in GitHub actions to generate a manifest of default images deployed by conn
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"os"
 
@@ -24,19 +23,19 @@ func main() {
 
 	// Gather the full image name and versions
 	defaultImageRegistry := common.DefaultImageRegistry
-	neptuneTag := getNeptuneTag()
 
 	// Connector images
 	images := []string{
-		fmt.Sprintf("%s/%s", defaultImageRegistry, common.AstraConnectDefaultImage),
+		fmt.Sprintf("%s/astra-connector:%s", defaultImageRegistry, common.ConnectorImageTag),
 		fmt.Sprintf("%s/%s", defaultImageRegistry, common.NatsSyncClientDefaultImage),
 		fmt.Sprintf("%s/%s", defaultImageRegistry, common.NatsDefaultImage),
 		fmt.Sprintf("%s:%s", common.AstraConnectorOperatorRepository, connectorOperatorVersion),
+		fmt.Sprintf("%s/trident-autosupport:%s", defaultImageRegistry, common.AsupImageTag),
 	}
 
 	// Include Neptune related images
 	for _, repository := range common.GetNeptuneRepositories() {
-		images = append(images, fmt.Sprintf("%s/%s:%s", defaultImageRegistry, repository, neptuneTag))
+		images = append(images, fmt.Sprintf("%s/%s:%s", defaultImageRegistry, repository, common.NeptuneImageTag))
 	}
 
 	// Open the manifest file
@@ -45,6 +44,7 @@ func main() {
 		fmt.Printf("error opening output file for writing: %s\n", err)
 		os.Exit(1)
 	}
+
 	defer file.Close()
 
 	// Write the file
@@ -56,27 +56,4 @@ func main() {
 			os.Exit(1)
 		}
 	}
-}
-
-func getNeptuneTag() string {
-	neptuneTag := common.NeptuneDefaultTag
-	file, err := os.Open(common.NeptuneTagFile)
-	if err != nil {
-		fmt.Printf("error opening file to get neptune tag")
-		os.Exit(2)
-	}
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
-
-	// scan the contents of the file and return first line
-	// neptune manager tag is present in the first line
-	for scanner.Scan() {
-		neptuneTag = scanner.Text()
-		fmt.Println("neptune manager tag : " + neptuneTag)
-		return neptuneTag
-	}
-
-	fmt.Println("Using default neptune tag, error reading from file")
-	return neptuneTag
 }

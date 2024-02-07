@@ -119,10 +119,12 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 			k8sUtil := k8s.NewK8sUtil(r.Client, r.Clientset, log)
 			registerUtil := register.NewClusterRegisterUtil(astraConnector, &http.Client{}, r.Client, k8sUtil, log, context.Background())
 
-			log.Info("Removing cluster from Astra upon CRD delete")
-			err = registerUtil.UnmanageCluster(natsSyncClientStatus.AstraClusterId)
-			if err != nil {
-				log.Error(err, "Failed to unmanage cluster, ignoring...")
+			if astraConnector.Status.NatsSyncClient.Registered == "true" {
+				log.Info("Removing cluster from Astra upon CRD delete")
+				err = registerUtil.UnmanageCluster(natsSyncClientStatus.AstraClusterId)
+				if err != nil {
+					log.Error(err, "Failed to unmanage cluster, ignoring...")
+				}
 			}
 
 			log.Info("Unregistering natsSyncClient upon CRD delete")
@@ -242,7 +244,7 @@ func (r *AstraConnectorController) deleteNeptuneResources(ctx context.Context, n
 	// will block the ResourceBackup's finalizer clean-up from running b/c it must be
 	// removing some data from the bucket.
 	//
-	// That being the case, we can tailor our deletion steps to delete the the resources
+	// That being the case, we can tailor our deletion steps to delete the resources
 	// in some logical ordering instead of whatever order is returned to us from the k8s api.
 	for _, gvr := range neptuneGVRs {
 		// Check to see if there are any resources to begin with. We may not need to enter the loop below.
@@ -506,7 +508,7 @@ func (r *AstraConnectorController) waitForStatusUpdate(astraConnector *v1.AstraC
 
 			// If the status has not been updated yet, log the current and expected statuses and continue polling.
 			if string(astraConnectorStatusJson) != string(currentStatusJson) {
-				log.Info("AstraControlCenter instance status subresource update is in progress... retrying",
+				log.Info("AstraConnector instance status subresource update is in progress... retrying",
 					"Expected status", astraConnector.Status, "Actual status", current.Status)
 				return false, nil
 			}
