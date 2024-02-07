@@ -7,17 +7,16 @@ package connector
 import (
 	"context"
 	"fmt"
-	"maps"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"strconv"
-
 	"k8s.io/apimachinery/pkg/api/resource"
+	"maps"
+	"strconv"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/NetApp-Polaris/astra-connector-operator/app/conf"
@@ -39,7 +38,7 @@ func (d *AstraConnectDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx co
 
 	var imageRegistry string
 	var containerImage string
-	var natssyncClientImage string
+	var connectorImage string
 	if m.Spec.ImageRegistry.Name != "" {
 		imageRegistry = m.Spec.ImageRegistry.Name
 	} else {
@@ -49,13 +48,13 @@ func (d *AstraConnectDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx co
 	if m.Spec.AstraConnect.Image != "" {
 		containerImage = m.Spec.AstraConnect.Image
 	} else {
-		containerImage = common.AstraConnectDefaultImage
+		containerImage = common.ConnectorImageTag
 	}
 
-	natssyncClientImage = fmt.Sprintf("%s/%s", imageRegistry, containerImage)
-	log.Info("Using AstraConnector image", "image", natssyncClientImage)
+	connectorImage = fmt.Sprintf("%s/astra-connector:%s", imageRegistry, containerImage)
+	log.Info("Using AstraConnector image", "image", connectorImage)
 
-	// TODO what is appropriate default size
+	// TODO remove option to set replica count in CRD. This should always only-ever be 1
 	var replicas int32
 	if m.Spec.AstraConnect.Replicas > 1 {
 		replicas = m.Spec.AstraConnect.Replicas
@@ -85,7 +84,7 @@ func (d *AstraConnectDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx co
 				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{{
-						Image: natssyncClientImage,
+						Image: connectorImage,
 						Name:  common.AstraConnectName,
 						Env: []corev1.EnvVar{
 							{

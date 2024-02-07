@@ -4,22 +4,27 @@
 
 package common
 
-import "github.com/NetApp-Polaris/astra-connector-operator/app/conf"
+import (
+	_ "embed"
+	"strings"
+
+	"github.com/NetApp-Polaris/astra-connector-operator/app/conf"
+)
 
 const (
 	DefaultImageRegistry = "netappdownloads.jfrog.io/docker-astra-control-staging/arch30/neptune"
 
 	AstraConnectName                 = "astraconnect"
 	AstraConnectDefaultReplicas      = 1
-	AstraConnectDefaultImage         = "astra-connector:1.0.202401122203"
 	AstraConnectorOperatorRepository = "netapp/astra-connector-operator"
+	AstraConnectTagFile              = "common/connector_version.txt"
 
 	NatsSyncClientName                  = "natssync-client"
 	NatsSyncClientDefaultReplicas       = 1
 	NatsSyncClientPort                  = 8080
 	NatsSyncClientProtocol              = "TCP"
 	NatsSyncClientKeystoreUrl           = "configmap:///configmap-data"
-	NatsSyncClientDefaultImage          = "natssync-client:2.1.202309262120"
+	NatsSyncClientDefaultImage          = "natssync-client:2.2.202402012115"
 	NatsSyncClientDefaultCloudBridgeURL = "https://astra.netapp.io"
 
 	NatsName               = "nats"
@@ -45,15 +50,9 @@ const (
 	NatsSyncClientConfigMapServiceAccountName = "natssync-client-configmap-serviceaccount"
 	NatsSyncClientConfigMapVolumeName         = "natssync-client-configmap-volume"
 
-	NeptuneName                          = "neptune-controller-manager"
-	NeptuneLeaderElectionRoleName        = "neptune-leader-election-role"
-	NeptuneLeaderElectionRoleBindingName = "neptune-leader-election-rolebinding"
-	NeptuneClusterRoleName               = "neptune-manager-role"
-	NeptuneMetricServicePort             = 8443
-	NeptuneMetricServiceProtocol         = "TCP"
-	NeptuneDefaultImage                  = "controller:e056f69"
-	NeptuneDefaultTag                    = "e056f69"
-	NeptuneTagFile                       = "common/neptune_manager_tag.txt"
+	NeptuneName       = "neptune-controller-manager"
+	NeptuneDefaultTag = "e056f69"
+	NeptuneTagFile    = "common/neptune_manager_tag.txt"
 
 	AstraPrivateCloudType = "private"
 	AstraPrivateCloudName = "private"
@@ -64,6 +63,24 @@ const (
 
 	AstraClustersAPIVersion        = "1.4"
 	AstraManagedClustersAPIVersion = "1.2"
+)
+
+// Embed image tags
+
+//go:embed "neptune_manager_tag.txt"
+var embeddedNeptuneImageTag string
+
+//go:embed "connector_version.txt"
+var embeddedConnectorImageTag string
+
+//go:embed "neptune_asup_tag.txt"
+var embeddedAsupImageTag string
+
+var (
+	// NeptuneImageTag is the trimmed version of the embedded string.
+	NeptuneImageTag   = strings.TrimSpace(embeddedNeptuneImageTag)
+	ConnectorImageTag = strings.TrimSpace(embeddedConnectorImageTag)
+	AsupImageTag      = strings.TrimSpace(embeddedAsupImageTag)
 )
 
 func GetNeptuneRepositories() []string {
