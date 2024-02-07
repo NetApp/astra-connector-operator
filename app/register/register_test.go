@@ -1683,7 +1683,7 @@ func TestRegisterClusterWithAstra(t *testing.T) {
 		err := fakeClient.Create(ctx, service)
 		assert.NoError(t, err)
 
-		ret := io.NopCloser(bytes.NewReader([]byte(`{"items":[{"id":"1234","name":"cluster1", "apiServiceID":"svc-uid", "managedState":"unmanaged"}, {"id":"5678","name":"cluster2"}]}`)))
+		ret := io.NopCloser(bytes.NewReader([]byte(`{"items":[{"id":"1234","name":"cluster1", "apiServiceID":"svc-uid", "managedState":"unmanaged", "connectorInstall":"installed"}, {"id":"5678","name":"cluster2"}]}`)))
 		mockHttpClient.On("Do", mock.Anything).Return(&http.Response{
 			StatusCode: 200,
 			Body:       ret,
