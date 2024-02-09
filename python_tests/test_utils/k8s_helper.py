@@ -1,5 +1,6 @@
 from kubernetes import client, config, utils
 
+
 # K8sHelper todo comment. This is a top level classed used by other classes (or directly if needed) to
 # manipulate CRs
 class K8sHelper:
@@ -28,8 +29,7 @@ class K8sHelper:
             body=body,
         )
 
-    def delete_cr(self, namespace, name, body, plural):
-        group, version = body['apiVersion'].split('/')
+    def delete_cr(self, namespace, name, group, version, plural):
         return self.custom_object_api.delete_namespaced_custom_object(
             group=group,
             version=version,

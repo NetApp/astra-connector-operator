@@ -1,10 +1,10 @@
 """ Outermost conftest file. Used for common fixtures. All inner contest/pytest suites inherit this file. """
 import pytest
-from test_utils.k8s_helper import K8sHelper
-from test_utils import app_vault, buckets, astra_connector
 import uuid
 from collections import namedtuple
-from python_tests import config
+from test_utils.cluster import Cluster
+from test_utils.buckets import BucketManager, Bucket
+
 
 # Add custom pytest args
 def pytest_addoption(parser):
@@ -55,61 +55,22 @@ def s3_creds(s3_host, s3_access_key, s3_secret_key) -> namedtuple:
 # ---------------
 # End Arg Parse #
 # ---------------
-
-
-@pytest.fixture(scope="session")
-def k8s_helper(kubeconfig):
-    return K8sHelper(kubeconfig)
-
-
-# --------------------------
-# cr_helper Fixture and Class
-# --------------------------
-class CrHelper:
-
-    def __init__(self, k8s_helper):
-        self.app_vault = app_vault.AppVaultHelper(k8s_helper)
-        self.astra_connector = astra_connector.AstraConnectorHelper(k8s_helper)
-
-
-@pytest.fixture(scope="session")
-def cr_helper(k8s_helper):
-    return CrHelper(k8s_helper)
-
-# -------------------------------
-# End cr_helper Fixture and Class
-# -------------------------------
-
 @pytest.fixture(scope="session")
 def bucket_manager(s3_creds):
-    bucket_manager = buckets.BucketManager(s3_creds.host, s3_creds.access_key, s3_creds.secret_key)
+    bucket_manager = BucketManager(s3_creds.host, s3_creds.access_key, s3_creds.secret_key)
     yield bucket_manager
     bucket_manager.cleanup_buckets()
 
 
-
 @pytest.fixture(scope="session")
-def shared_bucket(bucket_manager) -> buckets.Bucket:
-    bucket_name = f"test-bucket-{str(uuid.uuid4())[:8]}"
-    bucket = bucket_manager.create_bucket(bucket_name)
-    return bucket
+def app_clusters(kubeconfig, bucket_manager) -> list[Cluster]:
+    # Note: only has one kubeconfig and appCluster now but is designed for N appClusters
+    test_bucket = bucket_manager.create_bucket(f"test-bucket-{uuid.uuid4()[:8]}")
+    app_clusters: list[Cluster] = [
+        Cluster(kubeconfig, test_bucket)
+    ]
+    yield app_clusters
 
-
-@pytest.fixture(scope="session")
-def shared_app_vault(cr_helper, shared_bucket):
-    secret_name = f"app-vault-secret-{str(uuid.uuid4())[:8]}"
-    cr_helper.app_vault.create_app_vault_secret(
-        namespace=config.DEFAULT_CONNECTOR_NAMESPACE,
-        secret_name=secret_name,
-        access_key=shared_bucket.access_key,
-        secret_key=shared_bucket.secret_key
-    )
-    app_vault_name = f"test-app-vault-{str(uuid.uuid4())[:8]}"
-    yield cr_helper.app_vault.create_app_vault(
-        name=app_vault_name,
-        namespace=config.DEFAULT_CONNECTOR_NAMESPACE,
-        bucket_name=shared_bucket.bucket_name,
-        bucket_host=shared_bucket.host,
-        secret_name=secret_name,
-        provider_type="generic-s3")
-
+    # Cluster cleanup, runs after all tests are complete
+    for cluster in app_clusters:
+        cluster.cleanup()
