@@ -10,7 +10,7 @@ class Bucket:
         self.secret_key = secret_key
         self.client = client
 
-    def read(self, object_path):
+    def read(self, object_path):  # todo not tested
         data = self.client.get_object(self.bucket_name, object_path)
         # Read the data
         file_data = data.read()

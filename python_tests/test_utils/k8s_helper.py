@@ -1,8 +1,6 @@
 from kubernetes import client, config, utils
 
 
-# K8sHelper todo comment. This is a top level classed used by other classes (or directly if needed) to
-# manipulate CRs
 class K8sHelper:
     def __init__(self, kubeconfig):
         self.api_client = config.new_client_from_config(config_file=kubeconfig)
