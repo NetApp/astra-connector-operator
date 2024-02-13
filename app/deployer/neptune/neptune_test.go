@@ -2,6 +2,8 @@ package neptune_test
 
 import (
 	"context"
+	"github.com/NetApp-Polaris/astra-connector-operator/common"
+	corev1 "k8s.io/api/core/v1"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -75,11 +77,6 @@ func TestUnimplementedObjectsV2(t *testing.T) {
 	assert.NotNil(t, fn)
 	assert.NoError(t, err)
 
-	ret, fn, err = n.GetServiceObjects(m, ctx)
-	assert.Nil(t, ret)
-	assert.NotNil(t, fn)
-	assert.NoError(t, err)
-
 	ret, fn, err = n.GetConfigMapObjects(m, ctx)
 	assert.Nil(t, ret)
 	assert.NotNil(t, fn)
@@ -109,4 +106,35 @@ func TestUnimplementedObjectsV2(t *testing.T) {
 	assert.Nil(t, ret)
 	assert.NotNil(t, fn)
 	assert.NoError(t, err)
+}
+
+func TestGetServiceObjects(t *testing.T) {
+	n, m, ctx := createNeptuneDeployerV2()
+
+	// Call the GetServiceObjects method
+	serviceObjects, fn, err := n.GetServiceObjects(m, ctx)
+	assert.NotNil(t, fn)
+
+	// Check if there is no error
+	assert.NoError(t, err)
+
+	// Check if the returned serviceObjects slice has the expected length
+	assert.Equal(t, 1, len(serviceObjects))
+
+	// Check if the returned serviceObjects contains the expected Service object
+	service, ok := serviceObjects[0].(*corev1.Service)
+	assert.True(t, ok)
+
+	// Check if the Service object has the expected properties
+	assert.Equal(t, "test-namespace", service.Namespace)
+	assert.Equal(t, "neptune-controller-manager-metrics-service", service.Name)
+
+	// Check if the Service object has the expected port configuration
+	assert.Equal(t, 1, len(service.Spec.Ports))
+	assert.Equal(t, "https", service.Spec.Ports[0].Name)
+	assert.Equal(t, common.NeptuneMetricServicePort, int(service.Spec.Ports[0].Port))
+	assert.Equal(t, common.NeptuneMetricServiceProtocol, string(service.Spec.Ports[0].Protocol))
+
+	// Check if the Service object has the expected selector
+	assert.Equal(t, map[string]string{"control-plane": "controller-manager"}, service.Spec.Selector)
 }
