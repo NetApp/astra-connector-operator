@@ -3082,6 +3082,9 @@ spec:
               clonePVCName:
                 description: Name of the temporary clone PVC created for Restic to copy from (if dataSourceRef is a VolumeSnapshot)
                 type: string
+              clonePVName:
+                description: Name of the temporary clone PV created for the PVC.
+                type: string
               completionTimestamp:
                 description: CompletionTimestamp records the time the ResticVolumeBackup completed. The server's time is used for CompletionTimestamps
                 format: date-time
@@ -3147,6 +3150,7 @@ spec:
                 description: State indicates a high level summary of the ResticVolumeBackup's state
                 type: string
             required:
+            - clonePVName
             - conditions
             - state
             type: object
