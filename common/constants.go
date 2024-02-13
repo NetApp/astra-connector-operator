@@ -50,9 +50,11 @@ const (
 	NatsSyncClientConfigMapServiceAccountName = "natssync-client-configmap-serviceaccount"
 	NatsSyncClientConfigMapVolumeName         = "natssync-client-configmap-volume"
 
-	NeptuneName       = "neptune-controller-manager"
-	NeptuneDefaultTag = "e056f69"
-	NeptuneTagFile    = "common/neptune_manager_tag.txt"
+	NeptuneName                  = "neptune-controller-manager"
+	NeptuneDefaultTag            = "e056f69"
+	NeptuneTagFile               = "common/neptune_manager_tag.txt"
+	NeptuneMetricServicePort     = 8443
+	NeptuneMetricServiceProtocol = "TCP"
 
 	AstraPrivateCloudType = "private"
 	AstraPrivateCloudName = "private"
