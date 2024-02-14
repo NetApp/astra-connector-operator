@@ -3479,10 +3479,6 @@ spec:
               recurrenceRule:
                 description: string containing an RFC-5545 Section 3.8.5.3. Recurrence Rule. For the DTSTART parameter, only UTC timestamps (denoted by the "Z" suffix) are supported, and only timestamps before the current time are supported. For the RECUR rule parts, "FREQ" and "INTERVAL" are the only rule parts supported. For the FREQ rule part, "MINUTELY" and "HOURLY" are the only values supported. This field is only present if granularity is set to "custom".
                 type: string
-              replicate:
-                default: false
-                description: Indicates if the schedule should trigger AppMirror replication for each snapshot. Only takes effect if the application has an AppMirror relationship defined.
-                type: boolean
               snapshotRetention:
                 description: Indicates how many snapshots to retain. Zero indicates that no snapshots should be created.
                 maxLength: 63
