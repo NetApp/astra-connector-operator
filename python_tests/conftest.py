@@ -1,9 +1,12 @@
 """ Outermost conftest file. Used for common fixtures. All inner contest/pytest suites inherit this file. """
 import pytest
-import uuid
+from python_tests.log import logger
 from collections import namedtuple
 from test_utils.cluster import Cluster
-from test_utils.buckets import BucketManager, Bucket
+from test_utils.buckets import BucketManager
+import python_tests.defaults as defaults
+import python_tests.test_utils.random as random
+from python_tests.test_utils.app_installer import App
 
 
 # Add custom pytest args
@@ -55,6 +58,8 @@ def s3_creds(s3_host, s3_access_key, s3_secret_key) -> namedtuple:
 # ---------------
 # End Arg Parse #
 # ---------------
+
+
 @pytest.fixture(scope="session")
 def bucket_manager(s3_creds):
     bucket_manager = BucketManager(s3_creds.host, s3_creds.access_key, s3_creds.secret_key)
@@ -63,14 +68,41 @@ def bucket_manager(s3_creds):
 
 
 @pytest.fixture(scope="session")
-def app_clusters(kubeconfig, bucket_manager) -> list[Cluster]:
-    # Note: only has one kubeconfig and appCluster now but is designed for N appClusters
-    test_bucket = bucket_manager.create_bucket(f"test-bucket-{uuid.uuid4()[:8]}")
-    app_clusters: list[Cluster] = [
-        Cluster(kubeconfig, test_bucket)
-    ]
-    yield app_clusters
+def app_cluster(kubeconfig, bucket_manager) -> Cluster:
+    logger.info(f"Using kubeconfig: {kubeconfig}")
+    default_test_bucket = bucket_manager.create_bucket(f"test-bucket-{random.get_short_uuid()}")
+    cluster = Cluster(kubeconfig, default_test_bucket)
+    yield cluster
 
     # Cluster cleanup, runs after all tests are complete
-    for cluster in app_clusters:
-        cluster.cleanup()
+    cluster.cleanup()
+
+
+@pytest.mark.fixture(scope="session")
+def default_app() -> App:
+    return App(
+        name="maria",
+        namespace="maria1"
+    )
+
+
+@pytest.fixture(scope="session")
+def default_app_vault(app_cluster):
+    secret_name = f"app-vault-secret-{random.get_short_uuid()}"
+    app_cluster.k8s_helper.create_secretkey_accesskey_secret(
+        namespace=defaults.DEFAULT_CONNECTOR_NAMESPACE,
+        secret_name=secret_name,
+        access_key=app_cluster.default_test_bucket.access_key,
+        secret_key=app_cluster.default_test_bucket.secret_key
+    )
+
+    app_vault_name = f"test-app-vault-{random.get_short_uuid()}"
+    cr_response = app_cluster.app_vault.apply_app_vault(
+        name=app_vault_name,
+        namespace=defaults.DEFAULT_CONNECTOR_NAMESPACE,
+        bucket_name=app_cluster.default_test_bucket.bucket_name,
+        bucket_host=app_cluster.default_test_bucket.host,
+        secret_name=secret_name,
+        provider_type="generic-s3"
+    )
+    return cr_response
