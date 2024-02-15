@@ -8,11 +8,6 @@ from python_tests.test_utils.app_installer import App
 # For POC only (not testing neptune)
 # Buckets on the fly
 def test_bucket_create_read_write_delete(bucket_manager):
-    """
-        * How to create and delete buckets on the fly
-        * How to write to a bucket (for example purposes)
-        * How to read from a bucket (for verifying app vault)
-    """
     # Create a bucket
     bucket = bucket_manager.create_bucket(f"example-create-bucket-{random.get_short_uuid()}")
 
