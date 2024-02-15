@@ -250,7 +250,9 @@ func (c clusterRegisterUtil) RegisterNatsSyncClient() (string, string, error) {
 		}
 
 		userMsg := ""
-		if strings.Contains(err.Error(), "bridgeerror.unknown") && strings.Contains(err.Error(), `"detail":"EOF"`) {
+		if responseStatus == "401" {
+			userMsg = "Authentication failed, invalid account or token"
+		} else if strings.Contains(err.Error(), "bridgeerror.unknown") && strings.Contains(err.Error(), `"detail":"EOF"`) {
 			// natssync-client was not able to connect to the natssync-server, add human readable error message
 			userMsg = "Registration with Astra Control failed, could not contact server."
 		}
