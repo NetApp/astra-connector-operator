@@ -7,7 +7,6 @@ from python_tests.test_utils.k8s_helper import K8sHelper
 
 class AppVaultHelper:
     created_app_vaults: list[dict] = []
-    created_secrets: list[dict] = []
     plural_name = "appvaults"
     group = "astra.netapp.io"
     version = "v1"
@@ -68,19 +67,6 @@ class AppVaultHelper:
                 if name == '' or namespace == '':
                     continue
                 self.delete_app_vault(name=name, namespace=namespace)
-            except ApiException as e:
-                # If the Secret was not found log and continue, we don"t want to fail due to cleanup
-                if e.status != 404:
-                    logger.warn(f"encountered error cleaning up secrets: {e}")
-
-    def cleanup_created_secrets(self):
-        for secret in self.created_secrets:
-            try:
-                name = secret.get('metadata', {}).get('name', '')
-                namespace = secret.get('metadata', {}).get('name', '')
-                if name == '' or namespace == '':
-                    continue
-                self.k8s_helper.core_v1_api.delete_namespaced_secret(name=name, namespace=namespace)
             except ApiException as e:
                 # If the Secret was not found log and continue, we don"t want to fail due to cleanup
                 if e.status != 404:

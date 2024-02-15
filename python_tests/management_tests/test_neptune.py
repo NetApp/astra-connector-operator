@@ -5,8 +5,9 @@ from python_tests import defaults
 from python_tests.test_utils.app_installer import App
 
 
-# For POC only
-def test_create_bucket(bucket_manager):
+# For POC only (not testing neptune)
+# Buckets on the fly
+def test_bucket_create_read_write_delete(bucket_manager):
     """
         * How to create and delete buckets on the fly
         * How to write to a bucket (for example purposes)
@@ -77,14 +78,14 @@ def test_app_snapshot(app_cluster, default_app_vault: dict):
     # Create snapshot CR
     snapshot_name = f"test-snap-{random.get_short_uuid()}"
     app_vault_name = default_app_vault['metadata']['name']
-    created_cr = app_cluster.snapshot_helper.apply_snapshot_cr(defaults.DEFAULT_CONNECTOR_NAMESPACE, snapshot_name,
-                                                               default_app.name, app_vault_name)
+    created_cr = app_cluster.snapshot_helper.apply_snapshot_cr(name=snapshot_name, application_name=default_app.name,
+                                                               app_vault_name=app_vault_name)
 
     # Wait for snapshot to complete
     state = ""
     time_expire = time.time() + 60
     while time.time() < time_expire:
-        state = app_cluster.snapshot_helper.get_cr(created_cr['metadata']['name']).get("status", {}).get("state", "")
+        state = app_cluster.snapshot_helper.get_cr(created_cr['metadata']['name'])['status'].get("state", "")
         if state.lower() == "completed":
             break
 

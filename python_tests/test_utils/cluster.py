@@ -19,6 +19,6 @@ class Cluster:
 
     def cleanup(self):
         pass
-        # self.app_vault.cleanup_created_app_vaults()
-        # self.app_vault.cleanup_created_secrets()
+        self.app_vault.cleanup_created_app_vaults()
+        self.app_vault.cleanup_created_secrets()
 

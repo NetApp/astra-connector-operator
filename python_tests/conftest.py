@@ -29,6 +29,7 @@ def pytest_addoption(parser):
 # Parse Args
 # -----------
 
+
 @pytest.fixture(scope="session")
 def kubeconfig(request):
     return request.config.getoption("--kubeconfig")
@@ -49,15 +50,15 @@ def s3_host(request):
     return request.config.getoption("--s3_host")
 
 
+# ---------------
+# End Arg Parse #
+# ---------------
+
+
 @pytest.fixture(scope="session")
 def s3_creds(s3_host, s3_access_key, s3_secret_key) -> namedtuple:
     S3_Creds = namedtuple('S3Creds', 'host access_key secret_key')
     return S3_Creds(host=s3_host, access_key=s3_access_key, secret_key=s3_secret_key)
-
-
-# ---------------
-# End Arg Parse #
-# ---------------
 
 
 @pytest.fixture(scope="session")

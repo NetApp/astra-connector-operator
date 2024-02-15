@@ -10,7 +10,7 @@ class ApplicationHelper:
     def __init__(self, k8s_helper: K8sHelper):
         self.k8s_helper = k8s_helper
 
-    def gen_snapshot_cr(self, name, included_namespaces: list[str]) -> dict:
+    def gen_application_cr(self, name, included_namespaces: list[str]) -> dict:
         return {
             "apiVersion": f"{self.group}/{self.version}",
             "kind": "Application",
@@ -24,7 +24,7 @@ class ApplicationHelper:
 
     def apply_application_cr(self, name, included_namespaces: list[str],
                              namespace=defaults.DEFAULT_CONNECTOR_NAMESPACE) -> dict:
-        snapshot_def = self.gen_snapshot_cr(name, included_namespaces)
+        snapshot_def = self.gen_application_cr(name, included_namespaces)
         return self.k8s_helper.apply_cr(name, namespace, snapshot_def, self.plural_name)
 
 
