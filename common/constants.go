@@ -52,6 +52,7 @@ const (
 	NeptuneName       = "neptune-controller-manager"
 	NeptuneDefaultTag = "e056f69"
 	NeptuneTagFile    = "common/neptune_manager_tag.txt"
+	NeptuneReplicas   = 1
 
 	AstraPrivateCloudType = "private"
 	AstraPrivateCloudName = "private"

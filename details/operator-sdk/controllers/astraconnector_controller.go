@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/NetApp-Polaris/astra-connector-operator/common"
 	"net/http"
 	"reflect"
 	"strings"
@@ -161,7 +162,7 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 		return ctrl.Result{}, nil
 	}
 
-	if r.needsReconcile(*astraConnector) {
+	if r.needsReconcile(ctx, *astraConnector) {
 		log.Info("Actual state does not match desired state", "registered", astraConnector.Status.NatsSyncClient.Registered, "desiredSpec", astraConnector.Spec, "observedSpec", astraConnector.Status.ObservedSpec)
 		if !astraConnector.Spec.SkipPreCheck {
 			k8sUtil := k8s.NewK8sUtil(r.Client, r.Clientset, log)
@@ -462,7 +463,7 @@ func (r *AstraConnectorController) validateAstraConnector(connector v1.AstraConn
 	return errors.New(fmt.Sprintf("Errors while validating AstraConnector CR: %s", strings.Join(fieldErrors, "; ")))
 }
 
-func (r *AstraConnectorController) needsReconcile(connector v1.AstraConnector) bool {
+func (r *AstraConnectorController) needsReconcile(ctx context.Context, connector v1.AstraConnector) bool {
 	// Ensure that the cluster has registered successfully
 	if connector.Status.NatsSyncClient.Registered != "true" {
 		return true
@@ -471,6 +472,46 @@ func (r *AstraConnectorController) needsReconcile(connector v1.AstraConnector) b
 	if !reflect.DeepEqual(connector.Status.ObservedSpec, connector.Spec) {
 		return true
 	}
+
+	// Check if the number of replicas for each component matches the desired number of replicas
+	natsSyncDeployment := &appsv1.Deployment{}
+	err := r.Get(ctx, types.NamespacedName{Name: common.NatsSyncClientName, Namespace: connector.Namespace}, natsSyncDeployment)
+	if err != nil {
+		return true
+	}
+	if *natsSyncDeployment.Spec.Replicas != connector.Spec.NatsSyncClient.Replicas {
+		return true
+	}
+
+	natsDeployment := &appsv1.StatefulSet{}
+	err = r.Get(ctx, types.NamespacedName{Name: common.NatsName, Namespace: connector.Namespace}, natsDeployment)
+	if err != nil {
+		return true
+	}
+	if *natsDeployment.Spec.Replicas != connector.Spec.Nats.Replicas {
+		return true
+	}
+
+	astraConnectDeployment := &appsv1.Deployment{}
+	err = r.Get(ctx, types.NamespacedName{Name: common.AstraConnectName, Namespace: connector.Namespace}, astraConnectDeployment)
+	if err != nil {
+		return true
+	}
+	// Check the number of replicas for AstraConnect
+	if *astraConnectDeployment.Spec.Replicas != connector.Spec.AstraConnect.Replicas {
+		return true
+	}
+
+	neptuneDeployment := &appsv1.Deployment{}
+	err = r.Get(ctx, types.NamespacedName{Name: common.AstraConnectName, Namespace: connector.Namespace}, neptuneDeployment)
+	if err != nil {
+		return true
+	}
+	// Check the number of replicas for AstraConnect
+	if *neptuneDeployment.Spec.Replicas != common.NeptuneReplicas {
+		return true
+	}
+
 	return false
 }
 
