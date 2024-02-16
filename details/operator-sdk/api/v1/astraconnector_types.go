@@ -38,22 +38,24 @@ type NatsSyncClient struct {
 	Image string `json:"image,omitempty"`
 	// +kubebuilder:validation:Optional
 	HostAliasIP string `json:"hostAliasIP,omitempty"`
-	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:=1
 	Replicas int32 `json:"replicas,omitempty"`
 }
 
 // +kubebuilder:validation:Optional
 
 type Nats struct {
-	Image    string `json:"image,omitempty"`
-	Replicas int32  `json:"replicas,omitempty"`
+	Image string `json:"image,omitempty"`
+	// +kubebuilder:default:=1
+	Replicas int32 `json:"replicas,omitempty"`
 }
 
 // +kubebuilder:validation:Optional
 
 type AstraConnect struct {
-	Image    string `json:"image,omitempty"`
-	Replicas int32  `json:"replicas,omitempty"`
+	Image string `json:"image,omitempty"`
+	// +kubebuilder:default:=1
+	Replicas int32 `json:"replicas,omitempty"`
 }
 
 // +kubebuilder:validation:Optional

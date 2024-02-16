@@ -489,7 +489,9 @@ func (r *AstraConnectorController) needsReconcile(ctx context.Context, connector
 	if err != nil {
 		return true
 	}
-	if *natsDeployment.Spec.Replicas != connector.Spec.Nats.Replicas {
+	// This is currently configured to only ever have one replica due to an issue with
+	// deploying on GKE. See app/deployer/connector/nats.go for more info.
+	if *natsDeployment.Spec.Replicas != common.NatsDefaultReplicas {
 		log.Info("Number of Nats replicas does not match", "Expected", connector.Spec.Nats.Replicas, "Actual", *natsDeployment.Spec.Replicas)
 		return true
 	}

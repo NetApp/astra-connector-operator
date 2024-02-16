@@ -54,6 +54,7 @@ func TestNatsSyncGetDeploymentObjectsDefault(t *testing.T) {
 		Spec: v1.AstraConnectorSpec{
 			NatsSyncClient: v1.NatsSyncClient{
 				HostAliasIP: "192.168.1.1",
+				Replicas:    1,
 			},
 			Astra: v1.Astra{
 				SkipTLSValidation: false,

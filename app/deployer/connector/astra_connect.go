@@ -54,15 +54,6 @@ func (d *AstraConnectDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx co
 	connectorImage = fmt.Sprintf("%s/astra-connector:%s", imageRegistry, containerImage)
 	log.Info("Using AstraConnector image", "image", connectorImage)
 
-	// TODO remove option to set replica count in CRD. This should always only-ever be 1
-	var replicas int32
-	if m.Spec.AstraConnect.Replicas > 1 {
-		replicas = m.Spec.AstraConnect.Replicas
-	} else {
-		log.Info("Defaulting the Astra Connect replica size", "size", common.AstraConnectDefaultReplicas)
-		replicas = common.AstraConnectDefaultReplicas
-	}
-
 	ref := &corev1.ConfigMapKeySelector{LocalObjectReference: corev1.LocalObjectReference{Name: common.AstraConnectName}, Key: "nats_url"}
 
 	dep := &appsv1.Deployment{
@@ -74,7 +65,8 @@ func (d *AstraConnectDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx co
 			},
 		},
 		Spec: appsv1.DeploymentSpec{
-			Replicas: &replicas,
+			// TODO remove option to set replica count in CRD. This should always only-ever be 1
+			Replicas: &m.Spec.AstraConnect.Replicas,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: ls,
 			},
