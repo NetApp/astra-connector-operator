@@ -324,7 +324,41 @@ func (n NeptuneClientDeployerV2) GetStatefulSetObjects(m *v1.AstraConnector, ctx
 }
 
 func (n NeptuneClientDeployerV2) GetServiceObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
-	return nil, model.NonMutateFn, nil
+	var services []client.Object
+
+	service := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "neptune-controller-manager-metrics-service",
+			Namespace: m.Namespace,
+			Labels: map[string]string{
+				"app.kubernetes.io/component":  "kube-rbac-proxy",
+				"app.kubernetes.io/created-by": "neptune",
+				"app.kubernetes.io/instance":   "controller-manager-metrics-service",
+				"app.kubernetes.io/managed-by": "kustomize",
+				"app.kubernetes.io/name":       "service",
+				"app.kubernetes.io/part-of":    "neptune",
+				"control-plane":                "controller-manager",
+			},
+		},
+		Spec: corev1.ServiceSpec{
+			Type: corev1.ServiceTypeClusterIP,
+			Ports: []corev1.ServicePort{
+				{
+					Name:       "https",
+					Port:       common.NeptuneMetricServicePort,
+					Protocol:   common.NeptuneMetricServiceProtocol,
+					TargetPort: intstr.FromString("https"),
+				},
+			},
+			Selector: map[string]string{
+				"control-plane": "controller-manager",
+			},
+		},
+	}
+
+	services = append(services, service)
+
+	return services, model.NonMutateFn, nil
 }
 
 func (n NeptuneClientDeployerV2) GetConfigMapObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
