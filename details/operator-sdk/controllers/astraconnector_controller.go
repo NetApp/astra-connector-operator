@@ -502,7 +502,6 @@ func (r *AstraConnectorController) needsReconcile(ctx context.Context, connector
 		log.Info("Number of AstraConnector replicas does not match", "Expected", connector.Spec.AstraConnect.Replicas, "Actual", *astraConnectDeployment.Spec.Replicas)
 		return true
 	}
-	// Check the number of replicas for AstraConnect
 	if *astraConnectDeployment.Spec.Replicas != connector.Spec.AstraConnect.Replicas {
 		return true
 	}
@@ -512,7 +511,6 @@ func (r *AstraConnectorController) needsReconcile(ctx context.Context, connector
 	if err != nil {
 		return true
 	}
-	// Check the number of replicas for AstraConnect
 	if *neptuneDeployment.Spec.Replicas != common.NeptuneReplicas {
 		log.Info("Number of Neptune replicas does not match", "Expected", connector.Spec.AstraConnect.Replicas, "Actual", *astraConnectDeployment.Spec.Replicas)
 		return true
