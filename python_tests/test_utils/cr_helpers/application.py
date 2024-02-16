@@ -39,7 +39,7 @@ class ApplicationHelper:
         for app in self.created_applications:
             try:
                 name = app.get('metadata', {}).get('name', '')
-                namespace = app.get('metadata', {}).get('name', '')
+                namespace = app.get('metadata', {}).get('namespace', '')
                 if not name or not namespace:
                     continue
                 self.delete_cr(name=name, namespace=namespace)

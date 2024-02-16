@@ -45,7 +45,7 @@ class BackupHelper:
         for backup in self.created_backups:
             try:
                 name = backup.get('metadata', {}).get('name', '')
-                namespace = backup.get('metadata', {}).get('name', '')
+                namespace = backup.get('metadata', {}).get('namespace', '')
                 if name == '' or namespace == '':
                     continue
                 self.delete_cr(name=name, namespace=namespace)

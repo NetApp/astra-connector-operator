@@ -1,7 +1,7 @@
 import base64
 import python_tests.defaults as defaults
 from kubernetes import client, config, utils
-from kubernetes.client import ApiException, V1Status, V1Secret
+from kubernetes.client import ApiException, V1Status, V1Secret, V1PodList, ApiException
 from python_tests.log import logger
 
 
@@ -45,6 +45,7 @@ class K8sHelper:
         )
 
     def apply_cr(self, name, namespace, body, plural) -> dict:
+        # apply_cr is the equivalent to update the CR if it exists, crreate it if it doesn't
         group, version = body['apiVersion'].split('/')
         try:
             self.custom_object_api.get_namespaced_custom_object(
@@ -117,3 +118,30 @@ class K8sHelper:
                 if e.status != 404:
                     logger.warn(f"encountered error cleaning up secrets: {e}")
 
+    def get_pods(self, namespace) -> V1PodList:
+        return self.core_v1_api.list_namespaced_pod(namespace)
+
+    def create_namespace(self, namespace):
+        # Check if the namespace exists and create it if it doesn't
+        try:
+            self.core_v1_api.read_namespace(namespace)
+        except ApiException as e:
+            if e.status == 404:
+                # Namespace not found, create it
+                namespace = client.V1Namespace(metadata=client.V1ObjectMeta(name=namespace))
+                self.core_v1_api.create_namespace(namespace)
+                print(f"Namespace '{namespace}' created.")
+            else:
+                # Some other error occurred
+                raise
+
+    def delete_namespace(self, namespace):
+        try:
+            self.core_v1_api.delete_namespace(namespace)
+        except ApiException as e:
+            if e.status == 404:
+                # Namespace not found
+                logger.info(f"Attempted to delete missing namespace '{namespace}', may have already been deleted")
+            else:
+                # Some other error occurred
+                raise

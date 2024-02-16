@@ -79,12 +79,11 @@ def app_cluster(kubeconfig, bucket_manager) -> Cluster:
     cluster.cleanup()
 
 
-@pytest.mark.fixture(scope="session")
-def default_app() -> App:
-    return App(
-        name="maria",
-        namespace="maria1"
-    )
+@pytest.fixture(scope="session")
+def default_app(app_cluster) -> App:
+    name = "mariadb"
+    namespace = f"maria-testapp-{random.get_short_uuid()}"
+    return app_cluster.app_installer.install_mariadb(name, namespace)
 
 
 @pytest.fixture(scope="session")

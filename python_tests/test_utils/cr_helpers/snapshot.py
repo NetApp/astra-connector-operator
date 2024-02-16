@@ -45,10 +45,10 @@ class SnapshotHelper:
         for snapshot in self.created_snapshot_crs:
             try:
                 name = snapshot.get('metadata', {}).get('name', '')
-                namespace = snapshot.get('metadata', {}).get('name', '')
+                namespace = snapshot.get('metadata', {}).get('namespace', '')
                 if name == '' or namespace == '':
                     continue
-                self.delete_cr(name=name, namespace=namespace)
+                self.delete_cr(name, namespace)
             except ApiException as e:
                 # Don"t fail if the CR has already been deleted
                 if e.status != 404:

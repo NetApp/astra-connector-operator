@@ -61,7 +61,7 @@ class AppVaultHelper:
         for app_vaults in self.created_app_vaults:
             try:
                 name = app_vaults.get('metadata', {}).get('name', '')
-                namespace = app_vaults.get('metadata', {}).get('name', '')
+                namespace = app_vaults.get('metadata', {}).get('namespace', '')
                 if not name or not namespace:
                     continue
                 self.delete_cr(name=name, namespace=namespace)

@@ -1,12 +1,18 @@
 import io
-import time
 
 import python_tests.test_utils.random as random
 from python_tests import defaults
 from python_tests.test_utils.app_installer import App
 
 
-# For POC only (not testing neptune)
+# For POC only
+def test_create_mariadb(app_cluster, default_app):
+    pods = app_cluster.k8s_helper.get_pods(default_app.namespace)
+    for pod in pods.items:
+        print(f"found pod: {pod.metadata.name}")
+
+
+# For POC only
 # Buckets on the fly
 def test_bucket_create_read_write_delete(bucket_manager):
     # Create a bucket
@@ -106,5 +112,5 @@ def test_backup(app_cluster, default_app_vault):
 
     # Wait for backup to complete
     app_cluster.backup_helper.wait_for_snapshot_with_timeout(backup_name, timeout_sec=300)
-    state = app_cluster.backup_helper.get_cr(snap_name)['status'].get("state", "")
+    state = app_cluster.backup_helper.get_cr(backup_name)['status'].get("state", "")
     assert state.lower() == "completed", f"timed out waiting for backup {backup_name} to complete"
