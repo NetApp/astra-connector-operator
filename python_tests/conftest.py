@@ -98,7 +98,7 @@ def default_app_vault(app_cluster):
     )
 
     app_vault_name = f"test-app-vault-{random.get_short_uuid()}"
-    cr_response = app_cluster.app_vault.apply_app_vault(
+    cr_response = app_cluster.app_vault.apply_cr(
         name=app_vault_name,
         namespace=defaults.DEFAULT_CONNECTOR_NAMESPACE,
         bucket_name=app_cluster.default_test_bucket.bucket_name,

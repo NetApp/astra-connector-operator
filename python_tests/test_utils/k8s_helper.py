@@ -83,8 +83,7 @@ class K8sHelper:
         return secret
 
     def get_secret(self, name, namespace) -> V1Secret:
-        return self.core_v1_api.read_namespaced_secret(name=name,
-                                                       namespace=namespace)
+        return self.core_v1_api.read_namespaced_secret(name=name, namespace=namespace)
 
     def create_secretkey_accesskey_secret(self, secret_name, access_key, secret_key,
                                           namespace=defaults.DEFAULT_CONNECTOR_NAMESPACE) -> V1Secret:
@@ -105,16 +104,16 @@ class K8sHelper:
         }
         return self.create_secret(namespace, secret_def)
 
-    def cleanup_created_secrets(self):
+    def cleanup(self):
         for secret in self.created_secrets:
             try:
                 name = secret.metadata.name
                 namespace = secret.metadata.namespace
-                if name == '' or namespace == '':
+                if not name or not namespace:
                     continue
                 self.core_v1_api.delete_namespaced_secret(name=name, namespace=namespace)
             except ApiException as e:
-                # If the Secret was not found log and continue, we don"t want to fail due to clean up
+                # Don"t fail if the CR has already been deleted
                 if e.status != 404:
                     logger.warn(f"encountered error cleaning up secrets: {e}")
 

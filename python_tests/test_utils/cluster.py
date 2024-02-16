@@ -3,6 +3,7 @@ from python_tests.test_utils.cr_helpers.snapshot import SnapshotHelper
 from python_tests.test_utils.cr_helpers.application import ApplicationHelper
 from python_tests.test_utils.app_installer import AppInstaller
 from python_tests.test_utils.k8s_helper import K8sHelper
+from python_tests.test_utils.cr_helpers.backup import BackupHelper
 
 
 class Cluster:
@@ -16,9 +17,12 @@ class Cluster:
         self.app_vault = AppVaultHelper(self.k8s_helper)
         self.snapshot_helper = SnapshotHelper(self.k8s_helper)
         self.application_helper = ApplicationHelper(self.k8s_helper)
+        self.backup_helper = BackupHelper(self.k8s_helper)
 
     def cleanup(self):
-        pass
-        self.app_vault.cleanup_created_app_vaults()
-        self.app_vault.cleanup_created_secrets()
+        self.snapshot_helper.cleanup()
+        self.backup_helper.cleanup()
+        self.application_helper.cleanup()
+        self.app_vault.cleanup()
+        self.k8s_helper.cleanup()
 
