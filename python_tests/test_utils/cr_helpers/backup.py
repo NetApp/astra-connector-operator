@@ -56,11 +56,13 @@ class BackupHelper:
 
     def wait_for_snapshot_with_timeout(self, name, timeout_sec, namespace=defaults.DEFAULT_CONNECTOR_NAMESPACE):
         time_expire = time.time() + timeout_sec
+        cr = None
         while time.time() < time_expire:
-            state = self.get_cr(name)['status'].get("state", "")
+            cr = self.get_cr(name)
+            state = cr.get('status', {}).get("state", "")
             if state.lower() == "completed":
                 return
             if state.lower() == "error":
                 raise Exception(f"backup {name} is in state {state}")
 
-        raise TimeoutError(f"Timed out waiting for backup {name} to complete")
+        raise TimeoutError(f"Timed out waiting for backup {name} to complete\n{cr}")

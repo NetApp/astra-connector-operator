@@ -1,5 +1,5 @@
-from kubernetes.client import ApiException
 import time
+from kubernetes.client import ApiException
 
 import python_tests.defaults as defaults
 from python_tests.log import logger
@@ -54,13 +54,16 @@ class SnapshotHelper:
                 if e.status != 404:
                     logger.warn(f"encountered error cleaning up snapshots: {e}")
 
-    def wait_for_snapshot_with_timeout(self, name, timeout_sec, namespace=defaults.DEFAULT_CONNECTOR_NAMESPACE):
+    def wait_for_snapshot_with_timeout(self, name: str, timeout_sec: int,
+                                       namespace: str = defaults.DEFAULT_CONNECTOR_NAMESPACE):
         time_expire = time.time() + timeout_sec
+        cr = None
         while time.time() < time_expire:
-            state = self.get_cr(name)['status'].get("state", "")
+            cr = self.get_cr(name)
+            state = cr.get('status', {}).get("state", "")
             if state.lower() == "completed":
                 return
             if state.lower() == "error":
                 raise Exception(f"snapshot {name} is in state {state}")
 
-        raise TimeoutError(f"Timed out waiting for snapshot {name} to complete")
+        raise TimeoutError(f"Timed out waiting for snapshot {name} to complete\n{cr}")

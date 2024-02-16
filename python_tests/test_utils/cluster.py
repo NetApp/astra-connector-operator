@@ -25,4 +25,5 @@ class Cluster:
         self.application_helper.cleanup()
         self.app_vault.cleanup()
         self.k8s_helper.cleanup()
+        self.app_installer.cleanup()
 

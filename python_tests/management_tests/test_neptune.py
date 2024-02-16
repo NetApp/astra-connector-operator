@@ -1,19 +1,26 @@
 import io
-
 import python_tests.test_utils.random as random
 from python_tests import defaults
-from python_tests.test_utils.app_installer import App
 
 
 # For POC only
-def test_create_mariadb(app_cluster, default_app):
-    pods = app_cluster.k8s_helper.get_pods(default_app.namespace)
-    for pod in pods.items:
-        print(f"found pod: {pod.metadata.name}")
+# How to install/uninstall an app
+def test_create_mariadb_app(app_cluster):
+    # Install App
+    namespace = f"mariadb-test-{random.get_short_uuid()}"
+    app = app_cluster.app_installer.install_mariadb("test-app", namespace)
+    try:
+        # Get app's pods
+        pods = app_cluster.k8s_helper.get_pods(app.namespace)
+        for pod in pods.items:
+            print(f"Found pod: {pod.metadata.name}")
+    finally:
+        # Uninstall App
+        app.uninstall()
 
 
 # For POC only
-# Buckets on the fly
+# How to create and delete buckets on the fly
 def test_bucket_create_read_write_delete(bucket_manager):
     # Create a bucket
     bucket = bucket_manager.create_bucket(f"example-create-bucket-{random.get_short_uuid()}")
@@ -65,11 +72,7 @@ def test_create_app_vault(app_cluster):
     assert app_vault['metadata']['name'] == app_vault_name, "failed to find app vault cr after creation"
 
 
-def test_app_snapshot(app_cluster, default_app_vault: dict):
-    default_app = App(
-        namespace="maria1",
-        name="maria"
-    )
+def test_app_snapshot(app_cluster, default_app_vault, default_app):
     # Create application CR
     app_cluster.application_helper.apply_cr(
         namespace=defaults.DEFAULT_CONNECTOR_NAMESPACE,
@@ -83,16 +86,12 @@ def test_app_snapshot(app_cluster, default_app_vault: dict):
     app_cluster.snapshot_helper.apply_cr(name=snapshot_name, application_name=default_app.name,
                                          app_vault_name=app_vault_name)
 
-    app_cluster.snapshot_helper.wait_for_snapshot_with_timeout(snapshot_name, timeout_sec=60)
+    app_cluster.snapshot_helper.wait_for_snapshot_with_timeout(snapshot_name, timeout_sec=120)
     state = app_cluster.snapshot_helper.get_cr(snapshot_name)['status'].get("state", "")
     assert state.lower() == "completed", f"expected snapshot '{snapshot_name}' state 'completed' but got '{state}'"
 
 
-def test_backup(app_cluster, default_app_vault):
-    default_app = App(
-        namespace="maria1",
-        name="maria"
-    )
+def test_backup(app_cluster, default_app_vault, default_app):
     # Create App CR
     app_cluster.application_helper.apply_cr(default_app.name, [default_app.namespace])
 
@@ -102,7 +101,7 @@ def test_backup(app_cluster, default_app_vault):
     app_cluster.snapshot_helper.apply_cr(snap_name, default_app.name, app_vault_name)
 
     # Wait for snapshot to complete
-    app_cluster.snapshot_helper.wait_for_snapshot_with_timeout(snap_name, timeout_sec=60)
+    app_cluster.snapshot_helper.wait_for_snapshot_with_timeout(snap_name, timeout_sec=120)
     state = app_cluster.snapshot_helper.get_cr(snap_name)['status'].get("state", "")
     assert state.lower() == "completed", f"expected snapshot '{snap_name}' state 'completed' but got '{state}'"
 

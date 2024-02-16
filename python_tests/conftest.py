@@ -1,12 +1,13 @@
 """ Outermost conftest file. Used for common fixtures. All inner contest/pytest suites inherit this file. """
 import pytest
-from python_tests.log import logger
 from collections import namedtuple
-from test_utils.cluster import Cluster
-from test_utils.buckets import BucketManager
+
 import python_tests.defaults as defaults
 import python_tests.test_utils.random as random
+from python_tests.log import logger
 from python_tests.test_utils.app_installer import App
+from test_utils.buckets import BucketManager
+from test_utils.cluster import Cluster
 
 
 # Add custom pytest args
@@ -23,11 +24,15 @@ def pytest_addoption(parser):
     parser.addoption(
         "--s3_access_key", action="store", default="not_set", help="S3 Access Key"
     )
+    parser.addoption(
+        "--static_app", action="store_true", default=False,
+        help="Set to true to test with a static app created outside of pytest"
+    )
 
 
-# -----------
-# Parse Args
-# -----------
+    # -----------
+    # Parse Args
+    # -----------
 
 
 @pytest.fixture(scope="session")
@@ -48,6 +53,10 @@ def s3_access_key(request):
 @pytest.fixture(scope="session")
 def s3_host(request):
     return request.config.getoption("--s3_host")
+
+@pytest.fixture(scope="session")
+def static_app(request):
+    return request.config.getoption("--static_app")
 
 
 # ---------------
@@ -80,10 +89,19 @@ def app_cluster(kubeconfig, bucket_manager) -> Cluster:
 
 
 @pytest.fixture(scope="session")
-def default_app(app_cluster) -> App:
-    name = "mariadb"
-    namespace = f"maria-testapp-{random.get_short_uuid()}"
-    return app_cluster.app_installer.install_mariadb(name, namespace)
+def default_app(app_cluster, static_app: bool) -> App:
+    if not static_app:
+        name = "mariadb"
+        namespace = f"maria-testapp-{random.get_short_uuid()}"
+        return app_cluster.app_installer.install_mariadb(name, namespace)
+    else:
+        name = "testapp"
+        namespace = "testapp"
+        return App(
+            name=name,
+            namespace=namespace,
+            k8s_helper=app_cluster.k8s_helper
+        )
 
 
 @pytest.fixture(scope="session")
