@@ -125,7 +125,7 @@ jobs:
         run: |
           export VERSION=$(cat VERSION)
           echo $VERSION
-          make docker-build
+          make docker-buildx
 
       - name: Push to DockerHub
         if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-') }}
