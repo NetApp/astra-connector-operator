@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023. NetApp, Inc. All Rights Reserved.
+ * Copyright (c) 2024. NetApp, Inc. All Rights Reserved.
  */
 
 package neptune
@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"log"
 	"maps"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"strings"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -21,6 +20,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/NetApp-Polaris/astra-connector-operator/app/conf"
@@ -75,6 +75,7 @@ func (n NeptuneClientDeployerV2) GetDeploymentObjects(m *v1.AstraConnector, ctx 
 		"app":           "controller.neptune.netapp.io",
 	}
 	maps.Copy(podLabels, m.Spec.Labels)
+	neptuneReplicas := int32(common.NeptuneReplicas)
 
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -87,7 +88,7 @@ func (n NeptuneClientDeployerV2) GetDeploymentObjects(m *v1.AstraConnector, ctx 
 		},
 		Spec: appsv1.DeploymentSpec{
 
-			Replicas: pointer.Int32(1),
+			Replicas: &neptuneReplicas,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"control-plane": "controller-manager",

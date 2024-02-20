@@ -15,12 +15,10 @@ const (
 	DefaultImageRegistry = "netappdownloads.jfrog.io/docker-astra-control-staging/arch30/neptune"
 
 	AstraConnectName                 = "astraconnect"
-	AstraConnectDefaultReplicas      = 1
 	AstraConnectorOperatorRepository = "netapp/astra-connector-operator"
 	AstraConnectTagFile              = "common/connector_version.txt"
 
 	NatsSyncClientName                  = "natssync-client"
-	NatsSyncClientDefaultReplicas       = 1
 	NatsSyncClientPort                  = 8080
 	NatsSyncClientProtocol              = "TCP"
 	NatsSyncClientKeystoreUrl           = "configmap:///configmap-data"
@@ -55,6 +53,7 @@ const (
 	NeptuneTagFile               = "common/neptune_manager_tag.txt"
 	NeptuneMetricServicePort     = 8443
 	NeptuneMetricServiceProtocol = "TCP"
+	NeptuneReplicas   = 1
 
 	AstraPrivateCloudType = "private"
 	AstraPrivateCloudName = "private"

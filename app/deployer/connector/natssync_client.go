@@ -61,14 +61,6 @@ func (d *NatsSyncClientDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx 
 		return nil, nil, errors.New("invalid keyStoreURLSplit provided, format - configmap:///configmap-data")
 	}
 
-	var replicas int32
-	if m.Spec.NatsSyncClient.Replicas > 1 {
-		replicas = m.Spec.NatsSyncClient.Replicas
-	} else {
-		log.Info("Defaulting the NatsSyncClient replica size", "size", common.NatsSyncClientDefaultReplicas)
-		replicas = common.NatsSyncClientDefaultReplicas
-	}
-
 	dep := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      common.NatsSyncClientName,
@@ -78,7 +70,7 @@ func (d *NatsSyncClientDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx 
 			},
 		},
 		Spec: appsv1.DeploymentSpec{
-			Replicas: &replicas,
+			Replicas: &m.Spec.NatsSyncClient.Replicas,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: ls,
 			},
