@@ -118,7 +118,7 @@ jobs:
         if: ${{ startsWith(github.ref, 'refs/heads/release-') }}
         run: |
           export BASE_VERSION=$(cat version.txt)
-          export VERSION=$BASE_VERSION-$(date +'%Y%m%d%H%M')
+          export VERSION=$BASE_VERSION-$(TARGETARCHdate +'%Y%m%d%H%M')
           echo $VERSION > VERSION
 
       - name: Build Images
