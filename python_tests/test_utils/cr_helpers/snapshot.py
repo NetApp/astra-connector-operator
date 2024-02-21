@@ -28,17 +28,17 @@ class SnapshotHelper:
             }
         }
 
-    def apply_cr(self, name, application_name, app_vault_name,
-                 namespace=defaults.DEFAULT_CONNECTOR_NAMESPACE) -> dict:
-        snapshot_def = self.gen_cr(name, application_name, app_vault_name)
-        cr = self.k8s_helper.apply_cr(name, namespace, snapshot_def, self.plural_name)
+    def apply_cr(self, cr_name, application_name, app_vault_name,
+                 namespace=defaults.CONNECTOR_NAMESPACE) -> dict:
+        snapshot_def = self.gen_cr(cr_name, application_name, app_vault_name)
+        cr = self.k8s_helper.apply_cr(cr_name, namespace, snapshot_def, self.plural_name)
         self.created_snapshot_crs.append(cr)
         return cr
 
-    def delete_cr(self, name, namespace=defaults.DEFAULT_CONNECTOR_NAMESPACE):
+    def delete_cr(self, name, namespace=defaults.CONNECTOR_NAMESPACE):
         self.k8s_helper.delete_cr(namespace, name, self.group, self.version, self.plural_name)
 
-    def get_cr(self, name, namespace=defaults.DEFAULT_CONNECTOR_NAMESPACE):
+    def get_cr(self, name, namespace=defaults.CONNECTOR_NAMESPACE):
         return self.k8s_helper.get_cr(name, namespace, self.group, self.version, self.plural_name)
 
     def cleanup(self):
@@ -46,8 +46,6 @@ class SnapshotHelper:
             try:
                 name = snapshot.get('metadata', {}).get('name', '')
                 namespace = snapshot.get('metadata', {}).get('namespace', '')
-                if name == '' or namespace == '':
-                    continue
                 self.delete_cr(name, namespace)
             except ApiException as e:
                 # Don"t fail if the CR has already been deleted
@@ -55,11 +53,11 @@ class SnapshotHelper:
                     logger.warn(f"encountered error cleaning up snapshots: {e}")
 
     def wait_for_snapshot_with_timeout(self, name: str, timeout_sec: int,
-                                       namespace: str = defaults.DEFAULT_CONNECTOR_NAMESPACE):
+                                       namespace: str = defaults.CONNECTOR_NAMESPACE):
         time_expire = time.time() + timeout_sec
         cr = None
         while time.time() < time_expire:
-            cr = self.get_cr(name)
+            cr = self.get_cr(name, namespace)
             state = cr.get('status', {}).get("state", "")
             if state.lower() == "completed":
                 return
@@ -67,3 +65,8 @@ class SnapshotHelper:
                 raise Exception(f"snapshot {name} is in state {state}")
 
         raise TimeoutError(f"Timed out waiting for snapshot {name} to complete\n{cr}")
+
+    @staticmethod
+    def get_snap_path(cr_def):
+        archive_path_split = cr_def['status']['appArchivePath'].split('/')
+        return f"{'/'.join(archive_path_split[:-1])}/"

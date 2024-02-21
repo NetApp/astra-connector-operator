@@ -28,11 +28,17 @@ def pytest_addoption(parser):
         "--static_app", action="store_true", default=False,
         help="Set to true to test with a static app created outside of pytest"
     )
+    parser.addoption(
+        "--src_sc", action="store", default=defaults.SRC_STORAGE_CLASS, help="AppMirror source SC name"
+    )
+    parser.addoption(
+        "--dst_sc", action="store", default=defaults.DST_STORAGE_CLASS, help="AppMirror destination SC name"
+    )
 
 
-    # -----------
-    # Parse Args
-    # -----------
+# -----------
+# Parse Args
+# -----------
 
 
 @pytest.fixture(scope="session")
@@ -54,9 +60,20 @@ def s3_access_key(request):
 def s3_host(request):
     return request.config.getoption("--s3_host")
 
+
 @pytest.fixture(scope="session")
 def static_app(request):
     return request.config.getoption("--static_app")
+
+
+@pytest.fixture(scope="session")
+def src_sc(request):
+    return request.config.getoption("--src_sc")
+
+
+@pytest.fixture(scope="session")
+def dst_sc(request):
+    return request.config.getoption("--dst_sc")
 
 
 # ---------------
@@ -88,8 +105,11 @@ def app_cluster(kubeconfig, bucket_manager) -> Cluster:
     cluster.cleanup()
 
 
+# If static_app = True - we expect there to already be an app created in the 'testapp' NS.
+# static_app is useful for quick iteration while developing
 @pytest.fixture(scope="session")
 def default_app(app_cluster, static_app: bool) -> App:
+    # Note: default_app uses the default SC
     if not static_app:
         name = "mariadb"
         namespace = f"maria-testapp-{random.get_short_uuid()}"
@@ -108,7 +128,7 @@ def default_app(app_cluster, static_app: bool) -> App:
 def default_app_vault(app_cluster):
     secret_name = f"app-vault-secret-{random.get_short_uuid()}"
     app_cluster.k8s_helper.create_secretkey_accesskey_secret(
-        namespace=defaults.DEFAULT_CONNECTOR_NAMESPACE,
+        namespace=defaults.CONNECTOR_NAMESPACE,
         secret_name=secret_name,
         access_key=app_cluster.default_test_bucket.access_key,
         secret_key=app_cluster.default_test_bucket.secret_key
@@ -117,10 +137,21 @@ def default_app_vault(app_cluster):
     app_vault_name = f"test-app-vault-{random.get_short_uuid()}"
     cr_response = app_cluster.app_vault.apply_cr(
         name=app_vault_name,
-        namespace=defaults.DEFAULT_CONNECTOR_NAMESPACE,
+        namespace=defaults.CONNECTOR_NAMESPACE,
         bucket_name=app_cluster.default_test_bucket.bucket_name,
         bucket_host=app_cluster.default_test_bucket.host,
         secret_name=secret_name,
         provider_type="generic-s3"
     )
     return cr_response
+
+
+# Uses fixture scope so each appmirror test gets its own app and the app gets cleaned up after each test
+@pytest.fixture(scope="fixture")
+def appmirror_src_app_fixture_scope(app_cluster, src_sc):
+    # Note: default_app uses the default SC
+    name = "appmirror-test-app"
+    namespace = f"appmirror-test-{random.get_short_uuid()}"
+    app = app_cluster.app_installer.install_mariadb(name, namespace)
+    yield app
+    app.uninstall()

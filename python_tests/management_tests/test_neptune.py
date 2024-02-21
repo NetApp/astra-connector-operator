@@ -1,6 +1,6 @@
 import io
 import python_tests.test_utils.random as random
-from python_tests import defaults
+from python_tests import defaults, constants
 
 
 # For POC only
@@ -49,11 +49,11 @@ def test_create_app_vault_secret(app_cluster):
         secret_name=secret_name,
         access_key=app_cluster.default_test_bucket.access_key,
         secret_key=app_cluster.default_test_bucket.secret_key,
-        namespace=defaults.DEFAULT_CONNECTOR_NAMESPACE
+        namespace=defaults.CONNECTOR_NAMESPACE
     )
 
     # Verify secret exists
-    secret = app_cluster.k8s_helper.get_secret(name=secret_name, namespace=defaults.DEFAULT_CONNECTOR_NAMESPACE)
+    secret = app_cluster.k8s_helper.get_secret(name=secret_name, namespace=defaults.CONNECTOR_NAMESPACE)
     assert secret.metadata.name == secret_name, f"secret {secret_name} not found"
 
 
@@ -75,7 +75,7 @@ def test_create_app_vault(app_cluster):
 def test_app_snapshot(app_cluster, default_app_vault, default_app):
     # Create application CR
     app_cluster.application_helper.apply_cr(
-        namespace=defaults.DEFAULT_CONNECTOR_NAMESPACE,
+        namespace=defaults.CONNECTOR_NAMESPACE,
         name=default_app.name,
         included_namespaces=[default_app.namespace]
     )
@@ -113,3 +113,66 @@ def test_backup(app_cluster, default_app_vault, default_app):
     app_cluster.backup_helper.wait_for_snapshot_with_timeout(backup_name, timeout_sec=300)
     state = app_cluster.backup_helper.get_cr(backup_name)['status'].get("state", "")
     assert state.lower() == "completed", f"timed out waiting for backup {backup_name} to complete"
+
+
+def test_appmirror(app_cluster, default_app_vault, appmirror_src_app_fixture_scope, dst_sc):
+    # Use the default app vault for both src and dest
+    src_app_vault = default_app_vault
+    dest_app_vault = default_app_vault
+    src_app = appmirror_src_app_fixture_scope
+
+    # Create src app CR
+    src_app_cr = app_cluster.application_helper.apply_cr(src_app.name, [src_app.namespace])
+
+    # Create Snapshot CR
+    snap_name = f"snapshot-test-{random.get_short_uuid()}"
+    app_vault_name = default_app_vault['metadata']['name']
+    app_cluster.snapshot_helper.apply_cr(snap_name, src_app.name, app_vault_name)
+
+    # Wait for snapshot to complete
+    app_cluster.snapshot_helper.wait_for_snapshot_with_timeout(snap_name, timeout_sec=120)
+    snap_cr = app_cluster.snapshot_helper.get_cr(snap_name)
+    state = snap_cr['status'].get("state", "")
+    assert state.lower() == "completed", f"expected snapshot '{snap_name}' state 'completed' but got '{state}'"
+
+    # Create src schedule CR
+    schedule_name = f"schedule-{random.get_short_uuid()}"
+    schedule_cr = app_cluster.schedule_helper.apply_cr(
+        name=schedule_name,
+        app_name=src_app.name,
+        app_vault_name=src_app_vault['metadata']['name'],
+        replicate=True
+    )
+
+    # Create dest app CR
+    dest_app_ns = f"appmirror-dest-{random.get_short_uuid()}"
+    dest_app_name = f"appmirror-dest-{random.get_short_uuid()}"
+    dest_app_cr = app_cluster.application_helper.apply_cr(dest_app_name, [dest_app_ns])
+
+    # Create appmirror CR
+    snap_path = app_cluster.snapshot_helper.get_snap_path(snap_cr)
+    am_name = f"appmirror-{random.get_short_uuid()}"
+    appmirror_cr = app_cluster.appmirror_helper.apply_cr(
+        name=am_name,
+        app_name=dest_app_cr['metadata']['name'],
+        desired_state=constants.AppmirrorState.ESTABLISHED.value,
+        src_app_vault_name=src_app_vault['metadata']['name'],
+        dest_app_vault_name=dest_app_vault['metadata']['name'],
+        snap_path=snap_path,
+        sc_name=dst_sc,
+        ns_mapping=[{
+            "source": src_app.namespace,
+            "destination": dest_app_ns
+        }]
+    )
+
+    # Wait for appmirror to be in established state
+    app_cluster.appmirror_helper.wait_for_state_with_timeout(
+        cr_name=am_name,
+        appmirror_state=constants.AppmirrorState.ESTABLISHED,
+        timeout_sec=300
+    )
+    cr = app_cluster.appmirror_helper.get_cr(am_name)
+    appmirror_state = cr.get(['status'], {}).get("state", "")
+    assert appmirror_state == constants.AppmirrorState.completed.value, \
+        f"timed out waiting for appmirror state '{constants.AppmirrorState.ESTABLISHED}'\n{cr}"

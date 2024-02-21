@@ -1,2 +1,6 @@
-DEFAULT_CONNECTOR_NAMESPACE = "astra-connector"
-DEFAULT_CONNECTOR_OPERATOR_NAMESPACE = "astra-connector-operator"
+
+CONNECTOR_NAMESPACE = "astra-connector"
+
+# Default storage class names
+SRC_STORAGE_CLASS = "src-sc"
+DST_STORAGE_CLASS = "dst-sc"

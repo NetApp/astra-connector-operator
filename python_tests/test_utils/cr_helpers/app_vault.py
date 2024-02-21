@@ -45,16 +45,16 @@ class AppVaultHelper:
         }
 
     def apply_cr(self, name, bucket_name, bucket_host, secret_name,
-                 provider_type="generic-s3", namespace=defaults.DEFAULT_CONNECTOR_NAMESPACE) -> dict:
+                 provider_type="generic-s3", namespace=defaults.CONNECTOR_NAMESPACE) -> dict:
         app_vault_def = self.gen_cr(name, bucket_host, bucket_name, secret_name, provider_type)
         cr_response = self.k8s_helper.apply_cr(name, namespace, app_vault_def, self.plural_name)
         self.created_app_vaults.append(cr_response)
         return cr_response
 
-    def get_cr(self, name, namespace=defaults.DEFAULT_CONNECTOR_NAMESPACE):
+    def get_cr(self, name, namespace=defaults.CONNECTOR_NAMESPACE):
         return self.k8s_helper.get_cr(name, namespace, self.group, self.version, self.plural_name)
 
-    def delete_cr(self, name, namespace=defaults.DEFAULT_CONNECTOR_NAMESPACE):
+    def delete_cr(self, name, namespace=defaults.CONNECTOR_NAMESPACE):
         self.k8s_helper.delete_cr(namespace, name, self.group, self.version, self.plural_name)
 
     def cleanup(self):
@@ -62,8 +62,6 @@ class AppVaultHelper:
             try:
                 name = app_vaults.get('metadata', {}).get('name', '')
                 namespace = app_vaults.get('metadata', {}).get('namespace', '')
-                if not name or not namespace:
-                    continue
                 self.delete_cr(name=name, namespace=namespace)
             except ApiException as e:
                 # Don"t fail if the CR has already been deleted

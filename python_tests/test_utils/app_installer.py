@@ -8,10 +8,11 @@ from python_tests.test_utils.k8s_helper import K8sHelper
 # App holds useful information about created apps tests may care about
 class App:
 
-    def __init__(self, name: str, namespace: str, k8s_helper: K8sHelper):
+    def __init__(self, name: str, namespace: str, k8s_helper: K8sHelper, storage_class: str = "default"):
         self.name = name
         self.namespace = namespace
         self.k8s_helper = k8s_helper
+        self.storage_class = storage_class
 
     def install(self):
         pass  # todo enforce base child method
@@ -22,8 +23,8 @@ class App:
 
 class MariaDb(App):
 
-    def __init__(self, name: str, namespace: str, k8s_helper: K8sHelper):
-        super().__init__(name, namespace, k8s_helper)
+    def __init__(self, name: str, namespace: str, k8s_helper: K8sHelper, storage_class: str = "default"):
+        super().__init__(name, namespace, k8s_helper, storage_class)
 
     def install(self):
         # Installs latest chart
@@ -31,6 +32,9 @@ class MariaDb(App):
         # The command to install MariaDB using Helm, uses the --wait option to wait for pods to start
         command = ["helm", "install", self.name, "oci://registry-1.docker.io/bitnamicharts/mariadb", "--set",
                    "auth.rootPassword=password", "--wait", "--timeout", f"{timeout}s", "-n", self.namespace]
+
+        if self.storage_class != "default":
+            command.extend(["--set", f"primary.persistence.storageClass=${self.storage_class}"])
 
         # Set KUBECONFIG env var
         env = os.environ.copy()
@@ -76,8 +80,8 @@ class AppInstaller:
     def __init__(self, k8s_helper: K8sHelper):
         self.k8s_helper = k8s_helper
 
-    def install_mariadb(self, name, namespace) -> App:
-        maria_db = MariaDb(name, namespace, self.k8s_helper)
+    def install_mariadb(self, name, namespace, storage_class="default") -> App:
+        maria_db = MariaDb(name, namespace, self.k8s_helper, storage_class)
         maria_db.install()
         self.created_apps.append(maria_db)
         return maria_db

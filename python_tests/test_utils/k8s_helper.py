@@ -45,7 +45,7 @@ class K8sHelper:
         )
 
     def apply_cr(self, name, namespace, body, plural) -> dict:
-        # apply_cr is the equivalent to update the CR if it exists, crreate it if it doesn't
+        # apply_cr is the equivalent to update the CR if it exists, create it if it doesn't
         group, version = body['apiVersion'].split('/')
         try:
             self.custom_object_api.get_namespaced_custom_object(
@@ -87,7 +87,7 @@ class K8sHelper:
         return self.core_v1_api.read_namespaced_secret(name=name, namespace=namespace)
 
     def create_secretkey_accesskey_secret(self, secret_name, access_key, secret_key,
-                                          namespace=defaults.DEFAULT_CONNECTOR_NAMESPACE) -> V1Secret:
+                                          namespace=defaults.CONNECTOR_NAMESPACE) -> V1Secret:
         access_key_encoded = base64.b64encode(access_key.encode()).decode()
         secret_key_encoded = base64.b64encode(secret_key.encode()).decode()
         secret_def = {

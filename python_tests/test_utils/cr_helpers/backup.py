@@ -29,16 +29,16 @@ class BackupHelper:
         }
 
     def apply_cr(self, name, application_name, snapshot_name, app_vault_name,
-                 namespace=defaults.DEFAULT_CONNECTOR_NAMESPACE) -> dict:
+                 namespace=defaults.CONNECTOR_NAMESPACE) -> dict:
         cr_def = self.gen_cr(name, application_name, snapshot_name, app_vault_name)
         cr_response = self.k8s_helper.apply_cr(name, namespace, cr_def, self.plural_name)
         self.created_backups.append(cr_response)
         return cr_response
 
-    def get_cr(self, name, namespace=defaults.DEFAULT_CONNECTOR_NAMESPACE):
+    def get_cr(self, name, namespace=defaults.CONNECTOR_NAMESPACE):
         return self.k8s_helper.get_cr(name, namespace, self.group, self.version, self.plural_name)
 
-    def delete_cr(self, name, namespace=defaults.DEFAULT_CONNECTOR_NAMESPACE):
+    def delete_cr(self, name, namespace=defaults.CONNECTOR_NAMESPACE):
         self.k8s_helper.delete_cr(namespace, name, self.group, self.version, self.plural_name)
 
     def cleanup(self):
@@ -46,19 +46,17 @@ class BackupHelper:
             try:
                 name = backup.get('metadata', {}).get('name', '')
                 namespace = backup.get('metadata', {}).get('namespace', '')
-                if name == '' or namespace == '':
-                    continue
                 self.delete_cr(name=name, namespace=namespace)
             except ApiException as e:
                 # Don"t fail if the CR has already been deleted
                 if e.status != 404:
                     logger.warn(f"encountered error cleaning up backup CRs: {e}")
 
-    def wait_for_snapshot_with_timeout(self, name, timeout_sec, namespace=defaults.DEFAULT_CONNECTOR_NAMESPACE):
+    def wait_for_snapshot_with_timeout(self, name, timeout_sec, namespace=defaults.CONNECTOR_NAMESPACE):
         time_expire = time.time() + timeout_sec
         cr = None
         while time.time() < time_expire:
-            cr = self.get_cr(name)
+            cr = self.get_cr(name, namespace)
             state = cr.get('status', {}).get("state", "")
             if state.lower() == "completed":
                 return

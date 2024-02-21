@@ -26,13 +26,13 @@ class ApplicationHelper:
         }
 
     def apply_cr(self, name, included_namespaces: list[str],
-                 namespace=defaults.DEFAULT_CONNECTOR_NAMESPACE) -> dict:
+                 namespace=defaults.CONNECTOR_NAMESPACE) -> dict:
         cr_def = self.gen_cr(name, included_namespaces)
         cr = self.k8s_helper.apply_cr(name, namespace, cr_def, self.plural_name)
         self.created_applications.append(cr)
         return cr
 
-    def delete_cr(self, name, namespace=defaults.DEFAULT_CONNECTOR_NAMESPACE) -> V1Status:
+    def delete_cr(self, name, namespace=defaults.CONNECTOR_NAMESPACE) -> V1Status:
         return self.k8s_helper.delete_cr(namespace, name, self.group, self.version, self.plural_name)
 
     def cleanup(self):
@@ -40,8 +40,6 @@ class ApplicationHelper:
             try:
                 name = app.get('metadata', {}).get('name', '')
                 namespace = app.get('metadata', {}).get('namespace', '')
-                if not name or not namespace:
-                    continue
                 self.delete_cr(name=name, namespace=namespace)
             except ApiException as e:
                 # Don"t fail if the CR has already been deleted
