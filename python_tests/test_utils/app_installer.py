@@ -34,7 +34,7 @@ class MariaDb(App):
                    "auth.rootPassword=password", "--wait", "--timeout", f"{timeout}s", "-n", self.namespace]
 
         if self.storage_class != "default":
-            command.extend(["--set", f"primary.persistence.storageClass=${self.storage_class}"])
+            command.extend(["--set", f"primary.persistence.storageClass={self.storage_class}"])
 
         # Set KUBECONFIG env var
         env = os.environ.copy()

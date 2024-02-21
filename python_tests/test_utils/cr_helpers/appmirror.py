@@ -10,7 +10,7 @@ from python_tests.test_utils.k8s_helper import K8sHelper
 
 class AppMirrorHelper:
     created_appmirrors: list[dict] = []
-    plural_name = "appmirrors"
+    plural_name = "appmirrorrelationships"
     group = "astra.netapp.io"
     version = "v1"
 
@@ -39,11 +39,11 @@ class AppMirrorHelper:
             cr_def['spec']['namespaceMapping'] = ns_mapping
         return cr_def
 
-    def apply_cr(self, name, app_name, desired_state, src_app_vault_name, dest_app_vault_name, snap_path,
+    def apply_cr(self, cr_name, app_name, desired_state, src_app_vault_name, dest_app_vault_name, snap_path,
                  sc_name, ns_mapping: [{}] = None, interval: int = 5,
                  frequency: str = constants.Frequency.MINUTELY.value,
                  namespace=defaults.CONNECTOR_NAMESPACE) -> dict:
-        cr_def = self.gen_cr(name=name,
+        cr_def = self.gen_cr(name=cr_name,
                              app_name=app_name,
                              desired_state=desired_state,
                              src_app_vault_name=src_app_vault_name,
@@ -53,7 +53,7 @@ class AppMirrorHelper:
                              ns_mapping=ns_mapping,
                              interval=interval,
                              frequency=frequency)
-        cr_response = self.k8s_helper.apply_cr(name, namespace, cr_def, self.plural_name)
+        cr_response = self.k8s_helper.apply_cr(cr_name, namespace, cr_def, self.plural_name)
         self.created_appmirrors.append(cr_response)
         return cr_response
 
@@ -62,6 +62,9 @@ class AppMirrorHelper:
 
     def delete_cr(self, name, namespace=defaults.CONNECTOR_NAMESPACE):
         self.k8s_helper.delete_cr(namespace, name, self.group, self.version, self.plural_name)
+
+    def update_cr(self, name, cr_def: dict, namespace=defaults.CONNECTOR_NAMESPACE):
+        self.k8s_helper.update_cr(namespace, name, cr_def, self.plural_name)
 
     def cleanup(self):
         for app_mirror in self.created_appmirrors:
@@ -83,5 +86,6 @@ class AppMirrorHelper:
             state = cr.get('status', {}).get("state", "")
             if state == appmirror_state:
                 return
+            time.sleep(3)
 
         raise TimeoutError(f"Timed out waiting for appmirror {cr_name} state '{appmirror_state}'\n{cr}")

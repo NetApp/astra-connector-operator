@@ -136,7 +136,7 @@ def default_app_vault(app_cluster):
 
     app_vault_name = f"test-app-vault-{random.get_short_uuid()}"
     cr_response = app_cluster.app_vault.apply_cr(
-        name=app_vault_name,
+        cr_name=app_vault_name,
         namespace=defaults.CONNECTOR_NAMESPACE,
         bucket_name=app_cluster.default_test_bucket.bucket_name,
         bucket_host=app_cluster.default_test_bucket.host,
@@ -146,12 +146,12 @@ def default_app_vault(app_cluster):
     return cr_response
 
 
-# Uses fixture scope so each appmirror test gets its own app and the app gets cleaned up after each test
-@pytest.fixture(scope="fixture")
+# Uses function scope so each appmirror test gets its own app and the app gets cleaned up after each test
+@pytest.fixture(scope="function")
 def appmirror_src_app_fixture_scope(app_cluster, src_sc):
     # Note: default_app uses the default SC
     name = "appmirror-test-app"
     namespace = f"appmirror-test-{random.get_short_uuid()}"
-    app = app_cluster.app_installer.install_mariadb(name, namespace)
+    app = app_cluster.app_installer.install_mariadb(name, namespace, storage_class=src_sc)
     yield app
     app.uninstall()

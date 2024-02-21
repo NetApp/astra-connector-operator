@@ -25,10 +25,10 @@ class ApplicationHelper:
             }
         }
 
-    def apply_cr(self, name, included_namespaces: list[str],
+    def apply_cr(self, cr_name, included_namespaces: list[str],
                  namespace=defaults.CONNECTOR_NAMESPACE) -> dict:
-        cr_def = self.gen_cr(name, included_namespaces)
-        cr = self.k8s_helper.apply_cr(name, namespace, cr_def, self.plural_name)
+        cr_def = self.gen_cr(cr_name, included_namespaces)
+        cr = self.k8s_helper.apply_cr(cr_name, namespace, cr_def, self.plural_name)
         self.created_applications.append(cr)
         return cr
 

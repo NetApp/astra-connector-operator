@@ -36,17 +36,17 @@ class ScheduleHelper:
         }
         return cr_def
 
-    def apply_cr(self, name, app_name, app_vault_name, replicate, interval: int = 5,
+    def apply_cr(self, cr_name, app_name, app_vault_name, replicate, interval: int = 5,
                  frequency: str = constants.Frequency.MINUTELY.value, enabled=True,
                  namespace=defaults.CONNECTOR_NAMESPACE) -> dict:
-        cr_def = self.gen_cr(name=name,
+        cr_def = self.gen_cr(name=cr_name,
                              app_name=app_name,
                              app_vault_name=app_vault_name,
                              replicate=replicate,
                              interval=interval,
                              frequency=frequency,
                              enabled=enabled)
-        cr_response = self.k8s_helper.apply_cr(name, namespace, cr_def, self.plural_name)
+        cr_response = self.k8s_helper.apply_cr(cr_name, namespace, cr_def, self.plural_name)
         self.created_schedules.append(cr_response)
         return cr_response
 

@@ -44,7 +44,7 @@ class K8sHelper:
             name=name,
         )
 
-    def apply_cr(self, name, namespace, body, plural) -> dict:
+    def apply_cr(self, cr_name, namespace, body, plural) -> dict:
         # apply_cr is the equivalent to update the CR if it exists, create it if it doesn't
         group, version = body['apiVersion'].split('/')
         try:
@@ -53,9 +53,9 @@ class K8sHelper:
                 version=version,
                 namespace=namespace,
                 plural=plural,
-                name=name,
+                name=cr_name,
             )
-            return self.update_cr(namespace, name, body, plural)
+            return self.update_cr(namespace, cr_name, body, plural)
         except ApiException as e:
             if e.status == 404:
                 return self.create_cr(namespace, body, plural)
@@ -105,7 +105,7 @@ class K8sHelper:
         }
         return self.create_secret(namespace, secret_def)
 
-    def cleanup(self):
+    def cleanup_secrets(self):
         for secret in self.created_secrets:
             try:
                 name = secret.metadata.name
@@ -128,9 +128,9 @@ class K8sHelper:
         except ApiException as e:
             if e.status == 404:
                 # Namespace not found, create it
-                namespace = client.V1Namespace(metadata=client.V1ObjectMeta(name=namespace))
-                self.core_v1_api.create_namespace(namespace)
-                print(f"Namespace '{namespace}' created.")
+                ns = client.V1Namespace(metadata=client.V1ObjectMeta(name=namespace))
+                self.core_v1_api.create_namespace(ns)
+                logger.info(f"Namespace '{namespace}' created.")
             else:
                 # Some other error occurred
                 raise

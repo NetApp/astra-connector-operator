@@ -26,8 +26,10 @@ class Cluster:
     def cleanup(self):
         self.snapshot_helper.cleanup()
         self.backup_helper.cleanup()
+        self.schedule_helper.cleanup()
+        self.appmirror_helper.cleanup()
         self.application_helper.cleanup()
         self.app_vault.cleanup()
-        self.k8s_helper.cleanup()
+        self.k8s_helper.cleanup_secrets()
         self.app_installer.cleanup()
 

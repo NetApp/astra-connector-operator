@@ -2,6 +2,7 @@ import time
 from kubernetes.client import ApiException
 
 import python_tests.defaults as defaults
+import python_tests.constants as constants
 from python_tests.log import logger
 from python_tests.test_utils.k8s_helper import K8sHelper
 
@@ -59,10 +60,11 @@ class SnapshotHelper:
         while time.time() < time_expire:
             cr = self.get_cr(name, namespace)
             state = cr.get('status', {}).get("state", "")
-            if state.lower() == "completed":
+            if state == constants.SnapshotState.COMPLETED.value:
                 return
             if state.lower() == "error":
                 raise Exception(f"snapshot {name} is in state {state}")
+            time.sleep(3)
 
         raise TimeoutError(f"Timed out waiting for snapshot {name} to complete\n{cr}")
 

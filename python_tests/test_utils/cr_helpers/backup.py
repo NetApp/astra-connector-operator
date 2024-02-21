@@ -28,10 +28,10 @@ class BackupHelper:
             }
         }
 
-    def apply_cr(self, name, application_name, snapshot_name, app_vault_name,
+    def apply_cr(self, cr_name, application_name, snapshot_name, app_vault_name,
                  namespace=defaults.CONNECTOR_NAMESPACE) -> dict:
-        cr_def = self.gen_cr(name, application_name, snapshot_name, app_vault_name)
-        cr_response = self.k8s_helper.apply_cr(name, namespace, cr_def, self.plural_name)
+        cr_def = self.gen_cr(cr_name, application_name, snapshot_name, app_vault_name)
+        cr_response = self.k8s_helper.apply_cr(cr_name, namespace, cr_def, self.plural_name)
         self.created_backups.append(cr_response)
         return cr_response
 
@@ -62,5 +62,6 @@ class BackupHelper:
                 return
             if state.lower() == "error":
                 raise Exception(f"backup {name} is in state {state}")
+            time.sleep(3)
 
         raise TimeoutError(f"Timed out waiting for backup {name} to complete\n{cr}")

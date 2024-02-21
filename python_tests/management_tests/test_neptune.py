@@ -61,7 +61,7 @@ def test_create_app_vault(app_cluster):
     mock_secret_name = "mock-secret"
     app_vault_name = f"test-app-vault-{random.get_short_uuid()}"
     app_cluster.app_vault.apply_cr(
-        name=app_vault_name,
+        cr_name=app_vault_name,
         bucket_name=app_cluster.default_test_bucket.bucket_name,
         bucket_host=app_cluster.default_test_bucket.host,
         secret_name=mock_secret_name
@@ -76,14 +76,14 @@ def test_app_snapshot(app_cluster, default_app_vault, default_app):
     # Create application CR
     app_cluster.application_helper.apply_cr(
         namespace=defaults.CONNECTOR_NAMESPACE,
-        name=default_app.name,
+        cr_name=default_app.name,
         included_namespaces=[default_app.namespace]
     )
 
     # Create snapshot CR
     snapshot_name = f"test-snap-{random.get_short_uuid()}"
     app_vault_name = default_app_vault['metadata']['name']
-    app_cluster.snapshot_helper.apply_cr(name=snapshot_name, application_name=default_app.name,
+    app_cluster.snapshot_helper.apply_cr(cr_name=snapshot_name, application_name=default_app.name,
                                          app_vault_name=app_vault_name)
 
     app_cluster.snapshot_helper.wait_for_snapshot_with_timeout(snapshot_name, timeout_sec=120)
@@ -115,7 +115,7 @@ def test_backup(app_cluster, default_app_vault, default_app):
     assert state.lower() == "completed", f"timed out waiting for backup {backup_name} to complete"
 
 
-def test_appmirror(app_cluster, default_app_vault, appmirror_src_app_fixture_scope, dst_sc):
+def test_appmirror_establish_promote(app_cluster, default_app_vault, appmirror_src_app_fixture_scope, dst_sc):
     # Use the default app vault for both src and dest
     src_app_vault = default_app_vault
     dest_app_vault = default_app_vault
@@ -137,11 +137,14 @@ def test_appmirror(app_cluster, default_app_vault, appmirror_src_app_fixture_sco
 
     # Create src schedule CR
     schedule_name = f"schedule-{random.get_short_uuid()}"
-    schedule_cr = app_cluster.schedule_helper.apply_cr(
-        name=schedule_name,
+    app_cluster.schedule_helper.apply_cr(
+        cr_name=schedule_name,
         app_name=src_app.name,
         app_vault_name=src_app_vault['metadata']['name'],
-        replicate=True
+        replicate=True,
+        enabled=True,
+        interval=5,
+        frequency=constants.Frequency.MINUTELY.value
     )
 
     # Create dest app CR
@@ -149,30 +152,48 @@ def test_appmirror(app_cluster, default_app_vault, appmirror_src_app_fixture_sco
     dest_app_name = f"appmirror-dest-{random.get_short_uuid()}"
     dest_app_cr = app_cluster.application_helper.apply_cr(dest_app_name, [dest_app_ns])
 
-    # Create appmirror CR
-    snap_path = app_cluster.snapshot_helper.get_snap_path(snap_cr)
-    am_name = f"appmirror-{random.get_short_uuid()}"
-    appmirror_cr = app_cluster.appmirror_helper.apply_cr(
-        name=am_name,
-        app_name=dest_app_cr['metadata']['name'],
-        desired_state=constants.AppmirrorState.ESTABLISHED.value,
-        src_app_vault_name=src_app_vault['metadata']['name'],
-        dest_app_vault_name=dest_app_vault['metadata']['name'],
-        snap_path=snap_path,
-        sc_name=dst_sc,
-        ns_mapping=[{
-            "source": src_app.namespace,
-            "destination": dest_app_ns
-        }]
-    )
+    try:
+        # Create appmirror CR
+        snap_path = app_cluster.snapshot_helper.get_snap_path(snap_cr)
+        am_name = f"appmirror-{random.get_short_uuid()}"
+        app_cluster.appmirror_helper.apply_cr(
+            cr_name=am_name,
+            app_name=dest_app_cr['metadata']['name'],
+            desired_state=constants.AppmirrorState.ESTABLISHED.value,
+            src_app_vault_name=src_app_vault['metadata']['name'],
+            dest_app_vault_name=dest_app_vault['metadata']['name'],
+            snap_path=snap_path,
+            sc_name=dst_sc,
+            ns_mapping=[{
+                "source": src_app.namespace,
+                "destination": dest_app_ns
+            }]
+        )
 
-    # Wait for appmirror to be in established state
-    app_cluster.appmirror_helper.wait_for_state_with_timeout(
-        cr_name=am_name,
-        appmirror_state=constants.AppmirrorState.ESTABLISHED,
-        timeout_sec=300
-    )
-    cr = app_cluster.appmirror_helper.get_cr(am_name)
-    appmirror_state = cr.get(['status'], {}).get("state", "")
-    assert appmirror_state == constants.AppmirrorState.completed.value, \
-        f"timed out waiting for appmirror state '{constants.AppmirrorState.ESTABLISHED}'\n{cr}"
+        # Wait for appmirror to be in established state
+        app_cluster.appmirror_helper.wait_for_state_with_timeout(
+            cr_name=am_name,
+            appmirror_state=constants.AppmirrorState.ESTABLISHED.value,
+            timeout_sec=300
+        )
+        cr = app_cluster.appmirror_helper.get_cr(am_name)
+        appmirror_state = cr.get('status', {}).get("state", "")
+        assert appmirror_state == constants.AppmirrorState.ESTABLISHED.value, \
+            f"timed out waiting for appmirror state '{constants.AppmirrorState.ESTABLISHED.value}'\n{cr}"
+
+        # Update CR to desired state "promoted"
+        cr['spec']['desiredState'] = constants.AppmirrorState.PROMOTED.value
+        app_cluster.appmirror_helper.update_cr(cr['metadata']['name'], cr)
+        # Wait for appmirror to be in promoted state
+        app_cluster.appmirror_helper.wait_for_state_with_timeout(
+            cr_name=am_name,
+            appmirror_state=constants.AppmirrorState.PROMOTED.value,
+            timeout_sec=300
+        )
+        cr = app_cluster.appmirror_helper.get_cr(am_name)
+        appmirror_state = cr.get('status', {}).get("state", "")
+        assert appmirror_state == constants.AppmirrorState.PROMOTED.value, \
+            f"timed out waiting for appmirror state '{constants.AppmirrorState.PROMOTED.value}'\n{cr}"
+
+    finally:
+        app_cluster.k8s_helper.delete_namespace(dest_app_ns)

@@ -10,4 +10,7 @@ class Frequency(Enum):
 class AppmirrorState(Enum):
     PROMOTED = 'promoted'
     ESTABLISHED = 'established'
-    COMPLETED = 'completed'
+
+
+class SnapshotState(Enum):
+    COMPLETED = 'Completed'

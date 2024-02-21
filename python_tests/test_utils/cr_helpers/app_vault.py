@@ -44,10 +44,10 @@ class AppVaultHelper:
             },
         }
 
-    def apply_cr(self, name, bucket_name, bucket_host, secret_name,
+    def apply_cr(self, cr_name, bucket_name, bucket_host, secret_name,
                  provider_type="generic-s3", namespace=defaults.CONNECTOR_NAMESPACE) -> dict:
-        app_vault_def = self.gen_cr(name, bucket_host, bucket_name, secret_name, provider_type)
-        cr_response = self.k8s_helper.apply_cr(name, namespace, app_vault_def, self.plural_name)
+        app_vault_def = self.gen_cr(cr_name, bucket_host, bucket_name, secret_name, provider_type)
+        cr_response = self.k8s_helper.apply_cr(cr_name, namespace, app_vault_def, self.plural_name)
         self.created_app_vaults.append(cr_response)
         return cr_response
 
