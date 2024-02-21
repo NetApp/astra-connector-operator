@@ -128,7 +128,7 @@ def test_appmirror_establish_promote(app_cluster, default_app_vault, appmirror_s
 
     # Create src app CR
     app_name = f"{src_app.name}-{random.get_short_uuid()}"
-    app_cluster.application_helper.apply_cr(cr_name=app_name, included_namespes=[src_app.namespace])
+    app_cluster.application_helper.apply_cr(cr_name=app_name, included_namespaces=[src_app.namespace])
 
     # Create Snapshot CR
     snap_name = f"snapshot-test-{random.get_short_uuid()}"
