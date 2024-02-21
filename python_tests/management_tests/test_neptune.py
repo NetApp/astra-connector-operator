@@ -43,6 +43,7 @@ def test_bucket_create_read_write_delete(bucket_manager):
         bucket_manager.delete_bucket(bucket.bucket_name)
 
 
+# POC only
 def test_create_app_vault_secret(app_cluster):
     secret_name = f"app-vault-test-{random.get_short_uuid()}"
     app_cluster.k8s_helper.create_secretkey_accesskey_secret(
@@ -74,16 +75,17 @@ def test_create_app_vault(app_cluster):
 
 def test_app_snapshot(app_cluster, default_app_vault, default_app):
     # Create application CR
+    app_name = f"{default_app.name}-{random.get_short_uuid()}"
     app_cluster.application_helper.apply_cr(
         namespace=defaults.CONNECTOR_NAMESPACE,
-        cr_name=default_app.name,
+        cr_name=app_name,
         included_namespaces=[default_app.namespace]
     )
 
     # Create snapshot CR
     snapshot_name = f"test-snap-{random.get_short_uuid()}"
     app_vault_name = default_app_vault['metadata']['name']
-    app_cluster.snapshot_helper.apply_cr(cr_name=snapshot_name, application_name=default_app.name,
+    app_cluster.snapshot_helper.apply_cr(cr_name=snapshot_name, application_name=app_name,
                                          app_vault_name=app_vault_name)
 
     app_cluster.snapshot_helper.wait_for_snapshot_with_timeout(snapshot_name, timeout_sec=120)
@@ -93,12 +95,13 @@ def test_app_snapshot(app_cluster, default_app_vault, default_app):
 
 def test_backup(app_cluster, default_app_vault, default_app):
     # Create App CR
-    app_cluster.application_helper.apply_cr(default_app.name, [default_app.namespace])
+    app_name = f"{default_app.name}-{random.get_short_uuid()}"
+    app_cluster.application_helper.apply_cr(app_name, [default_app.namespace])
 
     # Create Snapshot CR
     snap_name = f"snapshot-test-{random.get_short_uuid()}"
     app_vault_name = default_app_vault['metadata']['name']
-    app_cluster.snapshot_helper.apply_cr(snap_name, default_app.name, app_vault_name)
+    app_cluster.snapshot_helper.apply_cr(snap_name, app_name, app_vault_name)
 
     # Wait for snapshot to complete
     app_cluster.snapshot_helper.wait_for_snapshot_with_timeout(snap_name, timeout_sec=120)
@@ -107,7 +110,7 @@ def test_backup(app_cluster, default_app_vault, default_app):
 
     # Create Backup CR
     backup_name = f"backup-test-{random.get_short_uuid()}"
-    app_cluster.backup_helper.apply_cr(backup_name, default_app.name, snap_name, app_vault_name)
+    app_cluster.backup_helper.apply_cr(backup_name, app_name, snap_name, app_vault_name)
 
     # Wait for backup to complete
     app_cluster.backup_helper.wait_for_snapshot_with_timeout(backup_name, timeout_sec=300)
@@ -122,12 +125,13 @@ def test_appmirror_establish_promote(app_cluster, default_app_vault, appmirror_s
     src_app = appmirror_src_app_fixture_scope
 
     # Create src app CR
-    src_app_cr = app_cluster.application_helper.apply_cr(src_app.name, [src_app.namespace])
+    app_name = f"{src_app.name}-{random.get_short_uuid()}"
+    app_cluster.application_helper.apply_cr(cr_name=app_name, included_namespes=[src_app.namespace])
 
     # Create Snapshot CR
     snap_name = f"snapshot-test-{random.get_short_uuid()}"
     app_vault_name = default_app_vault['metadata']['name']
-    app_cluster.snapshot_helper.apply_cr(snap_name, src_app.name, app_vault_name)
+    app_cluster.snapshot_helper.apply_cr(snap_name, app_name, app_vault_name)
 
     # Wait for snapshot to complete
     app_cluster.snapshot_helper.wait_for_snapshot_with_timeout(snap_name, timeout_sec=120)
@@ -139,7 +143,7 @@ def test_appmirror_establish_promote(app_cluster, default_app_vault, appmirror_s
     schedule_name = f"schedule-{random.get_short_uuid()}"
     app_cluster.schedule_helper.apply_cr(
         cr_name=schedule_name,
-        app_name=src_app.name,
+        app_name=app_name,
         app_vault_name=src_app_vault['metadata']['name'],
         replicate=True,
         enabled=True,
