@@ -86,7 +86,7 @@ var (
 )
 
 func GetNeptuneRepositories() []string {
-	return []string{"controller", "resourcesummaryupload", "resourcerestore", "resourcedelete", "resourcebackup", "exechook"}
+	return []string{"controller", "exechook", "resourcebackup", "resourcedelete", "resourcerestore", "resourcesummaryupload", "restic"}
 }
 
 func GetConnectorCapabilities() []string {
