@@ -278,6 +278,7 @@ func GetAstraHostURL(astraConnector *v1.AstraConnector) string {
 	var astraHost string
 	if astraConnector.Spec.NatsSyncClient.CloudBridgeURL != "" {
 		astraHost = astraConnector.Spec.NatsSyncClient.CloudBridgeURL
+		astraHost = strings.TrimSuffix(astraHost, "/")
 	} else {
 		astraHost = common.NatsSyncClientDefaultCloudBridgeURL
 	}
