@@ -63,7 +63,7 @@ def test_create_app_vault_secret(app_cluster):
 def test_create_app_vault(app_cluster):
     mock_secret_name = "mock-secret"
     app_vault_name = f"test-app-vault-{random.get_short_uuid()}"
-    app_cluster.app_vault.apply_cr(
+    app_cluster.app_vault_helper.apply_cr(
         cr_name=app_vault_name,
         bucket_name=app_cluster.default_test_bucket.bucket_name,
         bucket_host=app_cluster.default_test_bucket.host,
@@ -71,7 +71,7 @@ def test_create_app_vault(app_cluster):
     )
 
     # Get app vaults from kubernetes and assert it's there
-    app_vault = app_cluster.app_vault.get_cr(app_vault_name)
+    app_vault = app_cluster.app_vault_helper.get_cr(app_vault_name)
     assert app_vault['metadata']['name'] == app_vault_name, "failed to find app vault cr after creation"
 
 

@@ -16,7 +16,7 @@ class Cluster:
         self.default_test_bucket = default_bucket
 
         # --- CR Helpers ---
-        self.app_vault = AppVaultHelper(self.k8s_helper)
+        self.app_vault_helper = AppVaultHelper(self.k8s_helper)
         self.snapshot_helper = SnapshotHelper(self.k8s_helper)
         self.application_helper = ApplicationHelper(self.k8s_helper)
         self.backup_helper = BackupHelper(self.k8s_helper)
@@ -29,7 +29,7 @@ class Cluster:
         self.schedule_helper.cleanup()
         self.appmirror_helper.cleanup()
         self.application_helper.cleanup()
-        self.app_vault.cleanup()
+        self.app_vault_helper.cleanup()
         self.k8s_helper.cleanup_secrets()
         self.app_installer.cleanup()
 
