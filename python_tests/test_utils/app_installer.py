@@ -54,7 +54,7 @@ class MariaDb(App):
         if process.returncode != 0:
             raise Exception(f"Error installing MariaDB: {stderr.decode('utf-8')}")
         else:
-            logger.info(f"MariaDB installed successfully: {stdout.decode('utf-8')}")
+            logger.info(f"Successfully installed MariaDB into namespace {self.namespace}")
 
     def uninstall(self):
         command = ["helm", "uninstall", self.name, "-n", self.namespace]

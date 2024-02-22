@@ -15,8 +15,7 @@ class ScheduleHelper:
     def __init__(self, k8s_helper: K8sHelper):
         self.k8s_helper = k8s_helper
 
-    def gen_cr(self, name, app_name, app_vault_name, replicate: bool = False, interval: int = 5,
-               frequency: str = constants.Frequency.MINUTELY.value, enabled=True):
+    def gen_cr(self, name, app_name, app_vault_name, interval: int = 5, frequency: str = constants.Frequency.MINUTELY.value, enabled=True):
         cr_def = {
             "apiVersion": f"{self.group}/{self.version}",
             "kind": "Schedule",
@@ -30,19 +29,17 @@ class ScheduleHelper:
                 "enabled": enabled,
                 "backupRetention": "0",
                 "snapshotRetention": "1",
-                "replicate": replicate,
                 "granularity": "custom"
             }
         }
         return cr_def
 
-    def apply_cr(self, cr_name, app_name, app_vault_name, replicate, interval: int = 5,
+    def apply_cr(self, cr_name, app_name, app_vault_name, interval: int = 5,
                  frequency: str = constants.Frequency.MINUTELY.value, enabled=True,
                  namespace=defaults.CONNECTOR_NAMESPACE) -> dict:
         cr_def = self.gen_cr(name=cr_name,
                              app_name=app_name,
                              app_vault_name=app_vault_name,
-                             replicate=replicate,
                              interval=interval,
                              frequency=frequency,
                              enabled=enabled)

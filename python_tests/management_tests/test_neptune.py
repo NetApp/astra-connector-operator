@@ -147,7 +147,6 @@ def test_appmirror_establish_promote(app_cluster, default_app_vault, appmirror_s
         cr_name=schedule_name,
         app_name=app_name,
         app_vault_name=src_app_vault['metadata']['name'],
-        replicate=True,
         enabled=True,
         interval=5,
         frequency=constants.Frequency.MINUTELY.value
