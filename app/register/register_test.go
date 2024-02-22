@@ -334,6 +334,26 @@ func TestRegisterNatsSyncClient(t *testing.T) {
 	})
 }
 
+func TestGetAstraHostURL(t *testing.T) {
+	t.Run("TestGetAstraHostURLTrailingSlash", func(t *testing.T) {
+		astraConnector := &v1.AstraConnector{
+			ObjectMeta: metaV1.ObjectMeta{
+				Name:      "test-astra-connector",
+				Namespace: testNamespace,
+			},
+			Spec: v1.AstraConnectorSpec{
+				NatsSyncClient: v1.NatsSyncClient{
+					CloudBridgeURL: "https://netapp.astra.io/",
+				},
+			},
+		}
+
+		host := register.GetAstraHostURL(astraConnector)
+		assert.Equal(t, host, "https://netapp.astra.io")
+
+	})
+}
+
 func TestCloudExists(t *testing.T) {
 	host, cloudId, apiToken := "test_host", "test_cloudId", "test_apiToken"
 
