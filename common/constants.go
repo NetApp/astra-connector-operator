@@ -53,7 +53,7 @@ const (
 	NeptuneTagFile               = "common/neptune_manager_tag.txt"
 	NeptuneMetricServicePort     = 8443
 	NeptuneMetricServiceProtocol = "TCP"
-	NeptuneReplicas   = 1
+	NeptuneReplicas              = 1
 
 	AstraPrivateCloudType = "private"
 	AstraPrivateCloudName = "private"
@@ -85,7 +85,7 @@ var (
 )
 
 func GetNeptuneRepositories() []string {
-	return []string{"controller", "resourcesummaryupload", "resourcerestore", "resourcedelete", "resourcebackup", "exechook"}
+	return []string{"controller", "exechook", "resourcebackup", "resourcedelete", "resourcerestore", "resourcesummaryupload", "restic"}
 }
 
 func GetConnectorCapabilities() []string {
