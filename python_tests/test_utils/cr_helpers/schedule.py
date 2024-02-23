@@ -27,8 +27,8 @@ class ScheduleHelper:
                 "appVaultRef": app_vault_name,
                 "recurrenceRule": f"DTSTART:20230928T110000Z\nRRULE:FREQ={frequency};INTERVAL={interval}",
                 "enabled": enabled,
-                "backupRetention": "0",
-                "snapshotRetention": "1",
+                "backupRetention": "0",  # todo make arg
+                "snapshotRetention": "1", # todo make arg
                 "granularity": "custom"
             }
         }
