@@ -5304,6 +5304,17 @@ rules:
   - list
   - watch
 - apiGroups:
+  - ""
+  resources:
+  - serviceaccounts
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - update
+  - watch
+- apiGroups:
   - astra.netapp.io
   resources:
   - '*'
@@ -5427,10 +5438,26 @@ rules:
   - update
   - watch
 - apiGroups:
+  - rbac.authorization.k8s.io
+  resources:
+  - rolebindings
+  - roles
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - update
+  - watch
+- apiGroups:
   - security.openshift.io
   resources:
   - securitycontextconstraints
   verbs:
+  - create
+  - delete
+  - get
+  - list
   - use
 - apiGroups:
   - snapshot.storage.k8s.io
