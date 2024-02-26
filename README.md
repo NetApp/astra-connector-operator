@@ -50,7 +50,7 @@ This guide provides instructions for installing the latest version of the Astra 
       astra:
         accountId: <ASTRA_ACCOUNT_ID>
         clusterName: <CLUSTER_NAME>
-        skipTLSValidation: true
+        skipTLSValidation: false  # Should be set to false in production environments
         tokenRef: astra-token
       natsSyncClient:
         cloudBridgeURL: <ASTRA_CONTROL_HOST_URL>
