@@ -51,6 +51,7 @@ class BucketManager:
     def delete_object(self, bucket_name, object_name):
         self.client.remove_object(bucket_name, object_name)
 
+    # todo: hitting bucket delete err due to existing objects, nested files may not be getting deleted
     def cleanup_buckets(self):
         logger.info(f"Cleaning up buckets...")
         for bucket in self.created_buckets:
