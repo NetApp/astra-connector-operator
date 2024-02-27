@@ -62,20 +62,13 @@ func DoRequest(ctx context.Context, client HTTPClient, method, url string, body 
 	var err error
 	var cancel context.CancelFunc
 
-	var bodyBytes []byte
-	if body != nil {
-		bodyBytes, err = io.ReadAll(body)
-		if err != nil {
-			return httpResponse, err, cancel
-		}
+	bodyBytes, err := io.ReadAll(body)
+	if err != nil {
+		return httpResponse, err, cancel
 	}
+
 	for i := 0; i < retries; i++ {
-		var bodyCopy *bytes.Reader
-		if body != nil {
-			bodyCopy = bytes.NewReader(bodyBytes)
-		} else {
-			bodyCopy = bytes.NewReader([]byte{})
-		}
+		bodyCopy := bytes.NewBuffer(bodyBytes)
 
 		sleepTimeout := time.Duration(math.Pow(2, float64(i))) * time.Second
 		log.Info(fmt.Sprintf("Retry %d, waiting for %v before next retry\n", i, sleepTimeout))
