@@ -76,7 +76,7 @@ func DoRequest(ctx context.Context, client HTTPClient, method, url string, body 
 		} else {
 			bodyCopy = bytes.NewReader([]byte{})
 		}
-		_ = bodyCopy
+
 		sleepTimeout := time.Duration(math.Pow(2, float64(i))) * time.Second
 		log.Info(fmt.Sprintf("Retry %d, waiting for %v before next retry\n", i, sleepTimeout))
 
