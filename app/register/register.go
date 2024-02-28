@@ -63,7 +63,6 @@ func DoRequest(ctx context.Context, client HTTPClient, method, url string, bodyB
 	var cancel context.CancelFunc
 
 	for i := 0; i < retries; i++ {
-		body := bytes.NewReader(bodyBytes)
 
 		sleepTimeout := time.Duration(math.Pow(2, float64(i))) * time.Second
 		log.Info(fmt.Sprintf("Retry %d, waiting for %v before next retry\n", i, sleepTimeout))
@@ -72,7 +71,7 @@ func DoRequest(ctx context.Context, client HTTPClient, method, url string, bodyB
 		var childCtx context.Context
 		childCtx, cancel = context.WithTimeout(ctx, 3*time.Minute)
 
-		req, _ := http.NewRequestWithContext(childCtx, method, url, body)
+		req, _ := http.NewRequestWithContext(childCtx, method, url, bytes.NewReader(bodyBytes))
 
 		req.Header.Add("Content-Type", "application/json")
 
