@@ -51,7 +51,7 @@ type HeaderMap struct {
 }
 
 // DoRequest Makes http request with the given parameters
-func DoRequest(ctx context.Context, client HTTPClient, method, url string, body io.Reader, headerMap HeaderMap, log logr.Logger, retryCount ...int) (*http.Response, error, context.CancelFunc) {
+func DoRequest(ctx context.Context, client HTTPClient, method, url string, bodyBytes []byte, headerMap HeaderMap, log logr.Logger, retryCount ...int) (*http.Response, error, context.CancelFunc) {
 	// Default retry count
 	retries := 1
 	if len(retryCount) > 0 {
@@ -62,20 +62,8 @@ func DoRequest(ctx context.Context, client HTTPClient, method, url string, body 
 	var err error
 	var cancel context.CancelFunc
 
-	var bodyBytes []byte
-	if body != nil {
-		bodyBytes, err = io.ReadAll(body)
-		if err != nil {
-			return httpResponse, err, cancel
-		}
-	}
 	for i := 0; i < retries; i++ {
-		var bodyCopy *bytes.Reader
-		if body != nil {
-			bodyCopy = bytes.NewReader(bodyBytes)
-		} else {
-			bodyCopy = bytes.NewReader([]byte{})
-		}
+		body := bytes.NewReader(bodyBytes)
 
 		sleepTimeout := time.Duration(math.Pow(2, float64(i))) * time.Second
 		log.Info(fmt.Sprintf("Retry %d, waiting for %v before next retry\n", i, sleepTimeout))
@@ -84,7 +72,7 @@ func DoRequest(ctx context.Context, client HTTPClient, method, url string, body 
 		var childCtx context.Context
 		childCtx, cancel = context.WithTimeout(ctx, 3*time.Minute)
 
-		req, _ := http.NewRequestWithContext(childCtx, method, url, bodyCopy)
+		req, _ := http.NewRequestWithContext(childCtx, method, url, body)
 
 		req.Header.Add("Content-Type", "application/json")
 
@@ -226,7 +214,7 @@ func (c clusterRegisterUtil) UnRegisterNatsSyncClient() error {
 		return err
 	}
 
-	response, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodPost, natsSyncClientUnregisterURL, bytes.NewBuffer(reqBodyBytes), HeaderMap{}, c.Log)
+	response, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodPost, natsSyncClientUnregisterURL, reqBodyBytes, HeaderMap{}, c.Log)
 	defer cancel()
 
 	if err != nil {
@@ -255,7 +243,7 @@ func (c clusterRegisterUtil) RegisterNatsSyncClient() (string, string, error) {
 		return "", errorReason, err
 	}
 
-	response, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodPost, natsSyncClientRegisterURL, bytes.NewBuffer(reqBodyBytes), HeaderMap{}, c.Log, 3)
+	response, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodPost, natsSyncClientRegisterURL, reqBodyBytes, HeaderMap{}, c.Log, 3)
 	defer cancel()
 	if err != nil {
 		if response != nil {
@@ -488,7 +476,7 @@ func (c clusterRegisterUtil) CreateCloud(astraHost, cloudType, apiToken string) 
 
 	c.Log.WithValues("cloudType", cloudType).Info("Creating cloud")
 	headerMap := HeaderMap{Authorization: fmt.Sprintf("Bearer %s", apiToken)}
-	response, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodPost, url, bytes.NewBuffer(reqBodyBytes), headerMap, c.Log)
+	response, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodPost, url, reqBodyBytes, headerMap, c.Log)
 	defer cancel()
 
 	if err != nil {
@@ -699,7 +687,7 @@ func (c clusterRegisterUtil) CreateCluster(astraHost, cloudId, astraConnectorId,
 
 	clustersBodyJson, _ := json.Marshal(clustersBody)
 	headerMap := HeaderMap{Authorization: fmt.Sprintf("Bearer %s", apiToken)}
-	clustersResp, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodPost, url, bytes.NewBuffer(clustersBodyJson), headerMap, c.Log, 3)
+	clustersResp, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodPost, url, clustersBodyJson, headerMap, c.Log, 3)
 	defer cancel()
 
 	if err != nil {
@@ -767,7 +755,7 @@ func (c clusterRegisterUtil) UpdateCluster(astraHost, cloudId, clusterId, astraC
 
 	clustersBodyJson, _ := json.Marshal(clustersBody)
 	headerMap := HeaderMap{Authorization: fmt.Sprintf("Bearer %s", apiToken)}
-	response, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodPut, url, bytes.NewBuffer(clustersBodyJson), headerMap, c.Log, 3)
+	response, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodPut, url, clustersBodyJson, headerMap, c.Log, 3)
 	defer cancel()
 
 	if err != nil {
@@ -827,7 +815,7 @@ func (c clusterRegisterUtil) UpdateManagedCluster(astraHost, clusterId, astraCon
 	manageClustersBodyJson, _ := json.Marshal(manageClustersBody)
 
 	headerMap := HeaderMap{Authorization: fmt.Sprintf("Bearer %s", apiToken)}
-	response, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodPut, url, bytes.NewBuffer(manageClustersBodyJson), headerMap, c.Log, 3)
+	response, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodPut, url, manageClustersBodyJson, headerMap, c.Log, 3)
 	defer cancel()
 
 	if err != nil {
@@ -861,7 +849,7 @@ func (c clusterRegisterUtil) CreateManagedCluster(astraHost, cloudId, clusterID,
 	manageClustersBodyJson, _ := json.Marshal(manageClustersBody)
 
 	headerMap := HeaderMap{Authorization: fmt.Sprintf("Bearer %s", apiToken)}
-	response, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodPost, url, bytes.NewBuffer(manageClustersBodyJson), headerMap, c.Log, 3)
+	response, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodPost, url, manageClustersBodyJson, headerMap, c.Log, 3)
 	defer cancel()
 
 	if err != nil {
