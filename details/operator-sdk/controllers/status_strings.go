@@ -11,6 +11,9 @@ const (
 	CreateClusterRole        = "Creating ClusterRole %s/%s"
 	CreateClusterRoleBinding = "Creating ClusterRoleBinding %s/%s"
 
+	DeleteInProgress = "Delete In Progress"
+	DeletionComplete = "Deletion Complete"
+
 	ErrorCreateStatefulSets        = "Error creating StatefulSets %s/%s"
 	ErrorCreateRoleBindings        = "Error creating RoleBindings %s/%s"
 	ErrorCreateClusterRoleBindings = "Error creating ClusterRoleBindings %s/%s"
