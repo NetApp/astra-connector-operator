@@ -11,8 +11,8 @@ const (
 	CreateClusterRole        = "Creating ClusterRole %s/%s"
 	CreateClusterRoleBinding = "Creating ClusterRoleBinding %s/%s"
 
-	DeleteInProgress = "Delete In Progress"
-	DeletionComplete = "Deletion Complete"
+	DeleteInProgress = "AstraConnector deletion in progress"
+	DeletionComplete = "AstraConnector deletion complete"
 
 	ErrorCreateStatefulSets        = "Error creating StatefulSets %s/%s"
 	ErrorCreateRoleBindings        = "Error creating RoleBindings %s/%s"
