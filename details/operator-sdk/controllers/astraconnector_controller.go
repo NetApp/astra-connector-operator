@@ -151,7 +151,7 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 				return ctrl.Result{Requeue: true}, err
 			}
 
-			// Update status message to indicate that CR delete is in progress
+			// Update status message to indicate that CR delete is in finished
 			natsSyncClientStatus.Status = DeletionComplete
 			_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
 
