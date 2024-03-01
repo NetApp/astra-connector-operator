@@ -117,6 +117,10 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 	} else {
 		// The object is being deleted
 		if controllerutil.ContainsFinalizer(astraConnector, finalizerName) {
+			// Update status message to indicate that CR delete is in progress
+			natsSyncClientStatus.Status = DeleteInProgress
+			_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
+
 			k8sUtil := k8s.NewK8sUtil(r.Client, r.Clientset, log)
 			registerUtil := register.NewClusterRegisterUtil(astraConnector, &http.Client{}, r.Client, k8sUtil, log, context.Background())
 
@@ -146,6 +150,10 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 				// Requeue in order to try again to remove resources
 				return ctrl.Result{Requeue: true}, err
 			}
+
+			// Update status message to indicate that CR delete is in finished
+			natsSyncClientStatus.Status = DeletionComplete
+			_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
 
 			// remove our finalizer from the list and update it.
 			controllerutil.RemoveFinalizer(astraConnector, finalizerName)
