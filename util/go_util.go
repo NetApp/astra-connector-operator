@@ -3,8 +3,6 @@ package util
 import (
 	"reflect"
 	"strings"
-
-	"k8s.io/apimachinery/pkg/util/validation"
 )
 
 // IsNil Return true if the interface value is actually nil, or the value is a nil pointer.
@@ -30,10 +28,4 @@ func GetJSONFieldName(sourceStruct interface{}, fieldPointer interface{}) string
 	}
 
 	return ""
-}
-
-// IsValidDNS1123Label checks if the supplied string satisfies Kubernetes DNS label requirements.
-// https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#dns-label-names
-func IsValidDNS1123Label(label string) bool {
-	return len(validation.IsDNS1123Label(label)) == 0
 }
