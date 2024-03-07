@@ -8,11 +8,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/NetApp-Polaris/astra-connector-operator/common"
 	"net/http"
 	"reflect"
 	"strings"
 	"time"
+
+	"github.com/NetApp-Polaris/astra-connector-operator/common"
 
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
@@ -95,7 +96,7 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 		natsSyncClientStatus.Status = fmt.Sprintf("%s; %s", FailedAstraConnectorValidation, err.Error())
 		_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
 		// Do not requeue. This is a user input error
-		return ctrl.Result{Requeue: false}, fmt.Errorf("%s; %w", natsSyncClientStatus.Status, err)
+		return ctrl.Result{}, err
 	}
 
 	// name of our custom finalizer
