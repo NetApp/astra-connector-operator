@@ -6,13 +6,16 @@ package controllers
 
 import (
 	"context"
+	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -150,3 +153,37 @@ var _ = Describe("Astraconnector controller", func() {
 		})
 	})
 })
+
+func TestAstraConnector_validateAstraConnector(t *testing.T) {
+	const connectorName = "astra-connector-operator"
+	ctx := context.Background()
+	log := ctrllog.FromContext(ctx)
+	connector := v1.AstraConnector{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: connectorName,
+		},
+		Spec: v1.AstraConnectorSpec{
+			AutoSupport: v1.AutoSupport{
+				Enrolled: false,
+			},
+			ImageRegistry: v1.ImageRegistry{
+				Name:   "test-registry",
+				Secret: "test-secret",
+			},
+			AstraConnect: v1.AstraConnect{
+				Image:    "test-image",
+				Replicas: 3,
+			},
+			SkipPreCheck: true,
+		},
+	}
+
+	controller := &AstraConnectorController{}
+	connector.Namespace = "default"
+	err := controller.validateAstraConnector(connector, log)
+	assert.Error(t, err)
+
+	connector.Namespace = "not-default"
+	err = controller.validateAstraConnector(connector, log)
+	assert.NoError(t, err)
+}
