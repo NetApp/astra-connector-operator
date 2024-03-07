@@ -13,8 +13,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/NetApp-Polaris/astra-connector-operator/common"
-
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
 
