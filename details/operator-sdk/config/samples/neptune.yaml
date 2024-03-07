@@ -5186,6 +5186,13 @@ metadata:
 rules:
 - apiGroups:
   - '*'
+  resources:
+  - '*'
+  verbs:
+  - get
+  - list
+- apiGroups:
+  - '*'
   resourceNames:
   - kube-system
   resources:
