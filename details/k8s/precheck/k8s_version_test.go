@@ -22,7 +22,7 @@ func TestIsSupported(t *testing.T) {
 		},
 		{
 			name:          "Maximum supported version",
-			k8sVersion:    "1.29.0",
+			k8sVersion:    "1.29.99",
 			expectedValid: false,
 		},
 		{
@@ -37,7 +37,7 @@ func TestIsSupported(t *testing.T) {
 		},
 		{
 			name:          "Above supported range",
-			k8sVersion:    "1.29.1",
+			k8sVersion:    "1.30.1",
 			expectedValid: false,
 		},
 	}
