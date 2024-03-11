@@ -19,6 +19,8 @@ spec:
         env:
         - name: LOG_LEVEL
           value: "trace"
+        - name: NATS_DISABLED
+          value: "false"
         resources:
           limits:
             cpu: 10m
