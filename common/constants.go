@@ -12,11 +12,11 @@ import (
 )
 
 const (
-	DefaultImageRegistry = "netappdownloads.jfrog.io/docker-astra-control-staging/arch30/neptune"
+	DefaultImageRegistry = "cr.astra.netapp.io"
 
 	AstraConnectName                 = "astraconnect"
 	AstraConnectDefaultReplicas      = 1
-	AstraConnectorOperatorRepository = "netapp/astra-connector-operator"
+	AstraConnectorOperatorRepository = "cr.astra.netapp.io"
 	AstraConnectTagFile              = "common/connector_version.txt"
 
 	NatsSyncClientName                  = "natssync-client"
