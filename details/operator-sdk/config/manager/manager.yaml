@@ -23,6 +23,7 @@ spec:
     metadata:
       labels:
         control-plane: controller-manager
+        app: operator.connector.netapp.io
     spec:
       containers:
       - command:
