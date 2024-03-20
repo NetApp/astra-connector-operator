@@ -15,12 +15,31 @@ spec:
     spec:
       containers:
       - name: astra-connector
-        image: acs-image-registry.netapp.astra.io/astra-connector:latest
+        image: cr.netapp.astra.io/astra-connector:latest
         env:
         - name: LOG_LEVEL
-          value: "trace"
+          value: "info"
         - name: NATS_DISABLED
           value: "false"
+
+        - name: API_TOKEN
+          value: ""
+        - name: API_TOKEN_SECRET_REF
+          value: "astra-api-token"
+        - name: CLOUD_BRIDGE_URL
+          value: ""
+        - name: ACCOUNT_ID
+          value: ""
+        - name: CLOUD_ID
+          value: ""
+        - name: CLUSTER_ID
+          value: ""
+
+        - name: HOST_ALIAS_IP
+          value: ""
+        - name: SKIP_TLS_VALIDATION
+          value: "false"
+
         resources:
           limits:
             cpu: 10m
