@@ -2064,6 +2064,51 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.11.1
   creationTimestamp: null
+  name: kopiavolumebackups.astra.netapp.io
+spec:
+  group: astra.netapp.io
+  names:
+    kind: KopiaVolumeBackup
+    listKind: KopiaVolumeBackupList
+    plural: kopiavolumebackups
+    singular: kopiavolumebackup
+  scope: Namespaced
+  versions:
+  - name: v1
+    schema:
+      openAPIV3Schema:
+        description: KopiaVolumeBackup is the Schema for the kopiavolumebackups API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: KopiaVolumeBackupSpec defines the desired state of KopiaVolumeBackup
+            properties:
+              foo:
+                description: Foo is an example field of KopiaVolumeBackup. Edit kopiavolumebackup_types.go to remove/update
+                type: string
+            type: object
+          status:
+            description: KopiaVolumeBackupStatus defines the observed state of KopiaVolumeBackup
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.11.1
+  creationTimestamp: null
   name: pvccopies.astra.netapp.io
 spec:
   group: astra.netapp.io
@@ -5462,6 +5507,32 @@ rules:
   - astra.netapp.io
   resources:
   - exechooksruns/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - astra.netapp.io
+  resources:
+  - kopiavolumebackups
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - astra.netapp.io
+  resources:
+  - kopiavolumebackups/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - astra.netapp.io
+  resources:
+  - kopiavolumebackups/status
   verbs:
   - get
   - patch
