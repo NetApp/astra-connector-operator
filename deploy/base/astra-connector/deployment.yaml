@@ -22,11 +22,9 @@ spec:
         - name: NATS_DISABLED
           value: "false"
 
-        - name: API_TOKEN
-          value: ""
         - name: API_TOKEN_SECRET_REF
           value: "astra-api-token"
-        - name: CLOUD_BRIDGE_URL
+        - name: ASTRA_CONTROL_URL
           value: ""
         - name: ACCOUNT_ID
           value: ""
