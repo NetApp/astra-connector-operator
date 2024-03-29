@@ -694,8 +694,8 @@ spec:
               triggerType:
                 description: TriggerType indicates how the AutoSupport bundle was triggered
                 enum:
-                - manual
-                - scheduled
+                - Manual
+                - Scheduled
                 type: string
             required:
             - triggerType
@@ -757,12 +757,12 @@ spec:
               generationState:
                 description: GenerationState is the current state of the ASUP bundle creation
                 enum:
-                - alreadyInProgress
-                - pending
-                - running
-                - completed
-                - partial
-                - failed
+                - AlreadyInProgress
+                - Pending
+                - Running
+                - Completed
+                - Partial
+                - Failed
                 type: string
               state:
                 description: State indicates a high level summary of the autosupportbundle's state
@@ -770,11 +770,11 @@ spec:
               uploadState:
                 description: UploadState is the current state of the ASUP bundle upload
                 enum:
-                - pending
-                - blocked
-                - running
-                - completed
-                - failed
+                - Pending
+                - Blocked
+                - Running
+                - Completed
+                - Failed
                 type: string
             required:
             - conditions
