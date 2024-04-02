@@ -7,9 +7,11 @@ package connector
 import (
 	"context"
 	"fmt"
-	"k8s.io/apimachinery/pkg/api/resource"
-	"maps"
 	"strconv"
+
+	"maps"
+
+	"k8s.io/apimachinery/pkg/api/resource"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -200,8 +202,33 @@ func (d *AstraConnectDeployer) GetClusterRoleObjects(m *v1.AstraConnector, ctx c
 			},
 			{
 				APIGroups: []string{"astra.netapp.io"},
-				Resources: []string{"applications", "appmirrorrelationships", "appmirrorupdates", "appvaults", "autosupportbundles", "backups", "backupinplacerestores", "backuprestores", "exechooks", "exechooksruns", "pvccopies", "pvcerases", "resourcebackups", "resourcedeletes", "resourcerestores", "resourcesummaryuploads", "resticvolumebackups", "resticvolumerestores", "schedules", "snapshotinplacerestores", "snapshotrestores", "snapshots", "astraconnectors"},
-				Verbs:     []string{"watch", "list", "get"},
+				Resources: []string{
+					"applications",
+					"appmirrorrelationships",
+					"appmirrorupdates",
+					"appvaults",
+					"autosupportbundles",
+					"backups",
+					"backupinplacerestores",
+					"backuprestores",
+					"exechooks",
+					"exechooksruns",
+					"pvccopies",
+					"pvcerases",
+					"resourcebackups",
+					"resourcedeletes",
+					"resourcerestores",
+					"resourcesummaryuploads",
+					"resticvolumebackups",
+					"resticvolumerestores",
+					"schedules",
+					"shutdownsnapshots",
+					"snapshots",
+					"snapshotinplacerestores",
+					"snapshotrestores",
+					"astraconnectors",
+				},
+				Verbs: []string{"watch", "list", "get"},
 			},
 			{
 				APIGroups: []string{"security.openshift.io"},
@@ -249,8 +276,33 @@ func (d *AstraConnectDeployer) GetRoleObjects(m *v1.AstraConnector, ctx context.
 			},
 			{
 				APIGroups: []string{"astra.netapp.io"},
-				Resources: []string{"applications", "appmirrorrelationships", "appmirrorupdates", "appvaults", "autosupportbundles", "backups", "backupinplacerestores", "backuprestores", "exechooks", "exechooksruns", "pvccopies", "pvcerases", "resourcebackups", "resourcedeletes", "resourcerestores", "resourcesummaryuploads", "resticvolumebackups", "resticvolumerestores", "schedules", "snapshotinplacerestores", "snapshotrestores", "snapshots", "astraconnectors"},
-				Verbs:     []string{"create", "update", "delete"},
+				Resources: []string{
+					"applications",
+					"appmirrorrelationships",
+					"appmirrorupdates",
+					"appvaults",
+					"autosupportbundles",
+					"backups",
+					"backupinplacerestores",
+					"backuprestores",
+					"exechooks",
+					"exechooksruns",
+					"pvccopies",
+					"pvcerases",
+					"resourcebackups",
+					"resourcedeletes",
+					"resourcerestores",
+					"resourcesummaryuploads",
+					"resticvolumebackups",
+					"resticvolumerestores",
+					"schedules",
+					"shutdownsnapshots",
+					"snapshots",
+					"snapshotinplacerestores",
+					"snapshotrestores",
+					"astraconnectors",
+				},
+				Verbs: []string{"create", "update", "delete"},
 			},
 		},
 	}
