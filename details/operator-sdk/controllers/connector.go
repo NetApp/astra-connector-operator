@@ -161,7 +161,7 @@ func (r *AstraConnectorController) deployConnector(ctx context.Context,
 }
 
 func getDeployers() []model.Deployer {
-	return []model.Deployer{connector.NewNatsDeployer(), connector.NewNatsSyncClientDeployer(), connector.NewAstraConnectorDeployer()}
+	return []model.Deployer{connector.NewAstraConnectorDeployer()}
 }
 
 func (r *AstraConnectorController) deleteConnectorClusterScopedResources(ctx context.Context, astraConnector *v1.AstraConnector) {
