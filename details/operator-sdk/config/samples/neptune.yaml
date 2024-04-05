@@ -5736,6 +5736,14 @@ rules:
 - apiGroups:
   - ""
   resources:
+  - events
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
   - namespaces
   verbs:
   - create
