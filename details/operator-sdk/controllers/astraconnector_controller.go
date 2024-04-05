@@ -219,16 +219,6 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 			}
 		}
 
-		if natsSyncClientStatus.AstraClusterId != "" {
-			log.Info(fmt.Sprintf("Updating CR status, clusterID: '%s'", natsSyncClientStatus.AstraClusterId))
-		}
-
-		_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus, true)
-		err := r.waitForStatusUpdate(astraConnector, log)
-		if err != nil {
-			log.Error(err, "Failed to update status, ignoring since this will be fixed on a future reconcile.")
-		}
-
 		return ctrl.Result{}, nil
 
 	} else {

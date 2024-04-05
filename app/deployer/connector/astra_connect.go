@@ -56,8 +56,6 @@ func (d *AstraConnectDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx co
 	connectorImage = fmt.Sprintf("%s/astra-connector:%s", imageRegistry, containerImage)
 	log.Info("Using AstraConnector image", "image", connectorImage)
 
-	ref := &corev1.ConfigMapKeySelector{LocalObjectReference: corev1.LocalObjectReference{Name: common.AstraConnectName}, Key: "nats_url"}
-
 	dep := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      common.AstraConnectName,
@@ -82,30 +80,40 @@ func (d *AstraConnectDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx co
 						Name:  common.AstraConnectName,
 						Env: []corev1.EnvVar{
 							{
-								Name:      "NATS_SERVER_URL",
-								ValueFrom: &corev1.EnvVarSource{ConfigMapKeyRef: ref},
-							},
-							{
-								Name:  "LOG_LEVEL",
+								Name:  "LOG_LEVEL", // todo should this match what operator is
 								Value: "trace",
 							},
 							{
-								Name: "POD_NAME",
-								ValueFrom: &corev1.EnvVarSource{
-									FieldRef: &corev1.ObjectFieldSelector{
-										APIVersion: "v1",
-										FieldPath:  "metadata.name",
-									},
-								},
+								Name:  "NATS_DISABLED",
+								Value: "true",
 							},
 							{
-								Name: "NAMESPACE",
-								ValueFrom: &corev1.EnvVarSource{
-									FieldRef: &corev1.ObjectFieldSelector{
-										APIVersion: "v1",
-										FieldPath:  "metadata.namespace",
-									},
-								},
+								Name:  "API_TOKEN_SECRET_REF",
+								Value: m.Spec.Astra.TokenRef,
+							},
+							{
+								Name:  "ASTRA_CONTROL_URL",
+								Value: m.Spec.NatsSyncClient.CloudBridgeURL,
+							},
+							{
+								Name:  "ACCOUNT_ID",
+								Value: m.Spec.Astra.AccountId,
+							},
+							{
+								Name:  "CLOUD_ID",
+								Value: m.Spec.Astra.CloudId,
+							},
+							{
+								Name:  "CLUSTER_ID",
+								Value: m.Spec.Astra.ClusterId,
+							},
+							{
+								Name:  "HOST_ALIAS_IP",
+								Value: m.Spec.NatsSyncClient.HostAliasIP,
+							},
+							{
+								Name:  "SKIP_TLS_VALIDATION",
+								Value: strconv.FormatBool(m.Spec.Astra.SkipTLSValidation),
 							},
 						},
 						Resources: corev1.ResourceRequirements{
@@ -151,7 +159,7 @@ func (d *AstraConnectDeployer) GetConfigMapObjects(m *v1.AstraConnector, ctx con
 			Name:      common.AstraConnectName,
 		},
 		Data: map[string]string{
-			"nats_url":            GetNatsURL(m),
+			//"nats_url":            GetNatsURL(m),
 			"skip_tls_validation": strconv.FormatBool(m.Spec.Astra.SkipTLSValidation),
 		},
 	}
