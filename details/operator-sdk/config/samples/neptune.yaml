@@ -685,8 +685,6 @@ spec:
           spec:
             description: AutoSupportBundleSpec defines the desired state of AutoSupportBundle
             properties:
-              completionTimeout:
-                type: string
               dateWindowStart:
                 description: DateWindowStart is a timestamp indicating the start time of the AutoSupport bundle data collection window.  Defaults to 24 hours ago if not specified.
                 format: date-time
@@ -697,14 +695,33 @@ spec:
                 - Manual
                 - Scheduled
                 type: string
+              uploadEnabled:
+                description: UploadEnabled is a boolean that indicates if AutoSupport bundle should be uploaded or not after generation.  Defaults to false if not specified.
+                type: boolean
             required:
             - triggerType
             type: object
           status:
             description: AutoSupportBundleStatus defines the observed state of AutoSupportBundle
             properties:
+              bundleCompletionTimestamp:
+                description: BundleCompletionTimestamp The time that the ASUP generation and upload (if enabled) completed
+                format: date-time
+                type: string
+              bundleFile:
+                description: BundleFile is the location and filename of the bundle in the ASUP job pod
+                type: string
+              bundleKubectlCpCommand:
+                description: BundleKubectlCpCommand is the kubectl cp command for copying the bundle from the job pod
+                type: string
+              bundleNamespace:
+                description: BundleNamespace is the namespace of the ASUP job pod
+                type: string
+              bundlePodName:
+                description: BundlePodName is the pod where the bundle is located
+                type: string
               completionTimestamp:
-                description: CompletionTimestamp The time that the ASUP generation and upload completed
+                description: CompletionTimestamp The time the ASUP job completed
                 format: date-time
                 type: string
               conditions:
@@ -775,6 +792,7 @@ spec:
                 - Running
                 - Completed
                 - Failed
+                - Disabled
                 type: string
             required:
             - conditions
