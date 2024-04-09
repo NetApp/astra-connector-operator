@@ -61,9 +61,10 @@ func (r *AstraConnectorController) deployResources(ctx context.Context, deployer
 		for _, kubeObject := range resourceList {
 			key := client.ObjectKeyFromObject(kubeObject)
 			statusMsg := fmt.Sprintf(funcList.createMessage, key.Namespace, key.Name)
+			// todo we need to use event and not use status because that causes reconciles
 			log.Info(statusMsg)
-			natsSyncClientStatus.Status = statusMsg
-			_ = r.updateAstraConnectorStatus(ctx, astraConnector, *natsSyncClientStatus)
+			//natsSyncClientStatus.Status = statusMsg
+			//_ = r.updateAstraConnectorStatus(ctx, astraConnector, *natsSyncClientStatus)
 
 			result, err := k8sUtil.CreateOrUpdateResource(ctx, kubeObject, astraConnector, mutateFunc)
 			if err != nil {
