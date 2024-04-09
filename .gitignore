@@ -25,6 +25,7 @@ deployConfig.yaml
 *.swp
 *.swo
 *~
+go.work
 
 # build dir
 build/
