@@ -99,6 +99,7 @@ func toImmutableConfig(config *MutableConfiguration) *ImmutableConfiguration {
 			deployNatsConnector:   config.FeatureFlags.DeployNatsConnector,
 			deployNeptune:         config.FeatureFlags.DeployNeptune,
 			skipAstraRegistration: config.FeatureFlags.SkipAstraRegistration,
+			natLess:               config.FeatureFlags.NatLess,
 		},
 		config: config,
 	}
@@ -146,6 +147,7 @@ func (i ImmutableConfiguration) FeatureFlags() ImmutableFeatureFlags {
 type ImmutableFeatureFlags struct {
 	deployNatsConnector   bool
 	deployNeptune         bool
+	natLess               bool
 	skipAstraRegistration bool
 }
 
@@ -153,6 +155,7 @@ type featureFlags struct {
 	DeployNatsConnector   bool
 	DeployNeptune         bool
 	SkipAstraRegistration bool
+	NatLess               bool
 }
 
 func (f ImmutableFeatureFlags) DeployNatsConnector() bool {
@@ -165,6 +168,10 @@ func (f ImmutableFeatureFlags) DeployNeptune() bool {
 
 func (f ImmutableFeatureFlags) SkipAstraRegistration() bool {
 	return f.skipAstraRegistration
+}
+
+func (f ImmutableFeatureFlags) NatLess() bool {
+	return f.natLess
 }
 
 // Viper configuration

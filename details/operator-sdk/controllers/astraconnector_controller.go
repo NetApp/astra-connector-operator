@@ -65,9 +65,6 @@ type AstraConnectorController struct {
 func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := ctrllog.FromContext(ctx)
 
-	natsSyncClientStatus := v1.NatsSyncClientStatus{
-		Registered: "false",
-	}
 	// Fetch the AstraConnector instance
 	astraConnector := &v1.AstraConnector{}
 	err := r.Get(ctx, req.NamespacedName, astraConnector)
@@ -81,12 +78,20 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 		}
 		// Error reading the object - requeue the request.
 		log.Error(err, FailedAstraConnectorGet)
-		natsSyncClientStatus.Status = FailedAstraConnectorGet
-		_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
+		_ = r.updateAstraConnectorStatus(ctx, astraConnector, v1.NatsSyncClientStatus{
+			Status:     FailedAstraConnectorGet,
+			Registered: "false",
+		})
 		// Do not requeue
 		return ctrl.Result{}, err
 	}
+
+	natsSyncClientStatus := astraConnector.Status.NatsSyncClient
 	natsSyncClientStatus.AstraClusterId = astraConnector.Status.NatsSyncClient.AstraClusterId
+
+	if natsSyncClientStatus.Registered == "" {
+		natsSyncClientStatus.Registered = "false"
+	}
 
 	// Validate AstraConnector CR for any errors
 	err = r.validateAstraConnector(*astraConnector, log)
@@ -119,8 +124,8 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 		// The object is being deleted
 		if controllerutil.ContainsFinalizer(astraConnector, finalizerName) {
 			// Update status message to indicate that CR delete is in progress
-			natsSyncClientStatus.Status = DeleteInProgress
-			_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
+			//natsSyncClientStatus.Status = DeleteInProgress
+			//_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
 
 			k8sUtil := k8s.NewK8sUtil(r.Client, r.Clientset, log)
 			registerUtil := register.NewClusterRegisterUtil(astraConnector, &http.Client{}, r.Client, k8sUtil, log, context.Background())
@@ -152,10 +157,6 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 				return ctrl.Result{Requeue: true}, err
 			}
 
-			// Update status message to indicate that CR delete is in finished
-			natsSyncClientStatus.Status = DeletionComplete
-			_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
-
 			// remove our finalizer from the list and update it.
 			controllerutil.RemoveFinalizer(astraConnector, finalizerName)
 			if err := r.Update(ctx, astraConnector); err != nil {
@@ -164,6 +165,10 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 				// Do not requeue. Item is being deleted
 				return ctrl.Result{}, err
 			}
+
+			// Update status message to indicate that CR delete is in finished
+			natsSyncClientStatus.Status = DeletionComplete
+			_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
 		}
 
 		// Stop reconciliation as the item is being deleted
@@ -210,8 +215,15 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 
 		if conf.Config.FeatureFlags().DeployNatsConnector() {
 			log.Info("Initiating Connector deployment")
-			connectorResults, err := r.deployConnector(ctx, astraConnector, &natsSyncClientStatus)
-			if err != nil {
+			var connectorResults ctrl.Result
+			var deployError error
+
+			if conf.Config.FeatureFlags().NatLess() {
+				connectorResults, deployError = r.deployNatlessConnector(ctx, astraConnector, &natsSyncClientStatus)
+			} else {
+				connectorResults, deployError = r.deployConnector(ctx, astraConnector, &natsSyncClientStatus)
+			}
+			if deployError != nil {
 				// Note: Returning nil in error since we want to wait for the requeue to happen
 				// non nil errors triggers the requeue right away
 				log.Error(err, "Error deploying NatsConnector, requeueing after delay", "delay", conf.Config.ErrorTimeout())
@@ -223,7 +235,7 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 			log.Info(fmt.Sprintf("Updating CR status, clusterID: '%s'", natsSyncClientStatus.AstraClusterId))
 		}
 
-		_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus, true)
+		_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
 		err := r.waitForStatusUpdate(astraConnector, log)
 		if err != nil {
 			log.Error(err, "Failed to update status, ignoring since this will be fixed on a future reconcile.")
