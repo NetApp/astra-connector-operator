@@ -1,0 +1,31 @@
+# permissions for end users to edit snapshotrestores.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/instance: snapshotrestore-editor-role
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: neptune
+    app.kubernetes.io/part-of: neptune
+    app.kubernetes.io/managed-by: kustomize
+  name: snapshotrestore-editor-role
+rules:
+- apiGroups:
+  - astra.netapp.io
+  resources:
+  - snapshotrestores
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - astra.netapp.io
+  resources:
+  - snapshotrestores/status
+  verbs:
+  - get

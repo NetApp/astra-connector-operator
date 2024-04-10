@@ -32,3 +32,5 @@ build/
 
 # Local Developer Files
 .config.yaml
+
+.DS_Store

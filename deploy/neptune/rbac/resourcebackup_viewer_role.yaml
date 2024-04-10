@@ -1,0 +1,27 @@
+# permissions for end users to view resourcebackups.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/instance: resourcebackup-viewer-role
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: neptune
+    app.kubernetes.io/part-of: neptune
+    app.kubernetes.io/managed-by: kustomize
+  name: resourcebackup-viewer-role
+rules:
+- apiGroups:
+  - astra.netapp.io
+  resources:
+  - resourcebackups
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - astra.netapp.io
+  resources:
+  - resourcebackups/status
+  verbs:
+  - get

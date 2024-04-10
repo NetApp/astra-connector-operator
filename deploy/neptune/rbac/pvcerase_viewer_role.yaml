@@ -1,0 +1,27 @@
+# permissions for end users to view pvcerases.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/instance: pvcerase-viewer-role
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: neptune
+    app.kubernetes.io/part-of: neptune
+    app.kubernetes.io/managed-by: kustomize
+  name: pvcerase-viewer-role
+rules:
+- apiGroups:
+  - astra.netapp.io
+  resources:
+  - pvcerases
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - astra.netapp.io
+  resources:
+  - pvcerases/status
+  verbs:
+  - get
