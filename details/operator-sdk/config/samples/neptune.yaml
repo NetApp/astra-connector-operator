@@ -685,8 +685,8 @@ spec:
           spec:
             description: AutoSupportBundleSpec defines the desired state of AutoSupportBundle
             properties:
-              dateWindowStart:
-                description: DateWindowStart is a timestamp indicating the start time of the AutoSupport bundle data collection window.  Defaults to 24 hours ago if not specified.
+              dataWindowStart:
+                description: DataWindowStart is a timestamp indicating the start time of the AutoSupport bundle data collection window.  Defaults to 24 hours ago if not specified.
                 format: date-time
                 type: string
               triggerType:
@@ -768,6 +768,10 @@ spec:
                   - type
                   type: object
                 type: array
+              dataWindowStart:
+                description: DataWindowStart is a timestamp indicating the start time of the AutoSupport bundle data collection window.  Will be the provided or calculated value.
+                format: date-time
+                type: string
               error:
                 description: Error indicates the most recent error that has occurred. The error may not be permanent, so progress may continue after temporarily seeing an error.
                 type: string
