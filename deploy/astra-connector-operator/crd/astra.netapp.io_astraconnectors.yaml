@@ -1,0 +1,273 @@
+
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.7.0
+  creationTimestamp: null
+  name: astraconnectors.astra.netapp.io
+spec:
+  group: astra.netapp.io
+  names:
+    kind: AstraConnector
+    listKind: AstraConnectorList
+    plural: astraconnectors
+    singular: astraconnector
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .status.natsSyncClient.registered
+      name: Registered
+      type: string
+    - jsonPath: .status.natsSyncClient.astraClusterID
+      name: AstraClusterID
+      type: string
+    - jsonPath: .status.natsSyncClient.astraConnectorID
+      name: AstraConnectorID
+      type: string
+    - jsonPath: .status.natsSyncClient.status
+      name: Status
+      type: string
+    name: v1
+    schema:
+      openAPIV3Schema:
+        description: AstraConnector is the Schema for the astraconnectors API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: AstraConnectorSpec defines the desired state of AstraConnector
+            properties:
+              astra:
+                properties:
+                  accountId:
+                    type: string
+                  cloudId:
+                    type: string
+                  clusterId:
+                    type: string
+                  clusterName:
+                    type: string
+                  skipTLSValidation:
+                    type: boolean
+                  tokenRef:
+                    type: string
+                  unregister:
+                    type: boolean
+                type: object
+              astraConnect:
+                properties:
+                  image:
+                    type: string
+                  replicas:
+                    default: 1
+                    format: int32
+                    type: integer
+                type: object
+              autoSupport:
+                default:
+                  enrolled: true
+                  url: https://stagesupport.netapp.com/put/AsupPut
+                description: AutoSupport indicates willingness to participate in NetApp's
+                  proactive support application, NetApp Active IQ. An internet connection
+                  is required (port 442) and all support data is anonymized. The default
+                  election is true and indicates support data will be sent to NetApp.
+                  An empty or blank election is the same as a default election. Air
+                  gapped installations should enter false.
+                properties:
+                  enrolled:
+                    default: true
+                    description: Enrolled determines if you want to send anonymous
+                      data to NetApp for support purposes.
+                    type: boolean
+                  url:
+                    default: https://stagesupport.netapp.com/put/AsupPut
+                    description: URL determines where the anonymous data will be sent
+                    type: string
+                type: object
+              imageRegistry:
+                properties:
+                  name:
+                    type: string
+                  secret:
+                    type: string
+                type: object
+              labels:
+                additionalProperties:
+                  type: string
+                description: Labels any additional labels wanted to be added to resources
+                type: object
+              nats:
+                properties:
+                  image:
+                    type: string
+                  replicas:
+                    default: 1
+                    format: int32
+                    type: integer
+                type: object
+              natsSyncClient:
+                properties:
+                  cloudBridgeURL:
+                    type: string
+                  hostAliasIP:
+                    type: string
+                  image:
+                    type: string
+                  replicas:
+                    default: 1
+                    format: int32
+                    type: integer
+                type: object
+              neptune:
+                properties:
+                  image:
+                    type: string
+                type: object
+              skipPreCheck:
+                default: false
+                description: SkipPreCheck determines if you want to skip pre-checks
+                  and go ahead with the installation.
+                type: boolean
+            type: object
+          status:
+            description: AstraConnectorStatus defines the observed state of AstraConnector
+            properties:
+              natsSyncClient:
+                description: NatsSyncClientStatus defines the observed state of NatsSyncClient
+                properties:
+                  astraClusterID:
+                    type: string
+                  astraConnectorID:
+                    type: string
+                  registered:
+                    type: string
+                  status:
+                    type: string
+                type: object
+              nodes:
+                items:
+                  type: string
+                type: array
+              observedSpec:
+                description: ObservedSpec is the last observed Connector custom resource
+                  spec
+                properties:
+                  astra:
+                    properties:
+                      accountId:
+                        type: string
+                      cloudId:
+                        type: string
+                      clusterId:
+                        type: string
+                      clusterName:
+                        type: string
+                      skipTLSValidation:
+                        type: boolean
+                      tokenRef:
+                        type: string
+                      unregister:
+                        type: boolean
+                    type: object
+                  astraConnect:
+                    properties:
+                      image:
+                        type: string
+                      replicas:
+                        default: 1
+                        format: int32
+                        type: integer
+                    type: object
+                  autoSupport:
+                    default:
+                      enrolled: true
+                      url: https://stagesupport.netapp.com/put/AsupPut
+                    description: AutoSupport indicates willingness to participate
+                      in NetApp's proactive support application, NetApp Active IQ.
+                      An internet connection is required (port 442) and all support
+                      data is anonymized. The default election is true and indicates
+                      support data will be sent to NetApp. An empty or blank election
+                      is the same as a default election. Air gapped installations
+                      should enter false.
+                    properties:
+                      enrolled:
+                        default: true
+                        description: Enrolled determines if you want to send anonymous
+                          data to NetApp for support purposes.
+                        type: boolean
+                      url:
+                        default: https://stagesupport.netapp.com/put/AsupPut
+                        description: URL determines where the anonymous data will
+                          be sent
+                        type: string
+                    type: object
+                  imageRegistry:
+                    properties:
+                      name:
+                        type: string
+                      secret:
+                        type: string
+                    type: object
+                  labels:
+                    additionalProperties:
+                      type: string
+                    description: Labels any additional labels wanted to be added to
+                      resources
+                    type: object
+                  nats:
+                    properties:
+                      image:
+                        type: string
+                      replicas:
+                        default: 1
+                        format: int32
+                        type: integer
+                    type: object
+                  natsSyncClient:
+                    properties:
+                      cloudBridgeURL:
+                        type: string
+                      hostAliasIP:
+                        type: string
+                      image:
+                        type: string
+                      replicas:
+                        default: 1
+                        format: int32
+                        type: integer
+                    type: object
+                  neptune:
+                    properties:
+                      image:
+                        type: string
+                    type: object
+                  skipPreCheck:
+                    default: false
+                    description: SkipPreCheck determines if you want to skip pre-checks
+                      and go ahead with the installation.
+                    type: boolean
+                type: object
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
