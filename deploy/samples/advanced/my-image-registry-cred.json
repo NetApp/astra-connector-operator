@@ -1,7 +1,0 @@
-{
-    "auths": {
-        "https://my.image.registry.com/path/": {
-        "auth": "dXNlcm5hbWU6cGFzc3dvcmQ="
-        }
-    }
-}
