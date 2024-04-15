@@ -37,6 +37,11 @@ spec:
           value: ""
         - name: SKIP_TLS_VALIDATION
           value: "false"
+        - name: MEMORY_RESOURCE_LIMIT
+          valueFrom:
+            resourceFieldRef:
+              containerName: astra-connector
+              resource: limits.memory
 
         resources:
           limits:
