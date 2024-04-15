@@ -113,6 +113,15 @@ func (d *AstraConnectNatlessDeployer) GetDeploymentObjects(m *v1.AstraConnector,
 								Name:  "SKIP_TLS_VALIDATION",
 								Value: strconv.FormatBool(m.Spec.Astra.SkipTLSValidation),
 							},
+							{
+								Name: "MEMORY_RESOURCE_LIMIT",
+								ValueFrom: &corev1.EnvVarSource{
+									ResourceFieldRef: &corev1.ResourceFieldSelector{
+										ContainerName: common.AstraConnectName,
+										Resource:      "limits.memory",
+									},
+								},
+							},
 						},
 						Resources: corev1.ResourceRequirements{
 							Limits: corev1.ResourceList{
