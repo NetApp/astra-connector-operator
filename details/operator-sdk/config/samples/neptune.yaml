@@ -1296,6 +1296,9 @@ spec:
               applicationRef:
                 description: Name of the Application to back up
                 type: string
+              dataMover:
+                description: DataMover specifies which data mover to use for volume backups. Valid options are Kopia, Restic (default).
+                type: string
               reclaimPolicy:
                 description: ReclaimPolicy defines what happens to a backup when released from its claim. Valid options are Retain, Delete (default).
                 type: string
@@ -1675,18 +1678,12 @@ spec:
                         pvcUid:
                           description: k8s UID of the source app PVC
                           type: string
-                        resticRepositoryPath:
-                          description: Restic repository location (specified in the same format as the "-r" option of the restic CLI)
+                        repositoryPath:
+                          description: Repository as appropriate for the data mover.
                           type: string
-                        resticSnapshotID:
-                          description: ID of the Restic snapshot created to represent this backup
+                        snapshotID:
+                          description: ID of the snapshot created to represent this backup
                           type: string
-                        resticVolumeBackupCompleted:
-                          description: Set to true when the ResticVolumeBackup has completed successfully
-                          type: boolean
-                        resticVolumeBackupCreated:
-                          description: Set to true when the ResticVolumeBackup for the VolumeSnapshot has been created
-                          type: boolean
                         sourceVolumeSnapshot:
                           description: Namespaced name of the source VolumeSnapshot to be backed up
                           properties:
@@ -1698,6 +1695,12 @@ spec:
                           - name
                           - namespace
                           type: object
+                        volumeBackupCompleted:
+                          description: Set to true when the VolumeBackup has completed successfully
+                          type: boolean
+                        volumeBackupCreated:
+                          description: Set to true when the VolumeBackup for the VolumeSnapshot has been created
+                          type: boolean
                         volumeSnapshotContentCopyName:
                           description: Name of the temporary copy of the VolumeSnapshotContent
                           type: string
@@ -1714,9 +1717,9 @@ spec:
                           description: Set to true when the temporary copy of the VolumeSnapshot is ready to use
                           type: boolean
                       required:
-                      - resticVolumeBackupCompleted
-                      - resticVolumeBackupCreated
                       - sourceVolumeSnapshot
+                      - volumeBackupCompleted
+                      - volumeBackupCreated
                       - volumeSnapshotContentCopyName
                       - volumeSnapshotCopied
                       - volumeSnapshotCopyDeleted
