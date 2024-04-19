@@ -525,9 +525,6 @@ spec:
                       - name
                       - namespace
                       type: object
-                    newlyReplicated:
-                      description: NewlyReplicated will be set to true if the destination PVC did not already exist
-                      type: boolean
                     sourcePVC:
                       description: SourcePVC holds the namespace and name for the source PVC
                       properties:
@@ -542,7 +539,6 @@ spec:
                   required:
                   - destinationPVC
                   - destinationTMR
-                  - newlyReplicated
                   - sourcePVC
                   type: object
                 type: array
