@@ -7,4 +7,4 @@ resources:
 - rbac
 
 # ToDo: remove this once neptune code is updated to not have hardcoded references to job resource names that include this prefix
-#namePrefix: neptune-
+namePrefix: neptune-
