@@ -868,6 +868,9 @@ spec:
           status:
             description: AutoSupportBundleScheduleStatus defines the observed state of AutoSupportBundleSchedule
             properties:
+              RunningAsupCRName:
+                description: RunningAsupCRName The name of the running ASUP CR initiated by the schedule controller
+                type: string
               nextScheduledTimestamp:
                 description: NextScheduledTimestamp The time to run the next scheduled ASUP
                 format: date-time
