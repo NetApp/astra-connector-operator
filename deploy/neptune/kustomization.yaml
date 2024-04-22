@@ -7,5 +7,4 @@ resources:
 - rbac
 
 # ToDo: remove this once neptune code is updated to not have hardcoded references to job resource names that include this prefix
-# note: removed to fix service account issue due to names not matching
-#namePrefix: neptune-
+namePrefix: neptune-
