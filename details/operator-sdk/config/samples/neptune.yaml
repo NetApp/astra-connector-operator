@@ -1678,7 +1678,7 @@ spec:
                           description: k8s UID of the source app PVC
                           type: string
                         repositoryPath:
-                          description: Repository as appropriate for the data mover.
+                          description: RepositoryPath is the path to the repository within the storage location.
                           type: string
                         snapshotID:
                           description: ID of the snapshot created to represent this backup
@@ -2281,9 +2281,6 @@ spec:
                   - name
                   type: object
                 type: array
-              kopiaRepository:
-                description: The kopia command for creating and connecting to a repository for a given Storage Location.
-                type: string
               kopiaVolumeMounts:
                 description: KopiaVolumeMounts contains information about the kopia secrets to be mounted on the kopia pod
                 items:
@@ -2349,17 +2346,20 @@ spec:
                       type: object
                   type: object
                 type: array
-              prefix:
-                description: Prefix to use for the repository location.
-                type: string
               reclaimPolicy:
                 description: ReclaimPolicy defines what happens to the KopiaSnapshot of a kopia backup when the KopiaVolumeBackup CR is deleted Valid options are Retain, Delete (default).
+                type: string
+              repositoryPath:
+                description: RepositoryPath is the path to the repository within the storage location.
+                type: string
+              storageLocation:
+                description: The kopia command line representation for a given Storage Location.
                 type: string
             required:
             - dataSourceRef
             - kopiaEnv
-            - kopiaRepository
-            - prefix
+            - repositoryPath
+            - storageLocation
             type: object
           status:
             description: KopiaVolumeBackupStatus defines the observed state of KopiaVolumeBackup
@@ -2561,9 +2561,6 @@ spec:
                   - name
                   type: object
                 type: array
-              kopiaRepository:
-                description: Kopia repository location (specified in the same format as the "-r" option of the kopia CLI)
-                type: string
               kopiaSnapshotID:
                 description: ID of the Kopia snapshot that needs to be restored
                 type: string
@@ -2632,8 +2629,11 @@ spec:
                       type: object
                   type: object
                 type: array
-              prefix:
-                description: Prefix to use for the repository location.
+              repositoryPath:
+                description: RepositoryPath is the path to the repository within the storage location.
+                type: string
+              storageLocation:
+                description: The kopia command line representation for a given Storage Location.
                 type: string
               targetPVCRef:
                 description: Config for the PVC to restore the kopia snapshot into
@@ -2648,9 +2648,9 @@ spec:
                 type: object
             required:
             - kopiaEnv
-            - kopiaRepository
             - kopiaSnapshotID
-            - prefix
+            - repositoryPath
+            - storageLocation
             - targetPVCRef
             type: object
           status:
