@@ -8,5 +8,5 @@ roleRef:
   name: astra-connector-operator
 subjects:
 - kind: ServiceAccount
-  name: astra-connector-operator
+  name: operator-controller-manager
   namespace: astra-connector-operator
