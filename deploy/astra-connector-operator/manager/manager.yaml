@@ -40,9 +40,6 @@ spec:
           command:
             - /manager
           image: netapp/astra-connector-operator:202404181636-main
-          env:
-            - name: "ENV_VAR_TEST"
-              value: "fake_value"
           livenessProbe:
             httpGet:
               path: /healthz
