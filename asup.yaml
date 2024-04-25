@@ -1,0 +1,13 @@
+apiVersion: management.astra.netapp.io/v1
+kind: AutoSupportBundleSchedule
+metadata:
+  name: autosupportbundleschedule-123
+  namespace: neptune-system
+spec:
+  enabled: false
+
+
+
+
+  autoSupport:
+    enrolled: false 

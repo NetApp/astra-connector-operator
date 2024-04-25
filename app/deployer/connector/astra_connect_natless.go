@@ -7,6 +7,9 @@ package connector
 import (
 	"context"
 	"fmt"
+	"github.com/NetApp-Polaris/astra-connector-operator/api/v1"
+	"maps"
+	"reflect"
 	"strconv"
 
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -22,31 +25,65 @@ import (
 	"github.com/NetApp-Polaris/astra-connector-operator/app/conf"
 	"github.com/NetApp-Polaris/astra-connector-operator/app/deployer/model"
 	"github.com/NetApp-Polaris/astra-connector-operator/common"
-	v1 "github.com/NetApp-Polaris/astra-connector-operator/details/operator-sdk/api/v1"
 )
 
-type AstraConnectNatlessDeployer struct{}
+type AstraConnectNatlessDeployer struct {
+	connectorCR v1.AstraConnector
+}
 
-func NewAstraConnectorNatlessDeployer() model.Deployer {
-	return &AstraConnectNatlessDeployer{}
+func NewAstraConnectorNatlessDeployer(cr v1.AstraConnector) model.Deployer {
+	return &AstraConnectNatlessDeployer{connectorCR: cr}
+}
+
+func (d *AstraConnectNatlessDeployer) UpdateStatus(ctx context.Context, status string, statusWriter client.StatusWriter) error {
+	d.connectorCR.Status.Status = status
+	err := statusWriter.Update(ctx, &d.connectorCR)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (d *AstraConnectNatlessDeployer) IsSpecModified(ctx context.Context, k8sClient client.Client) bool {
+	log := ctrllog.FromContext(ctx)
+	// Fetch the AstraConnector instance
+	controllerKey := client.ObjectKeyFromObject(&d.connectorCR)
+	updatedAstraConnector := &v1.AstraConnector{}
+	err := k8sClient.Get(ctx, controllerKey, updatedAstraConnector)
+	if err != nil {
+		log.Info("AstraConnector resource not found. Ignoring since object must be deleted")
+		return true
+	}
+
+	if updatedAstraConnector.GetDeletionTimestamp() != nil {
+		log.Info("AstraConnector marked for deletion, reconciler requeue")
+		return true
+	}
+
+	if !reflect.DeepEqual(updatedAstraConnector.Spec, d.connectorCR.Spec) {
+		log.Info("AstraConnector spec change, reconciler requeue")
+		return true
+	}
+	return false
 }
 
 // GetDeploymentObjects returns a Astra Connect Deployment object
-func (d *AstraConnectNatlessDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
+func (d *AstraConnectNatlessDeployer) GetDeploymentObjects(ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
 	log := ctrllog.FromContext(ctx)
-	ls := LabelsForAstraConnectClient(common.AstraConnectName, m.Spec.Labels)
+	ls := LabelsForAstraConnectClient(common.AstraConnectName, d.connectorCR.Spec.Labels)
 
 	var imageRegistry string
 	var containerImage string
 	var connectorImage string
-	if m.Spec.ImageRegistry.Name != "" {
-		imageRegistry = m.Spec.ImageRegistry.Name
+	if d.connectorCR.Spec.ImageRegistry.Name != "" {
+		imageRegistry = d.connectorCR.Spec.ImageRegistry.Name
 	} else {
 		imageRegistry = common.DefaultImageRegistry
 	}
 
-	if m.Spec.AstraConnect.Image != "" {
-		containerImage = m.Spec.AstraConnect.Image
+	if d.connectorCR.Spec.Image != "" {
+		containerImage = d.connectorCR.Spec.Image
 	} else {
 		containerImage = common.ConnectorImageTag
 	}
@@ -57,14 +94,14 @@ func (d *AstraConnectNatlessDeployer) GetDeploymentObjects(m *v1.AstraConnector,
 	dep := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      common.AstraConnectName,
-			Namespace: m.Namespace,
+			Namespace: d.connectorCR.Namespace,
 			Annotations: map[string]string{
 				"container.seccomp.security.alpha.kubernetes.io/pod": "runtime/default",
 			},
 		},
 		Spec: appsv1.DeploymentSpec{
 			// TODO remove option to set replica count in CRD. This should always only-ever be 1
-			Replicas: &m.Spec.AstraConnect.Replicas,
+			Replicas: &d.connectorCR.Spec.Replicas,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: ls,
 			},
@@ -87,31 +124,31 @@ func (d *AstraConnectNatlessDeployer) GetDeploymentObjects(m *v1.AstraConnector,
 							},
 							{
 								Name:  "API_TOKEN_SECRET_REF",
-								Value: m.Spec.Astra.TokenRef,
+								Value: d.connectorCR.Spec.ApiTokenSecretRef,
 							},
 							{
 								Name:  "ASTRA_CONTROL_URL",
-								Value: m.Spec.NatsSyncClient.CloudBridgeURL,
+								Value: d.connectorCR.Spec.AstraControlUrl,
 							},
 							{
 								Name:  "ACCOUNT_ID",
-								Value: m.Spec.Astra.AccountId,
+								Value: d.connectorCR.Spec.AccountId,
 							},
 							{
 								Name:  "CLOUD_ID",
-								Value: m.Spec.Astra.CloudId,
+								Value: d.connectorCR.Spec.CloudId,
 							},
 							{
 								Name:  "CLUSTER_ID",
-								Value: m.Spec.Astra.ClusterId,
+								Value: d.connectorCR.Spec.ClusterId,
 							},
 							{
 								Name:  "HOST_ALIAS_IP",
-								Value: m.Spec.NatsSyncClient.HostAliasIP,
+								Value: d.connectorCR.Spec.HostAliasIP,
 							},
 							{
 								Name:  "SKIP_TLS_VALIDATION",
-								Value: strconv.FormatBool(m.Spec.Astra.SkipTLSValidation),
+								Value: strconv.FormatBool(d.connectorCR.Spec.SkipTLSValidation),
 							},
 							{
 								Name: "MEMORY_RESOURCE_LIMIT",
@@ -136,10 +173,10 @@ func (d *AstraConnectNatlessDeployer) GetDeploymentObjects(m *v1.AstraConnector,
 		},
 	}
 
-	if m.Spec.ImageRegistry.Secret != "" {
+	if d.connectorCR.Spec.ImageRegistry.Secret != "" {
 		dep.Spec.Template.Spec.ImagePullSecrets = []corev1.LocalObjectReference{
 			{
-				Name: m.Spec.ImageRegistry.Secret,
+				Name: d.connectorCR.Spec.ImageRegistry.Secret,
 			},
 		}
 	}
@@ -147,37 +184,37 @@ func (d *AstraConnectNatlessDeployer) GetDeploymentObjects(m *v1.AstraConnector,
 }
 
 // GetServiceObjects returns an Astra-Connect Service object
-func (d *AstraConnectNatlessDeployer) GetServiceObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
+func (d *AstraConnectNatlessDeployer) GetServiceObjects(ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
 	return nil, model.NonMutateFn, nil
 }
 
 // GetConfigMapObjects returns a ConfigMap object for Astra Connect
-func (d *AstraConnectNatlessDeployer) GetConfigMapObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
+func (d *AstraConnectNatlessDeployer) GetConfigMapObjects(ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
 	configMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: m.Namespace,
+			Namespace: d.connectorCR.Namespace,
 			Name:      common.AstraConnectName,
 		},
 		Data: map[string]string{
 			//"nats_url":            GetNatsURL(m),
-			"skip_tls_validation": strconv.FormatBool(m.Spec.Astra.SkipTLSValidation),
+			"skip_tls_validation": strconv.FormatBool(d.connectorCR.Spec.SkipTLSValidation),
 		},
 	}
 	return []client.Object{configMap}, model.NonMutateFn, nil
 }
 
 // GetServiceAccountObjects returns a ServiceAccount object for Astra Connect
-func (d *AstraConnectNatlessDeployer) GetServiceAccountObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
+func (d *AstraConnectNatlessDeployer) GetServiceAccountObjects(ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
 	sa := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      common.AstraConnectName,
-			Namespace: m.Namespace,
+			Namespace: d.connectorCR.Namespace,
 		},
 	}
 	return []client.Object{sa}, model.NonMutateFn, nil
 }
 
-func (d *AstraConnectNatlessDeployer) GetClusterRoleObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
+func (d *AstraConnectNatlessDeployer) GetClusterRoleObjects(ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
 	clusterRole := &rbacv1.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: common.AstraConnectName,
@@ -249,7 +286,7 @@ func (d *AstraConnectNatlessDeployer) GetClusterRoleObjects(m *v1.AstraConnector
 	return []client.Object{clusterRole}, model.NonMutateFn, nil
 }
 
-func (d *AstraConnectNatlessDeployer) GetClusterRoleBindingObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
+func (d *AstraConnectNatlessDeployer) GetClusterRoleBindingObjects(ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
 	clusterRoleBinding := &rbacv1.ClusterRoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: common.AstraConnectName,
@@ -258,7 +295,7 @@ func (d *AstraConnectNatlessDeployer) GetClusterRoleBindingObjects(m *v1.AstraCo
 			{
 				Kind:      "ServiceAccount",
 				Name:      common.AstraConnectName,
-				Namespace: m.Namespace,
+				Namespace: d.connectorCR.Namespace,
 			},
 		},
 		RoleRef: rbacv1.RoleRef{
@@ -271,11 +308,11 @@ func (d *AstraConnectNatlessDeployer) GetClusterRoleBindingObjects(m *v1.AstraCo
 }
 
 // GetRoleObjects returns a ConfigMapRole object for Astra Connect
-func (d *AstraConnectNatlessDeployer) GetRoleObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
+func (d *AstraConnectNatlessDeployer) GetRoleObjects(ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
 	role := &rbacv1.Role{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      common.AstraConnectName,
-			Namespace: m.Namespace,
+			Namespace: d.connectorCR.Namespace,
 		},
 		Rules: []rbacv1.PolicyRule{
 			{
@@ -320,17 +357,17 @@ func (d *AstraConnectNatlessDeployer) GetRoleObjects(m *v1.AstraConnector, ctx c
 }
 
 // GetRoleBindingObjects returns a ConfigMapRoleBinding object
-func (d *AstraConnectNatlessDeployer) GetRoleBindingObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
+func (d *AstraConnectNatlessDeployer) GetRoleBindingObjects(ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
 	roleBinding := &rbacv1.RoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      common.AstraConnectName,
-			Namespace: m.Namespace,
+			Namespace: d.connectorCR.Namespace,
 		},
 		Subjects: []rbacv1.Subject{
 			{
 				Kind:      "ServiceAccount",
 				Name:      common.AstraConnectName,
-				Namespace: m.Namespace,
+				Namespace: d.connectorCR.Namespace,
 			},
 		},
 		RoleRef: rbacv1.RoleRef{
@@ -343,6 +380,13 @@ func (d *AstraConnectNatlessDeployer) GetRoleBindingObjects(m *v1.AstraConnector
 }
 
 // NIL RESOURCES BELOW
-func (d *AstraConnectNatlessDeployer) GetStatefulSetObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
+func (d *AstraConnectNatlessDeployer) GetStatefulSetObjects(ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
 	return nil, model.NonMutateFn, nil
+}
+
+// LabelsForAstraConnectClient returns the labels for selecting the AstraConnectClient
+func LabelsForAstraConnectClient(name string, mLabels map[string]string) map[string]string {
+	labels := map[string]string{"type": name, "role": name}
+	maps.Copy(labels, mLabels)
+	return labels
 }

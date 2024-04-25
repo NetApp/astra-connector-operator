@@ -9,8 +9,10 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
+	"github.com/NetApp-Polaris/astra-connector-operator/api/v1"
 	"log"
 	"maps"
+	"reflect"
 	"strings"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -26,30 +28,63 @@ import (
 	"github.com/NetApp-Polaris/astra-connector-operator/app/conf"
 	"github.com/NetApp-Polaris/astra-connector-operator/app/deployer/model"
 	"github.com/NetApp-Polaris/astra-connector-operator/common"
-	v1 "github.com/NetApp-Polaris/astra-connector-operator/details/operator-sdk/api/v1"
 )
 
-type NeptuneClientDeployerV2 struct{}
-
-func NewNeptuneClientDeployerV2() model.Deployer {
-	return &NeptuneClientDeployerV2{}
+type NeptuneClientDeployerV2 struct {
+	neptuneCR *v1.AstraNeptune
 }
 
-func (n NeptuneClientDeployerV2) GetDeploymentObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
+func NewNeptuneClientDeployerV2(neptune *v1.AstraNeptune) model.Deployer {
+	return &NeptuneClientDeployerV2{neptuneCR: neptune}
+}
+
+func (n *NeptuneClientDeployerV2) UpdateStatus(ctx context.Context, status string, statusWriter client.StatusWriter) error {
+	n.neptuneCR.Status.Status = status
+	err := statusWriter.Update(ctx, n.neptuneCR)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (n *NeptuneClientDeployerV2) IsSpecModified(ctx context.Context, k8sClient client.Client) bool {
+	log := ctrllog.FromContext(ctx)
+	// Fetch the AstraNeptune instance
+	controllerKey := client.ObjectKeyFromObject(n.neptuneCR)
+	updatedAstraNeptune := &v1.AstraNeptune{}
+	err := k8sClient.Get(ctx, controllerKey, updatedAstraNeptune)
+	if err != nil {
+		log.Info("AstraNeptune resource not found. Ignoring since object must be deleted")
+		return true
+	}
+
+	if updatedAstraNeptune.GetDeletionTimestamp() != nil {
+		log.Info("AstraNeptune marked for deletion, reconciler requeue")
+		return true
+	}
+
+	if !reflect.DeepEqual(updatedAstraNeptune.Spec, n.neptuneCR.Spec) {
+		log.Info("AstraNeptune spec change, reconciler requeue")
+		return true
+	}
+	return false
+}
+
+func (n *NeptuneClientDeployerV2) GetDeploymentObjects(ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
 	var deps []client.Object
 	log := ctrllog.FromContext(ctx)
 
 	var imageRegistry string
 	var containerImage string
 	var neptuneImage string
-	if m.Spec.ImageRegistry.Name != "" {
-		imageRegistry = m.Spec.ImageRegistry.Name
+	if n.neptuneCR.Spec.ImageRegistry.Name != "" {
+		imageRegistry = n.neptuneCR.Spec.ImageRegistry.Name
 	} else {
 		imageRegistry = common.DefaultImageRegistry
 	}
 
-	if m.Spec.Neptune.Image != "" {
-		containerImage = m.Spec.Neptune.Image
+	if n.neptuneCR.Spec.Image != "" {
+		containerImage = n.neptuneCR.Spec.Image
 	} else {
 		containerImage = common.NeptuneImageTag
 	}
@@ -68,19 +103,19 @@ func (n NeptuneClientDeployerV2) GetDeploymentObjects(m *v1.AstraConnector, ctx 
 		"control-plane":                "controller-manager",
 	}
 	// add any labels user wants to use or override
-	maps.Copy(deploymentLabels, m.Spec.Labels)
+	maps.Copy(deploymentLabels, n.neptuneCR.Spec.Labels)
 
 	podLabels := map[string]string{
 		"control-plane": "controller-manager",
 		"app":           "controller.neptune.netapp.io",
 	}
-	maps.Copy(podLabels, m.Spec.Labels)
+	maps.Copy(podLabels, n.neptuneCR.Spec.Labels)
 	neptuneReplicas := int32(common.NeptuneReplicas)
 
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      common.NeptuneName,
-			Namespace: m.Namespace,
+			Namespace: n.neptuneCR.Namespace,
 			Labels:    deploymentLabels,
 			Annotations: map[string]string{
 				"container.seccomp.security.alpha.kubernetes.io/pod": "runtime/default",
@@ -172,7 +207,11 @@ func (n NeptuneClientDeployerV2) GetDeploymentObjects(m *v1.AstraConnector, ctx 
 								"/manager",
 							},
 							Image: neptuneImage,
-							Env:   getNeptuneEnvVars(imageRegistry, containerImage, m.Spec.ImageRegistry.Secret, m.Spec.AutoSupport.URL, m.Spec.Labels),
+							Env: getNeptuneEnvVars(imageRegistry,
+								containerImage,
+								n.neptuneCR.Spec.ImageRegistry.Secret,
+								n.neptuneCR.Spec.AutoSupport.URL,
+								n.neptuneCR.Spec.Labels),
 							LivenessProbe: &corev1.Probe{
 								ProbeHandler: corev1.ProbeHandler{
 									HTTPGet: &corev1.HTTPGetAction{
@@ -218,10 +257,10 @@ func (n NeptuneClientDeployerV2) GetDeploymentObjects(m *v1.AstraConnector, ctx 
 		},
 	}
 
-	if m.Spec.ImageRegistry.Secret != "" {
+	if n.neptuneCR.Spec.ImageRegistry.Secret != "" {
 		deployment.Spec.Template.Spec.ImagePullSecrets = []corev1.LocalObjectReference{
 			{
-				Name: m.Spec.ImageRegistry.Secret,
+				Name: n.neptuneCR.Spec.ImageRegistry.Secret,
 			},
 		}
 	}
@@ -236,7 +275,7 @@ func (n NeptuneClientDeployerV2) GetDeploymentObjects(m *v1.AstraConnector, ctx 
 			if container.Name == "manager" {
 				for j, envVar := range container.Env {
 					if envVar.Name == "NEPTUNE_AUTOSUPPORT_URL" {
-						containers[i].Env[j].Value = m.Spec.AutoSupport.URL
+						containers[i].Env[j].Value = n.neptuneCR.Spec.AutoSupport.URL
 					}
 				}
 			}
@@ -320,17 +359,17 @@ func getNeptuneEnvVars(imageRegistry, containerImage, pullSecret, asupUrl string
 	return envVars
 }
 
-func (n NeptuneClientDeployerV2) GetStatefulSetObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
+func (n *NeptuneClientDeployerV2) GetStatefulSetObjects(ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
 	return nil, model.NonMutateFn, nil
 }
 
-func (n NeptuneClientDeployerV2) GetServiceObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
+func (n *NeptuneClientDeployerV2) GetServiceObjects(ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
 	var services []client.Object
 
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "neptune-controller-manager-metrics-service",
-			Namespace: m.Namespace,
+			Namespace: n.neptuneCR.Namespace,
 			Labels: map[string]string{
 				"app.kubernetes.io/component":  "kube-rbac-proxy",
 				"app.kubernetes.io/created-by": "neptune",
@@ -362,32 +401,32 @@ func (n NeptuneClientDeployerV2) GetServiceObjects(m *v1.AstraConnector, ctx con
 	return services, model.NonMutateFn, nil
 }
 
-func (n NeptuneClientDeployerV2) GetConfigMapObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
+func (n *NeptuneClientDeployerV2) GetConfigMapObjects(ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
 	return nil, model.NonMutateFn, nil
 }
 
-func (n NeptuneClientDeployerV2) GetServiceAccountObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
+func (n *NeptuneClientDeployerV2) GetServiceAccountObjects(ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
 	sa := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      common.NeptuneName,
-			Namespace: m.Namespace,
+			Namespace: n.neptuneCR.Namespace,
 		},
 	}
 	return []client.Object{sa}, model.NonMutateFn, nil
 }
 
-func (n NeptuneClientDeployerV2) GetRoleObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
+func (n *NeptuneClientDeployerV2) GetRoleObjects(ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
 	return nil, model.NonMutateFn, nil
 }
 
-func (n NeptuneClientDeployerV2) GetClusterRoleObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
+func (n *NeptuneClientDeployerV2) GetClusterRoleObjects(ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
 	return nil, model.NonMutateFn, nil
 }
 
-func (n NeptuneClientDeployerV2) GetRoleBindingObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
+func (n *NeptuneClientDeployerV2) GetRoleBindingObjects(ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
 	return nil, model.NonMutateFn, nil
 }
 
-func (n NeptuneClientDeployerV2) GetClusterRoleBindingObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
+func (n *NeptuneClientDeployerV2) GetClusterRoleBindingObjects(ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
 	return nil, model.NonMutateFn, nil
 }

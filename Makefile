@@ -84,10 +84,10 @@ help: ## Display this help.
 ##@ Development
 
 manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
-	cd details/operator-sdk && $(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases
+	$(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases
 
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
-	cd details/operator-sdk && $(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
+	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
 fmt: ## Run go fmt against code.
 	go fmt ./...
@@ -119,17 +119,17 @@ docker-buildx: test ## Build and push docker image for the manager for cross-pla
 ##@ Deployment
 
 install: manifests kustomize ## Install CRDs into the K8s cluster specified in ~/.kube/config.
-	cd details/operator-sdk && $(KUSTOMIZE) build config/crd | kubectl apply -f -
+	$(KUSTOMIZE) build config/crd | kubectl apply -f -
 
 uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified in ~/.kube/config.
-	cd details/operator-sdk && $(KUSTOMIZE) build config/crd | kubectl delete -f -
+	$(KUSTOMIZE) build config/crd | kubectl delete -f -
 
 deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
-	cd details/operator-sdk/config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
-	cd details/operator-sdk && $(KUSTOMIZE) build config/default | kubectl apply -f -
+	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
+	$(KUSTOMIZE) build config/default | kubectl apply -f -
 
 undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config.
-	cd details/operator-sdk && $(KUSTOMIZE) build config/default | kubectl delete -f -
+	$(KUSTOMIZE) build config/default | kubectl delete -f -
 
 
 CONTROLLER_GEN = $(shell pwd)/bin/controller-gen
@@ -170,8 +170,8 @@ endef
 .PHONY: bundle
 bundle: manifests kustomize ## Generate bundle manifests and metadata, then validate generated files.
 	operator-sdk generate kustomize manifests -q
-	cd details/operator-sdk/config/manager && $(KUSTOMIZE) edit set image controller=$(IMG)
-	cd details/operator-sdk && $(KUSTOMIZE) build config/manifests | operator-sdk generate bundle -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)
+	cd config/manager && $(KUSTOMIZE) edit set image controller=$(IMG)
+	$(KUSTOMIZE) build config/manifests | operator-sdk generate bundle -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)
 	operator-sdk bundle validate ./bundle
 
 .PHONY: opm
@@ -225,12 +225,12 @@ image-tar:
 release: kustomize
 	rm -rf build
 	mkdir build
-	cd details/operator-sdk/config/manager && $(KUSTOMIZE) edit set image controller=$(IMG)
-	cd details/operator-sdk && $(KUSTOMIZE) build config/default > $(BUILD_DIR)/only_astraconnector_operator.yaml
-	cat $(MAKEFILE_DIR)/details/operator-sdk/config/samples/neptune.yaml > $(BUILD_DIR)/astraconnector_operator.yaml
+	cd config/manager && $(KUSTOMIZE) edit set image controller=$(IMG)
+	$(KUSTOMIZE) build config/default > $(BUILD_DIR)/only_astraconnector_operator.yaml
+	cat $(MAKEFILE_DIR)/config/samples/neptune.yaml > $(BUILD_DIR)/astraconnector_operator.yaml
 	echo "---" >> $(BUILD_DIR)/astraconnector_operator.yaml
 	cat $(BUILD_DIR)/only_astraconnector_operator.yaml >> $(BUILD_DIR)/astraconnector_operator.yaml
-	cp $(MAKEFILE_DIR)/details/operator-sdk/config/samples/astra_v1_astraconnector.yaml $(BUILD_DIR)/astra_v1_astraconnector.yaml
+	cp $(MAKEFILE_DIR)/config/samples/astra_v1_astraconnector.yaml $(BUILD_DIR)/astra_v1_astraconnector.yaml
 
 .PHONY: generate-mocks
 generate-mocks: install-mockery

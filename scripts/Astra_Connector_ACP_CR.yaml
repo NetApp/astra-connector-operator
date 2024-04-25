@@ -1,0 +1,24 @@
+apiVersion: astra.netapp.io/v1
+kind: AstraConnector
+metadata:
+  name: astra-connector
+  namespace: neptune-system
+spec:
+  astra:
+    accountId: "b4a877b7-d73e-4767-9b04-24de0a4e2674"
+    clusterName: "Team3Caas3"
+    skipTLSValidation: true
+    tokenRef: astra-token
+  natsSyncClient:
+    cloudBridgeURL: "https://10.193.60.84"
+  imageRegistry:
+    name: netappdownloads.jfrog.io/docker-astra-control-staging/arch30/neptune
+    secret: regcred
+#---
+#apiVersion: trident.netapp.io/v1
+#kind: TridentOrchestrator
+#metadata:
+#  name: trident
+#  namespace: trident
+#spec:
+#  enableACP: true

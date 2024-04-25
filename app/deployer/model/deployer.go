@@ -8,20 +8,22 @@ import (
 	"context"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-
-	v1 "github.com/NetApp-Polaris/astra-connector-operator/details/operator-sdk/api/v1"
 )
 
 type Deployer interface {
-	GetDeploymentObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error)
-	GetStatefulSetObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error)
-	GetServiceObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error)
-	GetConfigMapObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error)
-	GetServiceAccountObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error)
-	GetRoleObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error)
-	GetClusterRoleObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error)
-	GetRoleBindingObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error)
-	GetClusterRoleBindingObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error)
+	GetDeploymentObjects(ctx context.Context) ([]client.Object, controllerutil.MutateFn, error)
+	GetStatefulSetObjects(ctx context.Context) ([]client.Object, controllerutil.MutateFn, error)
+	GetServiceObjects(ctx context.Context) ([]client.Object, controllerutil.MutateFn, error)
+	GetConfigMapObjects(ctx context.Context) ([]client.Object, controllerutil.MutateFn, error)
+	GetServiceAccountObjects(ctx context.Context) ([]client.Object, controllerutil.MutateFn, error)
+	GetRoleObjects(ctx context.Context) ([]client.Object, controllerutil.MutateFn, error)
+	GetClusterRoleObjects(ctx context.Context) ([]client.Object, controllerutil.MutateFn, error)
+	GetRoleBindingObjects(ctx context.Context) ([]client.Object, controllerutil.MutateFn, error)
+	GetClusterRoleBindingObjects(ctx context.Context) ([]client.Object, controllerutil.MutateFn, error)
+
+	// UpdateStatus of CR
+	UpdateStatus(ctx context.Context, status string, statusWriter client.StatusWriter) error
+	IsSpecModified(ctx context.Context, k8sClient client.Client) bool
 }
 
 // Define the MutateFn function

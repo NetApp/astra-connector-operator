@@ -2,6 +2,7 @@ package neptune_test
 
 import (
 	"context"
+	"github.com/NetApp-Polaris/astra-connector-operator/api/v1"
 	"github.com/NetApp-Polaris/astra-connector-operator/common"
 	corev1 "k8s.io/api/core/v1"
 	"testing"
@@ -12,7 +13,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/NetApp-Polaris/astra-connector-operator/app/deployer/neptune"
-	v1 "github.com/NetApp-Polaris/astra-connector-operator/details/operator-sdk/api/v1"
 )
 
 func createNeptuneDeployerV2() (neptune.NeptuneClientDeployerV2, *v1.AstraConnector, context.Context) { // Create a new NeptuneClientDeployer instance

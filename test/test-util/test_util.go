@@ -4,6 +4,7 @@ package test_util
 
 import (
 	"fmt"
+	"github.com/NetApp-Polaris/astra-connector-operator/api/v1"
 	stdlog "log"
 	"os"
 	"runtime"
@@ -17,8 +18,6 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-
-	astrav1 "github.com/NetApp-Polaris/astra-connector-operator/details/operator-sdk/api/v1"
 )
 
 // CreateLoggerForTesting reates a golang standard logging implementation of logr.Logger. This allows tests to still log output for easier debug
@@ -79,11 +78,11 @@ func FindTestName(includeFullPkgPath bool) (string, error) {
 }
 
 func CreateFakeClient(initObjs ...client.Object) client.Client {
-	ac := &astrav1.AstraConnector{}
+	ac := &v1.AstraConnector{}
 
 	// Create a fake k8s api client
 	s := clientgoscheme.Scheme
-	s.AddKnownTypes(astrav1.SchemeBuilder.GroupVersion, ac)
+	s.AddKnownTypes(v1.SchemeBuilder.GroupVersion, ac)
 
 	cb := fake.NewClientBuilder()
 	cb = cb.WithScheme(s)

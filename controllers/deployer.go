@@ -1,0 +1,168 @@
+package controllers
+
+import (
+	"context"
+	"fmt"
+	"github.com/NetApp-Polaris/astra-connector-operator/app/conf"
+	"github.com/NetApp-Polaris/astra-connector-operator/k8s"
+	"github.com/go-logr/logr"
+	appsv1 "k8s.io/api/apps/v1"
+	"reflect"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"time"
+
+	"github.com/pkg/errors"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
+
+	"github.com/NetApp-Polaris/astra-connector-operator/app/deployer/model"
+)
+
+// getK8sResources of function type
+type getK8sResources func(model.Deployer, context.Context) ([]client.Object, controllerutil.MutateFn, error)
+
+type createResourceParams struct {
+	getResource   getK8sResources
+	createMessage string
+	errorMessage  string
+	clusterScope  bool
+}
+
+// ResourcesToDeploy This is a list and order matters since things will be created in the order specified
+var resources = []createResourceParams{
+	{createMessage: CreateConfigMap, errorMessage: ErrorCreateConfigMaps, getResource: model.Deployer.GetConfigMapObjects, clusterScope: false},
+	{createMessage: CreateRole, errorMessage: ErrorCreateRoles, getResource: model.Deployer.GetRoleObjects, clusterScope: false},
+	{createMessage: CreateClusterRole, errorMessage: ErrorCreateClusterRoles, getResource: model.Deployer.GetClusterRoleObjects, clusterScope: true},
+	{createMessage: CreateRoleBinding, errorMessage: ErrorCreateRoleBindings, getResource: model.Deployer.GetRoleBindingObjects, clusterScope: false},
+	{createMessage: CreateClusterRoleBinding, errorMessage: ErrorCreateClusterRoleBindings, getResource: model.Deployer.GetClusterRoleBindingObjects, clusterScope: true},
+	{createMessage: CreateServiceAccount, errorMessage: ErrorCreateServiceAccounts, getResource: model.Deployer.GetServiceAccountObjects, clusterScope: false},
+	{createMessage: CreateStatefulSet, errorMessage: ErrorCreateStatefulSets, getResource: model.Deployer.GetStatefulSetObjects, clusterScope: false},
+	{createMessage: CreateService, errorMessage: ErrorCreateService, getResource: model.Deployer.GetServiceObjects, clusterScope: false},
+	{createMessage: CreateDeployment, errorMessage: ErrorCreateDeployments, getResource: model.Deployer.GetDeploymentObjects, clusterScope: false},
+}
+
+type K8sDeployer struct {
+	k8sUtil    k8s.K8sUtil
+	client     client.Client
+	owner      client.Object
+	deployable model.Deployer
+}
+
+func NewK8sDeployer(k8s k8s.K8sUtil, client client.Client, owner client.Object, deployable model.Deployer) K8sDeployer {
+	return K8sDeployer{k8sUtil: k8s, client: client, owner: owner, deployable: deployable}
+}
+
+func (r *K8sDeployer) deployResources(ctx context.Context) error {
+	log := ctrllog.FromContext(ctx)
+
+	for _, funcList := range resources {
+
+		resourceList, mutateFunc, err := funcList.getResource(r.deployable, ctx)
+		if err != nil {
+			return errors.Wrapf(err, "Unable to get resource")
+		}
+		if resourceList == nil {
+			continue
+		}
+
+		for _, kubeObject := range resourceList {
+			key := client.ObjectKeyFromObject(kubeObject)
+			statusMsg := fmt.Sprintf(funcList.createMessage, key.Namespace, key.Name)
+			_ = r.deployable.UpdateStatus(ctx, statusMsg, r.client.Status())
+
+			result, err := r.k8sUtil.CreateOrUpdateResource(ctx, kubeObject, r.owner, mutateFunc)
+			if err != nil {
+				return r.formatError(ctx, log, funcList.errorMessage, key.Namespace, key.Name, err)
+			} else {
+				waitCtx, cancel := context.WithCancel(ctx)
+				defer cancel()
+				err = r.waitForResourceReady(waitCtx, kubeObject)
+				if err != nil {
+					return r.formatError(ctx, log, funcList.errorMessage, key.Namespace, key.Name, err)
+				}
+				log.Info(fmt.Sprintf("Successfully %s resources", result))
+			}
+		}
+
+	}
+	return nil
+}
+
+func (r *K8sDeployer) deleteClusterScopedResources(ctx context.Context) {
+	log := ctrllog.FromContext(ctx)
+
+	for _, funcList := range resources {
+		if !funcList.clusterScope {
+			// Skip non-cluster scoped resources
+			continue
+		}
+
+		resourceList, _, _ := funcList.getResource(r.deployable, ctx)
+		if resourceList == nil {
+			continue
+		}
+
+		for _, kubeObject := range resourceList {
+			key := client.ObjectKeyFromObject(kubeObject)
+			objectKind := reflect.TypeOf(kubeObject).String()
+
+			log.WithValues("name", key.Name, "kind", objectKind).Info("Deleting resource")
+			err := r.k8sUtil.DeleteResource(ctx, kubeObject)
+			if err != nil {
+				log.WithValues("name", key.Name, "kind", objectKind).Error(err, "error deleting resource")
+				return
+			}
+			log.WithValues("name", key.Name, "kind", objectKind).Info("Deleted resource")
+		}
+	}
+}
+
+func (r *K8sDeployer) waitForResourceReady(ctx context.Context, kubeObject client.Object) error {
+	log := ctrllog.FromContext(ctx)
+	timeout := time.After(conf.Config.WaitDurationForResource()) // default is 2 mins
+	ticker := time.NewTicker(3 * time.Second)
+
+	for {
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("reconcile cancelled")
+		case <-timeout:
+			return fmt.Errorf("timed out waiting for resource %s/%s to be ready", kubeObject.GetNamespace(), kubeObject.GetName())
+		case <-ticker.C:
+			// First lets make sure controller isn't modified, this check allow us
+			// to respond faster when there is a cr spec change or deletion
+			if r.deployable.IsSpecModified(ctx, r.client) {
+				return fmt.Errorf("controller updated, requeue to handle changes")
+			}
+
+			err := r.client.Get(ctx, client.ObjectKeyFromObject(kubeObject), kubeObject)
+			if err != nil {
+				log.Error(err, "Error getting resource", "namespace", kubeObject.GetNamespace(), "name", kubeObject.GetName())
+				continue
+			}
+
+			isReady := false
+			switch obj := kubeObject.(type) {
+			case *appsv1.Deployment:
+				isReady = obj.Status.ReadyReplicas == obj.Status.Replicas
+			case *appsv1.StatefulSet:
+				isReady = obj.Status.ReadyReplicas == obj.Status.Replicas && obj.Status.CurrentReplicas == obj.Status.Replicas
+			default:
+				isReady = true
+			}
+
+			if isReady {
+				log.Info("Resource is ready", "namespace", kubeObject.GetNamespace(), "name", kubeObject.GetName())
+				return nil
+			}
+		}
+	}
+}
+
+func (r *K8sDeployer) formatError(ctx context.Context,
+	log logr.Logger, errorMessage, namespace, name string, err error) error {
+	statusMsg := fmt.Sprintf(errorMessage, namespace, name)
+	_ = r.deployable.UpdateStatus(ctx, statusMsg, r.client.Status())
+	log.Error(err, statusMsg)
+	return errors.Wrapf(err, statusMsg)
+}

@@ -1,12 +1,12 @@
 package util_test
 
 import (
+	"github.com/NetApp-Polaris/astra-connector-operator/api/v1"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	v1 "github.com/NetApp-Polaris/astra-connector-operator/details/operator-sdk/api/v1"
 	"github.com/NetApp-Polaris/astra-connector-operator/util"
 )
 

@@ -2,6 +2,7 @@ package connector_test
 
 import (
 	"context"
+	"github.com/NetApp-Polaris/astra-connector-operator/api/v1"
 	"testing"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -10,7 +11,6 @@ import (
 
 	"github.com/NetApp-Polaris/astra-connector-operator/app/deployer/connector"
 	"github.com/NetApp-Polaris/astra-connector-operator/common"
-	v1 "github.com/NetApp-Polaris/astra-connector-operator/details/operator-sdk/api/v1"
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
