@@ -4648,6 +4648,11 @@ spec:
               state:
                 description: 'INSERT ADDITIONAL STATUS FIELD - define observed state of cluster Important: Run "make" to regenerate code after modifying this file State indicates a high level summary of the SnapshotInplace Restore''s state'
                 type: string
+              warnings:
+                description: Warnings contains warnings that have occurred during execution
+                items:
+                  type: string
+                type: array
             required:
             - conditions
             - state
