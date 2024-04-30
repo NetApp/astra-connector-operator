@@ -9,16 +9,20 @@ import (
 )
 
 type Astra struct {
+	// +kubebuilder:validation:Required
 	AccountId string `json:"accountId"`
-	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Required
 	CloudId string `json:"cloudId"`
+	// +kubebuilder:validation:Required
+	ClusterId string `json:"clusterId"`
 	// +kubebuilder:validation:Optional
-	ClusterId   string `json:"clusterId"`
 	ClusterName string `json:"clusterName,omitempty"`
 	// +kubebuilder:validation:Optional
-	SkipTLSValidation bool   `json:"skipTLSValidation,omitempty"`
-	TokenRef          string `json:"tokenRef,omitempty"`
-	Unregister        bool   `json:"unregister,omitempty"`
+	SkipTLSValidation bool `json:"skipTLSValidation,omitempty"`
+	// +kubebuilder:validation:Required
+	TokenRef string `json:"tokenRef,omitempty"`
+	// +kubebuilder:validation:Optional
+	Unregister bool `json:"unregister,omitempty"`
 }
 
 // AutoSupport defines how the customer interacts with NetApp ActiveIQ.
