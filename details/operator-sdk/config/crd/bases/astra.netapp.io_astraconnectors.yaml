@@ -65,6 +65,11 @@ spec:
                     type: string
                   unregister:
                     type: boolean
+                required:
+                - accountId
+                - cloudId
+                - clusterId
+                - tokenRef
                 type: object
               astraConnect:
                 properties:
@@ -180,6 +185,11 @@ spec:
                         type: string
                       unregister:
                         type: boolean
+                    required:
+                    - accountId
+                    - cloudId
+                    - clusterId
+                    - tokenRef
                     type: object
                   astraConnect:
                     properties:
