@@ -246,9 +246,6 @@ spec:
           spec:
             description: AppMirrorRelationshipSpec defines the desired state of AppMirrorRelationship
             properties:
-              applicationRef:
-                description: ApplicationRef is the name of the Application
-                type: string
               desiredState:
                 description: DesiredState is the desired state of the AppMirrorRelationship
                 enum:
@@ -257,6 +254,9 @@ spec:
                 type: string
               destinationAppVaultRef:
                 description: DestinationAppVaultRef is the name of the destination AppVault
+                type: string
+              destinationApplicationRef:
+                description: DestinationApplicationRef is the name of the destination Application
                 type: string
               namespaceMapping:
                 description: NamespaceMapping is the mapping between source namespace to target namespace
@@ -282,19 +282,23 @@ spec:
               sourceAppVaultRef:
                 description: SourceAppVaultRef is the name of the source AppVault
                 type: string
-              sourceSnapshotsPath:
-                description: SourceSnapshotsPath is the name of the source app snapshots path
+              sourceApplicationName:
+                description: SourceApplicationName is the name of the source Application CR
+                type: string
+              sourceApplicationUID:
+                description: SourceApplicationUID is the UID of the source Application CR
                 type: string
               storageClassName:
                 description: StorageClassName is the name of the StorageClass to use when creating new PVCs
                 type: string
             required:
-            - applicationRef
             - desiredState
             - destinationAppVaultRef
+            - destinationApplicationRef
             - recurrenceRule
             - sourceAppVaultRef
-            - sourceSnapshotsPath
+            - sourceApplicationName
+            - sourceApplicationUID
             type: object
           status:
             description: AppMirrorRelationshipStatus defines the observed state of AppMirrorRelationship
@@ -407,28 +411,13 @@ spec:
                 description: Name of the owning AppMirrorRelationship
                 minLength: 1
                 type: string
-              applicationRef:
-                description: Name of the Application
-                minLength: 1
-                type: string
-              destinationAppVaultRef:
-                description: Name of the DestinationAppVault
-                minLength: 1
-                type: string
               sourceAppArchivePath:
                 description: Name of the source app archive path
                 minLength: 1
                 type: string
-              sourceAppVaultRef:
-                description: Name of the SourceAppVault
-                minLength: 1
-                type: string
             required:
             - appMirrorRelationshipRef
-            - applicationRef
-            - destinationAppVaultRef
             - sourceAppArchivePath
-            - sourceAppVaultRef
             type: object
           status:
             description: AppMirrorUpdateStatus defines the observed state of AppMirrorUpdate
