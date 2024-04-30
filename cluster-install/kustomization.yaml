@@ -1,0 +1,10 @@
+# Temporary patch until we figure out the structure and contents of all resources
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../details/operator-sdk/config/default
+  - ./neptune.yaml
+
+patches:
+  - path: ./operator-proxy-role.yaml
