@@ -81,7 +81,7 @@ func DefaultConfiguration() *MutableConfiguration {
 			DeployNatsConnector:   true,
 			DeployNeptune:         true,
 			SkipAstraRegistration: false,
-			NatLess:               true,
+			NatLess:               false,
 		},
 	}
 }
