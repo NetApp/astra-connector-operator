@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net/http"
 	"reflect"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"strings"
 	"time"
 
@@ -450,7 +451,7 @@ func getPodNames(pods []corev1.Pod) []string {
 // SetupWithManager sets up the controller with the Manager.
 func (r *AstraConnectorController) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&v1.AstraConnector{}).
+		For(&v1.AstraConnector{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
 		Owns(&appsv1.Deployment{}).
 		Owns(&appsv1.StatefulSet{}).
 		Owns(&corev1.Service{}).

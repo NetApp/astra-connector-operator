@@ -18,9 +18,8 @@ type Astra struct {
 	// +kubebuilder:validation:Optional
 	ClusterName string `json:"clusterName,omitempty"`
 	// +kubebuilder:validation:Optional
-	SkipTLSValidation bool `json:"skipTLSValidation,omitempty"`
-	// +kubebuilder:validation:Required
-	TokenRef string `json:"tokenRef,omitempty"`
+	SkipTLSValidation bool   `json:"skipTLSValidation,omitempty"`
+	TokenRef          string `json:"tokenRef,omitempty"`
 	// +kubebuilder:validation:Optional
 	Unregister bool `json:"unregister,omitempty"`
 }
