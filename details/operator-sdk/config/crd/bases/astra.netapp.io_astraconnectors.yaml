@@ -69,7 +69,6 @@ spec:
                 - accountId
                 - cloudId
                 - clusterId
-                - tokenRef
                 type: object
               astraConnect:
                 properties:
@@ -189,7 +188,6 @@ spec:
                     - accountId
                     - cloudId
                     - clusterId
-                    - tokenRef
                     type: object
                   astraConnect:
                     properties:
