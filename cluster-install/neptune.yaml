@@ -4129,6 +4129,9 @@ spec:
                 minLength: 0
                 pattern: ^(0|([1-9][0-9]*))$
                 type: string
+              dataMover:
+                description: DataMover specifies which data mover to use for backups. Valid options are Kopia, Restic (default).
+                type: string
               dayOfMonth:
                 description: Numeric value indicating the day of the month (1-31) to execute the schedule. This field is only present if granularity is set to "monthly".
                 type: string
