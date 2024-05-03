@@ -49,7 +49,7 @@ else
 fi
 
 # Now you can use $cloudID in the rest of your script
-echo "Cloud ID: ${cloudID}"
+#echo "Cloud ID: ${cloudID}"
 
 
 
@@ -74,4 +74,23 @@ fi
 
 # Extract the id from the response and store it in clusterID
 clusterID=$(echo "${cluster_response}" | jq -r '.id')
-echo "Cluster ID: ${clusterID}"
+#echo "Cluster ID: ${clusterID}"
+
+# Print the YAML template, replacing the placeholders with the variables
+echo "apiVersion: astra.netapp.io/v1
+kind: AstraConnector
+metadata:
+  name: astra-connector
+  namespace: astra-connector
+spec:
+  astra:
+    accountId: ${account_id}
+    clusterId: ${clusterID}
+    cloudId: ${cloudID}
+    skipTLSValidation: true
+    tokenRef: astra-api-token
+  natsSyncClient:
+    cloudBridgeURL: ${astra_url}
+  imageRegistry:
+    name: netappdownloads.jfrog.io/docker-astra-control-staging/arch30/neptune
+    secret: regcred"
