@@ -1,0 +1,77 @@
+#!/bin/bash
+
+## Please fill this out
+astra_url="ASTRAURL"
+account_id="ACCOUNTID"
+auth_token="AUTHTOKEN"
+cluster_name="bobby"
+
+# Define the base URL and headers for convenience
+base_url="${astra_url}/accounts/${account_id}/topology/v1/clouds"
+accept_header="accept: application/json"
+auth_header="Authorization: Bearer ${auth_token}"
+cluster_name_unique=${cluster_name}-$(date +%m-%d-%H-%M%S)
+
+# See if cloud exists
+response=$(curl -s -S -k -X 'GET' \
+  "${base_url}?include=id%2Cname%2Cstate&filter=name%20eq%20%27private%27" \
+  -H "${accept_header}" \
+  -H "${auth_header}")
+# check see GET wored
+if [ $? -ne 0 ]; then
+  echo "Error: Failed to make GET request"
+  exit 1
+fi
+
+# Extract the items array from the response
+items=$(echo "${response}" | jq '.items')
+
+# Check if the items array has exactly one item
+if [ $(echo "${items}" | jq 'length') -eq 1 ]; then
+  # If it does, extract the id and store it in cloudID
+  cloudID=$(echo "${items}" | jq -r '.[0][0]')
+else
+  # If it doesn't, make a POST request to create the item
+  post_response=$(curl -k -X 'POST' \
+    "${base_url}" \
+    -H "${accept_header}" \
+    -H "${auth_header}" \
+    -H 'Content-Type: application/astra-cloud+json' \
+    -d '{
+      "cloudType": "private",
+      "name": "private",
+      "type": "application/astra-cloud",
+      "version": "1.1"
+    }')
+
+  # Extract the id from the response and store it in cloudID
+  cloudID=$(echo "${post_response}" | jq -r '.id')
+fi
+
+# Now you can use $cloudID in the rest of your script
+echo "Cloud ID: ${cloudID}"
+
+
+
+# Make the POST request using the cloudID
+cluster_response=$(curl -s -S -k -X 'POST' \
+  "${base_url}/${cloudID}/clusters" \
+  -H 'accept: application/astra-cluster+json' \
+  -H "${auth_header}" \
+  -H 'Content-Type: application/astra-cluster+json' \
+  -d '{
+    "name": "'"${cluster_name_unique}"'",
+    "type": "application/astra-cluster",
+    "connectorInstall": "pending",
+    "version": "1.6"
+  }')
+
+# Check if the curl command was successful
+if [ $? -ne 0 ]; then
+  echo "Error: Failed to make POST request"
+  exit 1
+fi
+
+# Extract the id from the response and store it in clusterID
+clusterID=$(echo "${cluster_response}" | jq -r '.id')
+echo "Cluster ID: ${clusterID}"
