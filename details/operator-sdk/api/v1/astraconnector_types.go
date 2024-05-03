@@ -64,7 +64,8 @@ type AstraConnect struct {
 // +kubebuilder:validation:Optional
 
 type Neptune struct {
-	Image string `json:"image,omitempty"`
+	Image              string `json:"image,omitempty"`
+	JobImagePullPolicy string `json:"jobImagePullPolicy,omitempty"`
 }
 
 // AstraConnectorSpec defines the desired state of AstraConnector
