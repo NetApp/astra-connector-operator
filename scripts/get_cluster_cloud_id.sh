@@ -91,6 +91,7 @@ spec:
     tokenRef: astra-api-token
   natsSyncClient:
     cloudBridgeURL: ${astra_url}
+    # hostAliasIP: IP needed if cloudBridgeURL DNS is not routable
   imageRegistry:
     name: netappdownloads.jfrog.io/docker-astra-control-staging/arch30/neptune
     secret: regcred"
