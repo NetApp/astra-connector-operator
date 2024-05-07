@@ -350,6 +350,11 @@ spec:
               error:
                 description: Error indicates the most recent error that has occurred. The error may not be permanent, so progress may continue after temporarily seeing an error.
                 type: string
+              lastSync:
+                additionalProperties:
+                  type: string
+                description: LastSync stores the startTime and completionTime for the last sync
+                type: object
               state:
                 description: State indicates the current state of the AppMirrorRelationship
                 type: string
