@@ -387,18 +387,6 @@ func (r *AstraConnectorController) updateAstraConnectorStatus(
 	astraConnector *v1.AstraConnector,
 	natsSyncClientStatus v1.NatsSyncClientStatus,
 	updateObservedSpec ...bool) error {
-	// Update the astraConnector status with the pod names
-	// List the pods for this astraConnector's deployment
-	log := ctrllog.FromContext(ctx)
-	podList := &corev1.PodList{}
-	listOpts := []client.ListOption{
-		client.InNamespace(astraConnector.Namespace),
-	}
-	if err := r.List(ctx, podList, listOpts...); err != nil {
-		log.Error(err, "Failed to list pods", "Namespace", astraConnector.Namespace)
-		return err
-	}
-	podNames := getPodNames(podList.Items)
 
 	// due to conflicts with network or changing object we need to retry on conflict
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
@@ -407,16 +395,6 @@ func (r *AstraConnectorController) updateAstraConnectorStatus(
 		err := r.Get(ctx, types.NamespacedName{Name: astraConnector.Name, Namespace: astraConnector.Namespace}, current)
 		if err != nil {
 			return err
-		}
-
-		// Update status.Nodes if needed
-		if !reflect.DeepEqual(podNames, astraConnector.Status.Nodes) {
-			astraConnector.Status.Nodes = podNames
-		}
-
-		// FIXME Status should never be nil
-		if astraConnector.Status.Nodes == nil {
-			astraConnector.Status.Nodes = []string{""}
 		}
 
 		if !reflect.DeepEqual(natsSyncClientStatus, astraConnector.Status.NatsSyncClient) {
