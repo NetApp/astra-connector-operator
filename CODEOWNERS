@@ -1,0 +1,14 @@
+################################################################################
+# GitHub CODEOWNERS documentation can be found here:
+# https://docs.github.com/en/free-pro-team@latest/github/creating-cloning-and-archiving-repositories/about-code-owners
+################################################################################
+
+########################################
+# DevOps and Tools
+########################################
+
+# DevOps and Jenkins CI/CD
+/.github/ @NetApp-Polaris/devops-team
+/deploy/ @NetApp-Polaris/devops-team
+/.golangci.yaml @NetApp-Polaris/devops-team
+/Dockerfile @NetApp-Polaris/devops-team
