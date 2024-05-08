@@ -417,15 +417,6 @@ func (r *AstraConnectorController) updateAstraConnectorStatus(
 	})
 }
 
-// getPodNames returns the pod names of the array of pods passed in
-func getPodNames(pods []corev1.Pod) []string {
-	var podNames []string
-	for _, pod := range pods {
-		podNames = append(podNames, pod.Name)
-	}
-	return podNames
-}
-
 // SetupWithManager sets up the controller with the Manager.
 func (r *AstraConnectorController) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
