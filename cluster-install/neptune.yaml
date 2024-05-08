@@ -6311,6 +6311,14 @@ rules:
 - apiGroups:
   - trident.netapp.io
   resources:
+  - tridentorchestrators
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - trident.netapp.io
+  resources:
   - tridentvolumes
   verbs:
   - get
