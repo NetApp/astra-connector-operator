@@ -9,6 +9,5 @@
 
 # DevOps and Jenkins CI/CD
 /.github/ @NetApp-Polaris/devops-team
-/deploy/ @NetApp-Polaris/devops-team
 /.golangci.yaml @NetApp-Polaris/devops-team
 /Dockerfile @NetApp-Polaris/devops-team
