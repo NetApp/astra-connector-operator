@@ -138,6 +138,8 @@ spec:
                 properties:
                   image:
                     type: string
+                  jobImagePullPolicy:
+                    type: string
                 type: object
               skipPreCheck:
                 default: false
@@ -259,6 +261,8 @@ spec:
                   neptune:
                     properties:
                       image:
+                        type: string
+                      jobImagePullPolicy:
                         type: string
                     type: object
                   skipPreCheck:

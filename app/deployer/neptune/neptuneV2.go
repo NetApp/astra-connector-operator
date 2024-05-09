@@ -172,7 +172,14 @@ func (n NeptuneClientDeployerV2) GetDeploymentObjects(m *v1.AstraConnector, ctx 
 								"/manager",
 							},
 							Image: neptuneImage,
-							Env:   getNeptuneEnvVars(imageRegistry, containerImage, m.Spec.ImageRegistry.Secret, m.Spec.AutoSupport.URL, m.Spec.Labels),
+							Env: getNeptuneEnvVars(
+								imageRegistry,
+								containerImage,
+								m.Spec.Neptune.JobImagePullPolicy,
+								m.Spec.ImageRegistry.Secret,
+								m.Spec.AutoSupport.URL,
+								m.Spec.Labels,
+							),
 							LivenessProbe: &corev1.Probe{
 								ProbeHandler: corev1.ProbeHandler{
 									HTTPGet: &corev1.HTTPGetAction{
@@ -251,7 +258,7 @@ func (n NeptuneClientDeployerV2) GetDeploymentObjects(m *v1.AstraConnector, ctx 
 	return deps, mutateFunc, nil
 }
 
-func getNeptuneEnvVars(imageRegistry, containerImage, pullSecret, asupUrl string, mLabels map[string]string) []corev1.EnvVar {
+func getNeptuneEnvVars(imageRegistry, containerImage, jobImagePullPolicy, pullSecret, asupUrl string, mLabels map[string]string) []corev1.EnvVar {
 	var envVars []corev1.EnvVar
 
 	//DefaultImageRegistry := "netappdownloads.jfrog.io/docker-astra-control-staging/arch30/neptune"
@@ -294,6 +301,13 @@ func getNeptuneEnvVars(imageRegistry, containerImage, pullSecret, asupUrl string
 		envVars = append(envVars, corev1.EnvVar{
 			Name:  "NEPTUNE_SECRET",
 			Value: pullSecret,
+		})
+	}
+
+	if jobImagePullPolicy != "" {
+		envVars = append(envVars, corev1.EnvVar{
+			Name:  "JOB_IMAGE_PULL_POLICY",
+			Value: jobImagePullPolicy,
 		})
 	}
 
