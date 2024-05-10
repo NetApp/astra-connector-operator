@@ -121,6 +121,8 @@ type ClusterRegisterUtil interface {
 	CreateOrUpdateManagedCluster(astraHost, cloudId, clusterId, astraConnectorId, managedClustersMethod, apiToken string) (ClusterInfo, string, error)
 	ValidateAndGetCluster(astraHost, cloudId, apiToken, clusterId string) (ClusterInfo, string, error)
 	UnmanageCluster(clusterID string) error
+	IsClusterManaged() (bool, string, error)
+	SetHttpClient(disableTls bool, astraHost string) error
 }
 
 type clusterRegisterUtil struct {
@@ -317,7 +319,7 @@ func (c clusterRegisterUtil) readResponseBody(response *http.Response) ([]byte, 
 	return bodyBytes, nil
 }
 
-func (c clusterRegisterUtil) setHttpClient(disableTls bool, astraHost string) error {
+func (c clusterRegisterUtil) SetHttpClient(disableTls bool, astraHost string) error {
 	if disableTls {
 		http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 		c.Log.WithValues("disableTls", disableTls).Info("TLS Validation Disabled! Not for use in production!")
@@ -551,6 +553,53 @@ func (c clusterRegisterUtil) GetOrCreateCloud(astraHost, cloudType, apiToken str
 	c.Log.WithValues("cloudID", cloudId).Info("Found/Created Cloud")
 
 	return cloudId, "", nil
+}
+
+func (c clusterRegisterUtil) IsClusterManaged() (bool, string, error) {
+	apiToken, errorReason, err := c.GetAPITokenFromSecret(c.AstraConnector.Spec.Astra.TokenRef)
+	if err != nil {
+		return false, errorReason, err
+	}
+
+	astraHost := GetAstraHostURL(c.AstraConnector)
+	url := fmt.Sprintf("%s/accounts/%s/topology/v1/managedClusters/%s", astraHost, c.AstraConnector.Spec.Astra.AccountId, c.AstraConnector.Spec.Astra.ClusterId)
+
+	c.Log.WithValues("ClusterId", c.AstraConnector.Spec.Astra.ClusterId).
+		Info("Checking if cluster is managed")
+
+	headerMap := HeaderMap{Authorization: fmt.Sprintf("Bearer %s", apiToken)}
+	response, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodGet, url, nil, headerMap, c.Log)
+	defer cancel()
+	if err != nil {
+		return false, CreateErrorMsg("IsClusterManaged", "GET /managedCluster error", url, "", "", err), err
+	}
+	if response.StatusCode != 200 {
+		return false, CreateErrorMsg("IsClusterManaged", "GET /managedCluster non 200 response", url, response.Status, "", err), err
+	}
+
+	respBody, err := c.readResponseBody(response)
+	if err != nil {
+		return false, CreateErrorMsg("IsClusterManaged", "parse GET /managedCluster response", url, response.Status, "", err), err
+	}
+
+	type ManagedClusterResp struct {
+		ID           string `json:"id"`
+		Name         string `json:"name"`
+		ManagedState string `json:"managedState"`
+	}
+
+	clusterResp := &ManagedClusterResp{}
+	err = json.Unmarshal(respBody, &clusterResp)
+	if err != nil {
+		return false, CreateErrorMsg("IsClusterManaged", "unmarshal response from GET call", url, response.Status, string(respBody), err), err
+	}
+
+	if clusterResp == nil || clusterResp.ManagedState != "managed" {
+		return false, "", nil
+	}
+
+	return true, "", nil
+
 }
 
 type Cluster struct {
@@ -1045,7 +1094,7 @@ func (c clusterRegisterUtil) RegisterClusterWithAstra(astraConnectorId string, c
 	astraHost := GetAstraHostURL(c.AstraConnector)
 	c.Log.WithValues("URL", astraHost).Info("Astra Host Info")
 
-	err := c.setHttpClient(c.AstraConnector.Spec.Astra.SkipTLSValidation, astraHost)
+	err := c.SetHttpClient(c.AstraConnector.Spec.Astra.SkipTLSValidation, astraHost)
 	if err != nil {
 		return "", "Failed to set TLS Config", err
 	}

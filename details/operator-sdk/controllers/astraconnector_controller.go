@@ -221,6 +221,34 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 
 			if conf.Config.FeatureFlags().NatLess() {
 				connectorResults, deployError = r.deployNatlessConnector(ctx, astraConnector, &natsSyncClientStatus)
+
+				// Wait for the cluster to become managed (aka "registered")
+				natsSyncClientStatus.Status = WaitForClusterManagedState
+				_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
+				isManaged, err := waitForManagedCluster(astraConnector, r.Client, log)
+				if !isManaged {
+					log.Error(err, "timed out waiting for cluster to become managed, requeueing after delay", "delay", conf.Config.ErrorTimeout())
+					natsSyncClientStatus.Status = ErrorClusterUnmanaged
+					_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
+					// Do not wait 5min, wait 5sec before requeue instead since we have already been waiting in waitForManagedCluster
+					return ctrl.Result{RequeueAfter: time.Second * conf.Config.ErrorTimeout()}, nil
+				}
+				log.Info("Cluster is managed")
+
+				// ASUP Setup
+				err = r.createASUPCR(ctx, astraConnector, astraConnector.Spec.Astra.ClusterId)
+				if err != nil {
+					log.Error(err, FailedASUPCreation)
+					natsSyncClientStatus.Status = FailedASUPCreation
+					_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
+					return ctrl.Result{RequeueAfter: time.Minute * conf.Config.ErrorTimeout()}, err
+				}
+
+				natsSyncClientStatus.Registered = "true"
+				natsSyncClientStatus.AstraConnectorID = "n/a" // Nats specific. NatLess connector does not have this
+				natsSyncClientStatus.AstraClusterId = astraConnector.Spec.Astra.ClusterId
+				natsSyncClientStatus.Status = RegisteredWithAstra
+				_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
 			} else {
 				connectorResults, deployError = r.deployConnector(ctx, astraConnector, &natsSyncClientStatus)
 			}
@@ -557,4 +585,30 @@ func (r *AstraConnectorController) waitForStatusUpdate(astraConnector *v1.AstraC
 		log.Info("AstraConnector status reflected in k8s")
 	}
 	return err
+}
+
+func waitForManagedCluster(astraConnector *v1.AstraConnector, client client.Client, log logr.Logger) (bool, error) {
+	registerUtil := register.NewClusterRegisterUtil(astraConnector, &http.Client{}, client, nil, log, context.Background())
+	// SetHttpClient should be in the New func above but would require a larger refactor
+	// Setup TLS if enabled, setup hostAliasIP if used
+	err := registerUtil.SetHttpClient(astraConnector.Spec.Astra.SkipTLSValidation, register.GetAstraHostURL(astraConnector))
+	if err != nil {
+		return false, fmt.Errorf("failed to setup HTTP client: %w", err)
+	}
+
+	maxRetries := 5
+	waitTime := 3 * time.Second
+	var isManaged bool
+	for i := 1; i <= maxRetries; i++ {
+		isManaged, _, err = registerUtil.IsClusterManaged()
+		if isManaged {
+			break
+		}
+		if err != nil {
+			log.Error(err, "encountered error while checking for cluster management")
+		}
+		log.Info("cluster not yet managed", "retiresLeft", maxRetries-i)
+		time.Sleep(waitTime)
+	}
+	return isManaged, err
 }
