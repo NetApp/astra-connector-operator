@@ -1829,7 +1829,6 @@ spec:
             required:
             - action
             - applicationRef
-            - enabled
             - hookSource
             - stage
             type: object
