@@ -21,7 +21,7 @@ func (r *AstraConnectorController) deployNatlessConnector(ctx context.Context,
 	log := ctrllog.FromContext(ctx)
 
 	// let's deploy Astra Connector without Nats
-	connectorDeployers := getNatlessDeployers()
+	connectorDeployers := getDeployers()
 	for _, deployer := range connectorDeployers {
 		err := r.deployResources(ctx, deployer, astraConnector, natsSyncClientStatus)
 		if err != nil {
@@ -51,8 +51,8 @@ func (r *AstraConnectorController) deployNatlessConnector(ctx context.Context,
 	return ctrl.Result{}, nil
 }
 
-func getNatlessDeployers() []model.Deployer {
-	return []model.Deployer{connector.NewAstraConnectorNatlessDeployer()}
+func getDeployers() []model.Deployer {
+	return []model.Deployer{connector.NewAstraConnectorDeployer()}
 }
 
 func (r *AstraConnectorController) createASUPCR(ctx context.Context, astraConnector *v1.AstraConnector, astraClusterID string) error {
