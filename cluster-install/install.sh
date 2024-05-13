@@ -2199,7 +2199,7 @@ step_generate_and_apply_resource_limit_patches() {
     local -r patch_value="$_PROCESSED_RESOURCE_LIMITS"
     local -a patches_list_for_debugging=()
 
-    logheader "$__DEBUG" "$(prefix_dryrun "Creating and applying resource-limit patches")"
+    logheader "$__INFO" "$(prefix_dryrun "Applying resource limits...")"
     logdebug "configured limits: $patch_value"
 
     # Note 1: The order we patch these is somewhat important to minimize downtime, as the operators create resources
