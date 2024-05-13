@@ -30,15 +30,6 @@ import (
 	v1 "github.com/NetApp-Polaris/astra-connector-operator/details/operator-sdk/api/v1"
 )
 
-const (
-	errorRetrySleep         = time.Second * 3
-	clusterUnManagedState   = "unmanaged"
-	clusterManagedState     = "managed"
-	getClusterPollCount     = 5
-	connectorInstalled      = "installed"
-	connectorInstallPending = "pending"
-)
-
 // HTTPClient interface used for request and to facilitate testing
 type HTTPClient interface {
 	Do(req *http.Request) (*http.Response, error)

@@ -5,17 +5,14 @@
 package register_test
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"io"
 	coreV1 "k8s.io/api/core/v1"
 	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
-	"net/http"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"testing"
 
@@ -34,30 +31,6 @@ const (
 )
 
 var ctx = context.Background()
-
-type mockRead struct {
-	mock.Mock
-}
-
-var mockHttpRes400 = &http.Response{
-	StatusCode: 400,
-	Body:       io.NopCloser(bytes.NewReader([]byte(`errorBody`))),
-	Status:     "Mock Error",
-}
-
-var mockHttpRes401 = &http.Response{
-	StatusCode: 400,
-	Body:       io.NopCloser(bytes.NewReader([]byte(`errorBody`))),
-	Status:     "Mock Error",
-}
-
-func (m *mockRead) Read(in []byte) (n int, err error) {
-	return m.Called(in).Int(0), m.Called(in).Error(1)
-}
-
-func (m *mockRead) Close() error {
-	return m.Called().Error(0)
-}
 
 func setupTokenSecret(secretName string, k8sClient client.Client) {
 	secretObj := &coreV1.Secret{
