@@ -1224,7 +1224,7 @@ create_kubectl_patch_for_containers() {
     local json_patch="[${__NEWLINE}"
     local current
     for (( i=0; i<"$container_count"; i++ )); do
-        current='{'$dry_run_warning'"op": "replace","path": "'
+        current='{'$dry_run_warning'"op": "add","path": "'
         current+=$containers_list_path_slash'/'$i'/'$resource_path'","value": '$patch_value'}'
         json_patch+="$(echo "$current" | jq -r),"
         if (( i < container_count-1 )); then
