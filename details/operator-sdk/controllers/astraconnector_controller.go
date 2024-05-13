@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"reflect"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"strings"
 	"time"
@@ -17,6 +16,9 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
 
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -203,6 +205,34 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 
 		connectorResults, deployError = r.deployNatlessConnector(ctx, astraConnector, &natsSyncClientStatus)
 
+		// Wait for the cluster to become managed (aka "registered")
+		natsSyncClientStatus.Status = WaitForClusterManagedState
+		_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
+		isManaged, err := waitForManagedCluster(astraConnector, r.Client, log)
+		if !isManaged {
+			log.Error(err, "timed out waiting for cluster to become managed, requeueing after delay", "delay", conf.Config.ErrorTimeout())
+			natsSyncClientStatus.Status = ErrorClusterUnmanaged
+			_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
+			// Do not wait 5min, wait 5sec before requeue instead since we have already been waiting in waitForManagedCluster
+			return ctrl.Result{RequeueAfter: time.Second * conf.Config.ErrorTimeout()}, nil
+		}
+		log.Info("Cluster is managed")
+
+		// ASUP Setup
+		err = r.createASUPCR(ctx, astraConnector, astraConnector.Spec.Astra.ClusterId)
+		if err != nil {
+			log.Error(err, FailedASUPCreation)
+			natsSyncClientStatus.Status = FailedASUPCreation
+			_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
+			return ctrl.Result{RequeueAfter: time.Minute * conf.Config.ErrorTimeout()}, err
+		}
+
+		natsSyncClientStatus.Registered = "true"
+		natsSyncClientStatus.AstraConnectorID = "n/a" // Nats specific. NatLess connector does not have this
+		natsSyncClientStatus.AstraClusterId = astraConnector.Spec.Astra.ClusterId
+		natsSyncClientStatus.Status = RegisteredWithAstra
+		_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
+
 		if deployError != nil {
 			// Note: Returning nil in error since we want to wait for the requeue to happen
 			// non nil errors triggers the requeue right away
@@ -222,7 +252,6 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 	}
 
 	return ctrl.Result{}, nil
-
 }
 
 func (r *AstraConnectorController) updateAstraConnectorStatus(
