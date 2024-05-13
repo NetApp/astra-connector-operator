@@ -18,10 +18,7 @@ import (
 	"github.com/pkg/errors"
 
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -226,66 +223,6 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 
 	return ctrl.Result{}, nil
 
-}
-
-// removeResourcesFinalizer removes the finalizer from neptune CRs as a last-ditch effort to remove resources.
-func (r *AstraConnectorController) removeResourcesFinalizer(gvr schema.GroupVersionResource, namespace string) error {
-	resourceList, err := r.DynamicClient.Resource(gvr).Namespace(namespace).List(context.Background(), metav1.ListOptions{})
-	if err != nil {
-		return err
-	}
-
-	// Iterate over the resources
-	for _, resource := range resourceList.Items {
-		// Get the finalizers
-		finalizers, found, err := unstructured.NestedStringSlice(resource.Object, "metadata", "finalizers")
-		if err != nil {
-			return err
-		}
-
-		if found {
-			finalizers = removeString(finalizers, "astra.netapp.io/finalizer")
-
-			// Update the finalizers in the resource
-			if err := unstructured.SetNestedStringSlice(resource.Object, finalizers, "metadata", "finalizers"); err != nil {
-				return err
-			}
-
-			_, err = r.DynamicClient.Resource(gvr).Namespace(namespace).Update(context.Background(), &resource, metav1.UpdateOptions{})
-			if err != nil {
-				return err
-			}
-		}
-	}
-	return err
-}
-
-// gvrContainsResources takes in a GVR and a namespace to check if at least one resource for that GVR in the
-// namespace exists.
-func (r *AstraConnectorController) gvrContainsResources(ctx context.Context, gvr schema.GroupVersionResource, namespace string) bool {
-	log := ctrllog.FromContext(ctx)
-
-	// We only need to check if at least one resource still exists for this CRD
-	resourceList, err := r.DynamicClient.Resource(gvr).Namespace(namespace).List(ctx, metav1.ListOptions{Limit: 1})
-	if err != nil {
-		log.Error(err, "Unable to list resources", "Resource", gvr.Resource)
-		return false
-	}
-	if len(resourceList.Items) == 0 {
-		log.Info("Deleted all resources", "GVR", gvr)
-		return false
-	}
-	return true
-}
-
-// removeString removes a string from a slice of strings.
-func removeString(slice []string, s string) []string {
-	for i, v := range slice {
-		if v == s {
-			return append(slice[:i], slice[i+1:]...)
-		}
-	}
-	return slice
 }
 
 func (r *AstraConnectorController) updateAstraConnectorStatus(
