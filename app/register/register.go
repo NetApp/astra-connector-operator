@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -123,30 +122,6 @@ type AstraConnector struct {
 	Id string `json:"locationID"`
 }
 
-// generateAuthPayload Returns the payload for authentication
-func (c clusterRegisterUtil) generateAuthPayload() ([]byte, string, error) {
-	apiToken, errorReason, err := c.GetAPITokenFromSecret(c.AstraConnector.Spec.Astra.TokenRef)
-	if err != nil {
-		return nil, errorReason, err
-	}
-
-	authPayload, err := json.Marshal(map[string]string{
-		"userToken": apiToken,
-		"accountId": c.AstraConnector.Spec.Astra.AccountId,
-	})
-
-	if err != nil {
-		return nil, "Failed to marshal auth payload", err
-	}
-
-	reqBodyBytes, err := json.Marshal(map[string]string{"authToken": base64.StdEncoding.EncodeToString(authPayload)})
-	if err != nil {
-		return nil, "Failed to marshal auth token", err
-	}
-
-	return reqBodyBytes, "", nil
-}
-
 // ************************************************
 //  FUNCTIONS TO REGISTER CLUSTER WITH ASTRA
 // ************************************************
@@ -170,19 +145,6 @@ func (c clusterRegisterUtil) getAstraHostFromURL(astraHostURL string) (string, e
 		return "", errors.New(errStr)
 	}
 	return cloudBridgeURLSplit[1], nil
-}
-
-func (c clusterRegisterUtil) logHttpError(response *http.Response) {
-	bodyBytes, err := io.ReadAll(response.Body)
-	if err != nil {
-		c.Log.Error(err, "Error reading response body")
-	} else {
-		c.Log.Info("Received unexpected status", "responseBody", string(bodyBytes), "status", response.Status)
-		err = response.Body.Close()
-		if err != nil {
-			c.Log.Error(err, "Error closing the response body")
-		}
-	}
 }
 
 func (c clusterRegisterUtil) readResponseBody(response *http.Response) ([]byte, error) {
