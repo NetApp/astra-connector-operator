@@ -96,8 +96,6 @@ type AstraConnectorSpec struct {
 // AstraConnectorStatus defines the observed state of AstraConnector
 type AstraConnectorStatus struct {
 	NatsSyncClient NatsSyncClientStatus `json:"natsSyncClient"`
-	// ObservedSpec is the last observed Connector custom resource spec
-	ObservedSpec AstraConnectorSpec `json:"observedSpec,omitempty"`
 }
 
 // NatsSyncClientStatus defines the observed state of NatsSyncClient
