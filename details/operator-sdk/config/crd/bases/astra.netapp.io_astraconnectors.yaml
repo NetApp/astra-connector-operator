@@ -155,8 +155,6 @@ spec:
                 properties:
                   astraClusterID:
                     type: string
-                  astraConnectorID:
-                    type: string
                   registered:
                     type: string
                   status:
