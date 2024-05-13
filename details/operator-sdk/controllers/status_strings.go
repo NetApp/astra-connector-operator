@@ -32,14 +32,9 @@ const (
 	FailedLocationIDGet = "Failed to get the locationID from ConfigMap"
 	EmptyLocationIDGet  = "Got an empty location ID from ConfigMap"
 
-	RegisterNSClient         = "Registered natsSyncClient"
-	FailedRegisterNSClient   = "Failed to register natsSyncClient"
-	UnregisterNSClient       = "Unregistered natsSyncClient"
 	FailedUnRegisterNSClient = "Failed to unregister natsSyncClient"
 	FailedASUPCreation       = "Failed to create ASUP CR"
 
 	DeployedComponents  = "Deployed all the connector components"
 	RegisteredWithAstra = "Registered with Astra"
-
-	FailedConnectorIDAdd = "Failed to add cluster to Astra"
 )

@@ -2,6 +2,9 @@ package controllers
 
 import (
 	"context"
+	"fmt"
+	"github.com/NetApp-Polaris/astra-connector-operator/details/k8s"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"time"
 
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -50,4 +53,42 @@ func (r *AstraConnectorController) deployNatlessConnector(ctx context.Context,
 
 func getNatlessDeployers() []model.Deployer {
 	return []model.Deployer{connector.NewAstraConnectorNatlessDeployer()}
+}
+
+func (r *AstraConnectorController) createASUPCR(ctx context.Context, astraConnector *v1.AstraConnector, astraClusterID string) error {
+	log := ctrllog.FromContext(ctx)
+	k8sUtil := k8s.NewK8sUtil(r.Client, r.Clientset, log)
+
+	cr := &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"apiVersion": "astra.netapp.io/v1",
+			"kind":       "AutoSupportBundleSchedule",
+			"metadata": map[string]interface{}{
+				"name":      "asupbundleschedule-" + astraClusterID,
+				"namespace": astraConnector.Namespace,
+			},
+			"spec": map[string]interface{}{
+				"enabled": astraConnector.Spec.AutoSupport.Enrolled,
+			},
+		},
+	}
+	// Define the MutateFn function
+	mutateFn := func() error {
+		cr.Object["spec"].(map[string]interface{})["enabled"] = astraConnector.Spec.AutoSupport.Enrolled
+		return nil
+	}
+	result, err := k8sUtil.CreateOrUpdateResource(ctx, cr, astraConnector, mutateFn)
+	if err != nil {
+		return err
+	}
+
+	log.Info(fmt.Sprintf("Successfully %s AutoSupportBundleSchedule", result))
+	return nil
+}
+
+func (r *AstraConnectorController) deleteConnectorClusterScopedResources(ctx context.Context, astraConnector *v1.AstraConnector) {
+	connectorDeployers := getDeployers()
+	for _, deployer := range connectorDeployers {
+		r.deleteClusterScopedResources(ctx, deployer, astraConnector)
+	}
 }
