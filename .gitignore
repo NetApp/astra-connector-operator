@@ -36,5 +36,5 @@ build/
 **/astra-generated/
 
 # Unified Installer: ignore env files that devs may end up keeping around (but whitelist the example)
-unified-installer/*.env
-!unified-installer/cluster-install-example.env
+cluster-install/*.env
+cluster-install/install-example-config.env
