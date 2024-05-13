@@ -5,17 +5,9 @@
 # Deploy Trident Operator: https://docs.netapp.com/us-en/trident/trident-get-started/kubernetes-deploy-operator.html
 # Upgrade Trident: https://docs.netapp.com/us-en/trident/trident-managing-k8s/upgrade-trident.html
 
-# TODO ASTRACTL-32773: when upgrading an existing trident install that isn't in the same namespace as the given NAMESPACE,
-# the upgrade will fail because of the namespace-transformer which will overwrite the existing trident
-# install namespace on every resource (of particular note is the clusterrolebindings, which will break because
-# it will be binding the cluster role to a service account in NAMESPACE instead of the existing trident namespace).
-# Work-around: decline Trident upgrade, or use COMPONENTS=TRIDENT_ONLY if wanting to upgrade Trident
 # TODO ASTRACTL-32773: do more testing with NAMESPACE="" once we a more stable kustomize structure in ACOP/Trident repos
-# TODO ASTRACTL-32773: implement LABELS (env var is there but not used)
-# TODO ASTRACTL-32772: SHOULD_UPGRADE_TRIDENT_IF_POSSIBLE var for automation (allowing upgrade to be skipped when DISABLE_PROMPTS=true)
 # TODO ASTRACTL-32772: more in-depth CLOUD_ID and CLUSTER_ID check (duplicate cluster and such, see registration.go)
 # TODO ASTRACTL-32138 (dependency): use _KUBERNETES_VERSION to choose the right bundle yaml (pre 1.25 or post 1.25)
-# TODO: look into how the trident-autosupport tag is determined as it's preventing ACP from being enabled
 
 #----------------------------------------------------------------------
 #-- Private vars/constants
@@ -24,7 +16,6 @@
 # ------------ STATEFUL VARIABLES ------------
 _PROBLEMS=() # Any failed checks will be added to this array and the program will exit at specific checkpoints if not empty
 _CONFIG_BUILDER=() # Contains the fully resolved config to be output at the end during a dry run
-_PATCHES=() # Contains the k8s patches that will be applied alongside CRDs, CRs, etc.
 _KUBERNETES_VERSION=""
 
 _EXISTING_TORC_NAME="" # TORC is short for TridentOrchestrator (works with kubectl too)
@@ -32,10 +23,19 @@ _EXISTING_TRIDENT_NAMESPACE=""
 _EXISTING_TRIDENT_IMAGE=""
 _EXISTING_TRIDENT_ACP_ENABLED=""
 _EXISTING_TRIDENT_ACP_IMAGE=""
+_EXISTING_TRIDENT_OPERATOR_IMAGE=""
+
+# _PATCHES_ variables contain the k8s patches that will be applied after we've applied all CRs and kustomize resources.
+# Entries should omit the 'kubectl patch' from the command, e.g. `deploy/astraconnect -n astra --type=json -p '[...]'`
+_PATCHES_TORC=() # Patches for the TridentOrchestrator
+_PATCHES_TRIDENT_OPERATOR=() # Patches for the Trident Operator
 
 # _PROCESSED_LABELS will contain an already indented, YAML-compliant "map" (in string form) of the given LABELS.
 # Example: "    label1: value1\n    label2: value2\n    label3: value3"
 _PROCESSED_LABELS=""
+
+# _PROCESSED_RESOURCE_LIMITS will contain the JSON form of the resource limits, e.g. `{"cpu": "3", "memory": "6Gi"}`
+_PROCESSED_RESOURCE_LIMITS=""
 
 # ------------ CONSTANTS ------------
 readonly __RELEASE_VERSION="24.02"
@@ -52,9 +52,11 @@ readonly __KUBERNETES_MIN_VERSION="1.23"
 readonly __KUBERNETES_MAX_VERSION="1.29"
 
 readonly __COMPONENTS_ALL_ASTRA_CONTROL="ALL_ASTRA_CONTROL"
+readonly __COMPONENTS_TRIDENT_AND_ACP="TRIDENT_AND_ACP"
 readonly __COMPONENTS_TRIDENT_ONLY="TRIDENT_ONLY"
 readonly __COMPONENTS_ACP_ONLY="ACP_ONLY"
-readonly __COMPONENTS_VALID_VALUES=("$__COMPONENTS_ALL_ASTRA_CONTROL" "$__COMPONENTS_TRIDENT_ONLY" "$__COMPONENTS_ACP_ONLY")
+readonly __COMPONENTS_VALID_VALUES=("$__COMPONENTS_ALL_ASTRA_CONTROL" "$__COMPONENTS_TRIDENT_AND_ACP" \
+    "$__COMPONENTS_TRIDENT_ONLY" "$__COMPONENTS_ACP_ONLY")
 
 readonly __DEFAULT_DOCKER_HUB_IMAGE_REGISTRY="docker.io"
 readonly __DEFAULT_DOCKER_HUB_IMAGE_BASE_REPO="netapp"
@@ -62,17 +64,31 @@ readonly __DEFAULT_ASTRA_IMAGE_REGISTRY="cr.astra.netapp.io"
 readonly __DEFAULT_IMAGE_TAG="$__RELEASE_VERSION"
 
 readonly __DEFAULT_TRIDENT_OPERATOR_IMAGE_NAME="trident-operator"
+readonly __DEFAULT_TRIDENT_AUTOSUPPORT_IMAGE_NAME="trident-autosupport"
 readonly __DEFAULT_TRIDENT_IMAGE_NAME="trident"
 readonly __DEFAULT_CONNECTOR_OPERATOR_IMAGE_NAME="astra-connector-operator"
 readonly __DEFAULT_CONNECTOR_IMAGE_NAME="astra-connector"
 readonly __DEFAULT_NEPTUNE_IMAGE_NAME="controller"
 readonly __DEFAULT_TRIDENT_ACP_IMAGE_NAME="trident-acp"
 
+readonly __DEFAULT_CONNECTOR_NAMESPACE="astra-connector"
+readonly __DEFAULT_TRIDENT_NAMESPACE="trident"
+
 readonly __GENERATED_CRS_DIR="./astra-generated"
 readonly __GENERATED_CRS_FILE="$__GENERATED_CRS_DIR/crs.yaml"
 readonly __GENERATED_OPERATORS_DIR="$__GENERATED_CRS_DIR/operators"
 readonly __GENERATED_KUSTOMIZATION_FILE="$__GENERATED_OPERATORS_DIR/kustomization.yaml"
-readonly __GENERATED_PATCHES_FILE="$__GENERATED_CRS_DIR/post-deploy-patches"
+readonly __GENERATED_PATCHES_TORC_FILE="$__GENERATED_CRS_DIR/post-deploy-patches_torc"
+readonly __GENERATED_PATCHES_TRIDENT_OPERATOR_FILE="$__GENERATED_OPERATORS_DIR/post-deploy-patches_trident-operator"
+readonly __GENERATED_PATCHES_RESOURCE_LIMITS="$__GENERATED_CRS_DIR/post-deploy-patches_resource_limits"
+
+readonly __RESOURCE_LIMITS_SMALL="small"
+readonly __RESOURCE_LIMITS_MEDIUM="medium"
+readonly __RESOURCE_LIMITS_LARGE="large"
+readonly __RESOURCE_LIMITS_CUSTOM="custom"
+readonly __RESOURCE_LIMITS_SKIP="skip"
+readonly __RESOURCE_LIMITS_VALID_PRESETS=("$__RESOURCE_LIMITS_SMALL" "$__RESOURCE_LIMITS_MEDIUM" \
+    "$__RESOURCE_LIMITS_LARGE" "$__RESOURCE_LIMITS_CUSTOM" "$__RESOURCE_LIMITS_SKIP")
 
 readonly __DEBUG=10
 readonly __INFO=20
@@ -101,7 +117,11 @@ get_configs() {
     COMPONENTS="${COMPONENTS:-$__COMPONENTS_ALL_ASTRA_CONTROL}" # Determines what we'll install/upgrade
     IMAGE_PULL_SECRET="${IMAGE_PULL_SECRET:-}" # TODO ASTRACTL-32772: skip prompt if IMAGE_REGISTRY is default
     NAMESPACE="${NAMESPACE:-}" # Overrides EVERY resource's namespace (for fresh installs only, not upgrades)
-    LABELS="${LABELS:-}" # TODO ASTRACTL-32773: pass these on to all resources (see design page for env var format)
+    LABELS="${LABELS:-}"
+    # RESOURCE_LIMITS_PRESET will only be used if both RESOURCE_LIMITS_CUSTOM_CPU and RESOURCE_LIMITS_CUSTOM_MEMORY are empty.
+    RESOURCE_LIMITS_PRESET="${RESOURCE_LIMITS_PRESET:-}"
+    RESOURCE_LIMITS_CUSTOM_CPU="${RESOURCE_LIMITS_CUSTOM_CPU:-}" # Plain number
+    RESOURCE_LIMITS_CUSTOM_MEMORY="${RESOURCE_LIMITS_CUSTOM_MEMORY:-}" # Plain number, assumed to be in 'Gi'
 
     # ------------ IMAGE REGISTRY ------------
     # The REGISTRY environment variables follow a hierarchy; each layer overwrites the previous, if specified.
@@ -111,6 +131,7 @@ get_configs() {
     IMAGE_REGISTRY="${IMAGE_REGISTRY}"
         DOCKER_HUB_IMAGE_REGISTRY="${DOCKER_HUB_IMAGE_REGISTRY:-${IMAGE_REGISTRY:-$__DEFAULT_DOCKER_HUB_IMAGE_REGISTRY}}"
             TRIDENT_OPERATOR_IMAGE_REGISTRY="${TRIDENT_OPERATOR_IMAGE_REGISTRY:-$DOCKER_HUB_IMAGE_REGISTRY}"
+            TRIDENT_AUTOSUPPORT_IMAGE_REGISTRY="${TRIDENT_AUTOSUPPORT_IMAGE_REGISTRY:-$DOCKER_HUB_IMAGE_REGISTRY}"
             TRIDENT_IMAGE_REGISTRY="${TRIDENT_IMAGE_REGISTRY:-$DOCKER_HUB_IMAGE_REGISTRY}"
             CONNECTOR_OPERATOR_IMAGE_REGISTRY="${CONNECTOR_OPERATOR_IMAGE_REGISTRY:-$DOCKER_HUB_IMAGE_REGISTRY}"
         ASTRA_IMAGE_REGISTRY="${ASTRA_IMAGE_REGISTRY:-${IMAGE_REGISTRY:-$__DEFAULT_ASTRA_IMAGE_REGISTRY}}"
@@ -128,6 +149,7 @@ get_configs() {
     IMAGE_BASE_REPO=${IMAGE_BASE_REPO:-""}
         DOCKER_HUB_BASE_REPO="${DOCKER_HUB_BASE_REPO:-${IMAGE_BASE_REPO:-$__DEFAULT_DOCKER_HUB_IMAGE_BASE_REPO}}"
             TRIDENT_OPERATOR_IMAGE_REPO="${TRIDENT_OPERATOR_IMAGE_REPO:-"$(join_rpath "$DOCKER_HUB_BASE_REPO" "$__DEFAULT_TRIDENT_OPERATOR_IMAGE_NAME")"}"
+            TRIDENT_AUTOSUPPORT_IMAGE_REPO="${TRIDENT_AUTOSUPPORT_IMAGE_REPO:-"$(join_rpath "$DOCKER_HUB_BASE_REPO" "$__DEFAULT_TRIDENT_AUTOSUPPORT_IMAGE_NAME")"}"
             TRIDENT_IMAGE_REPO="${TRIDENT_IMAGE_REPO:-"$(join_rpath "$DOCKER_HUB_BASE_REPO" "$__DEFAULT_TRIDENT_IMAGE_NAME")"}"
             CONNECTOR_OPERATOR_IMAGE_REPO="${CONNECTOR_OPERATOR_IMAGE_REPO:-"$(join_rpath "$DOCKER_HUB_BASE_REPO" "$__DEFAULT_CONNECTOR_OPERATOR_IMAGE_NAME")"}"
         ASTRA_BASE_REPO="${ASTRA_BASE_REPO:-$IMAGE_BASE_REPO}"
@@ -143,6 +165,7 @@ get_configs() {
     IMAGE_TAG="${IMAGE_TAG}"
         DOCKER_HUB_IMAGE_TAG="${DOCKER_HUB_IMAGE_TAG:-${IMAGE_TAG:-$__DEFAULT_IMAGE_TAG}}"
             TRIDENT_OPERATOR_IMAGE_TAG="${TRIDENT_OPERATOR_IMAGE_TAG:-$DOCKER_HUB_IMAGE_TAG}"
+            TRIDENT_AUTOSUPPORT_IMAGE_TAG="${TRIDENT_AUTOSUPPORT_IMAGE_TAG:-$DOCKER_HUB_IMAGE_TAG}"
             TRIDENT_IMAGE_TAG="${TRIDENT_IMAGE_TAG:-$DOCKER_HUB_IMAGE_TAG}"
             CONNECTOR_OPERATOR_IMAGE_TAG="${CONNECTOR_OPERATOR_IMAGE_TAG:-$DOCKER_HUB_IMAGE_TAG}"
         ASTRA_IMAGE_TAG="${ASTRA_IMAGE_TAG:-${IMAGE_TAG:-$__DEFAULT_IMAGE_TAG}}"
@@ -206,18 +229,36 @@ components_include_connector() {
     return 1
 }
 
+components_include_neptune() {
+    components_include_connector
+}
+
 components_include_trident() {
-    if [ "$COMPONENTS" == "$__COMPONENTS_ALL_ASTRA_CONTROL" ] || [ "$COMPONENTS" == "$__COMPONENTS_TRIDENT_ONLY" ]; then
+    if str_contains_at_least_one "$COMPONENTS" \
+            "$__COMPONENTS_ALL_ASTRA_CONTROL" "$__COMPONENTS_TRIDENT_AND_ACP" "$__COMPONENTS_TRIDENT_ONLY"; then
         return 0
     fi
     return 1
 }
 
 components_include_acp() {
-    if [ "$COMPONENTS" == "$__COMPONENTS_ALL_ASTRA_CONTROL" ] || [ "$COMPONENTS" == "$__COMPONENTS_ACP_ONLY" ]; then
+    if str_contains_at_least_one "$COMPONENTS" \
+            "$__COMPONENTS_ALL_ASTRA_CONTROL" "$__COMPONENTS_TRIDENT_AND_ACP" "$__COMPONENTS_ACP_ONLY"; then
         return 0
     fi
     return 1
+}
+
+get_trident_namespace() {
+    echo "${_EXISTING_TRIDENT_NAMESPACE:-"${NAMESPACE:-"${__DEFAULT_TRIDENT_NAMESPACE}"}"}"
+}
+
+get_connector_operator_namespace() {
+    echo "${NAMESPACE:-"${__DEFAULT_CONNECTOR_OPERATOR_NAMESPACE}"}"
+}
+
+get_connector_namespace() {
+    echo "${NAMESPACE:-"${__DEFAULT_CONNECTOR_NAMESPACE}"}"
 }
 
 trident_is_missing() {
@@ -230,8 +271,25 @@ should_skip_trident_upgrade() {
     return 1
 }
 
+get_config_trident_image() {
+    as_full_image "$TRIDENT_IMAGE_REGISTRY" "$TRIDENT_IMAGE_REPO" "$TRIDENT_IMAGE_TAG"
+}
+
+get_config_trident_operator_image() {
+    as_full_image "$TRIDENT_OPERATOR_IMAGE_REGISTRY" "$TRIDENT_OPERATOR_IMAGE_REPO" "$TRIDENT_OPERATOR_IMAGE_TAG"
+}
+
+get_config_trident_autosupport_image() {
+    as_full_image "$TRIDENT_AUTOSUPPORT_IMAGE_REGISTRY" "$TRIDENT_AUTOSUPPORT_IMAGE_REPO" "$TRIDENT_AUTOSUPPORT_IMAGE_TAG"
+}
+
+get_config_acp_image() {
+    as_full_image "$TRIDENT_ACP_IMAGE_REGISTRY" "$TRIDENT_ACP_IMAGE_REPO" "$TRIDENT_ACP_IMAGE_TAG"
+}
+
+
 trident_image_needs_upgraded() {
-    local -r configured_image="$(as_full_image "$TRIDENT_IMAGE_REGISTRY" "$TRIDENT_IMAGE_REPO" "$TRIDENT_IMAGE_TAG")"
+    local -r configured_image="$(get_config_trident_image)"
 
     logdebug "Checking if Trident image needs upgraded: $_EXISTING_TRIDENT_IMAGE vs $configured_image"
     if [ "$_EXISTING_TRIDENT_IMAGE" != "$configured_image" ]; then
@@ -242,7 +300,7 @@ trident_image_needs_upgraded() {
 }
 
 trident_operator_image_needs_upgraded() {
-    local -r configured_image="$(as_full_image "$TRIDENT_OPERATOR_IMAGE_REGISTRY" "$TRIDENT_OPERATOR_IMAGE_REPO" "$TRIDENT_OPERATOR_IMAGE_TAG")"
+    local -r configured_image="$(get_config_trident_operator_image)"
 
     logdebug "Checking if Trident image needs upgraded: $_EXISTING_TRIDENT_OPERATOR_IMAGE vs $configured_image"
     if [ "$_EXISTING_TRIDENT_OPERATOR_IMAGE" != "$configured_image" ]; then
@@ -253,7 +311,7 @@ trident_operator_image_needs_upgraded() {
 }
 
 acp_image_needs_upgraded() {
-    local -r configured_image="$(as_full_image "$TRIDENT_ACP_IMAGE_REGISTRY" "$TRIDENT_ACP_IMAGE_REPO" "$TRIDENT_ACP_IMAGE_TAG")"
+    local -r configured_image="$(get_config_acp_image)"
 
     logdebug "Checking if ACP image needs upgraded: $_EXISTING_TRIDENT_ACP_IMAGE vs $configured_image"
     if [ "$_EXISTING_TRIDENT_ACP_IMAGE" != "$configured_image" ]; then
@@ -285,12 +343,24 @@ config_image_is_custom() {
     local -r default_tag="$__DEFAULT_IMAGE_TAG"
     local -r default_image="$(as_full_image "$default_registry" "$default_repo" "$default_tag")"
 
+    [ -z "${!registry_var}" ] && fatal "component '$component_name' invalid: variable '$registry_var' is empty"
+    [ -z "${!repo_var}" ] && fatal "component '$component_name' invalid: variable '$repo_var' is empty"
+    [ -z "${!tag_var}" ] && fatal "component '$component_name' invalid: variable '$tag_var' is empty"
+    [ -z "${!default_image_name_var}" ] && fatal "component '$component_name' invalid: variable '$default_image_name_var' is empty"
+
     [ "$current_image" != "$default_image" ] && return 0
     return 1
 }
 
 config_trident_operator_image_is_custom() {
     if config_image_is_custom "TRIDENT_OPERATOR" "$__DEFAULT_DOCKER_HUB_IMAGE_REGISTRY" "$__DEFAULT_DOCKER_HUB_IMAGE_BASE_REPO"; then
+        return 0
+    fi
+    return 1
+}
+
+config_trident_autosupport_image_is_custom() {
+    if config_image_is_custom "TRIDENT_AUTOSUPPORT" "$__DEFAULT_DOCKER_HUB_IMAGE_REGISTRY" "$__DEFAULT_DOCKER_HUB_IMAGE_BASE_REPO"; then
         return 0
     fi
     return 1
@@ -341,6 +411,60 @@ is_dry_run() {
     return 1
 }
 
+get_preset_recommendation() {
+    local -r node_count="$1"
+    local -r namespace_count="$2"
+
+    [ "$node_count" -lt 1 ] && fatal "invalid node_count '$node_count' given: must be a number greater than 0"
+    [ "$namespace_count" -lt 1 ] && fatal "invalid namespace_count '$namespace_count' given: must be a number greater than 0"
+
+    # TODO: these are placeholder recommendations
+    if [ "$node_count" -gt 5 ] || [ "$namespace_count" -lt 25 ]; then
+        echo "${__RESOURCE_LIMITS_SMALL}"
+    elif [ "$node_count" -gt 15 ] || [ "$namespace_count" -lt 75 ]; then
+        echo "${__RESOURCE_LIMITS_MEDIUM}"
+    else
+        echo "${__RESOURCE_LIMITS_LARGE}"
+    fi
+}
+
+get_limits_for_preset() {
+    local -r preset="$1"
+    [ -z "$preset" ] && fatal "no preset given"
+
+    # TODO: these are placeholders too
+    if [ "$preset" == "$__RESOURCE_LIMITS_SMALL" ]; then
+        echo '{"cpu": "1", "memory": "2Gi"}'
+    elif [ "$preset" == "$__RESOURCE_LIMITS_MEDIUM" ]; then
+        echo '{"cpu": "3", "memory": "6Gi"}'
+    elif [ "$preset" == "$__RESOURCE_LIMITS_LARGE" ]; then
+        echo '{"cpu": "6", "memory": "12Gi"}'
+    elif [ "$preset" == "$__RESOURCE_LIMITS_CUSTOM" ]; then
+        local -r custom_cpu="${RESOURCE_LIMITS_CUSTOM_CPU:-"(manual)"}"
+        local custom_mem="${RESOURCE_LIMITS_CUSTOM_MEMORY:-"(manual)"}"
+        [ -n "$RESOURCE_LIMITS_CUSTOM_MEMORY" ] && custom_mem+="Gi"
+        echo '{"cpu": "'"$custom_cpu"'", "memory": "'"$custom_mem"'"}'
+    elif [ "$preset" == "$__RESOURCE_LIMITS_SKIP" ]; then
+        echo ""
+    elif str_matches_at_least_one "$preset" "${__RESOURCE_LIMITS_VALID_PRESETS[@]}"; then
+        fatal "preset '$preset' is apparently valid but this function hasn't been updated to take it into account"
+    fi
+
+    [ -z "$preset" ] && fatal "invalid preset '$preset' given"
+}
+
+get_limits_for_preset_fancy() {
+    get_limits_for_preset "$1" | jq -r '"cpu: \(.cpu), memory: \(.memory)"'
+}
+
+get_limits_list_fancy() {
+    local msg=""
+    for preset in "${__RESOURCE_LIMITS_VALID_PRESETS[@]}" ; do
+        msg+="$preset -- $(get_limits_for_preset_fancy "$preset")${__NEWLINE}"
+    done
+    echo "${msg%${__NEWLINE}}"
+}
+
 #----------------------------------------------------------------------
 #-- Util functions
 #----------------------------------------------------------------------
@@ -368,6 +492,15 @@ logln() {
 
 logheader() {
     logln "$1" "--- $2"
+}
+
+# prefix_dryrun will add a prefix to the given string when DRY_RUN=true.
+prefix_dryrun() {
+    if is_dry_run; then
+        echo "(DRY_RUN=true) $1"
+    else
+        echo "$1"
+    fi
 }
 
 logdebug() {
@@ -435,6 +568,18 @@ insert_into_file_after_pattern() {
     echo "$new_content" > "$filepath"
 }
 
+append_lines_to_file() {
+    local -r file="$1"
+    local -ar lines=("${@:2}")
+
+    [ -z "$file" ] && fatal "no file given"
+    [ "${#lines[@]}" -eq 0 ] && fatal "no lines given"
+
+    for line in "${lines[@]}"; do
+        echo "$line"
+    done >> "$file"
+}
+
 prompt_user() {
     local -r var_name="$1"
     local -r prompt_msg="$2"
@@ -469,6 +614,52 @@ prompt_user_yes_no() {
     done
 }
 
+# prompt_user_select_one will prompt the user to select one item from a list, putting the chosen
+# value in the variable of the given name. The only time this function returns an error code (1) is when
+# prompts are disabled and the variable has an invalid value (empty is also considered invalid unless provided
+# as an option).
+prompt_user_select_one() {
+    local -r variable_name="$1"
+    local -ra valid_values=("${@:2}")
+    [ -z "$variable_name" ] && fatal "no variable name given"
+    [ "${#valid_values[@]}" -lt 1 ] && fatal "no valid values given"
+
+    if [ -z "${!variable_name}" ]; then
+        prompt_user "${variable_name}" "Please select one of (${valid_values[*]}): "
+    fi
+
+    while true; do
+        if str_matches_at_least_one "${!variable_name}" "${valid_values[@]}"; then
+            return 0
+        elif prompts_disabled; then
+            return 1
+        fi
+        prompt_user "${variable_name}" "$variable_name value '${!variable_name}' is invalid. Select one of (${valid_values[*]}): "
+    done
+}
+
+# prompt_user_number_greater_than_zero will prompt the user for a number greater than zero, putting the
+# value in the variable of the given name. The only time this function returns an error code (1) is when
+# prompts are disabled and the variable has an invalid value (empty is also considered invalid).
+prompt_user_number_greater_than_zero() {
+    local -r variable_name="$1"
+    local -r initial_prompt_msg="$2"
+    [ -z "$variable_name" ] && fatal "no variable name given"
+
+    if [ -z "${!variable_name}" ]; then
+        prompt_user "${variable_name}" "${initial_prompt_msg% } "
+    fi
+
+    while true; do
+        if [ "${!variable_name}" -gt 0 ] &> /dev/null; then
+            return 0
+        elif prompts_disabled; then
+            return 1
+        fi
+        prompt_user "${variable_name}" "$variable_name value '${!variable_name}' is invalid. Please enter a number greater than 0: "
+    done
+}
+
 with_trailing_slash() {
     local str="$1"
     [ -z "$str" ] && return 0
@@ -494,6 +685,38 @@ join_rpath() {
     done
 
     echo "$joined"
+}
+
+str_contains_at_least_one() {
+    local -r str_to_check="$1"
+    local -a keywords=("${@:2}")
+
+    [ -z "$str_to_check" ] && fatal "no str_to_check provided"
+    [ "${#keywords[@]}" -eq 0 ] && fatal "no keywords provided"
+
+    for keyword in "${keywords[@]}" ; do
+        if echo "$str_to_check" | grep -qi -- "$keyword"; then
+            return 0
+        fi
+    done
+
+    return 1
+}
+
+str_matches_at_least_one() {
+    local -r str_to_check="$1"
+    local -a keywords=("${@:2}")
+
+    [ -z "$str_to_check" ] && fatal "no str_to_check provided"
+    [ "${#keywords[@]}" -eq 0 ] && fatal "no keywords provided"
+
+    for keyword in "${keywords[@]}" ; do
+        if [ "$str_to_check" == "$keyword" ]; then
+            return 0
+        fi
+    done
+
+    return 1
 }
 
 get_base_repo() {
@@ -832,103 +1055,46 @@ EOF
     echo "$yaml_labels"
 }
 
-generate_resource_limits_patch_pre_deploy() {
-    # TODO ASTRACTL-32773: resource limits
-    return 0
+apply_kubectl_patch() {
+    local patch="$1"
+    local dry_run_flag=""
 
-    local -r kind="${1}"
-    local -r resource_name="$2"
-    local -r containers=("${@:3}")
+    [ -z "$patch" ] && fatal "no patch provided"
+    str_contains_at_least_one "$patch" "kubectl patch" && fatal "patch '$patch' should exclude 'kubectl patch'"
+    is_dry_run && dry_run_flag=" --dry-run=client"
 
-    [ -z "$kind" ] && fatal "no kind given"
-    [ -z "$resource_name" ] && fatal "no resource name given"
-    [ "${#containers[@]}" -eq 0 ] && fatal "no containers given"
-
-    local -r kustomization_file="$__GENERATED_KUSTOMIZATION_FILE"
-    local -r patch_file_name="resource-limits-transformer.yaml"
-    local -r patch_file_path="$__GENERATED_OPERATORS_DIR/$patch_file_name"
-
-    logheader $__DEBUG "Generating resource limits patch for '$kind/$resource_name'"
-
-    for container in "${containers[@]}" ; do
-        logdebug "container: $container"
-        cat << EOF >> "$patch_file_path"
-apiVersion: builtin
-kind: PatchTransformer
-metadata:
-  name: resource-limits--${resource_name}--${container}
-patch: |-
-  kind: ${kind}
-  metadata:
-    name: "${resource_name}"
-  spec:
-    template:
-      spec:
-        containers:
-        - name: ${container}
-          resources:
-            limits:
-              cpu: "5"
-              memory: "2Gi"
-target:
-  kind: Deployment
----
-EOF
-    done
-
-    if ! grep -q -- "$patch_file_name" < "$kustomization_file"; then
-        logdebug "added $patch_file_name to kustomization transformers list"
-        insert_into_file_after_pattern "$kustomization_file" "transformers:" "- $patch_file_name"
+    local -r command="kubectl patch$dry_run_flag $patch"
+    local result="$command: "
+    if eval "$command" &> /dev/null; then
+        logdebug "$result OK"
+        return 0
+    else
+        logdebug "$result failed"
+        return 1
     fi
-
-    logdebug "done"
 }
 
-generate_resource_limits_patch_post_deploy() {
-    # TODO ASTRACTL-32773: resource limits
-    return 0
+apply_kubectl_patches() {
+    local -a patches=("${@}")
 
-    local -r kind="${1}"
-    local -r resource_name="$2"
-    local -r namespace="$3"
-    local -r containers=("${@:4}")
-
-    local resources_path=""
-    local patches=""
-    for container in "${containers[@]}" ; do
-        local resources_path="/spec/containers/$container/resources"
-        if [ "$kind" != "Pod" ]; then
-            resources_path="/spec/template$resources_path"
-        fi
-        if [ -n "$patches" ]; then
-            patches+=","
-        fi
-         '{"op":"replace","path":"/spec/enableACP","value":true}'
-    done
-
-    _PATCHES+=("$kind $resource_name -p [$patches]")
-
-    resource_limits_patch+=',{"op":"replace","path":"/spec/enableACP","value":true}'
+    if [ "${#patches}" -gt 0 ]; then
+        for p in "${patches[@]}"; do
+            apply_kubectl_patch "$p"
+        done
+    else
+        logdebug "no patches to apply"
+    fi
 }
 
 wait_for_deployment_running() {
     local -r deployment="$1"
     local -r namespace="${2:-"default"}"
+    local -r timeout="${3:-"2m"}"
     [ -z "$deployment" ] && fatal "no deployment name given"
 
-    local -r max_checks=12
-    local counter=0
-    while ((counter < max_checks)); do
-        if kubectl rollout status -n "$namespace" "deploy/$deployment" &> /dev/null; then
-            logdebug "deploy/$deployment is now running"
-            return 0
-        else
-            logdebug "waiting for deploy/$deployment to be running"
-            ((counter++))
-            sleep 5
-        fi
-    done
-
+    if kubectl rollout status -n "$namespace" "deploy/$deployment" --timeout="$timeout" &> /dev/null; then
+        return 0
+    fi
     return 1
 }
 
@@ -960,6 +1126,119 @@ wait_for_cr_state() {
     return 1
 }
 
+wait_for_resource_created() {
+    local -r resource="$1"
+    local -r namespace="$2"
+    local -r timeout="${3:-60}"
+
+    [ -z "$resource" ] && fatal "no resource given"
+    [ -z "$namespace" ] && fatal "no namespace given"
+
+    local max_checks=1
+    if (( timeout > 0 )); then
+        max_checks=$(( timeout / 5 ))
+        if (( max_checks <= 0 )); then
+            max_checks=1
+        fi
+    fi
+
+    logdebug "waiting for resource '$resource' in namespace '$namespace' to be created (timeout=$timeout)"
+    local counter=0
+    while ((counter < max_checks)); do
+        if kubectl get -n "$namespace" "$resource" &> /dev/null; then
+            logdebug "resource '$resource' found"
+            return 0
+        else
+            logdebug "resource '$resource' not yet created"
+            ((counter++))
+            sleep 5
+        fi
+    done
+
+    return 1
+}
+
+get_container_count() {
+    local -r resource="$1"
+    local -r namespace="$2"
+
+    [ -z "$resource" ] && fatal "no resource given"
+    [ -z "$namespace" ] && fatal "no namespace given"
+    if ! str_contains_at_least_one "$resource" "deploy" "daemonset" "replicaset"; then
+        fatal "invalid resource kind in '$resource': only deployments, daemonsets, and replicasets supported"
+    fi
+
+    local path=".spec.template.spec.containers"
+    local count=0
+    count="$(kubectl get "$resource" -n "$namespace" -o json 2> /dev/null | jq -r "$path | length" 2> /dev/null)"
+
+    if [ -n "$count" ] || (( count > 0 )); then
+        echo "$count"
+        return 0
+    fi
+
+    return 1
+}
+
+create_kubectl_patch_for_containers() {
+    local -r resource="$1" # Format: '$kind/$resource_name'
+    local -r namespace="$2"
+    local -r resource_path="$3" # Relative to the root of the container spec, e.g. "resources/limits"
+    local -r patch_value="$4" # 'value' field of the JSON patch, e.g. `{"cpu": "5", "memory": "2Gi"}`
+    local -r kind="$(dirname "$resource")"
+
+    [ -z "$resource" ] && fatal "no resource given"
+    [ -z "$namespace" ] && fatal "no namespace given"
+    [ -z "$resource_path" ] && fatal "no resource_path given"
+    [ -z "$patch_value" ] && fatal "no patch_value given"
+    if ! echo "$resource" | grep -q -- "/"; then fatal "invalid format for given resource '$resource': use 'kind/resource_name'"; fi
+    if ! echo "$patch_value" | jq &> /dev/null; then fatal "given patch_value '$patch_value' is not valid JSON"; fi
+    if [ "$kind" != "deploy" ] && [ "$kind" != "pod" ]; then fatal "unsupported kind '$kind' given"; fi
+
+    local containers_list_path_slash="/spec/template/spec/containers"
+
+    local container_count=0
+    local wait_timeout="" # Empty value == use default
+    local dry_run_warning=""
+    if is_dry_run; then
+        # If dry running, the resource won't be created (though it might already exist) so no point in waiting
+        wait_timeout=0
+        dry_run_warning='"WARNING": "DRYRUN-GENERATED-PATCH",'
+    fi
+
+    if wait_for_resource_created "$resource" "$namespace" "$wait_timeout"; then
+        container_count="$(get_container_count "$resource" "$namespace")"
+        logdebug "found $container_count containers"
+    elif is_dry_run; then
+        container_count=1
+        logdebug "resource '$resource' in namespace '$namespace' not found, continuing anyway because this is a dry run"
+    else
+        fatal "resource '$resource' in namespace '$namespace' was never created"
+    fi
+
+    if [ -z "$container_count" ] || (( container_count <= 0 )); then
+        fatal "failed to get container count from resource '$resource' in namespace '$namespace'"
+    fi
+
+    local json_patch="[${__NEWLINE}"
+    local current
+    for (( i=0; i<"$container_count"; i++ )); do
+        current='{'$dry_run_warning'"op": "replace","path": "'
+        current+=$containers_list_path_slash'/'$i'/'$resource_path'","value": '$patch_value'}'
+        json_patch+="$(echo "$current" | jq -r),"
+        if (( i < container_count-1 )); then
+            json_patch+="${__NEWLINE}"
+        fi
+    done
+
+    json_patch="${json_patch%,}" # Remove trailing comma
+    json_patch+="]"
+
+    # Using the global _return_value var instead of 'echo' otherwise we can't log anything else without
+    # forcing the consumer of the function to use `tail -n 1` every time
+    _return_value="$resource -n $namespace --type=json -p '$json_patch'"
+}
+
 exit_if_problems() {
     if [ ${#_PROBLEMS[@]} -ne 0 ]; then
         [ "$LOG_LEVEL" == "$__DEBUG" ] && print_built_config
@@ -978,10 +1257,13 @@ step_check_config() {
     # COMPONENTS and associated vars
     local trident_vars=()
     trident_vars+=("TRIDENT_OPERATOR_IMAGE_REGISTRY" "$TRIDENT_OPERATOR_IMAGE_REGISTRY")
+    trident_vars+=("TRIDENT_AUTOSUPPORT_IMAGE_REGISTRY" "$TRIDENT_AUTOSUPPORT_IMAGE_REGISTRY")
     trident_vars+=("TRIDENT_IMAGE_REGISTRY" "$TRIDENT_IMAGE_REGISTRY")
     trident_vars+=("TRIDENT_OPERATOR_IMAGE_REPO" "$TRIDENT_OPERATOR_IMAGE_REPO")
+    trident_vars+=("TRIDENT_AUTOSUPPORT_IMAGE_REPO" "$TRIDENT_AUTOSUPPORT_IMAGE_REPO")
     trident_vars+=("TRIDENT_IMAGE_REPO" "$TRIDENT_IMAGE_REPO")
     trident_vars+=("TRIDENT_OPERATOR_IMAGE_TAG" "$TRIDENT_OPERATOR_IMAGE_TAG")
+    trident_vars+=("TRIDENT_AUTOSUPPORT_IMAGE_TAG" "$TRIDENT_AUTOSUPPORT_IMAGE_TAG")
     trident_vars+=("TRIDENT_IMAGE_TAG" "$TRIDENT_IMAGE_TAG")
 
     local connector_vars=()
@@ -1013,6 +1295,10 @@ step_check_config() {
             required_vars+=("${trident_vars[@]}")
             required_vars+=("${acp_vars[@]}")
             required_vars+=("${connector_vars[@]}")
+            break
+        elif [ "$COMPONENTS" == "$__COMPONENTS_TRIDENT_AND_ACP" ]; then
+            required_vars+=("${trident_vars[@]}")
+            required_vars+=("${acp_vars[@]}")
             break
         elif [ "$COMPONENTS" == "$__COMPONENTS_TRIDENT_ONLY" ]; then
             required_vars+=("${trident_vars[@]}")
@@ -1193,6 +1479,10 @@ step_check_all_images_can_be_pulled() {
         if config_trident_operator_image_is_custom; then images_to_check+=("$custom")
         else images_to_check+=("$default"); fi
 
+        images_to_check+=("$TRIDENT_AUTOSUPPORT_IMAGE_REGISTRY" "$TRIDENT_AUTOSUPPORT_IMAGE_REPO" "$TRIDENT_AUTOSUPPORT_IMAGE_TAG")
+        if config_trident_autosupport_image_is_custom; then images_to_check+=("$custom")
+        else images_to_check+=("$default"); fi
+
         images_to_check+=("$TRIDENT_IMAGE_REGISTRY" "$TRIDENT_IMAGE_REPO" "$TRIDENT_IMAGE_TAG")
         if config_trident_image_is_custom; then images_to_check+=("$custom")
         else images_to_check+=("$default"); fi
@@ -1338,6 +1628,104 @@ step_check_kubeconfig_choice() {
     fi
 }
 
+# step_query_user_for_resource_count is used to query the user on the number of nodes/namespaces they expect
+# to have on their cluster, which will help us recommend the appropriate resource limit preset.
+step_query_user_for_resource_count() {
+    local -r resource="$1"
+    if ! str_matches_at_least_one "$resource" "namespaces" "nodes"; then
+        fatal "invalid resource '$resource': only 'namespaces' or 'nodes' supported"
+    fi
+    local -r manual_entry_msg="How many $resource on do you expect to have in this cluster?"
+    local msg=""
+
+    _count="$(kubectl get "$resource" -o json | jq -r '.items | length' 2> /dev/null)"
+    if [ -z "$_count" ] || [ "$_count" -lt 1 ]; then
+        _count=""
+        msg="Failed to detect number of $resource.${__NEWLINE}$manual_entry_msg"
+        if ! prompt_user_number_greater_than_zero _count "$msg"; then
+            msg="Failed to detect number of $resource."
+            msg+=" Please verify your connection to the cluster and try again,"
+            msg+=" or set RESOURCE_LIMITS_PRESET to one of the following values:"
+            msg+=" ${__RESOURCE_LIMITS_VALID_PRESETS[*]}"
+            add_problem "$msg"
+            return 1
+        fi
+    else
+        msg="We detected $_count $resource on your cluster.${__NEWLINE}"
+        msg+="Is this accurate ('no' to enter a number manually)?"
+        if ! prompt_user_yes_no "$msg"; then
+            _user_count=""
+            if ! prompt_user_number_greater_than_zero _user_count "$manual_entry_msg"; then
+                # This failure path should not be possible (because the user needs to have prompts enabled)
+                # which is why it's a fatal error instead of a problem
+                fatal "failed to get $resource count from user"
+            fi
+            _count="$_user_count"
+        fi
+    fi
+
+    loginfo "Proceeding with a count of $_count $resource."
+    _return_value="$_count"
+}
+
+step_determine_resource_limit_preset() {
+    local valid_presets=("${__RESOURCE_LIMITS_VALID_PRESETS[@]}")
+    local valid_presets_str="${__RESOURCE_LIMITS_VALID_PRESETS[*]}"
+    logheader "$__INFO" "Resolving resource limit configuration..."
+
+    if [ -n "$RESOURCE_LIMITS_CUSTOM_CPU" ] || [ -n "$RESOURCE_LIMITS_CUSTOM_MEMORY" ]; then
+        RESOURCE_LIMITS_PRESET="$__RESOURCE_LIMITS_CUSTOM"
+        loginfo "Custom resource limits have been set by user ($(get_limits_for_preset_fancy "$__RESOURCE_LIMITS_CUSTOM"))"
+    elif [ -z "$RESOURCE_LIMITS_PRESET" ]; then
+        step_query_user_for_resource_count "nodes"
+        local -r node_count="$_return_value"
+
+        step_query_user_for_resource_count "namespaces"
+        local -r namespace_count="$_return_value"
+
+        exit_if_problems
+
+        RESOURCE_LIMITS_PRESET="$(get_preset_recommendation "$node_count" "$namespace_count")"
+        if ! str_matches_at_least_one "$RESOURCE_LIMITS_PRESET" "${valid_presets[@]}"; then
+            fatal "the recommended preset ($RESOURCE_LIMITS_PRESET) is invalid: valid values are ($valid_presets_str)"
+        fi
+
+        local -r preset_fancy="$(get_limits_for_preset_fancy "$RESOURCE_LIMITS_PRESET")"
+        local msg="For $node_count nodes and $namespace_count namespaces,"
+        msg+=" the recommended resource limit preset is: $RESOURCE_LIMITS_PRESET ($preset_fancy)${__NEWLINE}"
+        msg+="Proceed with preset '$RESOURCE_LIMITS_PRESET' (choose no to enter a preset manually)?"
+        if ! prompt_user_yes_no "$msg"; then
+            msg="${__NEWLINE}Available presets:${__NEWLINE}"
+            msg+="$(get_limits_list_fancy)${__NEWLINE}"
+            loginfo "$msg"
+            RESOURCE_LIMITS_PRESET=""
+            prompt_user_select_one RESOURCE_LIMITS_PRESET "${valid_presets[@]}"
+        fi
+    fi
+    exit_if_problems
+
+    loginfo "Resource limit preset is '$RESOURCE_LIMITS_PRESET'"
+    add_to_config_builder RESOURCE_LIMITS_PRESET
+    if [ "$RESOURCE_LIMITS_PRESET" == "$__RESOURCE_LIMITS_CUSTOM" ]; then
+        if ! prompt_user_number_greater_than_zero RESOURCE_LIMITS_CUSTOM_CPU "Enter a CPU limit:"; then
+            add_problem "RESOURCE_LIMITS_CUSTOM_CPU value '$RESOURCE_LIMITS_CUSTOM_CPU' is invalid"
+        fi
+        # Would ideally allow the user to input the suffix themselves to allow greater flexibility,
+        # but that would require more complex parsing of their input. Maybe later, if it proves to
+        # be needed.
+        if ! prompt_user_number_greater_than_zero RESOURCE_LIMITS_CUSTOM_MEMORY "Enter a memory limit (Gi):"; then
+            add_problem "RESOURCE_LIMITS_CUSTOM_MEMORY value '$RESOURCE_LIMITS_CUSTOM_MEMORY' is invalid"
+        fi
+        add_to_config_builder RESOURCE_LIMITS_CUSTOM_CPU
+        add_to_config_builder RESOURCE_LIMITS_CUSTOM_MEMORY
+    elif [ "$RESOURCE_LIMITS_PRESET" == "$__RESOURCE_LIMITS_SKIP" ]; then
+        return 0
+    fi
+
+    _PROCESSED_RESOURCE_LIMITS="$(get_limits_for_preset "$RESOURCE_LIMITS_PRESET")"
+    loginfo "Proceeding with resource limits: $(get_limits_for_preset_fancy "$RESOURCE_LIMITS_PRESET")"
+}
+
 step_init_generated_dirs_and_files() {
     local -r kustomization_file="$__GENERATED_KUSTOMIZATION_FILE"
     local -r kustomization_dir="$(dirname "$kustomization_file")"
@@ -1405,8 +1793,7 @@ step_generate_astra_connector_yaml() {
 
     logheader $__DEBUG "Generating Astra Connector YAML files..."
 
-    local -r global_namespace="$NAMESPACE"
-    local -r connector_namespace="${NAMESPACE:-"astra-connector"}"
+    local -r connector_namespace="$(get_connector_namespace)"
     local -r connector_regcred_name="${IMAGE_PULL_SECRET:-"astra-connector-regcred"}"
     local -r connector_registry="$(join_rpath "$CONNECTOR_IMAGE_REGISTRY" "$(get_base_repo "$CONNECTOR_IMAGE_REPO")")"
     local -r connector_tag="$CONNECTOR_IMAGE_TAG"
@@ -1516,12 +1903,12 @@ EOF
 
     logdebug "$crs_file: OK"
     logdebug "$crs_file: added AstraConnector CR"
-
-    generate_resource_limits_patch_pre_deploy "Deployment" "operator-controller-manager" "manager" "kube-rbac-proxy"
 }
 
 step_collect_existing_trident_info() {
     logheader $__INFO "Checking if Trident is installed..."
+
+    # TORC CR definition
     local -r torc_crd="$(kubectl get crd tridentorchestrators.trident.netapp.io -o name 2> /dev/null)"
     if [ -z "$torc_crd" ]; then
         logdebug "tridentorchestrator crd: not found"
@@ -1531,44 +1918,78 @@ step_collect_existing_trident_info() {
         logdebug "tridentorchestrator crd: OK"
     fi
 
+    # TORC CR
     local -r torc_json="$(kubectl get tridentorchestrator -A -o jsonpath="{.items[0]}" 2> /dev/null)"
-    if [ -n "$torc_json" ]; then
-        local -r trident_ns="$(echo "$torc_json" | jq -r '.spec.namespace')"
-        _EXISTING_TORC_NAME="$(echo "$torc_json" | jq -r '.metadata.name')"
-        _EXISTING_TRIDENT_NAMESPACE="$trident_ns"
-        logdebug "trident install: OK"
-        logdebug "trident namespace: $trident_ns"
+    if [ -z "$torc_json" ]; then
+        logdebug "tridentorchestrator: not found"
+        loginfo "* Trident installation not found."
+        return 0
+    else
+        logdebug "tridentorchestrator: OK"
+    fi
 
-        local -r trident_image="$(echo "$torc_json" | jq -r ".spec.tridentImage" 2> /dev/null)"
-        if [ -n "$trident_image" ]; then
-            _EXISTING_TRIDENT_IMAGE="$trident_image"
-            logdebug "trident image: $trident_image"
-        else
-            logdebug "trident image: not found"
+    # Trident namespace
+    local -r trident_ns="$(echo "$torc_json" | jq -r '.spec.namespace')"
+    if [ -z "$(kubectl get namespace "$trident_ns" -o name 2> /dev/null)" ]; then
+        logdebug "trident namespace '$trident_ns': not found"
+        loginfo "* Trident Orchestrator exists, but configured namespace '$trident_ns' not found on cluster."
+        return 0
+    else
+        logdebug "trident namespace '$trident_ns': OK"
+    fi
+    _EXISTING_TORC_NAME="$(echo "$torc_json" | jq -r '.metadata.name')"
+    _EXISTING_TRIDENT_NAMESPACE="$trident_ns"
+    logdebug "trident orchestrator: $_EXISTING_TORC_NAME"
+    logdebug "trident namespace: $trident_ns"
+
+    # Trident image
+    local -r trident_image="$(echo "$torc_json" | jq -r ".spec.tridentImage" 2> /dev/null)"
+    if [ -n "$trident_image" ]; then
+        _EXISTING_TRIDENT_IMAGE="$trident_image"
+        logdebug "trident image: $trident_image"
+    else
+        logdebug "trident image: not found"
+    fi
+
+    # ACP enabled/disabled
+    local -r acp_enabled="$(echo "$torc_json" | jq -r '.spec.enableACP' 2> /dev/null)"
+    if [ "$acp_enabled" == "true" ]; then
+        logdebug "trident ACP enabled: yes"
+        _EXISTING_TRIDENT_ACP_ENABLED="true"
+    else
+        _EXISTING_TRIDENT_ACP_ENABLED="false"
+        logdebug "trident ACP enabled: no"
+    fi
+
+    # ACP image
+    local -r acp_image="$(echo "$torc_json" | jq -r '.spec.acpImage' 2> /dev/null)"
+    if [ -n "$acp_image" ]; then
+        logdebug "trident ACP image: $acp_image"
+        _EXISTING_TRIDENT_ACP_IMAGE="$acp_image"
+    else
+        logdebug "trident ACP image: not found"
+    fi
+
+    # Trident operator
+    local -r trident_operator_json="$(kubectl get deploy/trident-operator -n "$trident_ns" -o json 2> /dev/null)"
+    if [ -n "$trident_operator_json" ]; then
+        local -r containers_length="$(echo "$trident_operator_json" | jq -r '.spec.template.spec.containers | length' 2> /dev/null)"
+        # Assume there's only one container (and it's the trident-operator), but if that ever changes,
+        # we'll at least learn about it. TODO: make this more robust
+        if [ -z "$containers_length" ] || [ "$containers_length" -ne 1 ]; then
+            fatal "expected only one container in trident-operator deployment (found '$containers_length')"
         fi
 
-        local -r acp_enabled="$(echo "$torc_json" | jq -r '.spec.enableACP' 2> /dev/null)"
-        if [ "$acp_enabled" == "true" ]; then
-            logdebug "trident ACP enabled: yes"
-            _EXISTING_TRIDENT_ACP_ENABLED="true"
-        else
-            _EXISTING_TRIDENT_ACP_ENABLED="false"
-            logdebug "trident ACP enabled: no"
-        fi
-
-        local -r acp_image="$(echo "$torc_json" | jq -r '.spec.acpImage' 2> /dev/null)"
-        if [ -n "$acp_image" ]; then
-            logdebug "trident ACP image: $acp_image"
-            _EXISTING_TRIDENT_ACP_IMAGE="$acp_image"
-        else
-            logdebug "trident ACP image: not found"
+        _EXISTING_TRIDENT_OPERATOR_IMAGE="$(echo "$trident_operator_json" | jq -r '.spec.template.spec.containers[0].image' 2> /dev/null)"
+        if [ -z "$_EXISTING_TRIDENT_OPERATOR_IMAGE" ]; then
+            fatal "failed to get the existing trident-operator image"
         fi
     else
-        logdebug "trident install: not found"
+        logdebug "trident operator: not found"
     fi
 }
 
-step_generate_trident_yaml() {
+step_generate_trident_fresh_install_yaml() {
     local -r kustomization_file="$__GENERATED_KUSTOMIZATION_FILE"
     local -r crs_file="$__GENERATED_CRS_FILE"
     [ ! -f "$kustomization_file" ] && fatal "kustomization file '$kustomization_file' does not exist"
@@ -1581,14 +2002,14 @@ step_generate_trident_yaml() {
         "- https://github.com/NetApp-Polaris/astra-deploy/trident-installer/deploy?ref=$__GIT_REF_TRIDENT"
     logdebug "$kustomization_file: added resources entry for trident operator"
 
-    local -r trident_image="$TRIDENT_IMAGE_REGISTRY/$TRIDENT_IMAGE_REPO:$TRIDENT_IMAGE_TAG"
-    local -r acp_image="$TRIDENT_ACP_IMAGE_REGISTRY/$TRIDENT_ACP_IMAGE_REPO:$TRIDENT_ACP_IMAGE_TAG"
+    local -r trident_image="$(get_config_trident_image)"
+    local -r autosupport_image="$(get_config_trident_autosupport_image)"
+    local -r acp_image="$(get_config_acp_image)"
+    local -r namespace="$(get_trident_namespace)"
     local pull_secret="[]"
-    local namespace="trident"
     local enable_acp="true"
     local labels_field_and_content=""
     if [ -n "$IMAGE_PULL_SECRET" ]; then pull_secret='["'$IMAGE_PULL_SECRET'"]'; fi
-    if [ -n "$NAMESPACE" ]; then namespace=$NAMESPACE; fi
     if [ -n "$PROCESSED_LABELS" ]; then
         labels_field_and_content="${__NEWLINE}  labels:${__NEWLINE}${_PROCESSED_LABELS}"
     fi
@@ -1600,6 +2021,7 @@ metadata:
   name: "trident"
   namespace: "${namespace}"${labels_field_and_content}
 spec:
+  autosupportImage: "${autosupport_image}"
   namespace: "${namespace}"
   tridentImage: "${trident_image}"
   imagePullSecrets: ${pull_secret}
@@ -1608,37 +2030,61 @@ spec:
 ---
 EOF
     logdebug "$crs_file: added TridentOrchestrator CR"
-
-    generate_resource_limits_patch_pre_deploy "Deployment" "trident-operator" "trident-operator"
 }
 
-step_generate_acp_patch() {
+step_generate_trident_operator_patch() {
+    local -r namespace="${_EXISTING_TRIDENT_NAMESPACE}"
+    local -r new_image="$(get_config_trident_operator_image)"
+    [ -z "$namespace" ] && fatal "no existing trident namespace found"
+    [ -z "$new_image" ] && fatal "no trident operator image found"
+
+    logheader $__DEBUG "Generating Trident Operator patch"
+    local -r patch='[{"op":"replace","path":"/spec/template/spec/containers/0/image","value":"'"$new_image"'"}]'
+    _PATCHES_TRIDENT_OPERATOR+=("deploy/trident-operator -n '$namespace' --type=json -p '$(echo "$patch" | jq)'")
+}
+
+step_generate_torc_patch() {
     local -r torc_name="$1"
-    local -r enable_acp="${2:-"false"}"
+    local -r trident_image="${2:-""}"
+    local -r acp_image="${3:-""}"
+    local -r enable_acp="${4:-""}"
+    local -r autosupport_image="${5:-""}"
     if [ -z "$torc_name" ]; then fatal "no trident orchestrator name was given"; fi
 
-    logheader $__DEBUG "Generating ACP patch"
+    logheader $__DEBUG "Generating TORC patch"
+    local torc_patch_list=""
 
-    local -r acp_image="$(as_full_image "$TRIDENT_ACP_IMAGE_REGISTRY" "$TRIDENT_ACP_IMAGE_REPO" "$TRIDENT_ACP_IMAGE_TAG")"
-    local -r set_acp_image_patch='{"op":"replace","path":"/spec/acpImage","value":"'"$acp_image"'"}'
-    local acp_patches="$set_acp_image_patch"
-    if [ "$enable_acp" == "true" ]; then
-        acp_patches+=',{"op":"replace","path":"/spec/enableACP","value":true}'
+    # Trident
+    if [ -n "$trident_image" ]; then
+        torc_patch_list+='{"op":"replace","path":"/spec/tridentImage","value":"'"$trident_image"'"},'
     fi
 
-    _PATCHES+=("tridentorchestrator $torc_name -p [$acp_patches]")
+    # ACP
+    if [ -n "$acp_image" ]; then
+        torc_patch_list+='{"op":"replace","path":"/spec/acpImage","value":"'"$acp_image"'"},'
+    fi
+    if [ "$enable_acp" == "true" ]; then
+        torc_patch_list+='{"op":"replace","path":"/spec/enableACP","value":true},'
+    fi
+
+    # Autosupport
+    if [ -n "$autosupport_image" ]; then
+        torc_patch_list+='{"op":"replace","path":"/spec/autosupportImage","value":"'"$autosupport_image"'"},'
+    fi
+
+    if [ "${#torc_patch_list[@]}" -gt 0 ]; then
+        torc_patch_list="'$(echo "[${torc_patch_list%,}]" | jq)'"
+        _PATCHES_TORC+=("tridentorchestrator $torc_name --type=json -p ${torc_patch_list}")
+    fi
 }
 
 step_add_labels_to_kustomization() {
     local processed_labels="${1:-""}"
     local -r kustomization_file="${2}"
-    local -r crs_file="${3}"
 
     [ -z "${processed_labels}" ] && return 0
     [ -z "${kustomization_file}" ] && fatal "no kustomization file given"
-    [ -z "${crs_file}" ] && fatal "no kustomization file given"
     [ ! -f "${kustomization_file}" ] && fatal "kustomization file '${kustomization_file}' does not exist"
-    [ ! -f "${crs_file}" ] && fatal "crs file '${crs_file}' does not exist"
 
     logheader $__DEBUG "Adding labels to kustomization and crs file"
 
@@ -1675,52 +2121,164 @@ step_apply_resources() {
     if [ ! -f "$__GENERATED_KUSTOMIZATION_FILE" ]; then fatal "file $__GENERATED_KUSTOMIZATION_FILE not found"; fi
     local -r crs_dir="$__GENERATED_CRS_DIR"
     local -r crs_file_path="$__GENERATED_CRS_FILE"
-    local -r patches_file_path="$__GENERATED_PATCHES_FILE"
     local -r operators_dir="$__GENERATED_OPERATORS_DIR"
 
-    for p in "${_PATCHES[@]}" ; do
-        echo "kubectl apply $p --type=json" >> "$patches_file_path"
-    done
+    logheader "$__INFO" "$(prefix_dryrun "Applying resources...")"
 
-    logheader "$__INFO" "Applying resources..."
-    logln "$__DEBUG" "Operator resources"
-    _output="$(kubectl apply -k "$operators_dir")"
-    logdebug "$_output"
+    # Apply operator resources
+    logdebug "apply operator resources"
+    local output=""
+    if ! is_dry_run; then
+        output="$(kubectl apply -k "$operators_dir" 2>&1)"
+        logdebug "kustomize apply output:${__NEWLINE}$output"
+    fi
     loginfo "* Astra operators have been applied to the cluster."
 
+    # Apply CRs (if we have any)
     if [ -f "$crs_file_path" ]; then
-        logln "$__DEBUG" "CRs"
+        logdebug "apply CRs"
         if grep -q "AstraConnector" $crs_file_path; then
             logdebug "delete previous astraconnect if it exists"
-            # Operator doesn't change the astraconnect spec right now so we need to delete it first if it exists
-            kubectl delete -n "${NAMESPACE:-"astra-connector"}" deploy/astraconnect &> /dev/null
+            if ! is_dry_run; then
+                # Operator doesn't change the astraconnect spec automatically so we need to delete it first (if it exists)
+                kubectl delete -n "$(get_connector_namespace)" deploy/astraconnect &> /dev/null
+                output="$(kubectl apply -f "$crs_file_path")"
+                logdebug "$output"
+            fi
         fi
-        _output="$(kubectl apply -f "$crs_file_path")"
-        logdebug "$_output"
+        loginfo "* Astra CRs have been applied to the cluster."
     else
         logdebug "No CRs file to apply"
     fi
+}
 
-    loginfo "* Astra CRs have been applied to the cluster."
-    logheader "$__DEBUG" "Patches"
-    for p in "${_PATCHES[@]}" ; do
-        kubectl patch $p --type=json
-    done
+step_apply_trident_operator_patches() {
+    logheader "$__DEBUG" "$(prefix_dryrun "Applying Trident Operator patches...")"
+    local -ra patches=("${_PATCHES_TRIDENT_OPERATOR[@]}")
+
+    if [ "$LOG_LEVEL" == "$__DEBUG" ] && [ "${#patches[@]}" -gt 0 ]; then
+        local disclaimer="# THIS FILE IS FOR DEBUGGING PURPOSES ONLY. These are the patches applied to the"
+        disclaimer+="${__NEWLINE}# Trident Operator deployment when upgrading the Trident Operator."
+        disclaimer+="${__NEWLINE}"
+        append_lines_to_file "${__GENERATED_PATCHES_TRIDENT_OPERATOR_FILE}" "$disclaimer" "${patches[@]}"
+    fi
+
+    apply_kubectl_patches "${patches[@]}"
+    logdebug "done"
+}
+
+step_apply_torc_patches() {
+    logheader "$__DEBUG" "$(prefix_dryrun "Applying TORC patches...")"
+    local -ra patches=("${_PATCHES_TORC[@]}")
+
+    if [ "$LOG_LEVEL" == "$__DEBUG" ] && [ "${#patches[@]}" -gt 0 ]; then
+        local disclaimer="# THIS FILE IS FOR DEBUGGING PURPOSES ONLY. These are the patches applied to the"
+        disclaimer+="${__NEWLINE}# TridentOrchestrator resource when upgrading Trident or enabling ACP."
+        disclaimer+="${__NEWLINE}"
+        append_lines_to_file "${__GENERATED_PATCHES_TORC_FILE}" "$disclaimer" "${patches[@]}"
+    fi
+
+    apply_kubectl_patches "${patches[@]}"
+    logdebug "done"
+}
+
+# step_generate_and_apply_resource_limit_patches generates and applies patches in one go, and should
+# be called after we've applied all resources. This is because the content of the patches is dynamically
+# generated based on the live resources, which itself is necessary for both the Neptune controller and the
+# Astra connector since they are created by the operators, not by us. This does mean we could technically set
+# the resource limits on the operators before we apply the resources, but whatever time we save is minimal
+# compared to the extra complexity it would introduce due to having two separate processes.
+step_generate_and_apply_resource_limit_patches() {
+    [ "$RESOURCE_LIMITS_PRESET" == "$__RESOURCE_LIMITS_SKIP" ] && return 0
+    [ -z "$_PROCESSED_RESOURCE_LIMITS" ] && fatal "_PROCESSED_RESOURCE_LIMITS is empty"
+
+    local -r connector_ns="$(get_connector_namespace)"
+    local -r trident_ns="$(get_trident_namespace)"
+    local -r patch_path="resources"
+    local -r patch_value="$_PROCESSED_RESOURCE_LIMITS"
+    local -a patches_list_for_debugging=()
+
+    logheader "$__DEBUG" "$(prefix_dryrun "Creating and applying resource-limit patches")"
+    logdebug "configured limits: $patch_value"
+
+    # Note 1: The order we patch these is somewhat important to minimize downtime, as the operators create resources
+    # (such as the Neptune controller) after a delay. And so, operators get patched first, and operator-created
+    # resources second, ideally in the order they are created.
+    #
+    # Note 2: Trident does not support setting resource limits as of this writing; the Trident Operator will clear out
+    # any resource limits we set on the controller (even if it's post-deployment). That said, the Trident Operator
+    # itself does "support" resource limits, in the sense that they don't get cleared out when we set them.
+
+    # Trident Operator
+    if ! components_include_trident; then
+        logdebug "skipping trident operator resource limits"
+    elif create_kubectl_patch_for_containers "deploy/trident-operator" "$trident_ns" "$patch_path" "$patch_value"; then
+        patches_list_for_debugging+=("$_return_value")
+        apply_kubectl_patch "$_return_value"
+    else
+        add_problem "Failed to create resource limit patch for the Trident Operator deployment (unknown error)"
+    fi
+
+    # Connector operator
+    if ! components_include_connector; then
+        logdebug "skipping connector operator resource limits"
+    elif create_kubectl_patch_for_containers "deploy/operator-controller-manager" "$connector_ns" "$patch_path" "$patch_value"; then
+        patches_list_for_debugging+=("$_return_value")
+        apply_kubectl_patch "$_return_value"
+    else
+        add_problem "Failed to create resource limit patch for the Astra Connector deployment (unknown error)"
+    fi
+    exit_if_problems
+
+    # Neptune controller
+    if ! components_include_neptune; then
+        logdebug "skipping neptune resource limits"
+    elif create_kubectl_patch_for_containers "deploy/neptune-controller-manager" "$connector_ns" "$patch_path" "$patch_value"; then
+        patches_list_for_debugging+=("$_return_value")
+        apply_kubectl_patch "$_return_value"
+    else
+        add_problem "Failed to create resource limit patch for the Neptune deployment (unknown error)"
+    fi
+
+    # Connector
+    if ! components_include_connector; then
+        logdebug "skipping connector resource limits"
+    elif create_kubectl_patch_for_containers "deploy/astraconnect" "$connector_ns" "$patch_path" "$patch_value"; then
+        patches_list_for_debugging+=("$_return_value")
+        apply_kubectl_patch "$_return_value"
+    else
+        add_problem "Failed to create resource limit patch for the Astra Connector deployment (unknown error)"
+    fi
+
+    if [ "$LOG_LEVEL" == "$__DEBUG" ] && [ "${#patches[@]}" -gt 0 ]; then
+        local disclaimer="# THIS FILE IS FOR DEBUGGING PURPOSES ONLY. These are the patches applied to the"
+        disclaimer+="${__NEWLINE}# Trident Operator deployment when upgrading the Trident Operator."
+        disclaimer+="${__NEWLINE}"
+        append_lines_to_file "${__GENERATED_PATCHES_RESOURCE_LIMITS}" "$disclaimer" "${patches[@]}"
+    fi
+    exit_if_problems
+
+    logdebug "done"
 }
 
 step_monitor_deployment_progress() {
-    local -r global_ns="$NAMESPACE"
-    local -r connector_operator_ns="${global_ns:-"astra-connector-operator"}"
-    local -r connector_ns="${global_ns:-"astra-connector"}"
-    local -r trident_ns="${_EXISTING_TRIDENT_NAMESPACE:-${global_ns:-"trident"}}"
+    local -r connector_operator_ns="$(get_connector_operator_namespace)"
+    local -r connector_ns="$(get_connector_namespace)"
+    local -r trident_ns="$(get_trident_namespace)"
 
-    logheader "$__INFO" "Monitoring deployment progress..."
+    logheader "$__INFO" "$(prefix_dryrun "Monitoring deployment progress...")"
+    if ! is_dry_run; then
+        sleep 20 # Wait for initial resources to be created and operators to detect changes
+    fi
+
     if components_include_connector; then
-        if ! kubectl rollout status deployment/operator-controller-manager -n "$connector_operator_ns" 2> /dev/null; then
+        if is_dry_run; then
+            logdebug "skip monitoring connector components because it's a dry run"
+        elif ! wait_for_deployment_running "operator-controller-manager" "$connector_operator_ns" "1m"; then
             add_problem "connector operator deploy: failed" "The Astra Connector Operator failed to deploy"
-        elif ! kubectl rollout status deployment/neptune-controller-manager -n "$connector_ns" 2> /dev/null; then
+        elif ! wait_for_deployment_running "neptune-controller-manager" "$connector_ns" "3m"; then
             add_problem "neptune deploy: failed" "Neptune failed to deploy"
-        elif ! wait_for_deployment_running "astraconnect" "$connector_ns"; then
+        elif ! wait_for_deployment_running "astraconnect" "$connector_ns" "3m"; then
             add_problem "astraconnect deploy: failed" "The Astra Connector failed to deploy"
         elif ! wait_for_cr_state "astraconnectors/astra-connector" ".status.natsSyncClient.status" "Registered with Astra" "$connector_ns"; then
             add_problem "cluster registration: failed" "Cluster registration failed"
@@ -1728,21 +2286,21 @@ step_monitor_deployment_progress() {
     fi
 
     if components_include_trident || components_include_acp; then
-        if ! kubectl rollout status deployment/trident-operator -n "$trident_ns"; then
+        if is_dry_run; then
+            logdebug "skip monitoring trident components because it's a dry run"
+        elif ! wait_for_deployment_running "trident-operator" "$trident_ns" "1m"; then
             add_problem "trident operator: failed" "The Trident Operator failed to deploy"
-        elif ! kubectl rollout status deployment/trident-controller -n "$trident_ns"; then
+        elif ! wait_for_deployment_running "trident-controller" "$trident_ns" "10m"; then
             add_problem "trident controller: failed" "Trident failed to deploy"
         fi
     fi
-
-    loginfo "(TODO)"
 }
 
 #======================================================================
 #== Main
 #======================================================================
-set_log_level
 logln $__INFO "====== Astra Cluster Installer v0.0.1 ======"
+set_log_level
 load_config_from_file_if_given "$CONFIG_FILE"
 exit_if_problems
 
@@ -1773,16 +2331,17 @@ else
 fi
 
 # ASTRA CONTROL access
-if [ "$SKIP_ASTRA_CHECK" != "true" ]; then
+if components_include_connector && [ "$SKIP_ASTRA_CHECK" != "true" ]; then
     step_check_astra_control_reachable
     step_check_astra_cloud_and_cluster_id
 else
-    logdebug "skipping all Astra checks (SKIP_ASTRA_CHECK=true)"
+    logdebug "skipping all Astra checks (COMPONENTS=${COMPONENTS}, SKIP_ASTRA_CHECK=${SKIP_ASTRA_CHECK})"
 fi
 exit_if_problems
 
 # ------------ YAML GENERATION ------------
 step_check_kubeconfig_choice
+step_determine_resource_limit_preset
 step_init_generated_dirs_and_files
 step_kustomize_global_namespace_if_needed "$NAMESPACE" "$__GENERATED_KUSTOMIZATION_FILE"
 
@@ -1794,23 +2353,53 @@ fi
 # TRIDENT / ACP yaml
 step_collect_existing_trident_info
 if trident_is_missing; then
-    step_generate_trident_yaml
-elif components_include_trident && trident_image_needs_upgraded; then
-    if should_skip_trident_upgrade; then
-        loginfo "Skipping Trident upgrade (SKIP_TRIDENT_UPGRADE=true)."
-    elif config_trident_image_is_custom || prompt_user_yes_no "Would you like to upgrade Trident?"; then
-        step_generate_trident_yaml
+    step_generate_trident_fresh_install_yaml
+elif [ -z "$_EXISTING_TRIDENT_OPERATOR_IMAGE" ]; then
+    logwarn "Upgrading Trident without the Trident Operator is not currently supported, skipping."
+else
+    # Upgrade Trident/Operator?
+    if components_include_trident && ! should_skip_trident_upgrade; then
+        # Trident upgrade (includes operator upgrade if needed)
+        if trident_image_needs_upgraded; then
+            if config_trident_image_is_custom || prompt_user_yes_no "Would you like to upgrade Trident?"; then
+                step_generate_torc_patch "$_EXISTING_TORC_NAME" "$(get_config_trident_image)" "" "" "$(get_config_trident_autosupport_image)"
+                trident_operator_image_needs_upgraded && step_generate_trident_operator_patch
+            else
+                loginfo "Trident will not be upgraded."
+            fi
+        # Trident operator upgrade (standalone)
+        elif trident_operator_image_needs_upgraded; then # TODO
+            if config_trident_operator_image_is_custom || prompt_user_yes_no "Would you like to upgrade the Trident Operator?"; then
+                step_generate_trident_operator_patch
+            else
+                loginfo "Trident Operator will not be upgraded."
+            fi
+        fi
     else
-        loginfo "Trident will not be upgraded."
+        logdebug "Skipping Trident upgrade (COMPONENTS=${COMPONENTS}, SKIP_TRIDENT_UPGRADE=${SKIP_TRIDENT_UPGRADE})"
     fi
-elif ! acp_is_enabled; then
-    if config_acp_image_is_custom || prompt_user_yes_no "Would you like to enable ACP?"; then
-        step_generate_acp_patch "$_EXISTING_TORC_NAME" "true"
+
+    # Upgrade/Enable ACP?
+    if components_include_acp; then
+        # Enable ACP if needed (includes ACP upgrade)
+        if ! acp_is_enabled; then
+            if config_acp_image_is_custom || prompt_user_yes_no "Would you like to enable ACP?"; then
+                step_generate_torc_patch "$_EXISTING_TORC_NAME" "" "$(get_config_acp_image)" "true"
+            else
+                loginfo "ACP will not be enabled."
+            fi
+        # ACP upgrade (ACP already enabled)
+        elif acp_image_needs_upgraded; then
+            if config_acp_image_is_custom || prompt_user_yes_no "Would you like to upgrade ACP?"; then
+                step_generate_torc_patch "$_EXISTING_TORC_NAME" "" "$(get_config_acp_image)" "true"
+            else
+                loginfo "ACP will not be upgraded."
+            fi
+        fi
     else
-        loginfo "ACP will not be enabled."
+        logdebug "Skipping ACP changes (COMPONENTS=${COMPONENTS})"
     fi
-elif config_acp_image_is_custom && acp_image_needs_upgraded; then
-    step_generate_acp_patch "$_EXISTING_TORC_NAME" "false"
+
 fi
 
 # IMAGE REMAPS, LABELS, RESOURCE LIMITS yaml
@@ -1819,13 +2408,18 @@ step_add_image_remaps_to_kustomization
 exit_if_problems
 
 # ------------ DEPLOYMENT ------------
+step_apply_resources
+step_apply_trident_operator_patches
+step_apply_torc_patches
+step_generate_and_apply_resource_limit_patches
+step_monitor_deployment_progress
+exit_if_problems
+
 if ! is_dry_run; then
-    step_apply_resources
-    step_monitor_deployment_progress
-    exit_if_problems
     logheader $__INFO "Cluster management complete!"
 else
-    logheader $__INFO "DRY_RUN is ON: See generated files"
+    [ "$LOG_LEVEL" == "$__DEBUG" ] && print_built_config
+    logheader $__INFO "$(prefix_dryrun "See generated files")"
     loginfo "$(find "$__GENERATED_CRS_DIR" -type f)"
     _msg="You can run 'kustomize build $__GENERATED_OPERATORS_DIR > $__GENERATED_OPERATORS_DIR/resources.yaml'"
     _msg+=" to view the CRDs and operator resources that will be applied."
