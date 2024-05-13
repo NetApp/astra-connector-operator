@@ -228,24 +228,14 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 func (r *AstraConnectorController) updateAstraConnectorStatus(
 	ctx context.Context,
 	astraConnector *v1.AstraConnector,
-	natsSyncClientStatus v1.NatsSyncClientStatus,
-	updateObservedSpec ...bool) error {
+	natsSyncClientStatus v1.NatsSyncClientStatus) error {
 
 	// due to conflicts with network or changing object we need to retry on conflict
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		// Get the current status of the resource
-		current := astraConnector.DeepCopy()
-		err := r.Get(ctx, types.NamespacedName{Name: astraConnector.Name, Namespace: astraConnector.Namespace}, current)
-		if err != nil {
-			return err
-		}
-
-		if !reflect.DeepEqual(natsSyncClientStatus, astraConnector.Status.NatsSyncClient) {
-			astraConnector.Status.NatsSyncClient = natsSyncClientStatus
-		}
+		astraConnector.Status.NatsSyncClient = natsSyncClientStatus
 
 		// Update the status
-		err = r.Status().Update(ctx, astraConnector)
+		err := r.Status().Update(ctx, astraConnector)
 		if err != nil {
 			return err
 		}
@@ -258,8 +248,14 @@ func (r *AstraConnectorController) updateAstraConnectorStatus(
 func (r *AstraConnectorController) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&v1.AstraConnector{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
+		Owns(&appsv1.Deployment{}).
+		Owns(&appsv1.StatefulSet{}).
+		Owns(&corev1.Service{}).
+		Owns(&corev1.ServiceAccount{}).
+		Owns(&corev1.ConfigMap{}).
+		Owns(&rbacv1.Role{}).
+		Owns(&rbacv1.RoleBinding{}).
 		WithOptions(controller.Options{MaxConcurrentReconciles: 1}).
-		// WithEventFilter(predicate.GenerationChangedPredicate{}). // Avoid reconcile for status updates
 		Complete(r)
 }
 
@@ -331,4 +327,30 @@ func (r *AstraConnectorController) waitForStatusUpdate(astraConnector *v1.AstraC
 		log.Info("AstraConnector status reflected in k8s")
 	}
 	return err
+}
+
+func waitForManagedCluster(astraConnector *v1.AstraConnector, client client.Client, log logr.Logger) (bool, error) {
+	registerUtil := register.NewClusterRegisterUtil(astraConnector, &http.Client{}, client, nil, log, context.Background())
+	// SetHttpClient should be in the New func above but would require a larger refactor
+	// Setup TLS if enabled, setup hostAliasIP if used
+	err := registerUtil.SetHttpClient(astraConnector.Spec.Astra.SkipTLSValidation, register.GetAstraHostURL(astraConnector))
+	if err != nil {
+		return false, fmt.Errorf("failed to setup HTTP client: %w", err)
+	}
+
+	maxRetries := 5
+	waitTime := 3 * time.Second
+	var isManaged bool
+	for i := 1; i <= maxRetries; i++ {
+		isManaged, _, err = registerUtil.IsClusterManaged()
+		if isManaged {
+			break
+		}
+		if err != nil {
+			log.Error(err, "encountered error while checking for cluster management")
+		}
+		log.Info("cluster not yet managed", "retiresLeft", maxRetries-i)
+		time.Sleep(waitTime)
+	}
+	return isManaged, err
 }

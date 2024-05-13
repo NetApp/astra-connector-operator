@@ -11,6 +11,8 @@ const (
 	CreateClusterRole        = "Creating ClusterRole %s/%s"
 	CreateClusterRoleBinding = "Creating ClusterRoleBinding %s/%s"
 
+	WaitForClusterManagedState = "Waiting for cluster state 'managed'"
+
 	DeleteInProgress = "AstraConnector deletion in progress"
 	DeletionComplete = "AstraConnector deletion complete"
 
@@ -23,6 +25,7 @@ const (
 	ErrorCreateService             = "Error creating Services  %s/%s"
 	ErrorCreateRoles               = "Error creating Roles  %s/%s"
 	ErrorCreateClusterRoles        = "Error creating ClusterRoles %s/%s"
+	ErrorClusterUnmanaged          = "Timed out waiting for cluster to become managed"
 
 	FailedFinalizerAdd             = "Failed to add finalizer"
 	FailedFinalizerRemove          = "Failed to remove finalizer"
