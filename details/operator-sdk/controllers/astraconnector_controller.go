@@ -178,7 +178,6 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 	}
 
 	if r.needsReconcile(ctx, *astraConnector, log) {
-		log.Info("Actual state does not match desired state", "registered", astraConnector.Status.NatsSyncClient.Registered, "desiredSpec", astraConnector.Spec, "observedSpec", astraConnector.Status.ObservedSpec)
 		if !astraConnector.Spec.SkipPreCheck {
 			k8sUtil := k8s.NewK8sUtil(r.Client, r.Clientset, log)
 			preCheckClient := precheck.NewPrecheckClient(log, k8sUtil)
@@ -221,6 +220,34 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 
 			if conf.Config.FeatureFlags().NatLess() {
 				connectorResults, deployError = r.deployNatlessConnector(ctx, astraConnector, &natsSyncClientStatus)
+
+				// Wait for the cluster to become managed (aka "registered")
+				natsSyncClientStatus.Status = WaitForClusterManagedState
+				_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
+				isManaged, err := waitForManagedCluster(astraConnector, r.Client, log)
+				if !isManaged {
+					log.Error(err, "timed out waiting for cluster to become managed, requeueing after delay", "delay", conf.Config.ErrorTimeout())
+					natsSyncClientStatus.Status = ErrorClusterUnmanaged
+					_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
+					// Do not wait 5min, wait 5sec before requeue instead since we have already been waiting in waitForManagedCluster
+					return ctrl.Result{RequeueAfter: time.Second * conf.Config.ErrorTimeout()}, nil
+				}
+				log.Info("Cluster is managed")
+
+				// ASUP Setup
+				err = r.createASUPCR(ctx, astraConnector, astraConnector.Spec.Astra.ClusterId)
+				if err != nil {
+					log.Error(err, FailedASUPCreation)
+					natsSyncClientStatus.Status = FailedASUPCreation
+					_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
+					return ctrl.Result{RequeueAfter: time.Minute * conf.Config.ErrorTimeout()}, err
+				}
+
+				natsSyncClientStatus.Registered = "true"
+				natsSyncClientStatus.AstraConnectorID = "n/a" // Nats specific. NatLess connector does not have this
+				natsSyncClientStatus.AstraClusterId = astraConnector.Spec.Astra.ClusterId
+				natsSyncClientStatus.Status = RegisteredWithAstra
+				_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
 			} else {
 				connectorResults, deployError = r.deployConnector(ctx, astraConnector, &natsSyncClientStatus)
 			}
@@ -385,30 +412,14 @@ func removeString(slice []string, s string) []string {
 func (r *AstraConnectorController) updateAstraConnectorStatus(
 	ctx context.Context,
 	astraConnector *v1.AstraConnector,
-	natsSyncClientStatus v1.NatsSyncClientStatus,
-	updateObservedSpec ...bool) error {
+	natsSyncClientStatus v1.NatsSyncClientStatus) error {
 
 	// due to conflicts with network or changing object we need to retry on conflict
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		// Get the current status of the resource
-		current := astraConnector.DeepCopy()
-		err := r.Get(ctx, types.NamespacedName{Name: astraConnector.Name, Namespace: astraConnector.Namespace}, current)
-		if err != nil {
-			return err
-		}
-
-		if !reflect.DeepEqual(natsSyncClientStatus, astraConnector.Status.NatsSyncClient) {
-			astraConnector.Status.NatsSyncClient = natsSyncClientStatus
-		}
-
-		if len(updateObservedSpec) > 0 && updateObservedSpec[0] {
-			astraConnector.Status.ObservedSpec = astraConnector.Spec
-		} else {
-			astraConnector.Status.ObservedSpec = current.Status.ObservedSpec
-		}
+		astraConnector.Status.NatsSyncClient = natsSyncClientStatus
 
 		// Update the status
-		err = r.Status().Update(ctx, astraConnector)
+		err := r.Status().Update(ctx, astraConnector)
 		if err != nil {
 			return err
 		}
@@ -429,7 +440,6 @@ func (r *AstraConnectorController) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&rbacv1.Role{}).
 		Owns(&rbacv1.RoleBinding{}).
 		WithOptions(controller.Options{MaxConcurrentReconciles: 1}).
-		WithEventFilter(predicate.GenerationChangedPredicate{}). // Avoid reconcile for status updates
 		Complete(r)
 }
 
@@ -455,35 +465,21 @@ func (r *AstraConnectorController) validateAstraConnector(connector v1.AstraConn
 }
 
 func (r *AstraConnectorController) needsReconcile(ctx context.Context, connector v1.AstraConnector, log logr.Logger) bool {
+	observedSpec := connector.DeepCopy()
+	err := r.Get(ctx, types.NamespacedName{Name: connector.Name, Namespace: connector.Namespace}, observedSpec) //if err != nil {
+	if err != nil {
+		log.Error(err, "Get connector CR failed, needs reconcile")
+		return true
+	}
+
 	// Ensure that the cluster has registered successfully
 	if connector.Status.NatsSyncClient.Registered != "true" {
+		log.Info("Registered != true, needs reconcile")
 		return true
 	}
 	// Ensure that the CR spec has not changed between reconciles
-	if !reflect.DeepEqual(connector.Status.ObservedSpec, connector.Spec) {
-		return true
-	}
-
-	// Check if the number of replicas for each component matches the desired number of replicas
-	natsSyncDeployment := &appsv1.Deployment{}
-	err := r.Get(ctx, types.NamespacedName{Name: common.NatsSyncClientName, Namespace: connector.Namespace}, natsSyncDeployment)
-	if err != nil {
-		return true
-	}
-	if *natsSyncDeployment.Spec.Replicas != connector.Spec.NatsSyncClient.Replicas {
-		log.Info("Number of NatsSyncClient replicas does not match", "Expected", connector.Spec.NatsSyncClient.Replicas, "Actual", *natsSyncDeployment.Spec.Replicas)
-		return true
-	}
-
-	natsDeployment := &appsv1.StatefulSet{}
-	err = r.Get(ctx, types.NamespacedName{Name: common.NatsName, Namespace: connector.Namespace}, natsDeployment)
-	if err != nil {
-		return true
-	}
-	// This is currently configured to only ever have one replica due to an issue with
-	// deploying on GKE. See app/deployer/connector/nats.go for more info.
-	if *natsDeployment.Spec.Replicas != common.NatsDefaultReplicas {
-		log.Info("Number of Nats replicas does not match", "Expected", connector.Spec.Nats.Replicas, "Actual", *natsDeployment.Spec.Replicas)
+	if !reflect.DeepEqual(observedSpec.Spec, connector.Spec) {
+		log.Info("Actual state does not match desired state", "registered", connector.Status.NatsSyncClient.Registered, "desiredSpec", connector.Spec, "observedSpec", observedSpec.Spec)
 		return true
 	}
 
@@ -500,6 +496,7 @@ func (r *AstraConnectorController) needsReconcile(ctx context.Context, connector
 	neptuneDeployment := &appsv1.Deployment{}
 	err = r.Get(ctx, types.NamespacedName{Name: common.AstraConnectName, Namespace: connector.Namespace}, neptuneDeployment)
 	if err != nil {
+		log.Info("Get neptuneDeployment failed, , needs reconcile")
 		return true
 	}
 	if *neptuneDeployment.Spec.Replicas != common.NeptuneReplicas {
@@ -557,4 +554,30 @@ func (r *AstraConnectorController) waitForStatusUpdate(astraConnector *v1.AstraC
 		log.Info("AstraConnector status reflected in k8s")
 	}
 	return err
+}
+
+func waitForManagedCluster(astraConnector *v1.AstraConnector, client client.Client, log logr.Logger) (bool, error) {
+	registerUtil := register.NewClusterRegisterUtil(astraConnector, &http.Client{}, client, nil, log, context.Background())
+	// SetHttpClient should be in the New func above but would require a larger refactor
+	// Setup TLS if enabled, setup hostAliasIP if used
+	err := registerUtil.SetHttpClient(astraConnector.Spec.Astra.SkipTLSValidation, register.GetAstraHostURL(astraConnector))
+	if err != nil {
+		return false, fmt.Errorf("failed to setup HTTP client: %w", err)
+	}
+
+	maxRetries := 5
+	waitTime := 3 * time.Second
+	var isManaged bool
+	for i := 1; i <= maxRetries; i++ {
+		isManaged, _, err = registerUtil.IsClusterManaged()
+		if isManaged {
+			break
+		}
+		if err != nil {
+			log.Error(err, "encountered error while checking for cluster management")
+		}
+		log.Info("cluster not yet managed", "retiresLeft", maxRetries-i)
+		time.Sleep(waitTime)
+	}
+	return isManaged, err
 }
