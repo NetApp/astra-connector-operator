@@ -118,28 +118,8 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 		// The object is being deleted
 		if controllerutil.ContainsFinalizer(astraConnector, finalizerName) {
 			// Update status message to indicate that CR delete is in progress
-			//natsSyncClientStatus.Status = DeleteInProgress
-			//_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
-
-			k8sUtil := k8s.NewK8sUtil(r.Client, r.Clientset, log)
-			registerUtil := register.NewClusterRegisterUtil(astraConnector, &http.Client{}, r.Client, k8sUtil, log, context.Background())
-
-			if astraConnector.Status.NatsSyncClient.Registered == "true" {
-				log.Info("Removing cluster from Astra upon CRD delete")
-				err = registerUtil.UnmanageCluster(natsSyncClientStatus.AstraClusterId)
-				if err != nil {
-					log.Error(err, "Failed to unmanage cluster, ignoring...")
-				}
-			}
-
-			log.Info("Unregistering natsSyncClient upon CRD delete")
-			err = registerUtil.UnRegisterNatsSyncClient()
-			if err != nil {
-				log.Error(err, FailedUnRegisterNSClient+", ignoring...")
-			} else {
-				natsSyncClientStatus.Status = "Unregistered"
-				log.Info("Unregistered natsSyncClient upon CRD delete")
-			}
+			natsSyncClientStatus.Status = DeleteInProgress
+			_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
 
 			// delete any cluster scoped resources created by the operator
 			r.deleteConnectorClusterScopedResources(ctx, astraConnector)
@@ -228,7 +208,6 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 		}
 
 		natsSyncClientStatus.Registered = "true"
-		natsSyncClientStatus.AstraConnectorID = "n/a" // Nats specific. NatLess connector does not have this
 		natsSyncClientStatus.AstraClusterId = astraConnector.Spec.Astra.ClusterId
 		natsSyncClientStatus.Status = RegisteredWithAstra
 		_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
