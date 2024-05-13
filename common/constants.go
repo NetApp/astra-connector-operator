@@ -16,53 +16,20 @@ const (
 
 	AstraConnectName                 = "astraconnect"
 	AstraConnectorOperatorRepository = "netapp/astra-connector-operator"
-	AstraConnectTagFile              = "common/connector_version.txt"
 
-	NatsSyncClientName                  = "natssync-client"
-	NatsSyncClientPort                  = 8080
-	NatsSyncClientProtocol              = "TCP"
-	NatsSyncClientKeystoreUrl           = "configmap:///configmap-data"
 	NatsSyncClientDefaultImage          = "natssync-client:2.2.202402012115"
 	NatsSyncClientDefaultCloudBridgeURL = "https://astra.netapp.io"
 
-	NatsName               = "nats"
-	NatsClusterServiceName = "nats-cluster"
-	NatsConfigMapName      = "nats-configmap"
-	NatsServiceAccountName = "nats-serviceaccount"
-	NatsRoleName           = "nats-role"
-	NatsRoleBindingName    = "nats-rolebinding"
-	NatsVolumeName         = "nats-configmap-volume"
-	NatsClientPort         = 4222
-	NatsClusterPort        = 6222
-	NatsMonitorPort        = 8222
-	NatsMetricsPort        = 7777
-	NatsGatewaysPort       = 7522
-	NatsDefaultReplicas    = 1
-	// NatsDefaultImage when changing default image push image to jfrog as well
-	NatsDefaultImage = "nats:2.10.1-alpine3.18"
-	NatsMaxPayload   = 8388608
+	NeptuneName = "neptune-controller-manager"
 
-	NatsSyncClientConfigMapName               = "natssync-client-configmap"
-	NatsSyncClientConfigMapRoleName           = "natssync-client-configmap-role"
-	NatsSyncClientConfigMapRoleBindingName    = "natssync-client-configmap-rolebinding"
-	NatsSyncClientConfigMapServiceAccountName = "natssync-client-configmap-serviceaccount"
-	NatsSyncClientConfigMapVolumeName         = "natssync-client-configmap-volume"
-
-	NeptuneName                  = "neptune-controller-manager"
-	NeptuneDefaultTag            = "e056f69"
-	NeptuneTagFile               = "common/neptune_manager_tag.txt"
 	NeptuneMetricServicePort     = 8443
 	NeptuneMetricServiceProtocol = "TCP"
 	NeptuneReplicas              = 1
-
-	AstraPrivateCloudType = "private"
-	AstraPrivateCloudName = "private"
 
 	ConnectorNeptuneCapability = "neptuneV1"
 	ConnectorV2Capability      = "connectorV2" // V2 refers specifically to Arch 3.0 connector and beyond
 	ConnectorWatcherCapability = "watcherV1"
 
-	AstraClustersAPIVersion        = "1.4"
 	AstraManagedClustersAPIVersion = "1.2"
 )
 
