@@ -1092,6 +1092,7 @@ wait_for_deployment_running() {
     local -r timeout="${3:-"2m"}"
     [ -z "$deployment" ] && fatal "no deployment name given"
 
+    loginfo "Waiting on deployment/$deployment (timeout: $timeout)..."
     if kubectl rollout status -n "$namespace" "deploy/$deployment" --timeout="$timeout" &> /dev/null; then
         return 0
     fi
