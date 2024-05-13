@@ -3859,6 +3859,9 @@ spec:
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
+    - jsonPath: .status.state
+      name: State
+      type: string
     - jsonPath: .metadata.creationTimestamp
       name: Age
       type: date
@@ -4053,6 +4056,11 @@ spec:
           status:
             description: ResticVolumeRestoreStatus defines the observed state of ResticVolumeRestore
             properties:
+              completionTimestamp:
+                description: CompletionTimestamp records the time the ResticVolumeRestore completed. The server's time is used for CompletionTimestamps
+                format: date-time
+                nullable: true
+                type: string
               resticJobCleanedUp:
                 description: Indicates whether the Restic job has been cleaned up
                 type: boolean
@@ -4076,8 +4084,12 @@ spec:
                 - namespace
                 - status
                 type: object
+              state:
+                description: State indicates a high level summary of the ResticVolumeRestore's state
+                type: string
             required:
             - resticJobCleanedUp
+            - state
             type: object
         type: object
     served: true
