@@ -8,6 +8,6 @@
 ########################################
 
 # DevOps and Jenkins CI/CD
-/.github/ @NetApp-Polaris/devops-team
-/.golangci.yaml @NetApp-Polaris/devops-team
-/Dockerfile @NetApp-Polaris/devops-team
+/.github/ @Astra-devops-team
+/.golangci.yaml @Astra-devops-team
+/Dockerfile @Astra-devops-team
