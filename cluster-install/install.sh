@@ -1723,7 +1723,7 @@ step_determine_resource_limit_preset() {
         return 0
     fi
 
-    _PROCESSED_RESOURCE_LIMITS="$(get_limits_for_preset "$RESOURCE_LIMITS_PRESET")"
+    _PROCESSED_RESOURCE_LIMITS="{\"limits\": $(get_limits_for_preset "$RESOURCE_LIMITS_PRESET")}"
     loginfo "Proceeding with resource limits: $(get_limits_for_preset_fancy "$RESOURCE_LIMITS_PRESET")"
 }
 
