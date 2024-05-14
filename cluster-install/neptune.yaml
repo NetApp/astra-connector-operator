@@ -430,6 +430,9 @@ spec:
               appArchivePath:
                 description: AppArchivePath is the path where the snapshot was archived in the destination AppVault.
                 type: string
+              appVaultRef:
+                description: AppVaultRef is the name of the destination AppVault CR
+                type: string
               completionTimestamp:
                 description: CompletionTimestamp records the time the AppMirrorUpdate completed. The server's time is used for CompletionTimestamps
                 format: date-time
