@@ -31,3 +31,10 @@ build/
 
 # Local Developer Files
 .config.yaml
+
+# Unified Installer: output
+**/astra-generated/
+
+# Unified Installer: ignore env files that devs may end up keeping around (but whitelist the example)
+cluster-install/*.env
+cluster-install/install-example-config.env
