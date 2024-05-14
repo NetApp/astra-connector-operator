@@ -1,5 +1,5 @@
-# Unified Installer Script
-The unified installer script will manage an arch3.0 cluster in one go.
+# Astra Cluster Install Script
+The cluster install script will manage an arch3.0 cluster in one go.
 It will also install/upgrade Trident and enable ACP if required/desired.
 
 It will be moved to the Astra Connector Operator repo once it is
