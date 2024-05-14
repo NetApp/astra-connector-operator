@@ -1,0 +1,13 @@
+################################################################################
+# GitHub CODEOWNERS documentation can be found here:
+# https://docs.github.com/en/free-pro-team@latest/github/creating-cloning-and-archiving-repositories/about-code-owners
+################################################################################
+
+########################################
+# DevOps and Tools
+########################################
+
+# DevOps and Jenkins CI/CD
+/.github/ @NetApp/astra-devops-team 
+/.golangci.yaml @NetApp/astra-devops-team 
+
