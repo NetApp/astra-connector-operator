@@ -1591,26 +1591,20 @@ step_check_all_images_can_be_pulled() {
 step_check_astra_control_reachable() {
     logheader $__INFO "Checking if Astra Control is reachable at '$ASTRA_CONTROL_URL'..."
     make_astra_control_request "/"
-    local -r body="$_return_body"
-    local -r status="$_return_status"
-    if [ "$status" == 200 ]; then
+    if [ "$_return_status" == 200 ]; then
         logdebug "astra control: OK"
     else
-        logdebug "body: $body"
-        add_problem "astra control: failed ($status)" "Failed to contact Astra Control at url '$ASTRA_CONTROL_URL' (status code: $status)"
+        add_problem "astra control: failed ($_return_status)" "Failed to contact Astra Control (status code: $_return_status)"
         return 1
     fi
 }
 
 step_check_astra_cloud_and_cluster_id() {
     make_astra_control_request "/topology/v1/clouds/$ASTRA_CLOUD_ID"
-    local -r body="$_return_body"
-    local -r status="$_return_status"
-    if [ "$status" == 200 ]; then
+    if [ "$_return_status" == 200 ]; then
         logdebug "astra control cloud_id: OK"
     else
-        logdebug "body: $body"
-        add_problem "astra control cloud_id: failed ($status)" "Given ASTRA_CLOUD_ID did not pass validation (status code: $status)"
+        add_problem "astra control cloud_id: failed ($_return_status)" "Given ASTRA_CLOUD_ID did not pass validation (status code: $_return_status)"
         return 1
     fi
 
@@ -2335,7 +2329,7 @@ fi
 
 # ASTRA CONTROL access
 if components_include_connector && [ "$SKIP_ASTRA_CHECK" != "true" ]; then
-    step_check_astra_control_reachable && exit_if_problems
+    step_check_astra_control_reachable
     step_check_astra_cloud_and_cluster_id
 else
     logdebug "skipping all Astra checks (COMPONENTS=${COMPONENTS}, SKIP_ASTRA_CHECK=${SKIP_ASTRA_CHECK})"
