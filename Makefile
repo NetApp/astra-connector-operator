@@ -97,7 +97,7 @@ vet: ## Run go vet against code.
 
 test: manifests generate fmt vet envtest ## Run tests.
 	# exclude mocks and script folder
-	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) --arch=amd64 use $(ENVTEST_K8S_VERSION) -p path)" PROJECT_ROOT=$(PWD) go test $(shell go list ./... | grep -v /mocks | grep -v /scripts) -coverprofile cover.out
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) --arch=amd64 use $(ENVTEST_K8S_VERSION) -p path)" PROJECT_ROOT=$(PWD) go test $(shell go list ./... | grep -v /mocks | grep -v /scripts | grep -v generated) -coverprofile cover.out
 
 ##@ Build
 
