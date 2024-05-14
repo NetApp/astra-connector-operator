@@ -64,7 +64,8 @@ type AstraConnect struct {
 // +kubebuilder:validation:Optional
 
 type Neptune struct {
-	Image string `json:"image,omitempty"`
+	Image              string `json:"image,omitempty"`
+	JobImagePullPolicy string `json:"jobImagePullPolicy,omitempty"`
 }
 
 // AstraConnectorSpec defines the desired state of AstraConnector
@@ -94,10 +95,7 @@ type AstraConnectorSpec struct {
 
 // AstraConnectorStatus defines the observed state of AstraConnector
 type AstraConnectorStatus struct {
-	Nodes          []string             `json:"nodes"`
 	NatsSyncClient NatsSyncClientStatus `json:"natsSyncClient"`
-	// ObservedSpec is the last observed Connector custom resource spec
-	ObservedSpec AstraConnectorSpec `json:"observedSpec,omitempty"`
 }
 
 // NatsSyncClientStatus defines the observed state of NatsSyncClient

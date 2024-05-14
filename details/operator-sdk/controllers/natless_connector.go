@@ -29,21 +29,6 @@ func (r *AstraConnectorController) deployNatlessConnector(ctx context.Context,
 		}
 	}
 
-	// if we are registered and have a clusterid let's set up the asup cr
-	err := r.createASUPCR(ctx, astraConnector, "1")
-	if err != nil {
-		log.Error(err, FailedASUPCreation)
-		natsSyncClientStatus.Status = FailedASUPCreation
-		_ = r.updateAstraConnectorStatus(ctx, astraConnector, *natsSyncClientStatus)
-		return ctrl.Result{RequeueAfter: time.Minute * conf.Config.ErrorTimeout()}, err
-	}
-
-	natsSyncClientStatus.Registered = "true"
-	natsSyncClientStatus.AstraConnectorID = "n/a"
-	natsSyncClientStatus.AstraClusterId = "n/a"
-	natsSyncClientStatus.Status = RegisteredWithAstra
-	_ = r.updateAstraConnectorStatus(ctx, astraConnector, *natsSyncClientStatus)
-
 	// No need to requeue due to success
 	return ctrl.Result{}, nil
 }
