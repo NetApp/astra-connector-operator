@@ -37,7 +37,7 @@ readonly __RELEASE_VERSION="24.02"
 readonly -a __REQUIRED_TOOLS=("jq" "kubectl" "curl" "grep" "sort" "uniq" "find" "base64" "wc" "awk")
 
 readonly __GIT_REF_CONNECTOR_OPERATOR="main" # Determines the ACOP branch from which the kustomize resources will be pulled
-readonly __GIT_REF_TRIDENT="initial-manifest" # Determines the Trident branch from which the kustomize resources will be pulled
+readonly __GIT_REF_TRIDENT="ASTRACTL-32138-temporary-stand-in" # Determines the Trident branch from which the kustomize resources will be pulled
 
 # Kustomize is 1.14+ only
 readonly __KUBECTL_MIN_VERSION="1.14"
@@ -755,6 +755,7 @@ version_in_range() {
     if [ -z "$current" ]; then fatal "no current version given"; fi
     if [ -z "$min" ]; then fatal "no min version given"; fi
     if [ -z "$max" ]; then fatal "no max version given"; fi
+    if [ "${current%.0}" == "${max%.0}" ]; then return 0; fi
 
     local -r middle_version="$(printf "%s\n%s\n%s" "$current" "$min" "$max" | sort -V | head -n 2 | tail -n 1)"
     if [ "$middle_version" == "$current" ]; then
@@ -1970,9 +1971,9 @@ step_generate_trident_fresh_install_yaml() {
 
     logheader $__DEBUG "Generating Trident YAML files..."
 
-    # TODO ASTRACTL-32183: use _KUBERNETES_VERSION to choose the right bundle yaml (pre 1.25 or post 1.25)
+    # TODO ASTRACTL-32138: use _KUBERNETES_VERSION to choose the right bundle yaml (pre 1.25 or post 1.25)
     insert_into_file_after_pattern "$kustomization_file" "resources:" \
-        "- https://github.com/NetApp-Polaris/astra-deploy/trident-installer/deploy?ref=$__GIT_REF_TRIDENT"
+        "- https://github.com/NetApp-Polaris/astra-connector/trident-deploy-files-tmp?ref=$__GIT_REF_TRIDENT"
     logdebug "$kustomization_file: added resources entry for trident operator"
 
     local -r trident_image="$(get_config_trident_image)"
