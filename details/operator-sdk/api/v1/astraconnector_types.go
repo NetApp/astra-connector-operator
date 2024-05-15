@@ -116,7 +116,6 @@ type ImageRegistry struct {
 //+kubebuilder:subresource:status
 //+kubebuilder:printcolumn:name="Registered",type=string,JSONPath=`.status.natsSyncClient.registered`
 //+kubebuilder:printcolumn:name="AstraClusterID",type=string,JSONPath=`.status.natsSyncClient.astraClusterID`
-//+kubebuilder:printcolumn:name="AstraConnectorID",type=string,JSONPath=`.status.natsSyncClient.astraConnectorID`
 //+kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.natsSyncClient.status`
 
 // AstraConnector is the Schema for the astraconnectors API

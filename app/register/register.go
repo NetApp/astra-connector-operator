@@ -14,7 +14,6 @@ import (
 	"math"
 	"net"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
@@ -259,39 +258,6 @@ type ClusterInfo struct {
 	Name             string
 	ManagedState     string
 	ConnectorInstall string
-}
-
-// UpdateManagedCluster Updates the persisted record of the given managed cluster
-func (c clusterRegisterUtil) UpdateManagedCluster(astraHost, clusterId, astraConnectorId, connectorInstall, apiToken string) (string, error) {
-	url := fmt.Sprintf("%s/accounts/%s/topology/v1/managedClusters/%s", astraHost, c.AstraConnector.Spec.Astra.AccountId, clusterId)
-
-	manageClustersBody := Cluster{
-		Type:                  "application/astra-managedCluster",
-		Version:               common.AstraManagedClustersAPIVersion,
-		ConnectorCapabilities: common.GetConnectorCapabilities(),
-		PrivateRouteID:        astraConnectorId,
-		ConnectorInstall:      connectorInstall,
-	}
-	manageClustersBodyJson, _ := json.Marshal(manageClustersBody)
-
-	headerMap := HeaderMap{Authorization: fmt.Sprintf("Bearer %s", apiToken)}
-	response, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodPut, url, manageClustersBodyJson, headerMap, c.Log, 3)
-	defer cancel()
-
-	if err != nil {
-		if response != nil {
-			return CreateErrorMsg("UpdateManagedCluster", "make PUT call", url, response.Status, "", err), err
-		}
-		return CreateErrorMsg("UpdateManagedCluster", "make PUT call", url, "", "", err), err
-	}
-
-	if response.StatusCode > http.StatusNoContent {
-		errorMsg := CreateErrorMsg("UpdateManagedCluster", "make PUT call", url, response.Status, "", errors.New("update managed cluster failed with: "+strconv.Itoa(response.StatusCode)))
-		return errorMsg, errors.New(errorMsg)
-	}
-
-	c.Log.WithValues("clusterId", clusterId).Info("Managed Cluster updated")
-	return "", nil
 }
 
 // GetAPITokenFromSecret Gets Secret provided in the ACC Spec and returns api token string of the data in secret

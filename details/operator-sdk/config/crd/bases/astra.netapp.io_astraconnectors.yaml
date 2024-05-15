@@ -23,9 +23,6 @@ spec:
     - jsonPath: .status.natsSyncClient.astraClusterID
       name: AstraClusterID
       type: string
-    - jsonPath: .status.natsSyncClient.astraConnectorID
-      name: AstraConnectorID
-      type: string
     - jsonPath: .status.natsSyncClient.status
       name: Status
       type: string
