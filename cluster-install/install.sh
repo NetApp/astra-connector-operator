@@ -37,7 +37,7 @@ readonly __RELEASE_VERSION="24.02"
 readonly -a __REQUIRED_TOOLS=("jq" "kubectl" "curl" "grep" "sort" "uniq" "find" "base64" "wc" "awk")
 
 readonly __GIT_REF_CONNECTOR_OPERATOR="main" # Determines the ACOP branch from which the kustomize resources will be pulled
-readonly __GIT_REF_TRIDENT="ASTRACTL-32138-temporary-standin" # Determines the Trident branch from which the kustomize resources will be pulled
+readonly __GIT_REF_TRIDENT="ASTRACTL-32138-temporary-stand-in" # Determines the Trident branch from which the kustomize resources will be pulled
 
 # Kustomize is 1.14+ only
 readonly __KUBECTL_MIN_VERSION="1.14"
