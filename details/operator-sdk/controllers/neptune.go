@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 	"time"
 
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -23,6 +24,7 @@ func (r *AstraConnectorController) deployNeptune(ctx context.Context,
 	if err != nil {
 		// Failed deploying we want status to reflect that for at least 30 seconds before it's requeued so
 		// anyone watching can be informed
+		log.Log.Error(err, "Oscar logging error")
 		return ctrl.Result{RequeueAfter: time.Minute * conf.Config.ErrorTimeout()}, err
 	}
 

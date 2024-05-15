@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"google.golang.org/appengine/log"
 	"net/http"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"strings"
@@ -16,9 +17,6 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
 
-	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -26,7 +24,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -95,6 +92,7 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 		natsSyncClientStatus.Status = fmt.Sprintf("%s; %s", FailedAstraConnectorValidation, err.Error())
 		_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
 		// Do not requeue. This is a user input error
+		log.Error(err, "Oscar logging error")
 		return ctrl.Result{}, err
 	}
 
@@ -111,6 +109,8 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 			if err := r.Update(ctx, astraConnector); err != nil {
 				natsSyncClientStatus.Status = FailedFinalizerAdd
 				_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
+
+				log.Error(err, "Oscar logging error")
 				return ctrl.Result{}, err
 			}
 		}
@@ -194,6 +194,7 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 			natsSyncClientStatus.Status = ErrorClusterUnmanaged
 			_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
 			// Do not wait 5min, wait 5sec before requeue instead since we have already been waiting in waitForManagedCluster
+			log.Error(err, "Oscar logging error")
 			return ctrl.Result{RequeueAfter: time.Second * conf.Config.ErrorTimeout()}, nil
 		}
 		log.Info("Cluster is managed")
@@ -204,6 +205,7 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 			log.Error(err, FailedASUPCreation)
 			natsSyncClientStatus.Status = FailedASUPCreation
 			_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
+			log.Error(err, "Oscar logging error")
 			return ctrl.Result{RequeueAfter: time.Minute * conf.Config.ErrorTimeout()}, err
 		}
 
@@ -238,31 +240,23 @@ func (r *AstraConnectorController) updateAstraConnectorStatus(
 	astraConnector *v1.AstraConnector,
 	natsSyncClientStatus v1.NatsSyncClientStatus) error {
 
-	// due to conflicts with network or changing object we need to retry on conflict
-	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		astraConnector.Status.NatsSyncClient = natsSyncClientStatus
+	astraConnector.Status.NatsSyncClient = natsSyncClientStatus
 
-		// Update the status
-		err := r.Status().Update(ctx, astraConnector)
-		if err != nil {
-			return err
-		}
+	// Update the status
+	err := r.Status().Update(ctx, astraConnector)
+	if err != nil {
+		log.Infof(ctx, "Oscar logging error")
+		log.Infof(ctx, err.Error())
+		return err
+	}
+	return nil
 
-		return nil
-	})
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *AstraConnectorController) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&v1.AstraConnector{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
-		Owns(&appsv1.Deployment{}).
-		Owns(&appsv1.StatefulSet{}).
-		Owns(&corev1.Service{}).
-		Owns(&corev1.ServiceAccount{}).
-		Owns(&corev1.ConfigMap{}).
-		Owns(&rbacv1.Role{}).
-		Owns(&rbacv1.RoleBinding{}).
 		WithOptions(controller.Options{MaxConcurrentReconciles: 1}).
 		Complete(r)
 }
