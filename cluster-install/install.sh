@@ -413,8 +413,7 @@ get_preset_recommendation() {
     [ "$node_count" -lt 1 ] && fatal "invalid node_count '$node_count' given: must be a number greater than 0"
     [ "$namespace_count" -lt 1 ] && fatal "invalid namespace_count '$namespace_count' given: must be a number greater than 0"
 
-    # TODO: these are placeholder
-    #  recommendations
+    # TODO: these are placeholder recommendations
     if [ "$node_count" -gt 5 ] || [ "$namespace_count" -lt 25 ]; then
         echo "${__RESOURCE_LIMITS_SMALL}"
     elif [ "$node_count" -gt 15 ] || [ "$namespace_count" -lt 75 ]; then
@@ -1189,7 +1188,7 @@ create_kubectl_patch_for_containers() {
     [ -z "$resource_path" ] && fatal "no resource_path given"
     [ -z "$patch_value" ] && fatal "no patch_value given"
     if ! echo "$resource" | grep -q -- "/"; then fatal "invalid format for given resource '$resource': use 'kind/resource_name'"; fi
-    if ! echo "$patch_value" | jq &> /dev/null; then fatal "given patch_value '$patch_value' is not valid JSON"; fi
+    if ! echo "$patch_value" | jq '.' &> /dev/null; then fatal "given patch_value '$patch_value' is not valid JSON"; fi
     if [ "$kind" != "deploy" ] && [ "$kind" != "pod" ]; then fatal "unsupported kind '$kind' given"; fi
 
     local containers_list_path_slash="/spec/template/spec/containers"
@@ -1222,7 +1221,7 @@ create_kubectl_patch_for_containers() {
     for (( i=0; i<"$container_count"; i++ )); do
         current='{'$dry_run_warning'"op": "add","path": "'
         current+=$containers_list_path_slash'/'$i'/'$resource_path'","value": '$patch_value'}'
-        json_patch+="$(echo "$current" | jq -r),"
+        json_patch+="$(echo "$current" | jq -r '.'),"
         if (( i < container_count-1 )); then
             json_patch+="${__NEWLINE}"
         fi
@@ -1591,26 +1590,20 @@ step_check_all_images_can_be_pulled() {
 step_check_astra_control_reachable() {
     logheader $__INFO "Checking if Astra Control is reachable at '$ASTRA_CONTROL_URL'..."
     make_astra_control_request "/"
-    local -r body="$_return_body"
-    local -r status="$_return_status"
-    if [ "$status" == 200 ]; then
+    if [ "$_return_status" == 200 ]; then
         logdebug "astra control: OK"
     else
-        logdebug "body: $body"
-        add_problem "astra control: failed ($status)" "Failed to contact Astra Control at url '$ASTRA_CONTROL_URL' (status code: $status)"
+        add_problem "astra control: failed ($_return_status)" "Failed to contact Astra Control (status code: $_return_status)"
         return 1
     fi
 }
 
 step_check_astra_cloud_and_cluster_id() {
     make_astra_control_request "/topology/v1/clouds/$ASTRA_CLOUD_ID"
-    local -r body="$_return_body"
-    local -r status="$_return_status"
-    if [ "$status" == 200 ]; then
+    if [ "$_return_status" == 200 ]; then
         logdebug "astra control cloud_id: OK"
     else
-        logdebug "body: $body"
-        add_problem "astra control cloud_id: failed ($status)" "Given ASTRA_CLOUD_ID did not pass validation (status code: $status)"
+        add_problem "astra control cloud_id: failed ($_return_status)" "Given ASTRA_CLOUD_ID did not pass validation (status code: $_return_status)"
         return 1
     fi
 
@@ -1633,41 +1626,18 @@ step_check_kubeconfig_choice() {
 
 # step_query_user_for_resource_count is used to query the user on the number of nodes/namespaces they expect
 # to have on their cluster, which will help us recommend the appropriate resource limit preset.
-step_query_user_for_resource_count() {
+step_detect_resource_count() {
     local -r resource="$1"
     if ! str_matches_at_least_one "$resource" "namespaces" "nodes"; then
         fatal "invalid resource '$resource': only 'namespaces' or 'nodes' supported"
     fi
-    local -r manual_entry_msg="How many $resource on do you expect to have in this cluster?"
-    local msg=""
 
     _count="$(kubectl get "$resource" -o json | jq -r '.items | length' 2> /dev/null)"
     if [ -z "$_count" ] || [ "$_count" -lt 1 ]; then
         _count=""
-        msg="Failed to detect number of $resource.${__NEWLINE}$manual_entry_msg"
-        if ! prompt_user_number_greater_than_zero _count "$msg"; then
-            msg="Failed to detect number of $resource."
-            msg+=" Please verify your connection to the cluster and try again,"
-            msg+=" or set RESOURCE_LIMITS_PRESET to one of the following values:"
-            msg+=" ${__RESOURCE_LIMITS_VALID_PRESETS[*]}"
-            add_problem "$msg"
-            return 1
-        fi
-    else
-        msg="We detected $_count $resource on your cluster.${__NEWLINE}"
-        msg+="Is this accurate ('no' to enter a number manually)?"
-        if ! prompt_user_yes_no "$msg"; then
-            _user_count=""
-            if ! prompt_user_number_greater_than_zero _user_count "$manual_entry_msg"; then
-                # This failure path should not be possible (because the user needs to have prompts enabled)
-                # which is why it's a fatal error instead of a problem
-                fatal "failed to get $resource count from user"
-            fi
-            _count="$_user_count"
-        fi
     fi
 
-    loginfo "Proceeding with a count of $_count $resource."
+    logdebug "Found '$_count' $resource."
     _return_value="$_count"
 }
 
@@ -1680,10 +1650,10 @@ step_determine_resource_limit_preset() {
         RESOURCE_LIMITS_PRESET="$__RESOURCE_LIMITS_CUSTOM"
         loginfo "Custom resource limits have been set by user ($(get_limits_for_preset_fancy "$__RESOURCE_LIMITS_CUSTOM"))"
     elif [ -z "$RESOURCE_LIMITS_PRESET" ]; then
-        step_query_user_for_resource_count "nodes"
+        step_detect_resource_count "nodes"
         local -r node_count="$_return_value"
 
-        step_query_user_for_resource_count "namespaces"
+        step_detect_resource_count "namespaces"
         local -r namespace_count="$_return_value"
 
         exit_if_problems
@@ -2043,7 +2013,7 @@ step_generate_trident_operator_patch() {
 
     logheader $__DEBUG "Generating Trident Operator patch"
     local -r patch='[{"op":"replace","path":"/spec/template/spec/containers/0/image","value":"'"$new_image"'"}]'
-    _PATCHES_TRIDENT_OPERATOR+=("deploy/trident-operator -n '$namespace' --type=json -p '$(echo "$patch" | jq)'")
+    _PATCHES_TRIDENT_OPERATOR+=("deploy/trident-operator -n '$namespace' --type=json -p '$(echo "$patch" | jq '.')'")
 }
 
 step_generate_torc_patch() {
@@ -2076,7 +2046,7 @@ step_generate_torc_patch() {
     fi
 
     if [ "${#torc_patch_list[@]}" -gt 0 ]; then
-        torc_patch_list="'$(echo "[${torc_patch_list%,}]" | jq)'"
+        torc_patch_list="'$(echo "[${torc_patch_list%,}]" | jq '.')'"
         _PATCHES_TORC+=("tridentorchestrator $torc_name --type=json -p ${torc_patch_list}")
     fi
 }
@@ -2335,7 +2305,7 @@ fi
 
 # ASTRA CONTROL access
 if components_include_connector && [ "$SKIP_ASTRA_CHECK" != "true" ]; then
-    step_check_astra_control_reachable && exit_if_problems
+    step_check_astra_control_reachable
     step_check_astra_cloud_and_cluster_id
 else
     logdebug "skipping all Astra checks (COMPONENTS=${COMPONENTS}, SKIP_ASTRA_CHECK=${SKIP_ASTRA_CHECK})"
