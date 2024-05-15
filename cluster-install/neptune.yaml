@@ -350,10 +350,28 @@ spec:
               error:
                 description: Error indicates the most recent error that has occurred. The error may not be permanent, so progress may continue after temporarily seeing an error.
                 type: string
-              lastSync:
-                additionalProperties:
-                  type: string
-                description: LastSync stores the startTime and completionTime for the last sync
+              lastTransfer:
+                description: LastTransfer stores the start time and completion time for the last transfer
+                properties:
+                  completionTimestamp:
+                    description: CompletionTimestamp is the time the transfer completed
+                    format: date-time
+                    type: string
+                  startTimestamp:
+                    description: StartTimestamp is the time the transfer started
+                    format: date-time
+                    type: string
+                type: object
+              lastTransferredSnapshot:
+                description: LastTransferredSnapshot stores the name and completion time for the last transferred snapshot
+                properties:
+                  completionTimestamp:
+                    description: CompletionTimestamp is the time when the snapshot was completed
+                    format: date-time
+                    type: string
+                  name:
+                    description: Name is the name of the snapshot
+                    type: string
                 type: object
               state:
                 description: State indicates the current state of the AppMirrorRelationship
