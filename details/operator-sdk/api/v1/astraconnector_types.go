@@ -100,10 +100,9 @@ type AstraConnectorStatus struct {
 
 // NatsSyncClientStatus defines the observed state of NatsSyncClient
 type NatsSyncClientStatus struct {
-	Registered       string `json:"registered"` //todo cluster vs connector registered
-	AstraClusterId   string `json:"astraClusterID,omitempty"`
-	AstraConnectorID string `json:"astraConnectorID"`
-	Status           string `json:"status"`
+	Registered     string `json:"registered"` //todo cluster vs connector registered
+	AstraClusterId string `json:"astraClusterID,omitempty"`
+	Status         string `json:"status"`
 }
 
 // +kubebuilder:validation:Optional
@@ -117,7 +116,6 @@ type ImageRegistry struct {
 //+kubebuilder:subresource:status
 //+kubebuilder:printcolumn:name="Registered",type=string,JSONPath=`.status.natsSyncClient.registered`
 //+kubebuilder:printcolumn:name="AstraClusterID",type=string,JSONPath=`.status.natsSyncClient.astraClusterID`
-//+kubebuilder:printcolumn:name="AstraConnectorID",type=string,JSONPath=`.status.natsSyncClient.astraConnectorID`
 //+kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.natsSyncClient.status`
 
 // AstraConnector is the Schema for the astraconnectors API

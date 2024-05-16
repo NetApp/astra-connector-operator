@@ -19,10 +19,6 @@ func Factory(
 	deploymentName string,
 ) (model.Deployer, error) {
 	switch deploymentName {
-	case common.NatsName:
-		return connector.NewNatsDeployer(), nil
-	case common.NatsSyncClientName:
-		return connector.NewNatsSyncClientDeployer(), nil
 	case common.AstraConnectName:
 		return connector.NewAstraConnectorDeployer(), nil
 	case common.NeptuneName:

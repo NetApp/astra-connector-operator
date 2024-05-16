@@ -96,7 +96,9 @@ vet: ## Run go vet against code.
 	go vet ./...
 
 test: manifests generate fmt vet envtest ## Run tests.
-	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) --arch=amd64 use $(ENVTEST_K8S_VERSION) -p path)" PROJECT_ROOT=$(PWD) go test ./... -coverprofile cover.out
+	# exclude mocks and script folder
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) --arch=amd64 use $(ENVTEST_K8S_VERSION) -p path)" PROJECT_ROOT=$(PWD) go test $(shell go list ./... | grep -v /mocks | grep -v /scripts) -coverprofile coverage.out
+	cat coverage.out | grep -v "zz_generated.deepcopy.go" > cover.out
 
 ##@ Build
 
