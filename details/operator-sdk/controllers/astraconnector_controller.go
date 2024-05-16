@@ -8,10 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/NetApp-Polaris/astra-connector-operator/common"
-	appsv1 "k8s.io/api/apps/v1"
 	"net/http"
-	"reflect"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"strings"
 	"time"
@@ -330,49 +327,6 @@ func (r *AstraConnectorController) waitForStatusUpdate(astraConnector *v1.AstraC
 		log.Info("AstraConnector status reflected in k8s")
 	}
 	return err
-}
-
-func (r *AstraConnectorController) needsReconcile(ctx context.Context, connector v1.AstraConnector, log logr.Logger) bool {
-	observedSpec := connector.DeepCopy()
-	err := r.Get(ctx, types.NamespacedName{Name: connector.Name, Namespace: connector.Namespace}, observedSpec) //if err != nil {
-	if err != nil {
-		log.Error(err, "Get connector CR failed, needs reconcile")
-		return true
-	}
-
-	// Ensure that the cluster has registered successfully
-	if connector.Status.NatsSyncClient.Registered != "true" {
-		log.Info("Registered != true, needs reconcile")
-		return true
-	}
-	// Ensure that the CR spec has not changed between reconciles
-	if !reflect.DeepEqual(observedSpec.Spec, connector.Spec) {
-		log.Info("Actual state does not match desired state", "registered", connector.Status.NatsSyncClient.Registered, "desiredSpec", connector.Spec, "observedSpec", observedSpec.Spec)
-		return true
-	}
-
-	astraConnectDeployment := &appsv1.Deployment{}
-	err = r.Get(ctx, types.NamespacedName{Name: common.AstraConnectName, Namespace: connector.Namespace}, astraConnectDeployment)
-	if err != nil {
-		log.Info("Number of AstraConnector replicas does not match", "Expected", connector.Spec.AstraConnect.Replicas, "Actual", *astraConnectDeployment.Spec.Replicas)
-		return true
-	}
-	if *astraConnectDeployment.Spec.Replicas != connector.Spec.AstraConnect.Replicas {
-		return true
-	}
-
-	neptuneDeployment := &appsv1.Deployment{}
-	err = r.Get(ctx, types.NamespacedName{Name: common.AstraConnectName, Namespace: connector.Namespace}, neptuneDeployment)
-	if err != nil {
-		log.Info("Get neptuneDeployment failed, , needs reconcile")
-		return true
-	}
-	if *neptuneDeployment.Spec.Replicas != common.NeptuneReplicas {
-		log.Info("Number of Neptune replicas does not match", "Expected", connector.Spec.AstraConnect.Replicas, "Actual", *astraConnectDeployment.Spec.Replicas)
-		return true
-	}
-
-	return false
 }
 
 func waitForManagedCluster(astraConnector *v1.AstraConnector, client client.Client, log logr.Logger) (bool, error) {
