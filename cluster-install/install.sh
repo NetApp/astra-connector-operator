@@ -2116,10 +2116,10 @@ step_apply_resources() {
             if ! is_dry_run; then
                 # Operator doesn't change the astraconnect spec automatically so we need to delete it first (if it exists)
                 kubectl delete -n "$(get_connector_namespace)" deploy/astraconnect &> /dev/null
-                output="$(kubectl apply -f "$crs_file_path")"
-                logdebug "$output"
             fi
         fi
+        output="$(kubectl apply -f "$crs_file_path")"
+        logdebug "$output"
         loginfo "* Astra CRs have been applied to the cluster."
     else
         logdebug "No CRs file to apply"
