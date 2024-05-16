@@ -113,6 +113,8 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 				_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
 				return ctrl.Result{}, err
 			}
+			// spec change this will trigger a reconcile
+			return ctrl.Result{}, nil
 		}
 	} else {
 		// The object is being deleted
@@ -140,11 +142,6 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 
 		// Stop reconciliation as the item is being deleted
 		// Do not requeue
-		return ctrl.Result{}, nil
-	}
-
-	if !r.needsReconcile(ctx, *astraConnector, log) {
-		log.Info("Actual state matches desired state", "registered", astraConnector.Status.NatsSyncClient.Registered, "desiredSpec", astraConnector.Spec)
 		return ctrl.Result{}, nil
 	}
 
