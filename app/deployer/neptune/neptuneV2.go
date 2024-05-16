@@ -87,7 +87,9 @@ func (n NeptuneClientDeployerV2) GetDeploymentObjects(m *v1.AstraConnector, ctx 
 			},
 		},
 		Spec: appsv1.DeploymentSpec{
-
+			Strategy: appsv1.DeploymentStrategy{
+				Type: appsv1.RecreateDeploymentStrategyType,
+			},
 			Replicas: &neptuneReplicas,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
@@ -166,7 +168,6 @@ func (n NeptuneClientDeployerV2) GetDeploymentObjects(m *v1.AstraConnector, ctx 
 							Args: []string{
 								"--health-probe-bind-address=:8081",
 								"--metrics-bind-address=127.0.0.1:8080",
-								"--leader-elect",
 							},
 							Command: []string{
 								"/manager",

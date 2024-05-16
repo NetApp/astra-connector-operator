@@ -18,18 +18,6 @@ func TestFactory(t *testing.T) {
 		expectError    bool
 	}{
 		{
-			name:           "NatsName",
-			deploymentName: common.NatsName,
-			expectedType:   &connector.NatsDeployer{},
-			expectError:    false,
-		},
-		{
-			name:           "NatssyncClientName",
-			deploymentName: common.NatsSyncClientName,
-			expectedType:   &connector.NatsSyncClientDeployer{},
-			expectError:    false,
-		},
-		{
 			name:           "AstraConnectName",
 			deploymentName: common.AstraConnectName,
 			expectedType:   &connector.AstraConnectDeployer{},

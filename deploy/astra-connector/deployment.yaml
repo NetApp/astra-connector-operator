@@ -19,8 +19,6 @@ spec:
         env:
         - name: LOG_LEVEL
           value: "info"
-        - name: NATS_DISABLED
-          value: "false"
 
         - name: API_TOKEN_SECRET_REF
           value: "astra-api-token"

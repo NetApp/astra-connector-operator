@@ -59,56 +59,14 @@ func TestAstraConnectGetDeploymentObjects(t *testing.T) {
 	assert.Equal(t, "test-registry/astra-connector:test-image", container.Image)
 	assert.Equal(t, common.AstraConnectName, container.Name)
 
-	assert.Equal(t, 4, len(container.Env))
-	assert.Equal(t, "NATS_SERVER_URL", container.Env[0].Name)
-	assert.Equal(t, "LOG_LEVEL", container.Env[1].Name)
-	assert.Equal(t, "trace", container.Env[1].Value)
+	assert.Equal(t, 10, len(container.Env))
+	assert.Equal(t, "LOG_LEVEL", container.Env[0].Name)
+	assert.Equal(t, "NATS_DISABLED", container.Env[1].Name)
+	assert.Equal(t, "true", container.Env[1].Value)
 
 	assert.Equal(t, 1, len(deployment.Spec.Template.Spec.ImagePullSecrets))
 	assert.Equal(t, "test-secret", deployment.Spec.Template.Spec.ImagePullSecrets[0].Name)
 }
-
-// ToDo: figure out a way to mock the txt file the code is reading from
-// func TestAstraConnectGetDeploymentObjectsUsingDefaults(t *testing.T) {
-// 	deployer := connector.NewAstraConnectorDeployer()
-// 	ctx := context.Background()
-
-// 	astraConnector := &v1.AstraConnector{
-// 		ObjectMeta: metav1.ObjectMeta{
-// 			Name:      "test-astra-connector",
-// 			Namespace: "test-namespace",
-// 		},
-// 		Spec: v1.AstraConnectorSpec{
-// 			AstraConnect: v1.AstraConnect{
-// 				Replicas: -3,
-// 			},
-// 		},
-// 	}
-//
-//	objects, _, err := deployer.GetDeploymentObjects(astraConnector, ctx)
-//	assert.NoError(t, err)
-//	assert.NotNil(t, objects)
-//	assert.Equal(t, 1, len(objects))
-//
-// 	deployment, ok := objects[0].(*appsv1.Deployment)
-// 	assert.True(t, ok)
-
-// 	assert.Equal(t, "test-namespace", deployment.Namespace)
-// 	assert.Equal(t, common.AstraConnectName, deployment.Name)
-
-// 	assert.Equal(t, int32(1), *deployment.Spec.Replicas)
-// 	assert.Equal(t, common.AstraConnectName, deployment.Spec.Template.Spec.ServiceAccountName)
-
-// 	container := deployment.Spec.Template.Spec.Containers[0]
-// 	assert.Equal(t, "netappdownloads.jfrog.io/docker-astra-control-staging/arch30/neptune/astra-connector:1.0.202401122203", container.Image)
-// 	assert.Equal(t, common.AstraConnectName, container.Name)
-// 	assert.Equal(t, 4, len(container.Env))
-// 	assert.Equal(t, "NATS_SERVER_URL", container.Env[0].Name)
-// 	assert.Equal(t, "LOG_LEVEL", container.Env[1].Name)
-// 	assert.Equal(t, "trace", container.Env[1].Value)
-
-// 	assert.Equal(t, 0, len(deployment.Spec.Template.Spec.ImagePullSecrets))
-// }
 
 func DummyAstraConnector() v1.AstraConnector {
 	return v1.AstraConnector{
@@ -160,7 +118,6 @@ func TestAstraConnectGetConfigMapObjectsSkipTLSValidationTrue(t *testing.T) {
 	assert.Equal(t, common.AstraConnectName, configMap.Name)
 
 	expectedData := map[string]string{
-		"nats_url":            "nats://nats.test-namespace:4222",
 		"skip_tls_validation": "true",
 	}
 	assert.Equal(t, expectedData, configMap.Data)
@@ -193,7 +150,6 @@ func TestAstraConnectGetConfigMapObjectsSkipTLSValidationFalse(t *testing.T) {
 	assert.Equal(t, common.AstraConnectName, configMap.Name)
 
 	expectedData := map[string]string{
-		"nats_url":            "nats://nats.something:4222",
 		"skip_tls_validation": "false",
 	}
 	assert.Equal(t, expectedData, configMap.Data)
