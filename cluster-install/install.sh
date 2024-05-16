@@ -2275,8 +2275,8 @@ step_monitor_deployment_progress() {
 #======================================================================
 #== Main
 #======================================================================
-logln $__INFO "====== Astra Cluster Installer v0.0.1 ======"
 set_log_level
+logln $__INFO "====== Astra Cluster Installer v0.0.1 ======"
 load_config_from_file_if_given "$CONFIG_FILE"
 exit_if_problems
 
