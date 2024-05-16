@@ -583,7 +583,7 @@ prompt_user() {
     if [ "$DISABLE_PROMPTS" == "true" ]; then return 0; fi
 
     while true; do
-        read -p "$prompt_msg" -r "${var_name?}"
+        read -p "${prompt_msg% } " -r "${var_name?}"
         if [ -n "${!var_name}" ]; then
             break
         else
@@ -2111,15 +2111,17 @@ step_apply_resources() {
     # Apply CRs (if we have any)
     if [ -f "$crs_file_path" ]; then
         logdebug "apply CRs"
-        if grep -q "AstraConnector" $crs_file_path; then
-            logdebug "delete previous astraconnect if it exists"
-            if ! is_dry_run; then
+        if ! is_dry_run; then
+            if grep -q "AstraConnector" $crs_file_path; then
+                logdebug "delete previous astraconnect if it exists"
                 # Operator doesn't change the astraconnect spec automatically so we need to delete it first (if it exists)
                 kubectl delete -n "$(get_connector_namespace)" deploy/astraconnect &> /dev/null
             fi
+            output="$(kubectl apply -f "$crs_file_path")"
+            logdebug "$output"
+        else
+            logdebug "skipped due to dry run"
         fi
-        output="$(kubectl apply -f "$crs_file_path")"
-        logdebug "$output"
         loginfo "* Astra CRs have been applied to the cluster."
     else
         logdebug "No CRs file to apply"
