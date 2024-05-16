@@ -7,6 +7,7 @@ package connector
 import (
 	"context"
 	"fmt"
+	"maps"
 	"strconv"
 
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -25,14 +26,14 @@ import (
 	v1 "github.com/NetApp-Polaris/astra-connector-operator/details/operator-sdk/api/v1"
 )
 
-type AstraConnectNatlessDeployer struct{}
+type AstraConnectDeployer struct{}
 
-func NewAstraConnectorNatlessDeployer() model.Deployer {
-	return &AstraConnectNatlessDeployer{}
+func NewAstraConnectorDeployer() model.Deployer {
+	return &AstraConnectDeployer{}
 }
 
 // GetDeploymentObjects returns a Astra Connect Deployment object
-func (d *AstraConnectNatlessDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
+func (d *AstraConnectDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
 	log := ctrllog.FromContext(ctx)
 	ls := LabelsForAstraConnectClient(common.AstraConnectName, m.Spec.Labels)
 
@@ -147,12 +148,12 @@ func (d *AstraConnectNatlessDeployer) GetDeploymentObjects(m *v1.AstraConnector,
 }
 
 // GetServiceObjects returns an Astra-Connect Service object
-func (d *AstraConnectNatlessDeployer) GetServiceObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
+func (d *AstraConnectDeployer) GetServiceObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
 	return nil, model.NonMutateFn, nil
 }
 
 // GetConfigMapObjects returns a ConfigMap object for Astra Connect
-func (d *AstraConnectNatlessDeployer) GetConfigMapObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
+func (d *AstraConnectDeployer) GetConfigMapObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
 	configMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: m.Namespace,
@@ -167,7 +168,7 @@ func (d *AstraConnectNatlessDeployer) GetConfigMapObjects(m *v1.AstraConnector, 
 }
 
 // GetServiceAccountObjects returns a ServiceAccount object for Astra Connect
-func (d *AstraConnectNatlessDeployer) GetServiceAccountObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
+func (d *AstraConnectDeployer) GetServiceAccountObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
 	sa := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      common.AstraConnectName,
@@ -177,7 +178,7 @@ func (d *AstraConnectNatlessDeployer) GetServiceAccountObjects(m *v1.AstraConnec
 	return []client.Object{sa}, model.NonMutateFn, nil
 }
 
-func (d *AstraConnectNatlessDeployer) GetClusterRoleObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
+func (d *AstraConnectDeployer) GetClusterRoleObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
 	clusterRole := &rbacv1.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: common.AstraConnectName,
@@ -249,7 +250,7 @@ func (d *AstraConnectNatlessDeployer) GetClusterRoleObjects(m *v1.AstraConnector
 	return []client.Object{clusterRole}, model.NonMutateFn, nil
 }
 
-func (d *AstraConnectNatlessDeployer) GetClusterRoleBindingObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
+func (d *AstraConnectDeployer) GetClusterRoleBindingObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
 	clusterRoleBinding := &rbacv1.ClusterRoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: common.AstraConnectName,
@@ -271,7 +272,7 @@ func (d *AstraConnectNatlessDeployer) GetClusterRoleBindingObjects(m *v1.AstraCo
 }
 
 // GetRoleObjects returns a ConfigMapRole object for Astra Connect
-func (d *AstraConnectNatlessDeployer) GetRoleObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
+func (d *AstraConnectDeployer) GetRoleObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
 	role := &rbacv1.Role{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      common.AstraConnectName,
@@ -320,7 +321,7 @@ func (d *AstraConnectNatlessDeployer) GetRoleObjects(m *v1.AstraConnector, ctx c
 }
 
 // GetRoleBindingObjects returns a ConfigMapRoleBinding object
-func (d *AstraConnectNatlessDeployer) GetRoleBindingObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
+func (d *AstraConnectDeployer) GetRoleBindingObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
 	roleBinding := &rbacv1.RoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      common.AstraConnectName,
@@ -343,6 +344,16 @@ func (d *AstraConnectNatlessDeployer) GetRoleBindingObjects(m *v1.AstraConnector
 }
 
 // NIL RESOURCES BELOW
-func (d *AstraConnectNatlessDeployer) GetStatefulSetObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
+
+func (d *AstraConnectDeployer) GetStatefulSetObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
 	return nil, model.NonMutateFn, nil
+}
+
+// Helper Functions Below
+
+// LabelsForAstraConnectClient returns the labels for selecting the AstraConnectClient
+func LabelsForAstraConnectClient(name string, mLabels map[string]string) map[string]string {
+	labels := map[string]string{"type": name, "role": name}
+	maps.Copy(labels, mLabels)
+	return labels
 }

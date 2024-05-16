@@ -78,10 +78,8 @@ func DefaultConfiguration() *MutableConfiguration {
 		WaitDurationForResource: 5 * time.Minute,
 		ErrorTimeout:            5,
 		FeatureFlags: featureFlags{
-			DeployNatsConnector:   true,
-			DeployNeptune:         true,
-			SkipAstraRegistration: false,
-			NatLess:               true,
+			DeployNatsConnector: true,
+			DeployNeptune:       true,
 		},
 	}
 }
@@ -97,10 +95,8 @@ func toImmutableConfig(config *MutableConfiguration) *ImmutableConfiguration {
 		waitDurationForResource: config.WaitDurationForResource,
 		errorTimeout:            config.ErrorTimeout,
 		featureFlags: ImmutableFeatureFlags{
-			deployNatsConnector:   config.FeatureFlags.DeployNatsConnector,
-			deployNeptune:         config.FeatureFlags.DeployNeptune,
-			skipAstraRegistration: config.FeatureFlags.SkipAstraRegistration,
-			natLess:               config.FeatureFlags.NatLess,
+			deployNatsConnector: config.FeatureFlags.DeployNatsConnector,
+			deployNeptune:       config.FeatureFlags.DeployNeptune,
 		},
 		config: config,
 	}
@@ -146,17 +142,13 @@ func (i ImmutableConfiguration) FeatureFlags() ImmutableFeatureFlags {
 }
 
 type ImmutableFeatureFlags struct {
-	deployNatsConnector   bool
-	deployNeptune         bool
-	natLess               bool
-	skipAstraRegistration bool
+	deployNatsConnector bool
+	deployNeptune       bool
 }
 
 type featureFlags struct {
-	DeployNatsConnector   bool
-	DeployNeptune         bool
-	SkipAstraRegistration bool
-	NatLess               bool
+	DeployNatsConnector bool
+	DeployNeptune       bool
 }
 
 func (f ImmutableFeatureFlags) DeployNatsConnector() bool {
@@ -165,14 +157,6 @@ func (f ImmutableFeatureFlags) DeployNatsConnector() bool {
 
 func (f ImmutableFeatureFlags) DeployNeptune() bool {
 	return f.deployNeptune
-}
-
-func (f ImmutableFeatureFlags) SkipAstraRegistration() bool {
-	return f.skipAstraRegistration
-}
-
-func (f ImmutableFeatureFlags) NatLess() bool {
-	return f.natLess
 }
 
 // Viper configuration
