@@ -79,7 +79,7 @@ type AstraConnectorSpec struct {
 
 	// AutoSupport indicates willingness to participate in NetApp's proactive support application, NetApp Active IQ.
 	// An internet connection is required (port 442) and all support data is anonymized.
-	// The default election is false and indicates support data will be sent to NetApp.
+	// The default election is false and indicates support data will not be sent to NetApp.
 	// An empty or blank election is the same as a default election.
 	// Air gapped installations should leave as false.
 	// +kubebuilder:default={"enrolled":false, "url":"https://support.netapp.com/put/AsupPut"}
