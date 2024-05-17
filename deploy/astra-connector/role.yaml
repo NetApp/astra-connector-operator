@@ -34,6 +34,7 @@ rules:
     "snapshotrestores",
     "astraconnectors",
     "autosupportbundleschedules",
-    "kopiavolumebackups"
+    "kopiavolumebackups",
+    "kopiavolumerestores"
   ]
   verbs: ["create", "update", "delete", "watch", "list", "get"]

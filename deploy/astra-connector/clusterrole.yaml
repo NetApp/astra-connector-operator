@@ -19,5 +19,5 @@ rules:
   resources: ["tridentversions", "tridentorchestrators"]
   verbs: ["watch", "list", "get"]
 - apiGroups: ["astra.netapp.io"]
-  resources: ["applications", "appmirrorrelationships", "appmirrorupdates", "appvaults", "autosupportbundles", "backups", "backupinplacerestores", "backuprestores", "exechooks", "exechooksruns", "pvccopies", "pvcerases", "resourcebackups", "resourcedeletes", "resourcerestores", "resourcesummaryuploads", "resticvolumebackups", "resticvolumerestores", "schedules", "snapshotinplacerestores", "snapshotrestores", "snapshots", "astraconnectors", "shutdownsnapshots", "autosupportbundleschedules", "kopiavolumebackups"]
+  resources: ["applications", "appmirrorrelationships", "appmirrorupdates", "appvaults", "autosupportbundles", "backups", "backupinplacerestores", "backuprestores", "exechooks", "exechooksruns", "pvccopies", "pvcerases", "resourcebackups", "resourcedeletes", "resourcerestores", "resourcesummaryuploads", "resticvolumebackups", "resticvolumerestores", "schedules", "snapshotinplacerestores", "snapshotrestores", "snapshots", "astraconnectors", "shutdownsnapshots", "autosupportbundleschedules", "kopiavolumebackups", "kopiavolumerestores"]
   verbs: ["watch", "list", "get"]
