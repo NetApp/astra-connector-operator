@@ -825,7 +825,6 @@ spec:
                 - Disabled
                 type: string
             required:
-            - conditions
             - state
             type: object
         type: object
