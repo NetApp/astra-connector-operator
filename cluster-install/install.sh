@@ -13,6 +13,9 @@ _PROBLEMS=() # Any failed checks will be added to this array and the program wil
 _CONFIG_BUILDER=() # Contains the fully resolved config to be output at the end during a dry run
 _KUBERNETES_VERSION=""
 
+# _TRIDENT_COLLECTION_STEP_CALLED is used as a guardrail to prevent certain functions from being called before
+# existing Trident information (if any) has been collected.
+_TRIDENT_COLLECTION_STEP_CALLED="false"
 _EXISTING_TORC_NAME="" # TORC is short for TridentOrchestrator (works with kubectl too)
 _EXISTING_TRIDENT_NAMESPACE=""
 _EXISTING_TRIDENT_IMAGE=""
@@ -33,7 +36,7 @@ _PROCESSED_LABELS=""
 _PROCESSED_RESOURCE_LIMITS=""
 
 # ------------ CONSTANTS ------------
-readonly __RELEASE_VERSION="24.02"
+readonly __RELEASE_VERSION="${RELEASE_VERSION_OVERRIDE:-24.02}"
 readonly -a __REQUIRED_TOOLS=("jq" "kubectl" "curl" "grep" "sort" "uniq" "find" "base64" "wc" "awk")
 
 readonly __GIT_REF_CONNECTOR_OPERATOR="main" # Determines the ACOP branch from which the kustomize resources will be pulled
@@ -103,9 +106,9 @@ get_configs() {
     SKIP_IMAGE_CHECK="${SKIP_IMAGE_CHECK:-"false"}" # Skips checking whether images exist or not
     SKIP_ASTRA_CHECK="${SKIP_ASTRA_CHECK:-"false"}" # Skips AC URL, cloud ID, and cluster ID check
     # DISABLE_PROMPTS skips prompting the user when something notable is about to happen (such as a Trident Upgrade).
-    # As a guardrail, setting DISABLE_PROMPTS=true will require the SKIP_TRIDENT_UPGRADE env var to also be set.
+    # As a guardrail, setting DISABLE_PROMPTS=true will require the DO_NOT_MODIFY_EXISTING_TRIDENT env var to also be set.
     DISABLE_PROMPTS="${DISABLE_PROMPTS:-"false"}"
-    SKIP_TRIDENT_UPGRADE="${SKIP_TRIDENT_UPGRADE}" # Required if DISABLED_PROMPTS=true
+    DO_NOT_MODIFY_EXISTING_TRIDENT="${DO_NOT_MODIFY_EXISTING_TRIDENT}" # Required if DISABLED_PROMPTS=true
 
     # ------------ GENERAL ------------
     KUBECONFIG="${KUBECONFIG}"
@@ -256,13 +259,25 @@ get_connector_namespace() {
     echo "${NAMESPACE:-"${__DEFAULT_CONNECTOR_NAMESPACE}"}"
 }
 
+existing_trident_can_be_modified() {
+    [ "$DO_NOT_MODIFY_EXISTING_TRIDENT" == "true" ] && return 1
+    return 0
+}
+
 trident_is_missing() {
+    if [ "$_TRIDENT_COLLECTION_STEP_CALLED" != "true" ]; then
+        fatal "this function should not be called until existing Trident information has been collected"
+    fi
     [ -z "$_EXISTING_TRIDENT_NAMESPACE" ] && return 0
     return 1
 }
 
-should_skip_trident_upgrade() {
-    [ "$SKIP_TRIDENT_UPGRADE" == "true" ] && return 0
+trident_will_be_installed_or_modified() {
+    if [ "$_TRIDENT_COLLECTION_STEP_CALLED" != "true" ]; then
+        fatal "this function should not be called until existing Trident information has been collected"
+    fi
+    if trident_is_missing; then return 0; fi
+    if existing_trident_can_be_modified && (components_include_trident || components_include_acp); then return 0; fi
     return 1
 }
 
@@ -979,23 +994,20 @@ check_if_image_can_be_pulled_via_curl() {
     if [ -n "$encoded_creds" ]; then
         args+=("-H" "Authorization: Basic $encoded_creds")
     fi
+    args+=("-H" "Accept: application/vnd.docker.distribution.manifest.v2+json")
 
-    local -r result="$(curl -X GET "${args[@]}" "https://$registry/v2/$image_repo/tags/list")"
+    local -r result="$(curl -X GET "${args[@]}" "https://$registry/v2/$image_repo/manifests/$image_tag")"
     local -r line_count="$(echo "$result" | wc -l)"
-    _return_body="$(echo "$result" | head -n "${line_count-1}")"
+    _return_body="$(echo "$result" | head -n "$((line_count-1))")"
     _return_status="$(echo "$result" | tail -n 1)"
     _return_error=""
 
     if [ "$_return_status" == 200 ]; then
-        # Example response body:
-        # {
-        #   "name" : "my/repo/astra-connector",
-        #   "tags" : [ "032172b", "074dk52", "1fbc135", "24.02" ]
-        # }
-        if echo "$_return_body" | grep "tags" | grep -q -- "$image_tag"; then
-            return 0
-        fi
-        _return_error="repository found but tag '$image_tag' does not exist"
+        return 0
+    elif [ "$_return_status" == 404 ]; then
+        _return_error="the image was not found"
+    elif [ "$_return_status" != 000 ]; then
+        _return_error="$(echo "$_return_body" | jq -r '.errors.[0].message')"
     fi
     return 1
 }
@@ -1085,13 +1097,24 @@ apply_kubectl_patches() {
 wait_for_deployment_running() {
     local -r deployment="$1"
     local -r namespace="${2:-"default"}"
-    local -r timeout="${3:-"2m"}"
+    local -r timeout="${3:-"2"}" # Minutes
     [ -z "$deployment" ] && fatal "no deployment name given"
 
+    local -r sleep_time="5" # Seconds
+    local -r max_checks="$(( (timeout * 60) / sleep_time ))"
+    local counter=0
     loginfo "Waiting on deployment/$deployment (timeout: $timeout)..."
-    if kubectl rollout status -n "$namespace" "deploy/$deployment" --timeout="$timeout" &> /dev/null; then
-        return 0
-    fi
+    while ((counter < max_checks)); do
+        if kubectl rollout status -n "$namespace" "deploy/$deployment" -w=false &> /dev/null; then
+            logdebug "deploy/$deployment is now running"
+            return 0
+        else
+            logdebug "waiting for deploy/$deployment to be running"
+            ((counter++))
+            sleep "$sleep_time"
+        fi
+    done
+
     return 1
 }
 
@@ -1100,11 +1123,13 @@ wait_for_cr_state() {
     local -r path="$2"
     local -r desired_state="$3"
     local -r namespace="${4:-"default"}"
+    local -r timeout="${5:-"2"}" # Minutes
     [ -z "$resource" ] && fatal "no resource given"
     [ -z "$path" ] && fatal "no JSON path given"
     [ -z "$desired_state" ] && fatal "no desired state given"
 
-    local -r max_checks=12
+    local -r sleep_time="5" # Seconds
+    local -r max_checks="$(( (timeout * 60) / sleep_time ))"
     local counter=0
     local current_state=""
     while ((counter < max_checks)); do
@@ -1116,7 +1141,7 @@ wait_for_cr_state() {
         else
             logdebug "waiting for resource '$resource' (ns: $namespace) to reach '$desired_state' (currently '$current_state')"
             ((counter++))
-            sleep 5
+            sleep "$sleep_time"
         fi
     done
 
@@ -1351,13 +1376,19 @@ step_check_config() {
     add_to_config_builder "NAMESPACE"
 
     if prompts_disabled; then
-        if [ -z "$SKIP_TRIDENT_UPGRADE" ]; then
-            local -r longer_msg="SKIP_TRIDENT_UPGRADE is required when prompts are disabled."
-            add_problem "SKIP_TRIDENT_UPGRADE: required (prompts disabled)" "$longer_msg"
+        if [ -z "$DO_NOT_MODIFY_EXISTING_TRIDENT" ]; then
+            local -r longer_msg="DO_NOT_MODIFY_EXISTING_TRIDENT is required when prompts are disabled."
+            add_problem "DO_NOT_MODIFY_EXISTING_TRIDENT: required (prompts disabled)" "$longer_msg"
         fi
     fi
+    if [ "$DO_NOT_MODIFY_EXISTING_TRIDENT" == "true" ] && [ "$COMPONENTS" == "$__COMPONENTS_ACP_ONLY" ]; then
+        local -r acp_only_err="DO_NOT_MODIFY_EXISTING_TRIDENT: cannot be set to 'true' if using"
+        acp_only_err+=" COMPONENTS='${__COMPONENTS_ACP_ONLY}', as the component in question requires modifying an"
+        acp_only_err+=" existing Trident installation."
+        add_problem "$acp_only_err"
+    fi
     add_to_config_builder "DISABLE_PROMPTS"
-    add_to_config_builder "SKIP_TRIDENT_UPGRADE"
+    add_to_config_builder "DO_NOT_MODIFY_EXISTING_TRIDENT"
 
     # Fully optional env vars
     add_to_config_builder "CONNECTOR_HOST_ALIAS_IP"
@@ -1881,6 +1912,7 @@ EOF
 
 step_collect_existing_trident_info() {
     logheader $__INFO "Checking if Trident is installed..."
+    _TRIDENT_COLLECTION_STEP_CALLED="true"
 
     # TORC CR definition
     local -r torc_crd="$(kubectl get crd tridentorchestrators.trident.netapp.io -o name 2> /dev/null)"
@@ -1896,7 +1928,7 @@ step_collect_existing_trident_info() {
     local -r torc_json="$(kubectl get tridentorchestrator -A -o jsonpath="{.items[0]}" 2> /dev/null)"
     if [ -z "$torc_json" ]; then
         logdebug "tridentorchestrator: not found"
-        loginfo "* Trident installation not found."
+        loginfo "* Trident not found -- it will be installed."
         return 0
     else
         logdebug "tridentorchestrator: OK"
@@ -1918,7 +1950,7 @@ step_collect_existing_trident_info() {
 
     # Trident image
     local -r trident_image="$(echo "$torc_json" | jq -r ".spec.tridentImage" 2> /dev/null)"
-    if [ -n "$trident_image" ]; then
+    if [ -n "$trident_image" ] && [ "$trident_image" != "null" ]; then
         _EXISTING_TRIDENT_IMAGE="$trident_image"
         logdebug "trident image: $trident_image"
     else
@@ -1937,7 +1969,7 @@ step_collect_existing_trident_info() {
 
     # ACP image
     local -r acp_image="$(echo "$torc_json" | jq -r '.spec.acpImage' 2> /dev/null)"
-    if [ -n "$acp_image" ]; then
+    if [ -n "$acp_image" ] && [ "$acp_image" != "null" ]; then
         logdebug "trident ACP image: $acp_image"
         _EXISTING_TRIDENT_ACP_IMAGE="$acp_image"
     else
@@ -2131,8 +2163,13 @@ step_apply_resources() {
 step_apply_trident_operator_patches() {
     logheader "$__DEBUG" "$(prefix_dryrun "Applying Trident Operator patches...")"
     local -ra patches=("${_PATCHES_TRIDENT_OPERATOR[@]}")
+    local -r patches_len="${#patches[@]}"
 
-    if [ "$LOG_LEVEL" == "$__DEBUG" ] && [ "${#patches[@]}" -gt 0 ]; then
+    if ! trident_will_be_installed_or_modified && [ "$patches_len" -gt 0 ]; then
+        fatal "found $patches_len operator patches despite trident not being installed or modified"
+    fi
+
+    if [ "$LOG_LEVEL" == "$__DEBUG" ] && [ "$patches_len" -gt 0 ]; then
         local disclaimer="# THIS FILE IS FOR DEBUGGING PURPOSES ONLY. These are the patches applied to the"
         disclaimer+="${__NEWLINE}# Trident Operator deployment when upgrading the Trident Operator."
         disclaimer+="${__NEWLINE}"
@@ -2146,8 +2183,13 @@ step_apply_trident_operator_patches() {
 step_apply_torc_patches() {
     logheader "$__DEBUG" "$(prefix_dryrun "Applying TORC patches...")"
     local -ra patches=("${_PATCHES_TORC[@]}")
+    local -r patches_len="${#patches[@]}"
 
-    if [ "$LOG_LEVEL" == "$__DEBUG" ] && [ "${#patches[@]}" -gt 0 ]; then
+    if ! trident_will_be_installed_or_modified && [ "$patches_len" -gt 0 ]; then
+        fatal "found $patches_len torc patches despite trident not being installed or modified"
+    fi
+
+    if [ "$LOG_LEVEL" == "$__DEBUG" ] && [ "$patches_len" -gt 0 ]; then
         local disclaimer="# THIS FILE IS FOR DEBUGGING PURPOSES ONLY. These are the patches applied to the"
         disclaimer+="${__NEWLINE}# TridentOrchestrator resource when upgrading Trident or enabling ACP."
         disclaimer+="${__NEWLINE}"
@@ -2186,7 +2228,7 @@ step_generate_and_apply_resource_limit_patches() {
     # itself does "support" resource limits, in the sense that they don't get cleared out when we set them.
 
     # Trident Operator
-    if ! components_include_trident; then
+    if ! trident_will_be_installed_or_modified; then
         logdebug "skipping trident operator resource limits"
     elif create_kubectl_patch_for_containers "deploy/trident-operator" "$trident_ns" "$patch_path" "$patch_value"; then
         patches_list_for_debugging+=("$_return_value")
@@ -2250,24 +2292,26 @@ step_monitor_deployment_progress() {
     if components_include_connector; then
         if is_dry_run; then
             logdebug "skip monitoring connector components because it's a dry run"
-        elif ! wait_for_deployment_running "operator-controller-manager" "$connector_operator_ns" "1m"; then
+        elif ! wait_for_deployment_running "operator-controller-manager" "$connector_operator_ns" "3"; then
             add_problem "connector operator deploy: failed" "The Astra Connector Operator failed to deploy"
-        elif ! wait_for_deployment_running "neptune-controller-manager" "$connector_ns" "3m"; then
+        elif ! wait_for_deployment_running "neptune-controller-manager" "$connector_ns" "3"; then
             add_problem "neptune deploy: failed" "Neptune failed to deploy"
-        elif ! wait_for_deployment_running "astraconnect" "$connector_ns" "3m"; then
+        elif ! wait_for_deployment_running "astraconnect" "$connector_ns" "5"; then
             add_problem "astraconnect deploy: failed" "The Astra Connector failed to deploy"
         elif ! wait_for_cr_state "astraconnectors/astra-connector" ".status.natsSyncClient.status" "Registered with Astra" "$connector_ns"; then
             add_problem "cluster registration: failed" "Cluster registration failed"
         fi
     fi
 
-    if components_include_trident || components_include_acp; then
+    if trident_will_be_installed_or_modified; then
         if is_dry_run; then
             logdebug "skip monitoring trident components because it's a dry run"
-        elif ! wait_for_deployment_running "trident-operator" "$trident_ns" "1m"; then
-            add_problem "trident operator: failed" "The Trident Operator failed to deploy"
-        elif ! wait_for_deployment_running "trident-controller" "$trident_ns" "10m"; then
-            add_problem "trident controller: failed" "Trident failed to deploy"
+        else
+            if ! wait_for_deployment_running "trident-operator" "$trident_ns" "3"; then
+                add_problem "trident operator: failed" "The Trident Operator failed to deploy"
+            elif ! wait_for_cr_state "torc/$_EXISTING_TORC_NAME" ".status.status" "Installed" "$trident_ns" "12"; then
+                add_problem "trident: failed" "Trident failed to deploy: status never reached 'Installed'"
+            fi
         fi
     fi
 }
@@ -2328,54 +2372,55 @@ fi
 
 # TRIDENT / ACP yaml
 step_collect_existing_trident_info
-if trident_is_missing; then
-    step_generate_trident_fresh_install_yaml
-elif [ -z "$_EXISTING_TRIDENT_OPERATOR_IMAGE" ]; then
-    logwarn "Upgrading Trident without the Trident Operator is not currently supported, skipping."
-else
-    # Upgrade Trident/Operator?
-    if components_include_trident && ! should_skip_trident_upgrade; then
-        # Trident upgrade (includes operator upgrade if needed)
-        if trident_image_needs_upgraded; then
-            if config_trident_image_is_custom || prompt_user_yes_no "Would you like to upgrade Trident?"; then
-                step_generate_torc_patch "$_EXISTING_TORC_NAME" "$(get_config_trident_image)" "" "" "$(get_config_trident_autosupport_image)"
-                trident_operator_image_needs_upgraded && step_generate_trident_operator_patch
-            else
-                loginfo "Trident will not be upgraded."
+if trident_will_be_installed_or_modified; then
+    if trident_is_missing; then
+        step_generate_trident_fresh_install_yaml
+    elif [ -z "$_EXISTING_TRIDENT_OPERATOR_IMAGE" ]; then
+        logwarn "Upgrading Trident without the Trident Operator is not currently supported, skipping."
+    elif existing_trident_can_be_modified; then
+        # Upgrade Trident/Operator?
+        if components_include_trident; then
+            # Trident upgrade (includes operator upgrade if needed)
+            if trident_image_needs_upgraded; then
+                if config_trident_image_is_custom || prompt_user_yes_no "Would you like to upgrade Trident?"; then
+                    step_generate_torc_patch "$_EXISTING_TORC_NAME" "$(get_config_trident_image)" "" "" "$(get_config_trident_autosupport_image)"
+                    trident_operator_image_needs_upgraded && step_generate_trident_operator_patch
+                else
+                    loginfo "Trident will not be upgraded."
+                fi
+            # Trident operator upgrade (standalone)
+            elif trident_operator_image_needs_upgraded; then
+                if config_trident_operator_image_is_custom || prompt_user_yes_no "Would you like to upgrade the Trident Operator?"; then
+                    step_generate_trident_operator_patch
+                else
+                    loginfo "Trident Operator will not be upgraded."
+                fi
             fi
-        # Trident operator upgrade (standalone)
-        elif trident_operator_image_needs_upgraded; then
-            if config_trident_operator_image_is_custom || prompt_user_yes_no "Would you like to upgrade the Trident Operator?"; then
-                step_generate_trident_operator_patch
-            else
-                loginfo "Trident Operator will not be upgraded."
-            fi
+        else
+            logdebug "Skipping Trident upgrade (COMPONENTS=${COMPONENTS}, DO_NOT_MODIFY_EXISTING_TRIDENT=${DO_NOT_MODIFY_EXISTING_TRIDENT})"
         fi
-    else
-        logdebug "Skipping Trident upgrade (COMPONENTS=${COMPONENTS}, SKIP_TRIDENT_UPGRADE=${SKIP_TRIDENT_UPGRADE})"
-    fi
 
-    # Upgrade/Enable ACP?
-    if components_include_acp; then
-        # Enable ACP if needed (includes ACP upgrade)
-        if ! acp_is_enabled; then
-            if config_acp_image_is_custom || prompt_user_yes_no "Would you like to enable ACP?"; then
-                step_generate_torc_patch "$_EXISTING_TORC_NAME" "" "$(get_config_acp_image)" "true"
-            else
-                loginfo "ACP will not be enabled."
+        # Upgrade/Enable ACP?
+        if components_include_acp; then
+            # Enable ACP if needed (includes ACP upgrade)
+            if ! acp_is_enabled; then
+                if config_acp_image_is_custom || prompt_user_yes_no "Would you like to enable ACP?"; then
+                    step_generate_torc_patch "$_EXISTING_TORC_NAME" "" "$(get_config_acp_image)" "true"
+                else
+                    loginfo "ACP will not be enabled."
+                fi
+            # ACP upgrade (ACP already enabled)
+            elif acp_image_needs_upgraded; then
+                if config_acp_image_is_custom || prompt_user_yes_no "Would you like to upgrade ACP?"; then
+                    step_generate_torc_patch "$_EXISTING_TORC_NAME" "" "$(get_config_acp_image)" "true"
+                else
+                    loginfo "ACP will not be upgraded."
+                fi
             fi
-        # ACP upgrade (ACP already enabled)
-        elif acp_image_needs_upgraded; then
-            if config_acp_image_is_custom || prompt_user_yes_no "Would you like to upgrade ACP?"; then
-                step_generate_torc_patch "$_EXISTING_TORC_NAME" "" "$(get_config_acp_image)" "true"
-            else
-                loginfo "ACP will not be upgraded."
-            fi
+        else
+            logdebug "Skipping ACP changes (COMPONENTS=${COMPONENTS})"
         fi
-    else
-        logdebug "Skipping ACP changes (COMPONENTS=${COMPONENTS})"
     fi
-
 fi
 
 # IMAGE REMAPS, LABELS, RESOURCE LIMITS yaml
