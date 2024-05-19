@@ -36,7 +36,7 @@ _PROCESSED_LABELS=""
 _PROCESSED_RESOURCE_LIMITS=""
 
 # ------------ CONSTANTS ------------
-readonly __RELEASE_VERSION="24.02"
+readonly __RELEASE_VERSION="${RELEASE_VERSION_OVERRIDE:-24.02}"
 readonly -a __REQUIRED_TOOLS=("jq" "kubectl" "curl" "grep" "sort" "uniq" "find" "base64" "wc" "awk")
 
 readonly __GIT_REF_CONNECTOR_OPERATOR="main" # Determines the ACOP branch from which the kustomize resources will be pulled
@@ -94,6 +94,11 @@ readonly __WARN=30
 readonly __ERROR=40
 readonly __FATAL=50
 
+# __ERR_FILE should be used when wanting to capture stdout and stderr output of a command separately.
+# You can then use `get_captured_err` to get the captured error. Example:
+#     captured_stdout="$(curl -sS https://bad-url.com 2> "$_ERR_FILE")"
+#     captured_stderr="$(get_captured_err)"
+readonly __ERR_FILE="tmp_last_captured_error.txt"
 readonly __NEWLINE=$'\n' # This is for readability
 
 #----------------------------------------------------------------------
@@ -478,6 +483,21 @@ get_limits_list_fancy() {
 #----------------------------------------------------------------------
 #-- Util functions
 #----------------------------------------------------------------------
+get_captured_err() {
+    if [ -f "$__ERR_FILE" ]; then
+        cat "$__ERR_FILE"
+        rm -f "$__ERR_FILE" &> /dev/null
+    else
+        echo ""
+    fi
+}
+
+debug_is_on() {
+    [ "$LOG_LEVEL" == "$__DEBUG" ] && return 0
+    [ "$LOG_LEVEL" -lt "$__DEBUG" ] &> /dev/null && return 0
+    return 1
+}
+
 log_at_level() {
     if [ -z "$LOG_LEVEL" ]; then LOG_LEVEL=$__INFO; fi
 
@@ -990,27 +1010,30 @@ check_if_image_can_be_pulled_via_curl() {
     if [ -z "$image_repo" ]; then fatal "no image_repo given"; fi
     if [ -z "$image_tag" ]; then fatal "no image_tag given"; fi
 
-    local -a args=('-s' '-w' "\n%{http_code}")
+    local -a args=('-sS' '-w' "\n%{http_code}")
     if [ -n "$encoded_creds" ]; then
         args+=("-H" "Authorization: Basic $encoded_creds")
     fi
+    args+=("-H" "Accept: application/vnd.docker.distribution.manifest.v2+json")
 
-    local -r result="$(curl -X GET "${args[@]}" "https://$registry/v2/$image_repo/tags/list")"
+    local -r result="$(curl -X GET "${args[@]}" "https://$registry/v2/$image_repo/manifests/$image_tag" 2> "$__ERR_FILE")"
+    local -r curl_err="$(get_captured_err)"
     local -r line_count="$(echo "$result" | wc -l)"
-    _return_body="$(echo "$result" | head -n "${line_count-1}")"
+    _return_body="$(echo "$result" | head -n "$((line_count-1))")"
     _return_status="$(echo "$result" | tail -n 1)"
     _return_error=""
 
     if [ "$_return_status" == 200 ]; then
-        # Example response body:
-        # {
-        #   "name" : "my/repo/astra-connector",
-        #   "tags" : [ "032172b", "074dk52", "1fbc135", "24.02" ]
-        # }
-        if echo "$_return_body" | grep "tags" | grep -q -- "$image_tag"; then
-            return 0
+        return 0
+    elif [ "$_return_status" == 404 ]; then
+        _return_error="the image was not found"
+    elif [ "$_return_status" == 000 ] && [ -n "$curl_err" ]; then
+        _return_error="$curl_err"
+    elif [ "$_return_status" != 000 ]; then
+        _return_error="$(echo "$_return_body" | jq -r '.errors.[0].message')"
+        if [ -z "$_return_error" ] || [ "$_return_error" == "null" ]; then
+            _return_error="unknown error"
         fi
-        _return_error="repository found but tag '$image_tag' does not exist"
     fi
     return 1
 }
@@ -1100,13 +1123,24 @@ apply_kubectl_patches() {
 wait_for_deployment_running() {
     local -r deployment="$1"
     local -r namespace="${2:-"default"}"
-    local -r timeout="${3:-"2m"}"
+    local -r timeout="${3:-"2"}" # Minutes
     [ -z "$deployment" ] && fatal "no deployment name given"
 
+    local -r sleep_time="5" # Seconds
+    local -r max_checks="$(( (timeout * 60) / sleep_time ))"
+    local counter=0
     loginfo "Waiting on deployment/$deployment (timeout: $timeout)..."
-    if kubectl rollout status -n "$namespace" "deploy/$deployment" --timeout="$timeout" &> /dev/null; then
-        return 0
-    fi
+    while ((counter < max_checks)); do
+        if kubectl rollout status -n "$namespace" "deploy/$deployment" -w=false &> /dev/null; then
+            logdebug "deploy/$deployment is now running"
+            return 0
+        else
+            logdebug "waiting for deploy/$deployment to be running"
+            ((counter++))
+            sleep "$sleep_time"
+        fi
+    done
+
     return 1
 }
 
@@ -1115,11 +1149,13 @@ wait_for_cr_state() {
     local -r path="$2"
     local -r desired_state="$3"
     local -r namespace="${4:-"default"}"
+    local -r timeout="${5:-"2"}" # Minutes
     [ -z "$resource" ] && fatal "no resource given"
     [ -z "$path" ] && fatal "no JSON path given"
     [ -z "$desired_state" ] && fatal "no desired state given"
 
-    local -r max_checks=12
+    local -r sleep_time="5" # Seconds
+    local -r max_checks="$(( (timeout * 60) / sleep_time ))"
     local counter=0
     local current_state=""
     while ((counter < max_checks)); do
@@ -1131,7 +1167,7 @@ wait_for_cr_state() {
         else
             logdebug "waiting for resource '$resource' (ns: $namespace) to reach '$desired_state' (currently '$current_state')"
             ((counter++))
-            sleep 5
+            sleep "$sleep_time"
         fi
     done
 
@@ -1253,11 +1289,12 @@ create_kubectl_patch_for_containers() {
 
 exit_if_problems() {
     if [ ${#_PROBLEMS[@]} -ne 0 ]; then
-        [ "$LOG_LEVEL" == "$__DEBUG" ] && print_built_config
+        debug_is_on && print_built_config
         logheader $__ERROR "Pre-flight check failed! Please resolve the following issues and try again:"
         for err in "${_PROBLEMS[@]}"; do
             logerror "* $err"
         done
+        step_cleanup_tmp_files
         exit 1
     fi
 }
@@ -1571,9 +1608,10 @@ step_check_all_images_can_be_pulled() {
             local status="$_return_status"
             local body="$_return_body"
             local error="$_return_error"
+            local problem="[$full_image] image check failed"
 
             if [ -n "$error" ]; then
-                add_problem "'$full_image': $error"
+                add_problem "$problem: $error"
             elif is_docker_hub "$registry" && [ "$status" != 200 ] && [ "$status" != 404 ]; then
                 # Note on docker hub: this check is purely "best effort" and we don't fail the script even
                 # if the check itself failed, unless we specifically get a 200 (success) or a 404 (not found).
@@ -1591,11 +1629,11 @@ step_check_all_images_can_be_pulled() {
                 # and it's great if it succeeds, but it's generally expected to fail.
                 logwarn "* Cannot guarantee the existence of custom Docker Hub image '$full_image', moving on."
             elif [ "$status" == 401 ]; then
-                add_problem "$full_image: unauthorized ($status)"
+                add_problem "$problem: unauthorized ($status)"
             elif [ "$status" == 404 ]; then
-                add_problem "$full_image: not found ($status)"
+                add_problem "$problem: not found ($status)"
             else
-                add_problem "$full_image: unknown error ($status)"
+                add_problem "$problem: unknown error ($status)"
             fi
             logdebug "body: '$body'"
         else
@@ -2156,10 +2194,10 @@ step_apply_trident_operator_patches() {
     local -r patches_len="${#patches[@]}"
 
     if ! trident_will_be_installed_or_modified && [ "$patches_len" -gt 0 ]; then
-        fatal "found $patches_len operator patches (expected 0) despite trident not being installed or modified"
+        fatal "found $patches_len operator patches despite trident not being installed or modified"
     fi
 
-    if [ "$LOG_LEVEL" == "$__DEBUG" ] && [ "$patches_len" -gt 0 ]; then
+    if debug_is_on && [ "$patches_len" -gt 0 ]; then
         local disclaimer="# THIS FILE IS FOR DEBUGGING PURPOSES ONLY. These are the patches applied to the"
         disclaimer+="${__NEWLINE}# Trident Operator deployment when upgrading the Trident Operator."
         disclaimer+="${__NEWLINE}"
@@ -2176,10 +2214,10 @@ step_apply_torc_patches() {
     local -r patches_len="${#patches[@]}"
 
     if ! trident_will_be_installed_or_modified && [ "$patches_len" -gt 0 ]; then
-        fatal "found $patches_len torc patches (expected 0) despite trident not being installed or modified"
+        fatal "found $patches_len torc patches despite trident not being installed or modified"
     fi
 
-    if [ "$LOG_LEVEL" == "$__DEBUG" ] && [ "$patches_len" -gt 0 ]; then
+    if debug_is_on && [ "$patches_len" -gt 0 ]; then
         local disclaimer="# THIS FILE IS FOR DEBUGGING PURPOSES ONLY. These are the patches applied to the"
         disclaimer+="${__NEWLINE}# TridentOrchestrator resource when upgrading Trident or enabling ACP."
         disclaimer+="${__NEWLINE}"
@@ -2258,7 +2296,7 @@ step_generate_and_apply_resource_limit_patches() {
         add_problem "Failed to create resource limit patch for the Astra Connector deployment (unknown error)"
     fi
 
-    if [ "$LOG_LEVEL" == "$__DEBUG" ] && [ "${#patches[@]}" -gt 0 ]; then
+    if debug_is_on && [ "${#patches[@]}" -gt 0 ]; then
         local disclaimer="# THIS FILE IS FOR DEBUGGING PURPOSES ONLY. These are the patches applied to the"
         disclaimer+="${__NEWLINE}# Trident Operator deployment when upgrading the Trident Operator."
         disclaimer+="${__NEWLINE}"
@@ -2282,11 +2320,11 @@ step_monitor_deployment_progress() {
     if components_include_connector; then
         if is_dry_run; then
             logdebug "skip monitoring connector components because it's a dry run"
-        elif ! wait_for_deployment_running "operator-controller-manager" "$connector_operator_ns" "1m"; then
+        elif ! wait_for_deployment_running "operator-controller-manager" "$connector_operator_ns" "3"; then
             add_problem "connector operator deploy: failed" "The Astra Connector Operator failed to deploy"
-        elif ! wait_for_deployment_running "neptune-controller-manager" "$connector_ns" "3m"; then
+        elif ! wait_for_deployment_running "neptune-controller-manager" "$connector_ns" "3"; then
             add_problem "neptune deploy: failed" "Neptune failed to deploy"
-        elif ! wait_for_deployment_running "astraconnect" "$connector_ns" "3m"; then
+        elif ! wait_for_deployment_running "astraconnect" "$connector_ns" "5"; then
             add_problem "astraconnect deploy: failed" "The Astra Connector failed to deploy"
         elif ! wait_for_cr_state "astraconnectors/astra-connector" ".status.natsSyncClient.status" "Registered with Astra" "$connector_ns"; then
             add_problem "cluster registration: failed" "Cluster registration failed"
@@ -2296,12 +2334,18 @@ step_monitor_deployment_progress() {
     if trident_will_be_installed_or_modified; then
         if is_dry_run; then
             logdebug "skip monitoring trident components because it's a dry run"
-        elif ! wait_for_deployment_running "trident-operator" "$trident_ns" "1m"; then
-            add_problem "trident operator: failed" "The Trident Operator failed to deploy"
-        elif ! wait_for_deployment_running "trident-controller" "$trident_ns" "10m"; then
-            add_problem "trident controller: failed" "Trident failed to deploy"
+        else
+            if ! wait_for_deployment_running "trident-operator" "$trident_ns" "3"; then
+                add_problem "trident operator: failed" "The Trident Operator failed to deploy"
+            elif ! wait_for_cr_state "torc/$_EXISTING_TORC_NAME" ".status.status" "Installed" "$trident_ns" "12"; then
+                add_problem "trident: failed" "Trident failed to deploy: status never reached 'Installed'"
+            fi
         fi
     fi
+}
+
+step_cleanup_tmp_files() {
+    rm -f "$__ERR_FILE" &> /dev/null
 }
 
 #======================================================================
@@ -2427,7 +2471,7 @@ exit_if_problems
 if ! is_dry_run; then
     logheader $__INFO "Cluster management complete!"
 else
-    [ "$LOG_LEVEL" == "$__DEBUG" ] && print_built_config
+    debug_is_on && print_built_config
     logheader $__INFO "$(prefix_dryrun "See generated files")"
     loginfo "$(find "$__GENERATED_CRS_DIR" -type f)"
     _msg="You can run 'kustomize build $__GENERATED_OPERATORS_DIR > $__GENERATED_OPERATORS_DIR/resources.yaml'"
@@ -2435,4 +2479,6 @@ else
     logln $__INFO "$_msg"
     exit 0
 fi
+
+step_cleanup_tmp_files
 
