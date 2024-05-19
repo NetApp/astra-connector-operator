@@ -1027,13 +1027,14 @@ check_if_image_can_be_pulled_via_curl() {
         return 0
     elif [ "$_return_status" == 404 ]; then
         _return_error="the image was not found"
-    elif [ "$_return_status" == 000 ] && [ -n "$curl_err" ]; then
-        _return_error="$curl_err"
     elif [ "$_return_status" != 000 ]; then
-        _return_error="$(echo "$_return_body" | jq -r '.errors.[0].message')"
+        _return_error="$(echo "$_return_body" | jq -r '.errors.[0].message' 2> /dev/null)"
         if [ -z "$_return_error" ] || [ "$_return_error" == "null" ]; then
             _return_error="unknown error"
         fi
+    else
+        if [ -n "$curl_err" ]; then _return_error="$curl_err"
+        else _return_error="unknown error"; fi
     fi
     return 1
 }
