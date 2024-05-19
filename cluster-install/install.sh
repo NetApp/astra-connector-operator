@@ -265,6 +265,9 @@ existing_trident_can_be_modified() {
 }
 
 existing_trident_needs_modifications() {
+    if [ "$_TRIDENT_COLLECTION_STEP_CALLED" != "true" ]; then
+        fatal "this function should not be called until existing Trident information has been collected"
+    fi
     trident_is_missing && return 1
 
     components_include_trident && trident_image_needs_upgraded && return 0
