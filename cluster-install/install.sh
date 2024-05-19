@@ -830,6 +830,28 @@ version_higher_or_equal() {
     return 1
 }
 
+status_code_msg() {
+    local -r status_code="$1"
+    [ -z "$status_code" ] && fatal "no status code given"
+
+    local status=""
+    case "$status_code" in
+      200) status="OK" ;;
+      201) status="created" ;;
+      204) status="no content" ;;
+      400) status="bad request" ;;
+      401) status="unauthorized" ;;
+      403) status="forbidden" ;;
+      404) status="not found" ;;
+      500) status="internal server error" ;;
+      503) status="service unavailable" ;;
+      *) status="unknown" ;;
+    esac
+    echo "$status"
+}
+
+echo "Status code: $status_code ($status)"
+
 add_problem() {
     local problem_simple=$1
     local problem_long=${2:-$problem_simple}
@@ -863,7 +885,8 @@ make_astra_control_request() {
     fi
 
     logdebug "$method --> '$url'"
-    local -r result="$(curl -X "$method" -s $skip_tls_validation_opt -w "\n%{http_code}" "$url" "${headers[@]}")"
+    local -r result="$(curl -X "$method" -sS $skip_tls_validation_opt -w "\n%{http_code}" "$url" "${headers[@]}" 2> "$__ERR_FILE")"
+    _return_error="$(get_captured_err)"
     _return_body="$(echo "$result" | head -n 1)"
     _return_status="$(echo "$result" | tail -n 1)"
 }
@@ -1046,7 +1069,7 @@ check_if_image_can_be_pulled_via_curl() {
     elif [ "$_return_status" != 000 ]; then
         _return_error="$(echo "$_return_body" | jq -r '.errors.[0].message' 2> /dev/null)"
         if [ -z "$_return_error" ] || [ "$_return_error" == "null" ]; then
-            _return_error="unknown error"
+            _return_error="$(status_code_msg "$_return_status")"
         fi
     else
         if [ -n "$curl_err" ]; then _return_error="$curl_err"
@@ -1620,10 +1643,9 @@ step_check_all_images_can_be_pulled() {
             local body="$_return_body"
             local error="$_return_error"
             local problem="[$full_image] image check failed"
+            logdebug "body: '$body'"
 
-            if [ -n "$error" ]; then
-                add_problem "$problem: $error"
-            elif is_docker_hub "$registry" && [ "$status" != 200 ] && [ "$status" != 404 ]; then
+            if is_docker_hub "$registry" && [ "$status" != 200 ] && [ "$status" != 404 ]; then
                 # Note on docker hub: this check is purely "best effort" and we don't fail the script even
                 # if the check itself failed, unless we specifically get a 200 (success) or a 404 (not found).
                 #
@@ -1638,15 +1660,10 @@ step_check_all_images_can_be_pulled() {
                 #
                 # And so, we'll try to check the image tag using the pull secret credentials (if provided),
                 # and it's great if it succeeds, but it's generally expected to fail.
-                logwarn "* Cannot guarantee the existence of custom Docker Hub image '$full_image', moving on."
-            elif [ "$status" == 401 ]; then
-                add_problem "$problem: unauthorized ($status)"
-            elif [ "$status" == 404 ]; then
-                add_problem "$problem: not found ($status)"
-            else
-                add_problem "$problem: unknown error ($status)"
+                logwarn "* Cannot guarantee the existence of custom Docker Hub image '$full_image', skipping."
+            elif [ "$status" != 200 ] || [ -n "$error" ]; then
+                add_problem "$problem: $error ($status)"
             fi
-            logdebug "body: '$body'"
         else
             logdebug "success"
         fi
@@ -1661,28 +1678,43 @@ step_check_all_images_can_be_pulled() {
 step_check_astra_control_reachable() {
     logheader $__INFO "Checking if Astra Control is reachable at '$ASTRA_CONTROL_URL'..."
     make_astra_control_request "/"
-    if [ "$_return_status" == 200 ]; then
+    local -r status="$_return_status"
+    local -r body="$_return_body"
+    local err="$_return_error"
+    if [ "$status" == 200 ]; then
         logdebug "astra control: OK"
     else
-        add_problem "astra control: failed ($_return_status)" "Failed to contact Astra Control (status code: $_return_status)"
+        if [ "$status" != 000 ] || [ -z "$err" ]; then err="$(status_code_msg "$status")"; fi
+        logdebug "body: '$body'"
+        add_problem "Failed to contact Astra Control: $err ($status)"
         return 1
     fi
 }
 
 step_check_astra_cloud_and_cluster_id() {
     make_astra_control_request "/topology/v1/clouds/$ASTRA_CLOUD_ID"
-    if [ "$_return_status" == 200 ]; then
+    local status="$_return_status"
+    local body="$_return_body"
+    local err="$_return_error"
+    if [ "$status" == 200 ]; then
         logdebug "astra control cloud_id: OK"
     else
-        add_problem "astra control cloud_id: failed ($_return_status)" "Given ASTRA_CLOUD_ID did not pass validation (status code: $_return_status)"
+        if [ "$status" != 000 ] || [ -z "$err" ]; then err="$(status_code_msg "$status")"; fi
+        logdebug "body: '$body'"
+        add_problem "Given ASTRA_CLOUD_ID did not pass validation: $err ($status)"
         return 1
     fi
 
     make_astra_control_request "/topology/v1/clouds/$ASTRA_CLOUD_ID/clusters/$ASTRA_CLUSTER_ID"
-    if [ "$_return_status" == 200 ]; then
+    status="$_return_status"
+    body="$_return_body"
+    err="$_return_error"
+    if [ "$status" == 200 ]; then
         logdebug "astra control cluster_id: OK"
     else
-        add_problem "astra control: failed ($_return_status)" "Given ASTRA_CLUSTER_ID did not pass validation (status code: $_return_status)"
+        if [ "$status" != 000 ] || [ -z "$err" ]; then err="$(status_code_msg "$status")"; fi
+        logdebug "body: '$body'"
+        add_problem "Given ASTRA_CLUSTER_ID did not pass validation: $err ($status)"
         return 1
     fi
 }
