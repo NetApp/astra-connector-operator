@@ -579,6 +579,7 @@ fatal() {
         log_at_level $__FATAL "-> line ${BASH_LINENO[$i]}: ${FUNCNAME[$i]}"
     done
 
+    step_cleanup_tmp_files
     exit 1
 }
 
@@ -2214,7 +2215,7 @@ step_apply_trident_operator_patches() {
     local -r patches_len="${#patches[@]}"
 
     if ! trident_will_be_installed_or_modified && [ "$patches_len" -gt 0 ]; then
-        fatal "found $patches_len operator patches despite trident not being installed or modified"
+        fatal "found $patches_len operator patches (expected 0) despite trident not being installed or modified"
     fi
 
     if debug_is_on && [ "$patches_len" -gt 0 ]; then
@@ -2234,7 +2235,7 @@ step_apply_torc_patches() {
     local -r patches_len="${#patches[@]}"
 
     if ! trident_will_be_installed_or_modified && [ "$patches_len" -gt 0 ]; then
-        fatal "found $patches_len torc patches despite trident not being installed or modified"
+        fatal "found $patches_len torc patches (expected 0) despite trident not being installed or modified"
     fi
 
     if debug_is_on && [ "$patches_len" -gt 0 ]; then
@@ -2365,6 +2366,7 @@ step_monitor_deployment_progress() {
 }
 
 step_cleanup_tmp_files() {
+    debug_is_on && logdebug "last captured err: '$(get_captured_err)'"
     rm -f "$__ERR_FILE" &> /dev/null
 }
 
