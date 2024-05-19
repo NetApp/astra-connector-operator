@@ -850,8 +850,6 @@ status_code_msg() {
     echo "$status"
 }
 
-echo "Status code: $status_code ($status)"
-
 add_problem() {
     local problem_simple=$1
     local problem_long=${2:-$problem_simple}
