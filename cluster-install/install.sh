@@ -2466,7 +2466,8 @@ fi
 
 # ASTRA CONTROL access
 if components_include_connector && [ "$SKIP_ASTRA_CHECK" != "true" ]; then
-    step_check_astra_control_reachable && exit_if_problems
+    step_check_astra_control_reachable
+    exit_if_problems
     step_check_astra_cloud_and_cluster_id
 else
     logdebug "skipping all Astra checks (COMPONENTS=${COMPONENTS}, SKIP_ASTRA_CHECK=${SKIP_ASTRA_CHECK})"
