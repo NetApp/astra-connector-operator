@@ -2386,7 +2386,6 @@ if trident_will_be_installed_or_modified; then
     elif [ -z "$_EXISTING_TRIDENT_OPERATOR_IMAGE" ]; then
         logwarn "Upgrading Trident without the Trident Operator is not currently supported, skipping."
     elif existing_trident_can_be_modified; then
-
         # Upgrade Trident/Operator?
         if components_include_trident; then
             # Trident upgrade (includes operator upgrade if needed)
