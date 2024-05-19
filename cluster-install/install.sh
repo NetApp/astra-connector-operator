@@ -269,6 +269,20 @@ existing_trident_can_be_modified() {
     return 0
 }
 
+existing_trident_needs_modifications() {
+    if [ "$_TRIDENT_COLLECTION_STEP_CALLED" != "true" ]; then
+        fatal "this function should not be called until existing Trident information has been collected"
+    fi
+    trident_is_missing && return 1
+
+    components_include_trident && trident_image_needs_upgraded && return 0
+    components_include_trident && trident_operator_image_needs_upgraded && return 0
+    components_include_acp && acp_image_needs_upgraded && return 0
+    components_include_acp && ! acp_enabled && return 0
+
+    return 1
+}
+
 trident_is_missing() {
     if [ "$_TRIDENT_COLLECTION_STEP_CALLED" != "true" ]; then
         fatal "this function should not be called until existing Trident information has been collected"
@@ -277,12 +291,13 @@ trident_is_missing() {
     return 1
 }
 
+
 trident_will_be_installed_or_modified() {
     if [ "$_TRIDENT_COLLECTION_STEP_CALLED" != "true" ]; then
         fatal "this function should not be called until existing Trident information has been collected"
     fi
     if trident_is_missing; then return 0; fi
-    if existing_trident_can_be_modified && (components_include_trident || components_include_acp); then return 0; fi
+    if existing_trident_needs_modifications && existing_trident_can_be_modified; then return 0; fi
     return 1
 }
 
@@ -1409,12 +1424,6 @@ step_check_config() {
             add_problem "DO_NOT_MODIFY_EXISTING_TRIDENT: required (prompts disabled)" "$longer_msg"
         fi
     fi
-    if [ "$DO_NOT_MODIFY_EXISTING_TRIDENT" == "true" ] && [ "$COMPONENTS" == "$__COMPONENTS_ACP_ONLY" ]; then
-        local -r acp_only_err="DO_NOT_MODIFY_EXISTING_TRIDENT: cannot be set to 'true' if using"
-        acp_only_err+=" COMPONENTS='${__COMPONENTS_ACP_ONLY}', as the component in question requires modifying an"
-        acp_only_err+=" existing Trident installation."
-        add_problem "$acp_only_err"
-    fi
     add_to_config_builder "DISABLE_PROMPTS"
     add_to_config_builder "DO_NOT_MODIFY_EXISTING_TRIDENT"
 
@@ -2024,6 +2033,16 @@ step_collect_existing_trident_info() {
     fi
 }
 
+step_existing_trident_flags_compatibility_check() {
+    [ "$COMPONENTS" == "$__COMPONENTS_ALL_ASTRA_CONTROL" ] && return 0
+    ! existing_trident_needs_modifications && return 0
+
+    local msg="Existing Trident install requires an upgrade but DO_NOT_MODIFY_EXISTING_TRIDENT=true,"
+    msg+=" and no other valid operations can be done due to COMPONENTS=$COMPONENTS."
+    add_problem "$msg"
+    return 1
+}
+
 step_generate_trident_fresh_install_yaml() {
     local -r kustomization_file="$__GENERATED_KUSTOMIZATION_FILE"
     local -r crs_file="$__GENERATED_CRS_FILE"
@@ -2404,7 +2423,8 @@ if components_include_connector; then
 fi
 
 # TRIDENT / ACP yaml
-step_collect_existing_trident_info
+step_collect_existing_trident_info && exit_if_problems
+step_existing_trident_flags_compatibility_check && exit_if_problems
 if trident_will_be_installed_or_modified; then
     if trident_is_missing; then
         step_generate_trident_fresh_install_yaml
