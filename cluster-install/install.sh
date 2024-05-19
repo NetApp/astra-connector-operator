@@ -2355,12 +2355,10 @@ step_monitor_deployment_progress() {
     if trident_will_be_installed_or_modified; then
         if is_dry_run; then
             logdebug "skip monitoring trident components because it's a dry run"
-        else
-            if ! wait_for_deployment_running "trident-operator" "$trident_ns" "3"; then
-                add_problem "trident operator: failed" "The Trident Operator failed to deploy"
-            elif ! wait_for_cr_state "torc/$_EXISTING_TORC_NAME" ".status.status" "Installed" "$trident_ns" "12"; then
-                add_problem "trident: failed" "Trident failed to deploy: status never reached 'Installed'"
-            fi
+        elif ! wait_for_deployment_running "trident-operator" "$trident_ns" "3"; then
+            add_problem "trident operator: failed" "The Trident Operator failed to deploy"
+        elif ! wait_for_cr_state "torc/$_EXISTING_TORC_NAME" ".status.status" "Installed" "$trident_ns" "12"; then
+            add_problem "trident: failed" "Trident failed to deploy: status never reached 'Installed'"
         fi
     fi
 }
