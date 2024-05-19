@@ -2378,8 +2378,12 @@ if components_include_connector; then
 fi
 
 # TRIDENT / ACP yaml
-step_collect_existing_trident_info && exit_if_problems
-step_existing_trident_flags_compatibility_check && exit_if_problems
+step_collect_existing_trident_info
+exit_if_problems
+
+step_existing_trident_flags_compatibility_check 
+exit_if_problems
+
 if trident_will_be_installed_or_modified; then
     if trident_is_missing; then
         step_generate_trident_fresh_install_yaml
