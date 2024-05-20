@@ -771,7 +771,7 @@ str_matches_at_least_one() {
 process_url() {
     local url="$1"
     local -r protocol="${2:-""}"
-    [ -z "$url" ] && fatal "no url given"
+    [ -z "$url" ] && return 0
 
     url="${url#http://}" # Remove 'http://'
     url="${url#https://}" # Remove 'https://'
