@@ -280,7 +280,7 @@ existing_trident_needs_modifications() {
     components_include_trident && trident_image_needs_upgraded && return 0
     components_include_trident && trident_operator_image_needs_upgraded && return 0
     components_include_acp && acp_image_needs_upgraded && return 0
-    components_include_acp && ! acp_enabled && return 0
+    components_include_acp && ! acp_is_enabled && return 0
 
     return 1
 }
