@@ -205,7 +205,7 @@ load_config_from_file_if_given() {
     source "$config_file"
 
     # check if api token was populated after sourcing config file
-    if ["$api_token" != "$ASTRA_API_TOKEN"]; then
+    if [ "$api_token" != "$ASTRA_API_TOKEN" ]; then
         logwarn "$token_warning"
     fi
 
