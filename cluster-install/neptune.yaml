@@ -6227,6 +6227,12 @@ rules:
   - update
   - watch
 - apiGroups:
+  - management.cattle.io
+  resources:
+  - projects
+  verbs:
+  - updatepsa
+- apiGroups:
   - rbac.authorization.k8s.io
   resources:
   - rolebindings
