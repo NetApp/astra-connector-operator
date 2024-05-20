@@ -191,6 +191,7 @@ set_log_level() {
 
 load_config_from_file_if_given() {
     local config_file=$1
+    local api_token=$ASTRA_API_TOKEN
     if [ -z "$config_file" ]; then return 0; fi
     if [ ! -f "$config_file" ]; then
         add_problem "CONFIG_FILE '$config_file' does not exist" "Given CONFIG_FILE '$config_file' does not exist"
@@ -199,6 +200,13 @@ load_config_from_file_if_given() {
 
     # shellcheck disable=SC1090
     source "$config_file"
+
+    # check if api token was populated after sourcing config file
+    if ["$api_token" != "$ASTRA_API_TOKEN"]; then
+        logwarn "We detected that your ASTRA_API_TOKEN was provided through the CONFIG_FILE, "\
+        "which is insecure! Consider storing it in a safe location and providing it through the command line only when needed."
+    fi
+
     set_log_level
     logheader $__DEBUG "Loaded configuration from file: $config_file"
 }
