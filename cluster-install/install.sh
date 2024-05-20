@@ -69,6 +69,8 @@ readonly __DEFAULT_TRIDENT_ACP_IMAGE_NAME="trident-acp"
 readonly __DEFAULT_CONNECTOR_NAMESPACE="astra-connector"
 readonly __DEFAULT_TRIDENT_NAMESPACE="trident"
 
+readonly __PRODUCTION_AUTOSUPPORT_URL="https://support.netapp.com/put/AsupPut"
+
 readonly __GENERATED_CRS_DIR="./astra-generated"
 readonly __GENERATED_CRS_FILE="$__GENERATED_CRS_DIR/crs.yaml"
 readonly __GENERATED_OPERATORS_DIR="$__GENERATED_CRS_DIR/operators"
@@ -178,6 +180,8 @@ get_configs() {
     CONNECTOR_HOST_ALIAS_IP="${CONNECTOR_HOST_ALIAS_IP:-""}"
     CONNECTOR_HOST_ALIAS_IP="${CONNECTOR_HOST_ALIAS_IP%/}" # Remove trailing slash
     CONNECTOR_SKIP_TLS_VALIDATION="${CONNECTOR_SKIP_TLS_VALIDATION:-"false"}"
+    CONNECTOR_AUTOSUPPORT_ENROLLED="${CONNECTOR_AUTOSUPPORT_ENROLLED:-"false"}"
+    CONNECTOR_AUTOSUPPORT_URL="${CONNECTOR_AUTOSUPPORT_URL:-$__PRODUCTION_AUTOSUPPORT_URL}"
 }
 
 set_log_level() {
@@ -1362,6 +1366,8 @@ step_check_config() {
     # Fully optional env vars
     add_to_config_builder "CONNECTOR_HOST_ALIAS_IP"
     add_to_config_builder "CONNECTOR_SKIP_TLS_VALIDATION"
+    add_to_config_builder "CONNECTOR_AUTOSUPPORT_ENROLLED"
+    add_to_config_builder "CONNECTOR_AUTOSUPPORT_URL"
 
     if [ -n "${LABELS}" ]; then
         _PROCESSED_LABELS="$(process_labels_to_yaml "${LABELS}" "    ")"
@@ -1771,6 +1777,8 @@ step_generate_astra_connector_yaml() {
     local -r connector_regcred_name="${IMAGE_PULL_SECRET:-"astra-connector-regcred"}"
     local -r connector_registry="$(join_rpath "$CONNECTOR_IMAGE_REGISTRY" "$(get_base_repo "$CONNECTOR_IMAGE_REPO")")"
     local -r connector_tag="$CONNECTOR_IMAGE_TAG"
+    local -r connector_autosupport_enrolled="$CONNECTOR_AUTOSUPPORT_ENROLLED"
+    local -r connector_autosupport_url="$CONNECTOR_AUTOSUPPORT_URL"
     local -r neptune_tag="$NEPTUNE_IMAGE_TAG"
     local -r host_alias_ip="$CONNECTOR_HOST_ALIAS_IP"
     local -r skip_tls_validation="$CONNECTOR_SKIP_TLS_VALIDATION"
@@ -1866,7 +1874,8 @@ spec:
   neptune:
     image: "${neptune_tag}" # This field sets the tag, not the image
   autoSupport:
-    enrolled: true
+    enrolled: ${connector_autosupport_enrolled} 
+    url: ${connector_autosupport_url}
   natsSyncClient:
     cloudBridgeURL: ${astra_url}
 EOF
