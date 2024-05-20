@@ -1434,6 +1434,17 @@ step_check_k8s_permissions() {
     fi
 }
 
+step_check_volumesnapshotclasses() {
+    logheader $__INFO "Checking for volumesnapshotclasses crd..."
+
+    local -r volsnapclass_crd="$(kubectl get crd volumesnapshotclasses.snapshot.storage.k8s.io -o name 2> /dev/null)"
+    if [ -z "$volsnapclass_crd" ]; then
+        logwarn "We didn't find the volumesnapshotclasses CRD on the cluster! Installation will proceed, but snapshots will not work until this is corrected."
+    else
+        logdebug "volumesnapshotclasses crd: OK"
+    fi
+}
+
 step_check_namespace_exists() {
     if [ -z "$(kubectl get namespace "$NAMESPACE" -o name 2> /dev/null)" ]; then
         if [ -n "$IMAGE_PULL_SECRET" ]; then
@@ -2297,6 +2308,7 @@ step_check_kubectl_has_kustomize_support "$__KUBECTL_MIN_VERSION"
 step_check_k8s_version_in_range "$__KUBERNETES_MIN_VERSION" "$__KUBERNETES_MAX_VERSION"
 step_check_k8s_permissions
 exit_if_problems
+step_check_volumesnapshotclasses
 
 # REGISTRY access
 if [ -n "$NAMESPACE" ]; then step_check_namespace_exists; fi
