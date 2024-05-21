@@ -127,6 +127,8 @@ get_configs() {
     RESOURCE_LIMITS_PRESET="${RESOURCE_LIMITS_PRESET:-}"
     RESOURCE_LIMITS_CUSTOM_CPU="${RESOURCE_LIMITS_CUSTOM_CPU:-}" # Plain number
     RESOURCE_LIMITS_CUSTOM_MEMORY="${RESOURCE_LIMITS_CUSTOM_MEMORY:-}" # Plain number, assumed to be in 'Gi'
+    # SKIP_TLS_VALIDATION will skip TLS validation for all requests made during the script.
+    SKIP_TLS_VALIDATION="${SKIP_TLS_VALIDATION:-"false"}"
 
     # ------------ IMAGE REGISTRY ------------
     # The REGISTRY environment variables follow a hierarchy; each layer overwrites the previous, if specified.
@@ -177,14 +179,14 @@ get_configs() {
 
     # ------------ ASTRA CONNECTOR ------------
     ASTRA_CONTROL_URL="${ASTRA_CONTROL_URL:-"astra.netapp.io"}"
-    ASTRA_CONTROL_URL="${ASTRA_CONTROL_URL%/}" # Remove trailing slash
+    ASTRA_CONTROL_URL="$(process_url "$ASTRA_CONTROL_URL" "https://")"
     ASTRA_API_TOKEN="${ASTRA_API_TOKEN}"
     ASTRA_ACCOUNT_ID="${ASTRA_ACCOUNT_ID}"
     ASTRA_CLOUD_ID="${ASTRA_CLOUD_ID}"
     ASTRA_CLUSTER_ID="${ASTRA_CLUSTER_ID}"
     CONNECTOR_HOST_ALIAS_IP="${CONNECTOR_HOST_ALIAS_IP:-""}"
-    CONNECTOR_HOST_ALIAS_IP="${CONNECTOR_HOST_ALIAS_IP%/}" # Remove trailing slash
-    CONNECTOR_SKIP_TLS_VALIDATION="${CONNECTOR_SKIP_TLS_VALIDATION:-"false"}"
+    CONNECTOR_HOST_ALIAS_IP="$(process_url "$CONNECTOR_HOST_ALIAS_IP")"
+    CONNECTOR_SKIP_TLS_VALIDATION="${CONNECTOR_SKIP_TLS_VALIDATION:-"${SKIP_TLS_VALIDATION:-"false"}"}"
 }
 
 set_log_level() {
@@ -774,6 +776,20 @@ str_matches_at_least_one() {
     return 1
 }
 
+# process_url removes trailing slashes from the given url and sets the protocol to the one given
+process_url() {
+    local url="$1"
+    local -r protocol="${2:-""}"
+    [ -z "$url" ] && return 0
+
+    url="${url#http://}" # Remove 'http://'
+    url="${url#https://}" # Remove 'https://'
+    url="${url%/}" # Remove trailing slash
+    url="${protocol}${url}"
+
+    echo "$url"
+}
+
 get_base_repo() {
     local -r image_repo="$1"
     if [ -z "$image_repo" ]; then fatal "no image_repo given"; fi
@@ -859,6 +875,18 @@ status_code_msg() {
     echo "$status"
 }
 
+add_tls_validation_hint_to_err_if_needed() {
+    local error_msg="$1"
+    [ -z "$error_msg" ] && return 0
+
+    local match_phrase="curl: (60) SSL certificate problem"
+    if echo "$error_msg" | grep -qi "$match_phrase"; then
+        error_msg="$match_phrase -- try setting SKIP_TLS_VALIDATION=true (WARNING: not for production use!)"
+    fi
+
+    echo "$error_msg"
+}
+
 add_problem() {
     local problem_simple=$1
     local problem_long=${2:-$problem_simple}
@@ -887,13 +915,13 @@ make_astra_control_request() {
     _return_body=""
     _return_status=""
     local skip_tls_validation_opt=""
-    if [ "$CONNECTOR_SKIP_TLS_VALIDATION" == "true" ]; then
+    if [ "$SKIP_TLS_VALIDATION" == "true" ]; then
         skip_tls_validation_opt="-k"
     fi
 
     logdebug "$method --> '$url'"
     local -r result="$(curl -X "$method" -sS $skip_tls_validation_opt -w "\n%{http_code}" "$url" "${headers[@]}" 2> "$__ERR_FILE")"
-    _return_error="$(get_captured_err)"
+    _return_error="$(add_tls_validation_hint_to_err_if_needed "$(get_captured_err)")"
     _return_body="$(echo "$result" | head -n 1)"
     _return_status="$(echo "$result" | tail -n 1)"
 }
@@ -1060,6 +1088,9 @@ check_if_image_can_be_pulled_via_curl() {
     if [ -n "$encoded_creds" ]; then
         args+=("-H" "Authorization: Basic $encoded_creds")
     fi
+    if [ "$SKIP_TLS_VALIDATION" == "true" ]; then
+        args+=("-k")
+    fi
     args+=("-H" "Accept: application/vnd.docker.distribution.manifest.v2+json")
 
     local -r result="$(curl -X GET "${args[@]}" "https://$registry/v2/$image_repo/manifests/$image_tag" 2> "$__ERR_FILE")"
@@ -1079,7 +1110,7 @@ check_if_image_can_be_pulled_via_curl() {
             _return_error="$(status_code_msg "$_return_status")"
         fi
     else
-        if [ -n "$curl_err" ]; then _return_error="$curl_err"
+        if [ -n "$curl_err" ]; then _return_error="$(add_tls_validation_hint_to_err_if_needed "$curl_err")"
         else _return_error="unknown error"; fi
     fi
     return 1
@@ -1337,7 +1368,7 @@ create_kubectl_patch_for_containers() {
 exit_if_problems() {
     if [ ${#_PROBLEMS[@]} -ne 0 ]; then
         debug_is_on && print_built_config
-        logheader $__ERROR "Pre-flight check failed! Please resolve the following issues and try again:"
+        logheader $__ERROR "Cluster management failed! We've identified the following issues:"
         for err in "${_PROBLEMS[@]}"; do
             logerror "* $err"
         done
@@ -1459,8 +1490,9 @@ step_check_config() {
     add_to_config_builder "DO_NOT_MODIFY_EXISTING_TRIDENT"
 
     # Fully optional env vars
-    add_to_config_builder "CONNECTOR_HOST_ALIAS_IP"
+    add_to_config_builder "SKIP_TLS_VALIDATION"
     add_to_config_builder "CONNECTOR_SKIP_TLS_VALIDATION"
+    add_to_config_builder "CONNECTOR_HOST_ALIAS_IP"
 
     if [ -n "${LABELS}" ]; then
         _PROCESSED_LABELS="$(process_labels_to_yaml "${LABELS}" "    ")"
@@ -1704,7 +1736,7 @@ step_check_astra_control_reachable() {
     else
         if [ "$status" != 000 ] || [ -z "$err" ]; then err="$(status_code_msg "$status")"; fi
         logdebug "body: '$body'"
-        add_problem "Failed to contact Astra Control: $err ($status)"
+        add_problem "Failed to contact Astra Control at url '$ASTRA_CONTROL_URL': $err ($status)"
         return 1
     fi
 }
@@ -2456,6 +2488,7 @@ fi
 # ASTRA CONTROL access
 if components_include_connector && [ "$SKIP_ASTRA_CHECK" != "true" ]; then
     step_check_astra_control_reachable
+    exit_if_problems
     step_check_astra_cloud_and_cluster_id
 else
     logdebug "skipping all Astra checks (COMPONENTS=${COMPONENTS}, SKIP_ASTRA_CHECK=${SKIP_ASTRA_CHECK})"
