@@ -199,6 +199,10 @@ set_log_level() {
 
 load_config_from_file_if_given() {
     local config_file=$1
+    local api_token=$ASTRA_API_TOKEN
+    local token_warning="We detected that your ASTRA_API_TOKEN was provided through the CONFIG_FILE,"
+    token_warning+=" which may pose a security risk! Make sure to store the configuration file in a secure location,"
+    token_warning+=" or consider moving the API token out of the file and providing it through the command line only when needed."
     if [ -z "$config_file" ]; then return 0; fi
     if [ ! -f "$config_file" ]; then
         add_problem "CONFIG_FILE '$config_file' does not exist" "Given CONFIG_FILE '$config_file' does not exist"
@@ -207,6 +211,12 @@ load_config_from_file_if_given() {
 
     # shellcheck disable=SC1090
     source "$config_file"
+
+    # check if api token was populated after sourcing config file
+    if [ "$api_token" != "$ASTRA_API_TOKEN" ]; then
+        logwarn "$token_warning"
+    fi
+
     set_log_level
     logheader $__DEBUG "Loaded configuration from file: $config_file"
 }
@@ -1524,6 +1534,17 @@ step_check_k8s_permissions() {
     fi
 }
 
+step_check_volumesnapshotclasses() {
+    logheader $__INFO "Checking for volumesnapshotclasses crd..."
+
+    local -r volsnapclass_crd="$(kubectl get crd volumesnapshotclasses.snapshot.storage.k8s.io -o name 2> /dev/null)"
+    if [ -z "$volsnapclass_crd" ]; then
+        logwarn "We didn't find the volumesnapshotclasses CRD on the cluster! Installation will proceed, but snapshots will not work until this is corrected."
+    else
+        logdebug "volumesnapshotclasses crd: OK"
+    fi
+}
+
 step_check_namespace_exists() {
     if [ -z "$(kubectl get namespace "$NAMESPACE" -o name 2> /dev/null)" ]; then
         if [ -n "$IMAGE_PULL_SECRET" ]; then
@@ -2423,6 +2444,7 @@ step_check_kubectl_has_kustomize_support "$__KUBECTL_MIN_VERSION"
 step_check_k8s_version_in_range "$__KUBERNETES_MIN_VERSION" "$__KUBERNETES_MAX_VERSION"
 step_check_k8s_permissions
 exit_if_problems
+step_check_volumesnapshotclasses
 
 # REGISTRY access
 if [ -n "$NAMESPACE" ]; then step_check_namespace_exists; fi
@@ -2456,7 +2478,7 @@ fi
 step_collect_existing_trident_info
 exit_if_problems
 
-step_existing_trident_flags_compatibility_check 
+step_existing_trident_flags_compatibility_check
 exit_if_problems
 
 if trident_will_be_installed_or_modified; then
