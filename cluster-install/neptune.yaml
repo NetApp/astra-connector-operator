@@ -2191,6 +2191,9 @@ spec:
                         type: object
                       storageClassName:
                         type: string
+                      volumeMode:
+                        description: PersistentVolumeMode describes how a volume is intended to be consumed, either Block or Filesystem.
+                        type: string
                     type: object
                 type: object
               dataSourceRef:
@@ -3598,6 +3601,9 @@ spec:
                             type: object
                         type: object
                       storageClassName:
+                        type: string
+                      volumeMode:
+                        description: PersistentVolumeMode describes how a volume is intended to be consumed, either Block or Filesystem.
                         type: string
                     type: object
                 type: object
