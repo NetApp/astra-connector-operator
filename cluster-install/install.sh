@@ -36,7 +36,9 @@ _PROCESSED_LABELS=""
 _PROCESSED_RESOURCE_LIMITS=""
 
 # ------------ CONSTANTS ------------
-readonly __RELEASE_VERSION="${RELEASE_VERSION_OVERRIDE:-24.02}"
+readonly __RELEASE_VERSION="24.02"
+readonly __TRIDENT_VERSION="${__TRIDENT_VERSION_OVERRIDE:-"$__RELEASE_VERSION"}"
+
 readonly -a __REQUIRED_TOOLS=("jq" "kubectl" "curl" "grep" "sort" "uniq" "find" "base64" "wc" "awk")
 
 readonly __GIT_REF_CONNECTOR_OPERATOR="main" # Determines the ACOP branch from which the kustomize resources will be pulled
@@ -164,17 +166,14 @@ get_configs() {
             TRIDENT_ACP_IMAGE_REPO="${TRIDENT_ACP_IMAGE_REPO:-"$(join_rpath "$ASTRA_BASE_REPO" "$__DEFAULT_TRIDENT_ACP_IMAGE_NAME")"}"
 
     # ------------ IMAGE TAG ------------
-    # The TAG environment variables follow a hierarchy; each layer overwrites the previous, if specified.
-    IMAGE_TAG="${IMAGE_TAG}"
-        DOCKER_HUB_IMAGE_TAG="${DOCKER_HUB_IMAGE_TAG:-${IMAGE_TAG:-$__DEFAULT_IMAGE_TAG}}"
-            TRIDENT_OPERATOR_IMAGE_TAG="${TRIDENT_OPERATOR_IMAGE_TAG:-$DOCKER_HUB_IMAGE_TAG}"
-            TRIDENT_AUTOSUPPORT_IMAGE_TAG="${TRIDENT_AUTOSUPPORT_IMAGE_TAG:-$DOCKER_HUB_IMAGE_TAG}"
-            TRIDENT_IMAGE_TAG="${TRIDENT_IMAGE_TAG:-$DOCKER_HUB_IMAGE_TAG}"
-            CONNECTOR_OPERATOR_IMAGE_TAG="${CONNECTOR_OPERATOR_IMAGE_TAG:-$DOCKER_HUB_IMAGE_TAG}"
-        ASTRA_IMAGE_TAG="${ASTRA_IMAGE_TAG:-${IMAGE_TAG:-$__DEFAULT_IMAGE_TAG}}"
-            CONNECTOR_IMAGE_TAG="${CONNECTOR_IMAGE_TAG:-$ASTRA_IMAGE_TAG}"
-            NEPTUNE_IMAGE_TAG="${NEPTUNE_IMAGE_TAG:-$ASTRA_IMAGE_TAG}"
-            TRIDENT_ACP_IMAGE_TAG="${TRIDENT_ACP_IMAGE_TAG:-$ASTRA_IMAGE_TAG}"
+    TRIDENT_IMAGE_TAG="${TRIDENT_IMAGE_TAG:-$__TRIDENT_VERSION}"
+        TRIDENT_OPERATOR_IMAGE_TAG="${TRIDENT_OPERATOR_IMAGE_TAG:-$TRIDENT_IMAGE_TAG}"
+        TRIDENT_AUTOSUPPORT_IMAGE_TAG="${TRIDENT_AUTOSUPPORT_IMAGE_TAG:-$TRIDENT_IMAGE_TAG}"
+        TRIDENT_IMAGE_TAG="${TRIDENT_IMAGE_TAG:-$TRIDENT_IMAGE_TAG}"
+        TRIDENT_ACP_IMAGE_TAG="${TRIDENT_ACP_IMAGE_TAG:-$TRIDENT_IMAGE_TAG}"
+    CONNECTOR_OPERATOR_IMAGE_TAG="${CONNECTOR_OPERATOR_IMAGE_TAG:-"202405211614-main"}"
+    CONNECTOR_IMAGE_TAG="${CONNECTOR_IMAGE_TAG:-"0c72380"}"
+    NEPTUNE_IMAGE_TAG="${NEPTUNE_IMAGE_TAG:-"18998b7"}"
 
     # ------------ ASTRA CONNECTOR ------------
     ASTRA_CONTROL_URL="${ASTRA_CONTROL_URL:-"astra.netapp.io"}"
@@ -2423,7 +2422,7 @@ step_cleanup_tmp_files() {
 #== Main
 #======================================================================
 set_log_level
-logln $__INFO "====== Astra Cluster Installer v0.0.1 ======"
+logln $__INFO "====== Astra Cluster Installer ${__RELEASE_VERSION} ======"
 load_config_from_file_if_given "$CONFIG_FILE"
 exit_if_problems
 
