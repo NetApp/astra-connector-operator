@@ -1543,13 +1543,18 @@ step_check_all_images_can_be_pulled() {
         if config_connector_operator_image_is_custom; then images_to_check+=("$custom")
         else images_to_check+=("$default"); fi
 
-        images_to_check+=("$CONNECTOR_IMAGE_REGISTRY" "$CONNECTOR_IMAGE_REPO" "$CONNECTOR_IMAGE_TAG")
-        if config_connector_image_is_custom; then images_to_check+=("$custom")
-        else images_to_check+=("$default"); fi
 
-        images_to_check+=("$NEPTUNE_IMAGE_REGISTRY" "$NEPTUNE_IMAGE_REPO" "$NEPTUNE_IMAGE_TAG")
-        if config_neptune_image_is_custom; then images_to_check+=("$custom")
-        else images_to_check+=("$default"); fi
+        if config_connector_image_is_custom; then
+          # Only check connector image if user has overridden the connector-operator's default.
+          # We do not know the default version and cannot check it due to it being hard coded within the connector-operator image.
+          images_to_check+=("$CONNECTOR_IMAGE_REGISTRY" "$CONNECTOR_IMAGE_REPO" "$CONNECTOR_IMAGE_TAG" "$custom")
+        fi
+
+        if config_neptune_image_is_custom; then
+          # Only check neptune image if user has overridden the connector-operator's default.
+          # We do not know the default version and cannot check it due to it being hard coded within the connector-operator image.
+          images_to_check+=("$NEPTUNE_IMAGE_REGISTRY" "$NEPTUNE_IMAGE_REPO" "$NEPTUNE_IMAGE_TAG" "$custom")
+        fi
     fi
     if components_include_acp; then
       images_to_check+=("$TRIDENT_ACP_IMAGE_REGISTRY" "$TRIDENT_ACP_IMAGE_REPO" "$TRIDENT_ACP_IMAGE_TAG")
