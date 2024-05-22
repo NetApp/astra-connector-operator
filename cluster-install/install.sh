@@ -364,7 +364,7 @@ config_image_is_custom() {
     local -r default_base_repo="$3"
     local -r default_tag="$4"
     if [ $# -ne 4 ]; then
-      echo "config_image_is_custom() 4 arguments, but received $#."
+      echo "config_image_is_custom() expects 4 arguments, but received $#."
       return 1
     fi
 
