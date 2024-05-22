@@ -1132,6 +1132,20 @@ wait_for_deployment_running() {
     [ -z "$deployment" ] && fatal "no deployment name given"
 
     loginfo "Waiting on deployment/$deployment (timeout: $timeout)..."
+
+    # Wait for the deployment to be created. The subsequent 'rollout status' command will fail if called before the
+    # deployment has been created.
+    max_retries=15
+    for ((i=1; i<=max_retries; i++)); do
+        if kubectl get deployment "$deployment" -n $namespace > /dev/null 2>&1; then
+            logdebug "Deployment found."
+            break
+        else
+            logdebug "Deployment not found, attempt $i..."
+            sleep "2"
+        fi
+    done
+
     if kubectl rollout status -n "$namespace" "deploy/$deployment" --timeout="$timeout" &> /dev/null; then
         return 0
     fi
@@ -1546,12 +1560,24 @@ step_check_all_images_can_be_pulled() {
           # Only check connector image if user has overridden the connector-operator's default.
           # We do not know the default version and cannot check it due to it being hard coded within the connector-operator image.
           images_to_check+=("$CONNECTOR_IMAGE_REGISTRY" "$CONNECTOR_IMAGE_REPO" "$CONNECTOR_IMAGE_TAG" "$custom")
+        else
+          # Get the default connector tag
+          file_content=$(curl -sS "https://raw.githubusercontent.com/NetApp/astra-connector-operator/$CONNECTOR_OPERATOR_IMAGE_TAG/common/connector_version.txt")
+          # Trim new lines and white space
+          tag="${file_content//[[:space:]]/}"
+          images_to_check+=("$CONNECTOR_IMAGE_REGISTRY" "$CONNECTOR_IMAGE_REPO" "$tag" "$default")
         fi
 
         if config_neptune_image_is_custom; then
           # Only check neptune image if user has overridden the connector-operator's default.
           # We do not know the default version and cannot check it due to it being hard coded within the connector-operator image.
           images_to_check+=("$NEPTUNE_IMAGE_REGISTRY" "$NEPTUNE_IMAGE_REPO" "$NEPTUNE_IMAGE_TAG" "$custom")
+        else
+          # Get the default connector tag
+          file_content=$(curl -sS "https://raw.githubusercontent.com/NetApp/astra-connector-operator/$CONNECTOR_OPERATOR_IMAGE_TAG/common/neptune_manager_tag.txt")
+          # Trim new lines and white space
+          tag="${file_content//[[:space:]]/}"
+          images_to_check+=("$NEPTUNE_IMAGE_REGISTRY" "$NEPTUNE_IMAGE_REPO" "$tag" "$default")
         fi
     fi
     if components_include_acp; then
