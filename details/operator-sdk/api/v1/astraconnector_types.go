@@ -31,7 +31,7 @@ type AutoSupport struct {
 	Enrolled bool `json:"enrolled"`
 
 	// URL determines where the anonymous data will be sent
-	// +kubebuilder:default:="https://stagesupport.netapp.com/put/AsupPut"
+	// +kubebuilder:default:="https://support.netapp.com/put/AsupPut"
 	URL string `json:"url,omitempty"`
 }
 
@@ -79,10 +79,10 @@ type AstraConnectorSpec struct {
 
 	// AutoSupport indicates willingness to participate in NetApp's proactive support application, NetApp Active IQ.
 	// An internet connection is required (port 442) and all support data is anonymized.
-	// The default election is true and indicates support data will be sent to NetApp.
+	// The default election is false and indicates support data will not be sent to NetApp.
 	// An empty or blank election is the same as a default election.
-	// Air gapped installations should enter false.
-	// +kubebuilder:default={"enrolled":true, "url":"https://stagesupport.netapp.com/put/AsupPut"}
+	// Air gapped installations should leave as false.
+	// +kubebuilder:default={"enrolled":false, "url":"https://support.netapp.com/put/AsupPut"}
 	AutoSupport AutoSupport `json:"autoSupport"`
 
 	// SkipPreCheck determines if you want to skip pre-checks and go ahead with the installation.
