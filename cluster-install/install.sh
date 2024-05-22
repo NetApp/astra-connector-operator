@@ -104,6 +104,11 @@ readonly __FATAL=50
 #     captured_stdout="$(curl -sS https://bad-url.com 2> "$_ERR_FILE")"
 #     captured_stderr="$(get_captured_err)"
 readonly __ERR_FILE="tmp_last_captured_error.txt"
+
+# __TMP_ENV is used to store the user's env vars so that we can then re-apply them after having sourced
+# their config file. This allows us to make command line vars take precedence over what's in the config file.
+readonly __TMP_ENV="tmp.env"
+
 readonly __NEWLINE=$'\n' # This is for readability
 
 #----------------------------------------------------------------------
@@ -203,6 +208,17 @@ set_log_level() {
     [ "$LOG_LEVEL" == "fatal" ] && LOG_LEVEL="$__FATAL"
 }
 
+set_config_from_string() {
+    local -r config_str="$1"
+    [ -z "$config_str" ] && fatal "no config string given"
+    local -r tmp_env="$__TMP_ENV"
+
+    echo "$config_str" > "$tmp_env"
+    # shellcheck disable=SC1090
+    source "$tmp_env" &> /dev/null
+    rm -f "$tmp_env" &> /dev/null
+}
+
 load_config_from_file_if_given() {
     local config_file=$1
     local api_token=$ASTRA_API_TOKEN
@@ -214,12 +230,17 @@ load_config_from_file_if_given() {
         add_problem "CONFIG_FILE '$config_file' does not exist" "Given CONFIG_FILE '$config_file' does not exist"
         return 1
     fi
+    # Store the current env so it can be re-applied after sourcing the config file
+    local -r previous_env="$(env)"
 
-    # shellcheck disable=SC1090
-    source "$config_file"
+    # Set config file values first
+    set_config_from_string "$(cat "$config_file")"
+
+    # Set previous env second to allow vars provided through the command line to take priority
+    set_config_from_string "$previous_env"
     set_log_level
 
-    # check if api token was populated after sourcing config file
+    # Check if api token was populated after sourcing config file
     if [ "$api_token" != "$ASTRA_API_TOKEN" ]; then
         logwarn "$token_warning"
     fi
@@ -2501,6 +2522,7 @@ step_monitor_deployment_progress() {
 step_cleanup_tmp_files() {
     debug_is_on && logdebug "last captured err: '$(get_captured_err)'"
     rm -f "$__ERR_FILE" &> /dev/null
+    rm -f "$__TMP_ENV" &>/dev/null
 }
 
 #======================================================================
