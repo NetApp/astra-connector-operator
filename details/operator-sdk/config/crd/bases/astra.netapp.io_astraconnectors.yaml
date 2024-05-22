@@ -78,14 +78,14 @@ spec:
                 type: object
               autoSupport:
                 default:
-                  enrolled: true
-                  url: https://stagesupport.netapp.com/put/AsupPut
+                  enrolled: false
+                  url: https://support.netapp.com/put/AsupPut
                 description: AutoSupport indicates willingness to participate in NetApp's
                   proactive support application, NetApp Active IQ. An internet connection
                   is required (port 442) and all support data is anonymized. The default
-                  election is true and indicates support data will be sent to NetApp.
-                  An empty or blank election is the same as a default election. Air
-                  gapped installations should enter false.
+                  election is false and indicates support data will not be sent to
+                  NetApp. An empty or blank election is the same as a default election.
+                  Air gapped installations should leave as false.
                 properties:
                   enrolled:
                     default: true
@@ -93,7 +93,7 @@ spec:
                       data to NetApp for support purposes.
                     type: boolean
                   url:
-                    default: https://stagesupport.netapp.com/put/AsupPut
+                    default: https://support.netapp.com/put/AsupPut
                     description: URL determines where the anonymous data will be sent
                     type: string
                 type: object
