@@ -16,6 +16,7 @@ _KUBERNETES_VERSION=""
 _EXISTING_TORC_NAME="" # TORC is short for TridentOrchestrator (works with kubectl too)
 _EXISTING_TRIDENT_NAMESPACE=""
 _EXISTING_TRIDENT_IMAGE=""
+_EXISTING_TRIDENT_VERSION=""
 _EXISTING_TRIDENT_ACP_ENABLED=""
 _EXISTING_TRIDENT_ACP_IMAGE=""
 _EXISTING_TRIDENT_OPERATOR_IMAGE=""
@@ -1946,6 +1947,15 @@ step_collect_existing_trident_info() {
         logdebug "trident image: not found"
     fi
 
+    # Trident version
+    local -r trident_version="$(kubectl get tridentversions -n trident -o json | jq -r '.items.[0].trident_version' 2> /dev/null)"
+    if [ -z "$trident_version" ]; then
+        logwarn "Failed to resolve existing Trident version. ACP may not be supported without an upgrade!"
+    else
+        _EXISTING_TRIDENT_VERSION="$trident_version"
+        logdebug "trident version found: $trident_version"
+    fi
+
     # ACP enabled/disabled
     local -r acp_enabled="$(echo "$torc_json" | jq -r '.spec.enableACP' 2> /dev/null)"
     if [ "$acp_enabled" == "true" ]; then
@@ -2359,12 +2369,36 @@ else
     if components_include_trident && ! should_skip_trident_upgrade; then
         # Trident upgrade (includes operator upgrade if needed)
         if trident_image_needs_upgraded; then
-            if config_trident_image_is_custom || prompt_user_yes_no "Would you like to upgrade Trident?"; then
-                step_generate_torc_patch "$_EXISTING_TORC_NAME" "$(get_config_trident_image)" "" "" "$(get_config_trident_autosupport_image)"
-                trident_operator_image_needs_upgraded && step_generate_trident_operator_patch
-            else
-                loginfo "Trident will not be upgraded."
+            # if trident version < 23.10
+            if version_higher_or_equal "23.07" "$_EXISTING_TRIDENT_VERSION"; then
+                logwarn "Your Trident installation is at version 23.07, while the lowest required version to enable ACP is 23.10."
             fi
+
+            if config_trident_image_is_custom; then
+                local -r custom_image="$(as_full_image "$TRIDENT_IMAGE_REGISTRY" "$TRIDENT_IMAGE_REPO" "$TRIDENT_IMAGE_TAG")"
+                local warning_message="Warning: we cannot verify the version of the custom Trident image you provided"
+                warning_message += " ($custom_image). ACP support cannot be guaranteed if upgrading to that image."
+                logwarn "$warning_message"
+            fi
+
+            if ! components_include_connector && (components_include_trident || components_include_acp); then
+                if prompt_user_yes_no "Would you like to upgrade Trident? Choosing no will exit the script (yes/no):"; then
+                    step_generate_torc_patch "$_EXISTING_TORC_NAME" "$(get_config_trident_image)" "" "" "$(get_config_trident_autosupport_image)"
+                    trident_operator_image_needs_upgraded && step_generate_trident_operator_patch
+                else
+                    exit 0
+                fi
+            fi
+
+            if components_include_connector; then
+                if prompt_user_yes_no "Would you like to upgrade Trident? If you choose no, ACP will remain disabled"; then
+                    step_generate_torc_patch "$_EXISTING_TORC_NAME" "$(get_config_trident_image)" "" "" "$(get_config_trident_autosupport_image)"
+                    trident_operator_image_needs_upgraded && step_generate_trident_operator_patch
+                else
+                    loginfo "Trident will not be upgraded and ACP will remain disabled."
+                fi
+            fi
+
         # Trident operator upgrade (standalone)
         elif trident_operator_image_needs_upgraded; then
             if config_trident_operator_image_is_custom || prompt_user_yes_no "Would you like to upgrade the Trident Operator?"; then
