@@ -21,6 +21,7 @@ _EXISTING_TRIDENT_NAMESPACE=""
 _EXISTING_TRIDENT_IMAGE=""
 _EXISTING_TRIDENT_ACP_ENABLED=""
 _EXISTING_TRIDENT_ACP_IMAGE=""
+_EXISTING_TRIDENT_IMAGE_PULL_SECRETS="" # Space-delimited values, e.g. 'secret1 secret2 secret3'
 _EXISTING_TRIDENT_OPERATOR_IMAGE=""
 
 # _PATCHES_ variables contain the k8s patches that will be applied after we've applied all CRs and kustomize resources.
@@ -786,6 +787,22 @@ str_contains_at_least_one() {
     return 1
 }
 
+str_contains_at_least_one_word() {
+    local -r str_to_check="$1"
+    local -a words=("${@:2}")
+
+    [ -z "$str_to_check" ] && fatal "no str_to_check provided"
+    [ "${#words[@]}" -eq 0 ] && fatal "no words provided"
+
+    for word in "${words[@]}" ; do
+        if echo "$str_to_check" | grep -qw -- "$keyword"; then
+            return 0
+        fi
+    done
+
+    return 1
+}
+
 str_matches_at_least_one() {
     local -r str_to_check="$1"
     local -a keywords=("${@:2}")
@@ -801,6 +818,7 @@ str_matches_at_least_one() {
 
     return 1
 }
+
 
 # process_url removes trailing slashes from the given url and sets the protocol to the one given
 process_url() {
@@ -1116,7 +1134,13 @@ check_if_image_can_be_pulled_via_curl() {
     if [ "$SKIP_TLS_VALIDATION" == "true" ]; then
         args+=("-k")
     fi
-    args+=("-H" "Accept: application/vnd.docker.distribution.manifest.v2+json")
+    # We accept all formats via '*/*' because we only really care about the status code, but certain multi-platform
+    # images require a more specific format and will return 404 if we only use '*/*', so we add those formats as well
+    local accept_formats="*/*"
+    accept_formats+=", application/vnd.docker.distribution.manifest.list.v1+json"
+    accept_formats+=", application/vnd.docker.distribution.manifest.list.v2+json"
+    accept_formats+=", application/vnd.oci.image.index.v1+json" # Required for ACP
+    args+=("-H" "Accept: $accept_formats")
 
     local -r result="$(curl -X GET "${args[@]}" "https://$registry/v2/$image_repo/manifests/$image_tag" 2> "$__ERR_FILE")"
     local -r curl_err="$(get_captured_err)"
@@ -2157,6 +2181,15 @@ step_collect_existing_trident_info() {
         logdebug "trident ACP image: not found"
     fi
 
+    # TORC imagePullSecrets
+    local -r pull_secrets="$(echo "$torc_json" | jq -r '.spec.imagePullSecrets | join(" ")' 2> /dev/null)"
+    if [ -n "$pull_secrets" ] && [ "$pull_secrets" != "null" ]; then
+        logdebug "trident pull secrets: $pull_secrets"
+        _EXISTING_TRIDENT_IMAGE_PULL_SECRETS="$pull_secrets"
+    else
+        logdebug "trident pull secrets: not found"
+    fi
+
     # Trident operator
     local -r trident_operator_json="$(kubectl get deploy/trident-operator -n "$trident_ns" -o json 2> /dev/null)"
     if [ -n "$trident_operator_json" ]; then
@@ -2268,6 +2301,13 @@ step_generate_torc_patch() {
     # Autosupport
     if [ -n "$autosupport_image" ]; then
         torc_patch_list+='{"op":"replace","path":"/spec/autosupportImage","value":"'"$autosupport_image"'"},'
+    fi
+
+    # Update image pull secrets if needed
+    if [ -n "$_EXISTING_TRIDENT_IMAGE_PULL_SECRETS" ] && [ -n "$IMAGE_PULL_SECRET" ]; then
+        if str_contains_at_least_one_word "$_EXISTING_TRIDENT_IMAGE_PULL_SECRETS" "$IMAGE_PULL_SECRET"; then
+            echo "WIP"
+        fi
     fi
 
     if [ "${#torc_patch_list[@]}" -gt 0 ]; then
