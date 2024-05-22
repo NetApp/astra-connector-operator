@@ -13,6 +13,9 @@ _PROBLEMS=() # Any failed checks will be added to this array and the program wil
 _CONFIG_BUILDER=() # Contains the fully resolved config to be output at the end during a dry run
 _KUBERNETES_VERSION=""
 
+# _TRIDENT_COLLECTION_STEP_CALLED is used as a guardrail to prevent certain functions from being called before
+# existing Trident information (if any) has been collected.
+_TRIDENT_COLLECTION_STEP_CALLED="false"
 _EXISTING_TORC_NAME="" # TORC is short for TridentOrchestrator (works with kubectl too)
 _EXISTING_TRIDENT_NAMESPACE=""
 _EXISTING_TRIDENT_IMAGE=""
@@ -35,6 +38,8 @@ _PROCESSED_RESOURCE_LIMITS=""
 
 # ------------ CONSTANTS ------------
 readonly __RELEASE_VERSION="24.02"
+readonly __TRIDENT_VERSION="${__TRIDENT_VERSION_OVERRIDE:-"$__RELEASE_VERSION"}"
+
 readonly -a __REQUIRED_TOOLS=("jq" "kubectl" "curl" "grep" "sort" "uniq" "find" "base64" "wc" "awk")
 
 readonly __GIT_REF_CONNECTOR_OPERATOR="main" # Determines the ACOP branch from which the kustomize resources will be pulled
@@ -70,6 +75,8 @@ readonly __DEFAULT_TRIDENT_ACP_IMAGE_NAME="trident-acp"
 readonly __DEFAULT_CONNECTOR_NAMESPACE="astra-connector"
 readonly __DEFAULT_TRIDENT_NAMESPACE="trident"
 
+readonly __PRODUCTION_AUTOSUPPORT_URL="https://support.netapp.com/put/AsupPut"
+
 readonly __GENERATED_CRS_DIR="./astra-generated"
 readonly __GENERATED_CRS_FILE="$__GENERATED_CRS_DIR/crs.yaml"
 readonly __GENERATED_OPERATORS_DIR="$__GENERATED_CRS_DIR/operators"
@@ -92,6 +99,11 @@ readonly __WARN=30
 readonly __ERROR=40
 readonly __FATAL=50
 
+# __ERR_FILE should be used when wanting to capture stdout and stderr output of a command separately.
+# You can then use `get_captured_err` to get the captured error. Example:
+#     captured_stdout="$(curl -sS https://bad-url.com 2> "$_ERR_FILE")"
+#     captured_stderr="$(get_captured_err)"
+readonly __ERR_FILE="tmp_last_captured_error.txt"
 readonly __NEWLINE=$'\n' # This is for readability
 
 #----------------------------------------------------------------------
@@ -104,9 +116,9 @@ get_configs() {
     SKIP_IMAGE_CHECK="${SKIP_IMAGE_CHECK:-"false"}" # Skips checking whether images exist or not
     SKIP_ASTRA_CHECK="${SKIP_ASTRA_CHECK:-"false"}" # Skips AC URL, cloud ID, and cluster ID check
     # DISABLE_PROMPTS skips prompting the user when something notable is about to happen (such as a Trident Upgrade).
-    # As a guardrail, setting DISABLE_PROMPTS=true will require the SKIP_TRIDENT_UPGRADE env var to also be set.
+    # As a guardrail, setting DISABLE_PROMPTS=true will require the DO_NOT_MODIFY_EXISTING_TRIDENT env var to also be set.
     DISABLE_PROMPTS="${DISABLE_PROMPTS:-"false"}"
-    SKIP_TRIDENT_UPGRADE="${SKIP_TRIDENT_UPGRADE}" # Required if DISABLED_PROMPTS=true
+    DO_NOT_MODIFY_EXISTING_TRIDENT="${DO_NOT_MODIFY_EXISTING_TRIDENT}" # Required if DISABLED_PROMPTS=true
 
     # ------------ GENERAL ------------
     KUBECONFIG="${KUBECONFIG}"
@@ -118,6 +130,8 @@ get_configs() {
     RESOURCE_LIMITS_PRESET="${RESOURCE_LIMITS_PRESET:-}"
     RESOURCE_LIMITS_CUSTOM_CPU="${RESOURCE_LIMITS_CUSTOM_CPU:-}" # Plain number
     RESOURCE_LIMITS_CUSTOM_MEMORY="${RESOURCE_LIMITS_CUSTOM_MEMORY:-}" # Plain number, assumed to be in 'Gi'
+    # SKIP_TLS_VALIDATION will skip TLS validation for all requests made during the script.
+    SKIP_TLS_VALIDATION="${SKIP_TLS_VALIDATION:-"false"}"
 
     # ------------ IMAGE REGISTRY ------------
     # The REGISTRY environment variables follow a hierarchy; each layer overwrites the previous, if specified.
@@ -157,28 +171,27 @@ get_configs() {
             TRIDENT_ACP_IMAGE_REPO="${TRIDENT_ACP_IMAGE_REPO:-"$(join_rpath "$ASTRA_BASE_REPO" "$__DEFAULT_TRIDENT_ACP_IMAGE_NAME")"}"
 
     # ------------ IMAGE TAG ------------
-    # The TAG environment variables follow a hierarchy; each layer overwrites the previous, if specified.
-    IMAGE_TAG="${IMAGE_TAG}"
-        DOCKER_HUB_IMAGE_TAG="${DOCKER_HUB_IMAGE_TAG:-${IMAGE_TAG:-$__DEFAULT_IMAGE_TAG}}"
-            TRIDENT_OPERATOR_IMAGE_TAG="${TRIDENT_OPERATOR_IMAGE_TAG:-$DOCKER_HUB_IMAGE_TAG}"
-            TRIDENT_AUTOSUPPORT_IMAGE_TAG="${TRIDENT_AUTOSUPPORT_IMAGE_TAG:-$DOCKER_HUB_IMAGE_TAG}"
-            TRIDENT_IMAGE_TAG="${TRIDENT_IMAGE_TAG:-$DOCKER_HUB_IMAGE_TAG}"
-            CONNECTOR_OPERATOR_IMAGE_TAG="${CONNECTOR_OPERATOR_IMAGE_TAG:-$DOCKER_HUB_IMAGE_TAG}"
-        ASTRA_IMAGE_TAG="${ASTRA_IMAGE_TAG:-${IMAGE_TAG:-$__DEFAULT_IMAGE_TAG}}"
-            CONNECTOR_IMAGE_TAG="${CONNECTOR_IMAGE_TAG:-$ASTRA_IMAGE_TAG}"
-            NEPTUNE_IMAGE_TAG="${NEPTUNE_IMAGE_TAG:-$ASTRA_IMAGE_TAG}"
-            TRIDENT_ACP_IMAGE_TAG="${TRIDENT_ACP_IMAGE_TAG:-$ASTRA_IMAGE_TAG}"
+    TRIDENT_IMAGE_TAG="${TRIDENT_IMAGE_TAG:-$__TRIDENT_VERSION}"
+        TRIDENT_OPERATOR_IMAGE_TAG="${TRIDENT_OPERATOR_IMAGE_TAG:-$TRIDENT_IMAGE_TAG}"
+        TRIDENT_AUTOSUPPORT_IMAGE_TAG="${TRIDENT_AUTOSUPPORT_IMAGE_TAG:-$TRIDENT_IMAGE_TAG}"
+        TRIDENT_IMAGE_TAG="${TRIDENT_IMAGE_TAG:-$TRIDENT_IMAGE_TAG}"
+        TRIDENT_ACP_IMAGE_TAG="${TRIDENT_ACP_IMAGE_TAG:-$TRIDENT_IMAGE_TAG}"
+    CONNECTOR_OPERATOR_IMAGE_TAG="${CONNECTOR_OPERATOR_IMAGE_TAG:-"202405211614-main"}"
+    CONNECTOR_IMAGE_TAG="${CONNECTOR_IMAGE_TAG:-"0c72380"}"
+    NEPTUNE_IMAGE_TAG="${NEPTUNE_IMAGE_TAG:-"18998b7"}"
 
     # ------------ ASTRA CONNECTOR ------------
     ASTRA_CONTROL_URL="${ASTRA_CONTROL_URL:-"astra.netapp.io"}"
-    ASTRA_CONTROL_URL="${ASTRA_CONTROL_URL%/}" # Remove trailing slash
+    ASTRA_CONTROL_URL="$(process_url "$ASTRA_CONTROL_URL" "https://")"
     ASTRA_API_TOKEN="${ASTRA_API_TOKEN}"
     ASTRA_ACCOUNT_ID="${ASTRA_ACCOUNT_ID}"
     ASTRA_CLOUD_ID="${ASTRA_CLOUD_ID}"
     ASTRA_CLUSTER_ID="${ASTRA_CLUSTER_ID}"
     CONNECTOR_HOST_ALIAS_IP="${CONNECTOR_HOST_ALIAS_IP:-""}"
-    CONNECTOR_HOST_ALIAS_IP="${CONNECTOR_HOST_ALIAS_IP%/}" # Remove trailing slash
-    CONNECTOR_SKIP_TLS_VALIDATION="${CONNECTOR_SKIP_TLS_VALIDATION:-"false"}"
+    CONNECTOR_HOST_ALIAS_IP="$(process_url "$CONNECTOR_HOST_ALIAS_IP")"
+    CONNECTOR_SKIP_TLS_VALIDATION="${CONNECTOR_SKIP_TLS_VALIDATION:-"${SKIP_TLS_VALIDATION:-"false"}"}"
+    CONNECTOR_AUTOSUPPORT_ENROLLED="${CONNECTOR_AUTOSUPPORT_ENROLLED:-"false"}"
+    CONNECTOR_AUTOSUPPORT_URL="${CONNECTOR_AUTOSUPPORT_URL:-$__PRODUCTION_AUTOSUPPORT_URL}"
 }
 
 set_log_level() {
@@ -267,13 +280,40 @@ get_connector_namespace() {
     echo "${NAMESPACE:-"${__DEFAULT_CONNECTOR_NAMESPACE}"}"
 }
 
+existing_trident_can_be_modified() {
+    [ "$DO_NOT_MODIFY_EXISTING_TRIDENT" == "true" ] && return 1
+    return 0
+}
+
+existing_trident_needs_modifications() {
+    if [ "$_TRIDENT_COLLECTION_STEP_CALLED" != "true" ]; then
+        fatal "this function should not be called until existing Trident information has been collected"
+    fi
+    trident_is_missing && return 1
+
+    components_include_trident && trident_image_needs_upgraded && return 0
+    components_include_trident && trident_operator_image_needs_upgraded && return 0
+    components_include_acp && acp_image_needs_upgraded && return 0
+    components_include_acp && ! acp_is_enabled && return 0
+
+    return 1
+}
+
 trident_is_missing() {
+    if [ "$_TRIDENT_COLLECTION_STEP_CALLED" != "true" ]; then
+        fatal "this function should not be called until existing Trident information has been collected"
+    fi
     [ -z "$_EXISTING_TRIDENT_NAMESPACE" ] && return 0
     return 1
 }
 
-should_skip_trident_upgrade() {
-    [ "$SKIP_TRIDENT_UPGRADE" == "true" ] && return 0
+
+trident_will_be_installed_or_modified() {
+    if [ "$_TRIDENT_COLLECTION_STEP_CALLED" != "true" ]; then
+        fatal "this function should not be called until existing Trident information has been collected"
+    fi
+    if trident_is_missing; then return 0; fi
+    if existing_trident_needs_modifications && existing_trident_can_be_modified; then return 0; fi
     return 1
 }
 
@@ -474,6 +514,21 @@ get_limits_list_fancy() {
 #----------------------------------------------------------------------
 #-- Util functions
 #----------------------------------------------------------------------
+get_captured_err() {
+    if [ -f "$__ERR_FILE" ]; then
+        cat "$__ERR_FILE"
+        rm -f "$__ERR_FILE" &> /dev/null
+    else
+        echo ""
+    fi
+}
+
+debug_is_on() {
+    [ "$LOG_LEVEL" == "$__DEBUG" ] && return 0
+    [ "$LOG_LEVEL" -lt "$__DEBUG" ] &> /dev/null && return 0
+    return 1
+}
+
 log_at_level() {
     if [ -z "$LOG_LEVEL" ]; then LOG_LEVEL=$__INFO; fi
 
@@ -540,6 +595,7 @@ fatal() {
         log_at_level $__FATAL "-> line ${BASH_LINENO[$i]}: ${FUNCNAME[$i]}"
     done
 
+    step_cleanup_tmp_files
     exit 1
 }
 
@@ -725,6 +781,20 @@ str_matches_at_least_one() {
     return 1
 }
 
+# process_url removes trailing slashes from the given url and sets the protocol to the one given
+process_url() {
+    local url="$1"
+    local -r protocol="${2:-""}"
+    [ -z "$url" ] && return 0
+
+    url="${url#http://}" # Remove 'http://'
+    url="${url#https://}" # Remove 'https://'
+    url="${url%/}" # Remove trailing slash
+    url="${protocol}${url}"
+
+    echo "$url"
+}
+
 get_base_repo() {
     local -r image_repo="$1"
     if [ -z "$image_repo" ]; then fatal "no image_repo given"; fi
@@ -790,6 +860,38 @@ version_higher_or_equal() {
     return 1
 }
 
+status_code_msg() {
+    local -r status_code="$1"
+    [ -z "$status_code" ] && fatal "no status code given"
+
+    local status=""
+    case "$status_code" in
+      200) status="OK" ;;
+      201) status="created" ;;
+      204) status="no content" ;;
+      400) status="bad request" ;;
+      401) status="unauthorized" ;;
+      403) status="forbidden" ;;
+      404) status="not found" ;;
+      500) status="internal server error" ;;
+      503) status="service unavailable" ;;
+      *) status="unknown" ;;
+    esac
+    echo "$status"
+}
+
+add_tls_validation_hint_to_err_if_needed() {
+    local error_msg="$1"
+    [ -z "$error_msg" ] && return 0
+
+    local match_phrase="curl: (60) SSL certificate problem"
+    if echo "$error_msg" | grep -qi "$match_phrase"; then
+        error_msg="$match_phrase -- try setting SKIP_TLS_VALIDATION=true (WARNING: not for production use!)"
+    fi
+
+    echo "$error_msg"
+}
+
 add_problem() {
     local problem_simple=$1
     local problem_long=${2:-$problem_simple}
@@ -818,12 +920,13 @@ make_astra_control_request() {
     _return_body=""
     _return_status=""
     local skip_tls_validation_opt=""
-    if [ "$CONNECTOR_SKIP_TLS_VALIDATION" == "true" ]; then
+    if [ "$SKIP_TLS_VALIDATION" == "true" ]; then
         skip_tls_validation_opt="-k"
     fi
 
     logdebug "$method --> '$url'"
-    local -r result="$(curl -X "$method" -s $skip_tls_validation_opt -w "\n%{http_code}" "$url" "${headers[@]}")"
+    local -r result="$(curl -X "$method" -sS $skip_tls_validation_opt -w "\n%{http_code}" "$url" "${headers[@]}" 2> "$__ERR_FILE")"
+    _return_error="$(add_tls_validation_hint_to_err_if_needed "$(get_captured_err)")"
     _return_body="$(echo "$result" | head -n 1)"
     _return_status="$(echo "$result" | tail -n 1)"
 }
@@ -986,27 +1089,34 @@ check_if_image_can_be_pulled_via_curl() {
     if [ -z "$image_repo" ]; then fatal "no image_repo given"; fi
     if [ -z "$image_tag" ]; then fatal "no image_tag given"; fi
 
-    local -a args=('-s' '-w' "\n%{http_code}")
+    local -a args=('-sS' '-w' "\n%{http_code}")
     if [ -n "$encoded_creds" ]; then
         args+=("-H" "Authorization: Basic $encoded_creds")
     fi
+    if [ "$SKIP_TLS_VALIDATION" == "true" ]; then
+        args+=("-k")
+    fi
+    args+=("-H" "Accept: application/vnd.docker.distribution.manifest.v2+json")
 
-    local -r result="$(curl -X GET "${args[@]}" "https://$registry/v2/$image_repo/tags/list")"
+    local -r result="$(curl -X GET "${args[@]}" "https://$registry/v2/$image_repo/manifests/$image_tag" 2> "$__ERR_FILE")"
+    local -r curl_err="$(get_captured_err)"
     local -r line_count="$(echo "$result" | wc -l)"
-    _return_body="$(echo "$result" | head -n "${line_count-1}")"
+    _return_body="$(echo "$result" | head -n "$((line_count-1))")"
     _return_status="$(echo "$result" | tail -n 1)"
     _return_error=""
 
     if [ "$_return_status" == 200 ]; then
-        # Example response body:
-        # {
-        #   "name" : "my/repo/astra-connector",
-        #   "tags" : [ "032172b", "074dk52", "1fbc135", "24.02" ]
-        # }
-        if echo "$_return_body" | grep "tags" | grep -q -- "$image_tag"; then
-            return 0
+        return 0
+    elif [ "$_return_status" == 404 ]; then
+        _return_error="the image was not found"
+    elif [ "$_return_status" != 000 ]; then
+        _return_error="$(echo "$_return_body" | jq -r '.errors.[0].message' 2> /dev/null)"
+        if [ -z "$_return_error" ] || [ "$_return_error" == "null" ]; then
+            _return_error="$(status_code_msg "$_return_status")"
         fi
-        _return_error="repository found but tag '$image_tag' does not exist"
+    else
+        if [ -n "$curl_err" ]; then _return_error="$(add_tls_validation_hint_to_err_if_needed "$curl_err")"
+        else _return_error="unknown error"; fi
     fi
     return 1
 }
@@ -1096,13 +1206,24 @@ apply_kubectl_patches() {
 wait_for_deployment_running() {
     local -r deployment="$1"
     local -r namespace="${2:-"default"}"
-    local -r timeout="${3:-"2m"}"
+    local -r timeout="${3:-"2"}" # Minutes
     [ -z "$deployment" ] && fatal "no deployment name given"
 
+    local -r sleep_time="5" # Seconds
+    local -r max_checks="$(( (timeout * 60) / sleep_time ))"
+    local counter=0
     loginfo "Waiting on deployment/$deployment (timeout: $timeout)..."
-    if kubectl rollout status -n "$namespace" "deploy/$deployment" --timeout="$timeout" &> /dev/null; then
-        return 0
-    fi
+    while ((counter < max_checks)); do
+        if kubectl rollout status -n "$namespace" "deploy/$deployment" -w=false &> /dev/null; then
+            logdebug "deploy/$deployment is now running"
+            return 0
+        else
+            logdebug "waiting for deploy/$deployment to be running"
+            ((counter++))
+            sleep "$sleep_time"
+        fi
+    done
+
     return 1
 }
 
@@ -1111,11 +1232,13 @@ wait_for_cr_state() {
     local -r path="$2"
     local -r desired_state="$3"
     local -r namespace="${4:-"default"}"
+    local -r timeout="${5:-"2"}" # Minutes
     [ -z "$resource" ] && fatal "no resource given"
     [ -z "$path" ] && fatal "no JSON path given"
     [ -z "$desired_state" ] && fatal "no desired state given"
 
-    local -r max_checks=12
+    local -r sleep_time="5" # Seconds
+    local -r max_checks="$(( (timeout * 60) / sleep_time ))"
     local counter=0
     local current_state=""
     while ((counter < max_checks)); do
@@ -1127,7 +1250,7 @@ wait_for_cr_state() {
         else
             logdebug "waiting for resource '$resource' (ns: $namespace) to reach '$desired_state' (currently '$current_state')"
             ((counter++))
-            sleep 5
+            sleep "$sleep_time"
         fi
     done
 
@@ -1249,11 +1372,12 @@ create_kubectl_patch_for_containers() {
 
 exit_if_problems() {
     if [ ${#_PROBLEMS[@]} -ne 0 ]; then
-        [ "$LOG_LEVEL" == "$__DEBUG" ] && print_built_config
-        logheader $__ERROR "Pre-flight check failed! Please resolve the following issues and try again:"
+        debug_is_on && print_built_config
+        logheader $__ERROR "Cluster management failed! We've identified the following issues:"
         for err in "${_PROBLEMS[@]}"; do
             logerror "* $err"
         done
+        step_cleanup_tmp_files
         exit 1
     fi
 }
@@ -1362,17 +1486,20 @@ step_check_config() {
     add_to_config_builder "NAMESPACE"
 
     if prompts_disabled; then
-        if [ -z "$SKIP_TRIDENT_UPGRADE" ]; then
-            local -r longer_msg="SKIP_TRIDENT_UPGRADE is required when prompts are disabled."
-            add_problem "SKIP_TRIDENT_UPGRADE: required (prompts disabled)" "$longer_msg"
+        if [ -z "$DO_NOT_MODIFY_EXISTING_TRIDENT" ]; then
+            local -r longer_msg="DO_NOT_MODIFY_EXISTING_TRIDENT is required when prompts are disabled."
+            add_problem "DO_NOT_MODIFY_EXISTING_TRIDENT: required (prompts disabled)" "$longer_msg"
         fi
     fi
     add_to_config_builder "DISABLE_PROMPTS"
-    add_to_config_builder "SKIP_TRIDENT_UPGRADE"
+    add_to_config_builder "DO_NOT_MODIFY_EXISTING_TRIDENT"
 
     # Fully optional env vars
-    add_to_config_builder "CONNECTOR_HOST_ALIAS_IP"
+    add_to_config_builder "SKIP_TLS_VALIDATION"
     add_to_config_builder "CONNECTOR_SKIP_TLS_VALIDATION"
+    add_to_config_builder "CONNECTOR_HOST_ALIAS_IP"
+    add_to_config_builder "CONNECTOR_AUTOSUPPORT_ENROLLED"
+    add_to_config_builder "CONNECTOR_AUTOSUPPORT_URL"
 
     if [ -n "${LABELS}" ]; then
         _PROCESSED_LABELS="$(process_labels_to_yaml "${LABELS}" "    ")"
@@ -1572,10 +1699,10 @@ step_check_all_images_can_be_pulled() {
             local status="$_return_status"
             local body="$_return_body"
             local error="$_return_error"
+            local problem="[$full_image] image check failed"
+            logdebug "body: '$body'"
 
-            if [ -n "$error" ]; then
-                add_problem "'$full_image': $error"
-            elif is_docker_hub "$registry" && [ "$status" != 200 ] && [ "$status" != 404 ]; then
+            if is_docker_hub "$registry" && [ "$status" != 200 ] && [ "$status" != 404 ]; then
                 # Note on docker hub: this check is purely "best effort" and we don't fail the script even
                 # if the check itself failed, unless we specifically get a 200 (success) or a 404 (not found).
                 #
@@ -1590,15 +1717,10 @@ step_check_all_images_can_be_pulled() {
                 #
                 # And so, we'll try to check the image tag using the pull secret credentials (if provided),
                 # and it's great if it succeeds, but it's generally expected to fail.
-                logwarn "* Cannot guarantee the existence of custom Docker Hub image '$full_image', moving on."
-            elif [ "$status" == 401 ]; then
-                add_problem "$full_image: unauthorized ($status)"
-            elif [ "$status" == 404 ]; then
-                add_problem "$full_image: not found ($status)"
-            else
-                add_problem "$full_image: unknown error ($status)"
+                logwarn "* Cannot guarantee the existence of custom Docker Hub image '$full_image', skipping."
+            elif [ "$status" != 200 ] || [ -n "$error" ]; then
+                add_problem "$problem: $error ($status)"
             fi
-            logdebug "body: '$body'"
         else
             logdebug "success"
         fi
@@ -1613,28 +1735,43 @@ step_check_all_images_can_be_pulled() {
 step_check_astra_control_reachable() {
     logheader $__INFO "Checking if Astra Control is reachable at '$ASTRA_CONTROL_URL'..."
     make_astra_control_request "/"
-    if [ "$_return_status" == 200 ]; then
+    local -r status="$_return_status"
+    local -r body="$_return_body"
+    local err="$_return_error"
+    if [ "$status" == 200 ]; then
         logdebug "astra control: OK"
     else
-        add_problem "astra control: failed ($_return_status)" "Failed to contact Astra Control (status code: $_return_status)"
+        if [ "$status" != 000 ] || [ -z "$err" ]; then err="$(status_code_msg "$status")"; fi
+        logdebug "body: '$body'"
+        add_problem "Failed to contact Astra Control at url '$ASTRA_CONTROL_URL': $err ($status)"
         return 1
     fi
 }
 
 step_check_astra_cloud_and_cluster_id() {
     make_astra_control_request "/topology/v1/clouds/$ASTRA_CLOUD_ID"
-    if [ "$_return_status" == 200 ]; then
+    local status="$_return_status"
+    local body="$_return_body"
+    local err="$_return_error"
+    if [ "$status" == 200 ]; then
         logdebug "astra control cloud_id: OK"
     else
-        add_problem "astra control cloud_id: failed ($_return_status)" "Given ASTRA_CLOUD_ID did not pass validation (status code: $_return_status)"
+        if [ "$status" != 000 ] || [ -z "$err" ]; then err="$(status_code_msg "$status")"; fi
+        logdebug "body: '$body'"
+        add_problem "Given ASTRA_CLOUD_ID did not pass validation: $err ($status)"
         return 1
     fi
 
     make_astra_control_request "/topology/v1/clouds/$ASTRA_CLOUD_ID/clusters/$ASTRA_CLUSTER_ID"
-    if [ "$_return_status" == 200 ]; then
+    status="$_return_status"
+    body="$_return_body"
+    err="$_return_error"
+    if [ "$status" == 200 ]; then
         logdebug "astra control cluster_id: OK"
     else
-        add_problem "astra control: failed ($_return_status)" "Given ASTRA_CLUSTER_ID did not pass validation (status code: $_return_status)"
+        if [ "$status" != 000 ] || [ -z "$err" ]; then err="$(status_code_msg "$status")"; fi
+        logdebug "body: '$body'"
+        add_problem "Given ASTRA_CLUSTER_ID did not pass validation: $err ($status)"
         return 1
     fi
 }
@@ -1793,6 +1930,8 @@ step_generate_astra_connector_yaml() {
     local -r connector_regcred_name="${IMAGE_PULL_SECRET:-"astra-connector-regcred"}"
     local -r connector_registry="$(join_rpath "$CONNECTOR_IMAGE_REGISTRY" "$(get_base_repo "$CONNECTOR_IMAGE_REPO")")"
     local -r connector_tag="$CONNECTOR_IMAGE_TAG"
+    local -r connector_autosupport_enrolled="$CONNECTOR_AUTOSUPPORT_ENROLLED"
+    local -r connector_autosupport_url="$CONNECTOR_AUTOSUPPORT_URL"
     local -r neptune_tag="$NEPTUNE_IMAGE_TAG"
     local -r host_alias_ip="$CONNECTOR_HOST_ALIAS_IP"
     local -r skip_tls_validation="$CONNECTOR_SKIP_TLS_VALIDATION"
@@ -1888,7 +2027,8 @@ spec:
   neptune:
     image: "${neptune_tag}" # This field sets the tag, not the image
   autoSupport:
-    enrolled: true
+    enrolled: ${connector_autosupport_enrolled} 
+    url: ${connector_autosupport_url}
   natsSyncClient:
     cloudBridgeURL: ${astra_url}
 EOF
@@ -1903,6 +2043,7 @@ EOF
 
 step_collect_existing_trident_info() {
     logheader $__INFO "Checking if Trident is installed..."
+    _TRIDENT_COLLECTION_STEP_CALLED="true"
 
     # TORC CR definition
     local -r torc_crd="$(kubectl get crd tridentorchestrators.trident.netapp.io -o name 2> /dev/null)"
@@ -1918,7 +2059,7 @@ step_collect_existing_trident_info() {
     local -r torc_json="$(kubectl get tridentorchestrator -A -o jsonpath="{.items[0]}" 2> /dev/null)"
     if [ -z "$torc_json" ]; then
         logdebug "tridentorchestrator: not found"
-        loginfo "* Trident installation not found."
+        loginfo "* Trident not found -- it will be installed."
         return 0
     else
         logdebug "tridentorchestrator: OK"
@@ -1940,7 +2081,7 @@ step_collect_existing_trident_info() {
 
     # Trident image
     local -r trident_image="$(echo "$torc_json" | jq -r ".spec.tridentImage" 2> /dev/null)"
-    if [ -n "$trident_image" ]; then
+    if [ -n "$trident_image" ] && [ "$trident_image" != "null" ]; then
         _EXISTING_TRIDENT_IMAGE="$trident_image"
         logdebug "trident image: $trident_image"
     else
@@ -1968,7 +2109,7 @@ step_collect_existing_trident_info() {
 
     # ACP image
     local -r acp_image="$(echo "$torc_json" | jq -r '.spec.acpImage' 2> /dev/null)"
-    if [ -n "$acp_image" ]; then
+    if [ -n "$acp_image" ] && [ "$acp_image" != "null" ]; then
         logdebug "trident ACP image: $acp_image"
         _EXISTING_TRIDENT_ACP_IMAGE="$acp_image"
     else
@@ -1992,6 +2133,16 @@ step_collect_existing_trident_info() {
     else
         logdebug "trident operator: not found"
     fi
+}
+
+step_existing_trident_flags_compatibility_check() {
+    [ "$COMPONENTS" == "$__COMPONENTS_ALL_ASTRA_CONTROL" ] && return 0
+    ! existing_trident_needs_modifications && return 0
+
+    local msg="Existing Trident install requires an upgrade but DO_NOT_MODIFY_EXISTING_TRIDENT=true,"
+    msg+=" and no other valid operations can be done due to COMPONENTS=$COMPONENTS."
+    add_problem "$msg"
+    return 1
 }
 
 step_generate_trident_fresh_install_yaml() {
@@ -2162,8 +2313,13 @@ step_apply_resources() {
 step_apply_trident_operator_patches() {
     logheader "$__DEBUG" "$(prefix_dryrun "Applying Trident Operator patches...")"
     local -ra patches=("${_PATCHES_TRIDENT_OPERATOR[@]}")
+    local -r patches_len="${#patches[@]}"
 
-    if [ "$LOG_LEVEL" == "$__DEBUG" ] && [ "${#patches[@]}" -gt 0 ]; then
+    if ! trident_will_be_installed_or_modified && [ "$patches_len" -gt 0 ]; then
+        fatal "found $patches_len operator patches (expected 0) despite trident not being installed or modified"
+    fi
+
+    if debug_is_on && [ "$patches_len" -gt 0 ]; then
         local disclaimer="# THIS FILE IS FOR DEBUGGING PURPOSES ONLY. These are the patches applied to the"
         disclaimer+="${__NEWLINE}# Trident Operator deployment when upgrading the Trident Operator."
         disclaimer+="${__NEWLINE}"
@@ -2177,8 +2333,13 @@ step_apply_trident_operator_patches() {
 step_apply_torc_patches() {
     logheader "$__DEBUG" "$(prefix_dryrun "Applying TORC patches...")"
     local -ra patches=("${_PATCHES_TORC[@]}")
+    local -r patches_len="${#patches[@]}"
 
-    if [ "$LOG_LEVEL" == "$__DEBUG" ] && [ "${#patches[@]}" -gt 0 ]; then
+    if ! trident_will_be_installed_or_modified && [ "$patches_len" -gt 0 ]; then
+        fatal "found $patches_len torc patches (expected 0) despite trident not being installed or modified"
+    fi
+
+    if debug_is_on && [ "$patches_len" -gt 0 ]; then
         local disclaimer="# THIS FILE IS FOR DEBUGGING PURPOSES ONLY. These are the patches applied to the"
         disclaimer+="${__NEWLINE}# TridentOrchestrator resource when upgrading Trident or enabling ACP."
         disclaimer+="${__NEWLINE}"
@@ -2217,7 +2378,7 @@ step_generate_and_apply_resource_limit_patches() {
     # itself does "support" resource limits, in the sense that they don't get cleared out when we set them.
 
     # Trident Operator
-    if ! components_include_trident; then
+    if ! trident_will_be_installed_or_modified; then
         logdebug "skipping trident operator resource limits"
     elif create_kubectl_patch_for_containers "deploy/trident-operator" "$trident_ns" "$patch_path" "$patch_value"; then
         patches_list_for_debugging+=("$_return_value")
@@ -2257,7 +2418,7 @@ step_generate_and_apply_resource_limit_patches() {
         add_problem "Failed to create resource limit patch for the Astra Connector deployment (unknown error)"
     fi
 
-    if [ "$LOG_LEVEL" == "$__DEBUG" ] && [ "${#patches[@]}" -gt 0 ]; then
+    if debug_is_on && [ "${#patches[@]}" -gt 0 ]; then
         local disclaimer="# THIS FILE IS FOR DEBUGGING PURPOSES ONLY. These are the patches applied to the"
         disclaimer+="${__NEWLINE}# Trident Operator deployment when upgrading the Trident Operator."
         disclaimer+="${__NEWLINE}"
@@ -2281,33 +2442,38 @@ step_monitor_deployment_progress() {
     if components_include_connector; then
         if is_dry_run; then
             logdebug "skip monitoring connector components because it's a dry run"
-        elif ! wait_for_deployment_running "operator-controller-manager" "$connector_operator_ns" "1m"; then
+        elif ! wait_for_deployment_running "operator-controller-manager" "$connector_operator_ns" "3"; then
             add_problem "connector operator deploy: failed" "The Astra Connector Operator failed to deploy"
-        elif ! wait_for_deployment_running "neptune-controller-manager" "$connector_ns" "3m"; then
+        elif ! wait_for_deployment_running "neptune-controller-manager" "$connector_ns" "3"; then
             add_problem "neptune deploy: failed" "Neptune failed to deploy"
-        elif ! wait_for_deployment_running "astraconnect" "$connector_ns" "3m"; then
+        elif ! wait_for_deployment_running "astraconnect" "$connector_ns" "5"; then
             add_problem "astraconnect deploy: failed" "The Astra Connector failed to deploy"
         elif ! wait_for_cr_state "astraconnectors/astra-connector" ".status.natsSyncClient.status" "Registered with Astra" "$connector_ns"; then
             add_problem "cluster registration: failed" "Cluster registration failed"
         fi
     fi
 
-    if components_include_trident || components_include_acp; then
+    if trident_will_be_installed_or_modified; then
         if is_dry_run; then
             logdebug "skip monitoring trident components because it's a dry run"
-        elif ! wait_for_deployment_running "trident-operator" "$trident_ns" "1m"; then
+        elif ! wait_for_deployment_running "trident-operator" "$trident_ns" "3"; then
             add_problem "trident operator: failed" "The Trident Operator failed to deploy"
-        elif ! wait_for_deployment_running "trident-controller" "$trident_ns" "10m"; then
-            add_problem "trident controller: failed" "Trident failed to deploy"
+        elif ! wait_for_cr_state "torc/$_EXISTING_TORC_NAME" ".status.status" "Installed" "$trident_ns" "12"; then
+            add_problem "trident: failed" "Trident failed to deploy: status never reached 'Installed'"
         fi
     fi
+}
+
+step_cleanup_tmp_files() {
+    debug_is_on && logdebug "last captured err: '$(get_captured_err)'"
+    rm -f "$__ERR_FILE" &> /dev/null
 }
 
 #======================================================================
 #== Main
 #======================================================================
 set_log_level
-logln $__INFO "====== Astra Cluster Installer v0.0.1 ======"
+logln $__INFO "====== Astra Cluster Installer ${__RELEASE_VERSION} ======"
 load_config_from_file_if_given "$CONFIG_FILE"
 exit_if_problems
 
@@ -2341,6 +2507,7 @@ fi
 # ASTRA CONTROL access
 if components_include_connector && [ "$SKIP_ASTRA_CHECK" != "true" ]; then
     step_check_astra_control_reachable
+    exit_if_problems
     step_check_astra_cloud_and_cluster_id
 else
     logdebug "skipping all Astra checks (COMPONENTS=${COMPONENTS}, SKIP_ASTRA_CHECK=${SKIP_ASTRA_CHECK})"
@@ -2411,27 +2578,58 @@ else
         logdebug "Skipping Trident upgrade (COMPONENTS=${COMPONENTS}, SKIP_TRIDENT_UPGRADE=${SKIP_TRIDENT_UPGRADE})"
     fi
 
-    # Upgrade/Enable ACP?
-    if components_include_acp; then
-        # Enable ACP if needed (includes ACP upgrade)
-        if ! acp_is_enabled; then
-            if config_acp_image_is_custom || prompt_user_yes_no "Would you like to enable ACP?"; then
-                step_generate_torc_patch "$_EXISTING_TORC_NAME" "" "$(get_config_acp_image)" "true"
-            else
-                loginfo "ACP will not be enabled."
-            fi
-        # ACP upgrade (ACP already enabled)
-        elif acp_image_needs_upgraded; then
-            if config_acp_image_is_custom || prompt_user_yes_no "Would you like to upgrade ACP?"; then
-                step_generate_torc_patch "$_EXISTING_TORC_NAME" "" "$(get_config_acp_image)" "true"
-            else
-                loginfo "ACP will not be upgraded."
-            fi
-        fi
-    else
-        logdebug "Skipping ACP changes (COMPONENTS=${COMPONENTS})"
-    fi
+step_existing_trident_flags_compatibility_check
+exit_if_problems
 
+if trident_will_be_installed_or_modified; then
+    if trident_is_missing; then
+        step_generate_trident_fresh_install_yaml
+    elif [ -z "$_EXISTING_TRIDENT_OPERATOR_IMAGE" ]; then
+        logwarn "Upgrading Trident without the Trident Operator is not currently supported, skipping."
+    elif existing_trident_can_be_modified; then
+        # Upgrade Trident/Operator?
+        if components_include_trident; then
+            # Trident upgrade (includes operator upgrade if needed)
+            if trident_image_needs_upgraded; then
+                if config_trident_image_is_custom || prompt_user_yes_no "Would you like to upgrade Trident?"; then
+                    step_generate_torc_patch "$_EXISTING_TORC_NAME" "$(get_config_trident_image)" "" "" "$(get_config_trident_autosupport_image)"
+                    trident_operator_image_needs_upgraded && step_generate_trident_operator_patch
+                else
+                    loginfo "Trident will not be upgraded."
+                fi
+            # Trident operator upgrade (standalone)
+            elif trident_operator_image_needs_upgraded; then
+                if config_trident_operator_image_is_custom || prompt_user_yes_no "Would you like to upgrade the Trident Operator?"; then
+                    step_generate_trident_operator_patch
+                else
+                    loginfo "Trident Operator will not be upgraded."
+                fi
+            fi
+        else
+            logdebug "Skipping Trident upgrade (COMPONENTS=${COMPONENTS}, DO_NOT_MODIFY_EXISTING_TRIDENT=${DO_NOT_MODIFY_EXISTING_TRIDENT})"
+        fi
+
+        # Upgrade/Enable ACP?
+        if components_include_acp; then
+            # Enable ACP if needed (includes ACP upgrade)
+            if ! acp_is_enabled; then
+                if config_acp_image_is_custom || prompt_user_yes_no "Would you like to enable ACP?"; then
+                    step_generate_torc_patch "$_EXISTING_TORC_NAME" "" "$(get_config_acp_image)" "true"
+                else
+                    loginfo "ACP will not be enabled."
+                fi
+            # ACP upgrade (ACP already enabled)
+            elif acp_image_needs_upgraded; then
+                if config_acp_image_is_custom || prompt_user_yes_no "Would you like to upgrade ACP?"; then
+                    step_generate_torc_patch "$_EXISTING_TORC_NAME" "" "$(get_config_acp_image)" "true"
+                else
+                    loginfo "ACP will not be upgraded."
+                fi
+            fi
+        else
+            logdebug "Skipping ACP changes (COMPONENTS=${COMPONENTS})"
+        fi
+    fi
 fi
 
 # IMAGE REMAPS, LABELS, RESOURCE LIMITS yaml
@@ -2450,7 +2648,7 @@ exit_if_problems
 if ! is_dry_run; then
     logheader $__INFO "Cluster management complete!"
 else
-    [ "$LOG_LEVEL" == "$__DEBUG" ] && print_built_config
+    debug_is_on && print_built_config
     logheader $__INFO "$(prefix_dryrun "See generated files")"
     loginfo "$(find "$__GENERATED_CRS_DIR" -type f)"
     _msg="You can run 'kustomize build $__GENERATED_OPERATORS_DIR > $__GENERATED_OPERATORS_DIR/resources.yaml'"
@@ -2458,4 +2656,6 @@ else
     logln $__INFO "$_msg"
     exit 0
 fi
+
+step_cleanup_tmp_files
 
