@@ -2517,6 +2517,7 @@ exit_if_problems
 # ------------ YAML GENERATION ------------
 step_check_kubeconfig_choice
 step_determine_resource_limit_preset
+exit_if_problems
 step_init_generated_dirs_and_files
 step_kustomize_global_namespace_if_needed "$NAMESPACE" "$__GENERATED_KUSTOMIZATION_FILE"
 
