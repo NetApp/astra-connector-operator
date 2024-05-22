@@ -1649,13 +1649,14 @@ step_check_all_images_can_be_pulled() {
           images_to_check+=("$CONNECTOR_IMAGE_REGISTRY" "$CONNECTOR_IMAGE_REPO" "$CONNECTOR_IMAGE_TAG" "$custom")
         else
           # Get the default connector tag
-          local -r file_content=$(curl -sS "https://raw.githubusercontent.com/NetApp/astra-connector-operator/$CONNECTOR_OPERATOR_IMAGE_TAG/common/connector_version.txt")
+          local file_content
+          file_content=$(curl -sS "https://raw.githubusercontent.com/NetApp/astra-connector-operator/$CONNECTOR_OPERATOR_IMAGE_TAG/common/connector_version.txt")
           # Trim new lines and white space
-          local -r tag="${file_content//[[:space:]]/}"
-          if [ -z "$tag" ]; then
+          local -r connector_tag="${file_content//[[:space:]]/}"
+          if [ -z "$connector_tag" ]; then
              logwarn "Cannot guarantee the existence of the Connector image due to a failure in resolving the default image tag, skipping check"
           else
-            images_to_check+=("$CONNECTOR_IMAGE_REGISTRY" "$CONNECTOR_IMAGE_REPO" "$tag" "$default")
+            images_to_check+=("$CONNECTOR_IMAGE_REGISTRY" "$CONNECTOR_IMAGE_REPO" "$connector_tag" "$default")
           fi
         fi
 
@@ -1665,15 +1666,15 @@ step_check_all_images_can_be_pulled() {
           images_to_check+=("$NEPTUNE_IMAGE_REGISTRY" "$NEPTUNE_IMAGE_REPO" "$NEPTUNE_IMAGE_TAG" "$custom")
         else
           # Get the default connector tag
-          local -r file_content=$(curl -sS "https://raw.githubusercontent.com/NetApp/astra-connector-operator/$CONNECTOR_OPERATOR_IMAGE_TAG/common/neptune_manager_tag.txt")
+          local file_content
+          file_content=$(curl -sS "https://raw.githubusercontent.com/NetApp/astra-connector-operator/$CONNECTOR_OPERATOR_IMAGE_TAG/common/neptune_manager_tag.txt")
           # Trim new lines and white space
-          local -r tag="${file_content//[[:space:]]/}"
-          if [ -z "$tag" ]; then
+          local -r neptune_tag="${file_content//[[:space:]]/}"
+          if [ -z "$neptune_tag" ]; then
              logwarn "Cannot guarantee the existence of the Neptune image due to a failure in resolving the default image tag, skipping check"
           else
-            images_to_check+=("$CONNECTOR_IMAGE_REGISTRY" "$CONNECTOR_IMAGE_REPO" "$tag" "$default")
+            images_to_check+=("$NEPTUNE_IMAGE_REGISTRY" "$NEPTUNE_IMAGE_REPO" "$neptune_tag" "$default")
           fi
-          images_to_check+=("$NEPTUNE_IMAGE_REGISTRY" "$NEPTUNE_IMAGE_REPO" "$tag" "$default")
         fi
     fi
     if components_include_acp; then
