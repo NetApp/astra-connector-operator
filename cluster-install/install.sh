@@ -447,7 +447,7 @@ config_neptune_image_is_custom() {
 }
 
 config_acp_image_is_custom() {
-    if config_image_is_custom "TRIDENT_ACP" "$__DEFAULT_ASTRA_IMAGE_REGISTRY" "$__DEFAULT_ASTRA_IMAGE_BASE_REPO" "$__DEFAULT_TRIDENT_IMAGE_TAG"; then
+    if config_image_is_custom "TRIDENT_ACP" "$__DEFAULT_ASTRA_IMAGE_REGISTRY" "$__DEFAULT_ASTRA_IMAGE_BASE_REPO" "$__TRIDENT_VERSION"; then
         return 0
     fi
     return 1
