@@ -403,28 +403,28 @@ config_image_is_custom() {
 }
 
 config_trident_operator_image_is_custom() {
-    if config_image_is_custom "TRIDENT_OPERATOR" "$__DEFAULT_DOCKER_HUB_IMAGE_REGISTRY" "$__DEFAULT_DOCKER_HUB_IMAGE_BASE_REPO" "$__DEFAULT_TRIDENT_IMAGE_TAG"; then
+    if config_image_is_custom "TRIDENT_OPERATOR" "$__DEFAULT_DOCKER_HUB_IMAGE_REGISTRY" "$__DEFAULT_DOCKER_HUB_IMAGE_BASE_REPO" "$__TRIDENT_VERSION"; then
         return 0
     fi
     return 1
 }
 
 config_trident_autosupport_image_is_custom() {
-    if config_image_is_custom "TRIDENT_AUTOSUPPORT" "$__DEFAULT_DOCKER_HUB_IMAGE_REGISTRY" "$__DEFAULT_DOCKER_HUB_IMAGE_BASE_REPO" "$__DEFAULT_TRIDENT_IMAGE_TAG"; then
+    if config_image_is_custom "TRIDENT_AUTOSUPPORT" "$__DEFAULT_DOCKER_HUB_IMAGE_REGISTRY" "$__DEFAULT_DOCKER_HUB_IMAGE_BASE_REPO" "$__TRIDENT_VERSION"; then
         return 0
     fi
     return 1
 }
 
 config_trident_image_is_custom() {
-    if config_image_is_custom "TRIDENT" "$__DEFAULT_DOCKER_HUB_IMAGE_REGISTRY" "$__DEFAULT_DOCKER_HUB_IMAGE_BASE_REPO" "$__DEFAULT_TRIDENT_IMAGE_TAG"; then
+    if config_image_is_custom "TRIDENT" "$__DEFAULT_DOCKER_HUB_IMAGE_REGISTRY" "$__DEFAULT_DOCKER_HUB_IMAGE_BASE_REPO" "$__TRIDENT_VERSION"; then
         return 0
     fi
     return 1
 }
 
 config_connector_operator_image_is_custom() {
-    if config_image_is_custom "CONNECTOR_OPERATOR" "$__DEFAULT_DOCKER_HUB_IMAGE_REGISTRY" "$__DEFAULT_DOCKER_HUB_IMAGE_BASE_REPO" "$__DEFAULT_TRIDENT_IMAGE_TAG"; then
+    if config_image_is_custom "CONNECTOR_OPERATOR" "$__DEFAULT_DOCKER_HUB_IMAGE_REGISTRY" "$__DEFAULT_DOCKER_HUB_IMAGE_BASE_REPO" "$__TRIDENT_VERSION"; then
         return 0
     fi
     return 1
@@ -1652,7 +1652,11 @@ step_check_all_images_can_be_pulled() {
           file_content=$(curl -sS "https://raw.githubusercontent.com/NetApp/astra-connector-operator/$CONNECTOR_OPERATOR_IMAGE_TAG/common/connector_version.txt")
           # Trim new lines and white space
           tag="${file_content//[[:space:]]/}"
-          images_to_check+=("$CONNECTOR_IMAGE_REGISTRY" "$CONNECTOR_IMAGE_REPO" "$tag" "$default")
+          if [ -z "$tag" ]; then
+             logwarn "Cannot guarantee the existence of the Connector image due to a failure in resolving the default image tag, skipping check"
+          else
+            images_to_check+=("$CONNECTOR_IMAGE_REGISTRY" "$CONNECTOR_IMAGE_REPO" "$tag" "$default")
+          fi
         fi
 
         if config_neptune_image_is_custom; then
@@ -1664,6 +1668,11 @@ step_check_all_images_can_be_pulled() {
           file_content=$(curl -sS "https://raw.githubusercontent.com/NetApp/astra-connector-operator/$CONNECTOR_OPERATOR_IMAGE_TAG/common/neptune_manager_tag.txt")
           # Trim new lines and white space
           tag="${file_content//[[:space:]]/}"
+          if [ -z "$tag" ]; then
+             logwarn "Cannot guarantee the existence of the Neptune image due to a failure in resolving the default image tag, skipping check"
+          else
+            images_to_check+=("$CONNECTOR_IMAGE_REGISTRY" "$CONNECTOR_IMAGE_REPO" "$tag" "$default")
+          fi
           images_to_check+=("$NEPTUNE_IMAGE_REGISTRY" "$NEPTUNE_IMAGE_REPO" "$tag" "$default")
         fi
     fi
