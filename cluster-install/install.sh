@@ -104,11 +104,6 @@ readonly __FATAL=50
 #     captured_stdout="$(curl -sS https://bad-url.com 2> "$_ERR_FILE")"
 #     captured_stderr="$(get_captured_err)"
 readonly __ERR_FILE="tmp_last_captured_error.txt"
-
-# __TMP_ENV is used to store the user's env vars so that we can then re-apply them after having sourced
-# their config file. This allows us to make command line vars take precedence over what's in the config file.
-readonly __TMP_ENV="tmp.env"
-
 readonly __NEWLINE=$'\n' # This is for readability
 
 #----------------------------------------------------------------------
@@ -208,17 +203,6 @@ set_log_level() {
     [ "$LOG_LEVEL" == "fatal" ] && LOG_LEVEL="$__FATAL"
 }
 
-set_config_from_string() {
-    local -r config_str="$1"
-    [ -z "$config_str" ] && fatal "no config string given"
-    local -r tmp_env="$__TMP_ENV"
-
-    echo "$config_str" > "$tmp_env"
-    # shellcheck disable=SC1090
-    source "$tmp_env" &> /dev/null
-    rm -f "$tmp_env" &> /dev/null
-}
-
 load_config_from_file_if_given() {
     local config_file=$1
     local api_token=$ASTRA_API_TOKEN
@@ -230,17 +214,12 @@ load_config_from_file_if_given() {
         add_problem "CONFIG_FILE '$config_file' does not exist" "Given CONFIG_FILE '$config_file' does not exist"
         return 1
     fi
-    # Store the current env so it can be re-applied after sourcing the config file
-    local -r previous_env="$(env)"
 
-    # Set config file values first
-    set_config_from_string "$(cat "$config_file")"
-
-    # Set previous env second to allow vars provided through the command line to take priority
-    set_config_from_string "$previous_env"
+    # shellcheck disable=SC1090
+    source "$config_file"
     set_log_level
 
-    # Check if api token was populated after sourcing config file
+    # check if api token was populated after sourcing config file
     if [ "$api_token" != "$ASTRA_API_TOKEN" ]; then
         logwarn "$token_warning"
     fi
@@ -1548,19 +1527,18 @@ step_check_config() {
     add_to_config_builder "CONNECTOR_AUTOSUPPORT_ENROLLED"
     add_to_config_builder "CONNECTOR_AUTOSUPPORT_URL"
 
-    # Add default install script labels
+    # Add our default labels
     local -r label_indent="    "
     local -a default_labels=("app.kubernetes.io/created-by=astra-cluster-install-script")
     _PROCESSED_LABELS="$(process_labels_to_yaml "${default_labels[*]}" "$label_indent")"
 
-    # Add custom labels
+    # Add user's custom labels
     if [ -n "${LABELS}" ]; then
         _PROCESSED_LABELS+="${__NEWLINE}$(process_labels_to_yaml "${LABELS}" "$label_indent")"
         if [ -z "${_PROCESSED_LABELS}" ]; then
             add_problem "label processing: failed" "The given LABELS could not be parsed."
         fi
     fi
-
     add_to_config_builder "LABELS"
 }
 
@@ -1771,7 +1749,7 @@ step_check_all_images_can_be_pulled() {
                 #
                 # And so, we'll try to check the image tag using the pull secret credentials (if provided),
                 # and it's great if it succeeds, but it's generally expected to fail.
-                loginfo "* Cannot guarantee the existence of custom Docker Hub image '$full_image', skipping."
+                logwarn "Cannot guarantee the existence of custom Docker Hub image '$full_image', skipping."
             elif [ "$status" != 200 ] || [ -n "$error" ]; then
                 add_problem "$problem: $error ($status)"
             fi
@@ -2125,12 +2103,10 @@ step_collect_existing_trident_info() {
         logdebug "trident namespace '$trident_ns': not found"
         loginfo "* Trident Orchestrator exists, but configured namespace '$trident_ns' not found on cluster."
         return 0
-    else
-        _EXISTING_TORC_NAME="$(echo "$torc_json" | jq -r '.metadata.name')"
-        _EXISTING_TRIDENT_NAMESPACE="$trident_ns"
-        loginfo "* Trident namespace: '$_EXISTING_TRIDENT_NAMESPACE'"
-        logdebug "trident namespace '$trident_ns': OK"
     fi
+    _EXISTING_TORC_NAME="$(echo "$torc_json" | jq -r '.metadata.name')"
+    _EXISTING_TRIDENT_NAMESPACE="$trident_ns"
+    loginfo "* Trident namespace: '$_EXISTING_TRIDENT_NAMESPACE'"
 
     # Trident image
     local -r trident_image="$(echo "$torc_json" | jq -r ".spec.tridentImage" 2> /dev/null)"
@@ -2391,7 +2367,7 @@ step_apply_torc_patches() {
         append_lines_to_file "${__GENERATED_PATCHES_TORC_FILE}" "$disclaimer" "${patches[@]}"
     fi
 
-    # Take a backup first
+    # Take a backup of the TORC just in case
     if [ -n "$_EXISTING_TORC_NAME" ]; then
         local -r backup="$(backup_kubernetes_resource "tridentorchestrator" "$_EXISTING_TORC_NAME" "$__GENERATED_CRS_DIR")"
         if [ -n "$backup" ]; then
@@ -2525,7 +2501,6 @@ step_monitor_deployment_progress() {
 step_cleanup_tmp_files() {
     debug_is_on && logdebug "last captured err: '$(get_captured_err)'"
     rm -f "$__ERR_FILE" &> /dev/null
-    rm -f "$__TMP_ENV" &>/dev/null
 }
 
 #======================================================================
