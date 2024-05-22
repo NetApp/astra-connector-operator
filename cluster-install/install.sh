@@ -1095,7 +1095,13 @@ check_if_image_can_be_pulled_via_curl() {
     if [ "$SKIP_TLS_VALIDATION" == "true" ]; then
         args+=("-k")
     fi
-    args+=("-H" "Accept: application/vnd.docker.distribution.manifest.v2+json")
+    # We accept all formats via '*/*' because we only really care about the status code, but certain multi-platform
+    # images require a more specific format and will return 404 if we only use '*/*', so we add those formats as well
+    local accept_formats="*/*"
+    accept_formats+=", application/vnd.docker.distribution.manifest.list.v1+json"
+    accept_formats+=", application/vnd.docker.distribution.manifest.list.v2+json"
+    accept_formats+=", application/vnd.oci.image.index.v1+json" # Required for ACP
+    args+=("-H" "Accept: $accept_formats")
 
     local -r result="$(curl -X GET "${args[@]}" "https://$registry/v2/$image_repo/manifests/$image_tag" 2> "$__ERR_FILE")"
     local -r curl_err="$(get_captured_err)"
