@@ -1649,9 +1649,9 @@ step_check_all_images_can_be_pulled() {
           images_to_check+=("$CONNECTOR_IMAGE_REGISTRY" "$CONNECTOR_IMAGE_REPO" "$CONNECTOR_IMAGE_TAG" "$custom")
         else
           # Get the default connector tag
-          file_content=$(curl -sS "https://raw.githubusercontent.com/NetApp/astra-connector-operator/$CONNECTOR_OPERATOR_IMAGE_TAG/common/connector_version.txt")
+          local -r file_content=$(curl -sS "https://raw.githubusercontent.com/NetApp/astra-connector-operator/$CONNECTOR_OPERATOR_IMAGE_TAG/common/connector_version.txt")
           # Trim new lines and white space
-          tag="${file_content//[[:space:]]/}"
+          local -r tag="${file_content//[[:space:]]/}"
           if [ -z "$tag" ]; then
              logwarn "Cannot guarantee the existence of the Connector image due to a failure in resolving the default image tag, skipping check"
           else
@@ -1665,9 +1665,9 @@ step_check_all_images_can_be_pulled() {
           images_to_check+=("$NEPTUNE_IMAGE_REGISTRY" "$NEPTUNE_IMAGE_REPO" "$NEPTUNE_IMAGE_TAG" "$custom")
         else
           # Get the default connector tag
-          file_content=$(curl -sS "https://raw.githubusercontent.com/NetApp/astra-connector-operator/$CONNECTOR_OPERATOR_IMAGE_TAG/common/neptune_manager_tag.txt")
+          local -r file_content=$(curl -sS "https://raw.githubusercontent.com/NetApp/astra-connector-operator/$CONNECTOR_OPERATOR_IMAGE_TAG/common/neptune_manager_tag.txt")
           # Trim new lines and white space
-          tag="${file_content//[[:space:]]/}"
+          local -r tag="${file_content//[[:space:]]/}"
           if [ -z "$tag" ]; then
              logwarn "Cannot guarantee the existence of the Neptune image due to a failure in resolving the default image tag, skipping check"
           else
