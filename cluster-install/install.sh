@@ -39,7 +39,7 @@ _PROCESSED_RESOURCE_LIMITS=""
 readonly __RELEASE_VERSION="24.02"
 readonly __TRIDENT_VERSION="${__TRIDENT_VERSION_OVERRIDE:-"$__RELEASE_VERSION"}"
 
-readonly -a __REQUIRED_TOOLS=("jq" "kubectl" "curl" "grep" "sort" "uniq" "find" "base64" "wc" "awk")
+readonly -a __REQUIRED_TOOLS=("git" "jq" "kubectl" "curl" "grep" "sort" "uniq" "find" "base64" "wc" "awk")
 
 readonly __GIT_REF_CONNECTOR_OPERATOR="main" # Determines the ACOP branch from which the kustomize resources will be pulled
 readonly __GIT_REF_TRIDENT="ASTRACTL-32138-temporary-stand-in" # Determines the Trident branch from which the kustomize resources will be pulled
@@ -73,6 +73,7 @@ readonly __DEFAULT_TRIDENT_ACP_IMAGE_NAME="trident-acp"
 
 readonly __DEFAULT_CONNECTOR_NAMESPACE="astra-connector"
 readonly __DEFAULT_TRIDENT_NAMESPACE="trident"
+readonly __DEFAULT_TORC_NAME="trident"
 
 readonly __PRODUCTION_AUTOSUPPORT_URL="https://support.netapp.com/put/AsupPut"
 
@@ -103,6 +104,11 @@ readonly __FATAL=50
 #     captured_stdout="$(curl -sS https://bad-url.com 2> "$_ERR_FILE")"
 #     captured_stderr="$(get_captured_err)"
 readonly __ERR_FILE="tmp_last_captured_error.txt"
+
+# __TMP_ENV is used to store the user's env vars so that we can then re-apply them after having sourced
+# their config file. This allows us to make command line vars take precedence over what's in the config file.
+readonly __TMP_ENV="tmp.env"
+
 readonly __NEWLINE=$'\n' # This is for readability
 
 #----------------------------------------------------------------------
@@ -202,6 +208,17 @@ set_log_level() {
     [ "$LOG_LEVEL" == "fatal" ] && LOG_LEVEL="$__FATAL"
 }
 
+set_config_from_string() {
+    local -r config_str="$1"
+    [ -z "$config_str" ] && fatal "no config string given"
+    local -r tmp_env="$__TMP_ENV"
+
+    echo "$config_str" > "$tmp_env"
+    # shellcheck disable=SC1090
+    source "$tmp_env" &> /dev/null
+    rm -f "$tmp_env" &> /dev/null
+}
+
 load_config_from_file_if_given() {
     local config_file=$1
     local api_token=$ASTRA_API_TOKEN
@@ -213,16 +230,21 @@ load_config_from_file_if_given() {
         add_problem "CONFIG_FILE '$config_file' does not exist" "Given CONFIG_FILE '$config_file' does not exist"
         return 1
     fi
+    # Store the current env so it can be re-applied after sourcing the config file
+    local -r previous_env="$(env)"
 
-    # shellcheck disable=SC1090
-    source "$config_file"
+    # Set config file values first
+    set_config_from_string "$(cat "$config_file")"
 
-    # check if api token was populated after sourcing config file
+    # Set previous env second to allow vars provided through the command line to take priority
+    set_config_from_string "$previous_env"
+    set_log_level
+
+    # Check if api token was populated after sourcing config file
     if [ "$api_token" != "$ASTRA_API_TOKEN" ]; then
         logwarn "$token_warning"
     fi
 
-    set_log_level
     logheader $__DEBUG "Loaded configuration from file: $config_file"
 }
 
@@ -572,7 +594,7 @@ loginfo() {
 }
 
 logwarn() {
-    log_at_level $__WARN "$1"
+    log_at_level $__WARN "WARNING: $1"
 }
 
 logerror() {
@@ -819,12 +841,11 @@ tool_is_installed() {
     local -r tool="$1"
     if [ -z "$tool" ]; then fatal "no tool name provided"; fi
 
-    if
-        command -v "$tool" &>/dev/null
+    if command -v "$tool" &>/dev/null; then
         return 0
-    then
-        return 1
     fi
+
+    return 1
 }
 
 version_in_range() {
@@ -1369,6 +1390,33 @@ create_kubectl_patch_for_containers() {
     _return_value="$resource -n $namespace --type=json -p '$json_patch'"
 }
 
+backup_kubernetes_resource() {
+    local -r kind="$1"
+    local -r resource_name="$2"
+    local -r directory="$3"
+    local -r namespace="${4:-""}"
+
+    [ -z "$kind" ] && fatal "no kind given"
+    [ -z "$resource_name" ] && fatal "no resource_name given"
+    [ -z "$directory" ] && fatal "no directory given"
+    ! [ -d "$directory" ] && fatal "directory '$directory' does not exist"
+
+    local namespace_arg=""
+    local backup_name="BACKUP_"
+    if [ -n "$namespace" ]; then
+        namespace_arg="--namespace='$namespace'"
+        backup_name+="${namespace}_"
+    fi
+    backup_name+="${kind}_${resource_name}.yaml"
+
+    local -r resource_name_yaml="$(kubectl get "$kind" "$resource_name" "$namespace_arg" -o yaml 2> $__ERR_FILE)"
+    [ -z "$resource_name_yaml" ] && return 1
+    _return_error="$(get_captured_err)"
+
+    echo "$resource_name_yaml" > "${directory}/${backup_name}"
+    echo "$backup_name"
+}
+
 exit_if_problems() {
     if [ ${#_PROBLEMS[@]} -ne 0 ]; then
         debug_is_on && print_built_config
@@ -1500,12 +1548,19 @@ step_check_config() {
     add_to_config_builder "CONNECTOR_AUTOSUPPORT_ENROLLED"
     add_to_config_builder "CONNECTOR_AUTOSUPPORT_URL"
 
+    # Add default install script labels
+    local -r label_indent="    "
+    local -a default_labels=("app.kubernetes.io/created-by=astra-cluster-install-script")
+    _PROCESSED_LABELS="$(process_labels_to_yaml "${default_labels[*]}" "$label_indent")"
+
+    # Add custom labels
     if [ -n "${LABELS}" ]; then
-        _PROCESSED_LABELS="$(process_labels_to_yaml "${LABELS}" "    ")"
+        _PROCESSED_LABELS+="${__NEWLINE}$(process_labels_to_yaml "${LABELS}" "$label_indent")"
         if [ -z "${_PROCESSED_LABELS}" ]; then
             add_problem "label processing: failed" "The given LABELS could not be parsed."
         fi
     fi
+
     add_to_config_builder "LABELS"
 }
 
@@ -1716,7 +1771,7 @@ step_check_all_images_can_be_pulled() {
                 #
                 # And so, we'll try to check the image tag using the pull secret credentials (if provided),
                 # and it's great if it succeeds, but it's generally expected to fail.
-                logwarn "* Cannot guarantee the existence of custom Docker Hub image '$full_image', skipping."
+                loginfo "* Cannot guarantee the existence of custom Docker Hub image '$full_image', skipping."
             elif [ "$status" != 200 ] || [ -n "$error" ]; then
                 add_problem "$problem: $error ($status)"
             fi
@@ -1836,7 +1891,7 @@ step_determine_resource_limit_preset() {
     fi
     exit_if_problems
 
-    loginfo "Resource limit preset is '$RESOURCE_LIMITS_PRESET'"
+    loginfo "* Resource limit preset is '$RESOURCE_LIMITS_PRESET'"
     add_to_config_builder RESOURCE_LIMITS_PRESET
     if [ "$RESOURCE_LIMITS_PRESET" == "$__RESOURCE_LIMITS_CUSTOM" ]; then
         if ! prompt_user_number_greater_than_zero RESOURCE_LIMITS_CUSTOM_CPU "Enter a CPU limit:"; then
@@ -1855,7 +1910,7 @@ step_determine_resource_limit_preset() {
     fi
 
     _PROCESSED_RESOURCE_LIMITS="{\"limits\": $(get_limits_for_preset "$RESOURCE_LIMITS_PRESET")}"
-    loginfo "Proceeding with resource limits: $(get_limits_for_preset_fancy "$RESOURCE_LIMITS_PRESET")"
+    loginfo "* Proceeding with resource limits: $(get_limits_for_preset_fancy "$RESOURCE_LIMITS_PRESET")"
 }
 
 step_init_generated_dirs_and_files() {
@@ -2071,12 +2126,11 @@ step_collect_existing_trident_info() {
         loginfo "* Trident Orchestrator exists, but configured namespace '$trident_ns' not found on cluster."
         return 0
     else
+        _EXISTING_TORC_NAME="$(echo "$torc_json" | jq -r '.metadata.name')"
+        _EXISTING_TRIDENT_NAMESPACE="$trident_ns"
+        loginfo "* Trident namespace: '$_EXISTING_TRIDENT_NAMESPACE'"
         logdebug "trident namespace '$trident_ns': OK"
     fi
-    _EXISTING_TORC_NAME="$(echo "$torc_json" | jq -r '.metadata.name')"
-    _EXISTING_TRIDENT_NAMESPACE="$trident_ns"
-    logdebug "trident orchestrator: $_EXISTING_TORC_NAME"
-    logdebug "trident namespace: $trident_ns"
 
     # Trident image
     local -r trident_image="$(echo "$torc_json" | jq -r ".spec.tridentImage" 2> /dev/null)"
@@ -2148,6 +2202,7 @@ step_generate_trident_fresh_install_yaml() {
         "- https://github.com/NetApp-Polaris/astra-connector/trident-deploy-files-tmp?ref=$__GIT_REF_TRIDENT"
     logdebug "$kustomization_file: added resources entry for trident operator"
 
+    local -r torc_name="$__DEFAULT_TORC_NAME"
     local -r trident_image="$(get_config_trident_image)"
     local -r autosupport_image="$(get_config_trident_autosupport_image)"
     local -r acp_image="$(get_config_acp_image)"
@@ -2156,7 +2211,7 @@ step_generate_trident_fresh_install_yaml() {
     local enable_acp="true"
     local labels_field_and_content=""
     if [ -n "$IMAGE_PULL_SECRET" ]; then pull_secret='["'$IMAGE_PULL_SECRET'"]'; fi
-    if [ -n "$PROCESSED_LABELS" ]; then
+    if [ -n "$_PROCESSED_LABELS" ]; then
         labels_field_and_content="${__NEWLINE}  labels:${__NEWLINE}${_PROCESSED_LABELS}"
     fi
 
@@ -2164,7 +2219,7 @@ step_generate_trident_fresh_install_yaml() {
 apiVersion: trident.netapp.io/v1
 kind: TridentOrchestrator
 metadata:
-  name: "trident"
+  name: "$torc_name"
   namespace: "${namespace}"${labels_field_and_content}
 spec:
   autosupportImage: "${autosupport_image}"
@@ -2336,6 +2391,18 @@ step_apply_torc_patches() {
         append_lines_to_file "${__GENERATED_PATCHES_TORC_FILE}" "$disclaimer" "${patches[@]}"
     fi
 
+    # Take a backup first
+    if [ -n "$_EXISTING_TORC_NAME" ]; then
+        local -r backup="$(backup_kubernetes_resource "tridentorchestrator" "$_EXISTING_TORC_NAME" "$__GENERATED_CRS_DIR")"
+        if [ -n "$backup" ]; then
+            loginfo "* Created backup for TridentOrchestrator '$_EXISTING_TORC_NAME': '$backup'"
+        elif [ -n "$_return_error" ]; then
+            logdebug "failed to create backup for TridentOrchestrator '$_EXISTING_TORC_NAME': $_return_error"
+        else
+            logdebug "failed to create backup for TridentOrchestrator '$_EXISTING_TORC_NAME': unknown error"
+        fi
+    fi
+
     apply_kubectl_patches "${patches[@]}"
     logdebug "done"
 }
@@ -2443,12 +2510,13 @@ step_monitor_deployment_progress() {
         fi
     fi
 
+    local -r torc_name="${_EXISTING_TORC_NAME:-"$__DEFAULT_TORC_NAME"}"
     if trident_will_be_installed_or_modified; then
         if is_dry_run; then
             logdebug "skip monitoring trident components because it's a dry run"
         elif ! wait_for_deployment_running "trident-operator" "$trident_ns" "3"; then
             add_problem "trident operator: failed" "The Trident Operator failed to deploy"
-        elif ! wait_for_cr_state "torc/$_EXISTING_TORC_NAME" ".status.status" "Installed" "$trident_ns" "12"; then
+        elif ! wait_for_cr_state "torc/$torc_name" ".status.status" "Installed" "$trident_ns" "12"; then
             add_problem "trident: failed" "Trident failed to deploy: status never reached 'Installed'"
         fi
     fi
@@ -2457,6 +2525,7 @@ step_monitor_deployment_progress() {
 step_cleanup_tmp_files() {
     debug_is_on && logdebug "last captured err: '$(get_captured_err)'"
     rm -f "$__ERR_FILE" &> /dev/null
+    rm -f "$__TMP_ENV" &>/dev/null
 }
 
 #======================================================================
