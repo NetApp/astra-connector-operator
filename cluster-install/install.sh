@@ -1314,8 +1314,6 @@ step_check_config() {
     connector_vars+=("CONNECTOR_IMAGE_REPO" "$CONNECTOR_IMAGE_REPO")
     connector_vars+=("NEPTUNE_IMAGE_REPO" "$NEPTUNE_IMAGE_REPO")
     connector_vars+=("CONNECTOR_OPERATOR_IMAGE_TAG" "$CONNECTOR_OPERATOR_IMAGE_TAG")
-#    connector_vars+=("CONNECTOR_IMAGE_TAG" "$CONNECTOR_IMAGE_TAG")
-#    connector_vars+=("NEPTUNE_IMAGE_TAG" "$NEPTUNE_IMAGE_TAG")
     connector_vars+=("ASTRA_CONTROL_URL" "$ASTRA_CONTROL_URL")
     connector_vars+=("ASTRA_API_TOKEN" "$ASTRA_API_TOKEN")
     connector_vars+=("ASTRA_ACCOUNT_ID" "$ASTRA_ACCOUNT_ID")
