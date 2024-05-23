@@ -1664,11 +1664,12 @@ step_check_volumesnapshotclasses() {
 
 step_check_namespace_exists() {
     local err_msg=""
-    local registry="<REGISTRY>"
 
     # Best effort guess at which registry to put in the create command
+    local registry="<REGISTRY>"
     if components_include_connector; then
         registry="$CONNECTOR_IMAGE_REGISTRY"
+    # Skip if Trident's image is still set to our default of 'docker.io/netapp', which is public
     elif components_include_trident && ! str_contains_at_least_one "$(get_config_trident_image)" "docker.io/netapp" ; then
         registry="$TRIDENT_IMAGE_REGISTRY"
     elif components_include_acp; then
