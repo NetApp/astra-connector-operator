@@ -1,6 +1,6 @@
 // Copyright 2023 Netapp, Inc. All Rights Reserved.
 
-package deploy
+package astra_install
 
 import (
 	"fmt"
