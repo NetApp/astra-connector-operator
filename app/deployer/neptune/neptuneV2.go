@@ -247,6 +247,7 @@ func (n NeptuneClientDeployerV2) GetDeploymentObjects(m *v1.AstraConnector, ctx 
 						containers[i].Env[j].Value = m.Spec.AutoSupport.URL
 					}
 				}
+				container.Image = neptuneImage
 			}
 		}
 
