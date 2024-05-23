@@ -80,7 +80,7 @@ func (d *AstraConnectDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx co
 						Env: []corev1.EnvVar{
 							{
 								Name:  "LOG_LEVEL", // todo should this match what operator is
-								Value: "trace",
+								Value: "info",
 							},
 							{
 								Name:  "NATS_DISABLED",
@@ -223,6 +223,8 @@ func (d *AstraConnectDeployer) GetClusterRoleObjects(m *v1.AstraConnector, ctx c
 					"backuprestores",
 					"exechooks",
 					"exechooksruns",
+					"kopiavolumebackups",
+					"kopiavolumerestores",
 					"pvccopies",
 					"pvcerases",
 					"resourcebackups",

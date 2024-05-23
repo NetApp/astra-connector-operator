@@ -171,14 +171,14 @@ get_configs() {
             TRIDENT_ACP_IMAGE_REPO="${TRIDENT_ACP_IMAGE_REPO:-"$(join_rpath "$ASTRA_BASE_REPO" "$__DEFAULT_TRIDENT_ACP_IMAGE_NAME")"}"
 
     # ------------ IMAGE TAG ------------
+    # Docker TAG environment variables
     TRIDENT_IMAGE_TAG="${TRIDENT_IMAGE_TAG:-$__TRIDENT_VERSION}"
         TRIDENT_OPERATOR_IMAGE_TAG="${TRIDENT_OPERATOR_IMAGE_TAG:-$TRIDENT_IMAGE_TAG}"
         TRIDENT_AUTOSUPPORT_IMAGE_TAG="${TRIDENT_AUTOSUPPORT_IMAGE_TAG:-$TRIDENT_IMAGE_TAG}"
-        TRIDENT_IMAGE_TAG="${TRIDENT_IMAGE_TAG:-$TRIDENT_IMAGE_TAG}"
         TRIDENT_ACP_IMAGE_TAG="${TRIDENT_ACP_IMAGE_TAG:-$TRIDENT_IMAGE_TAG}"
     CONNECTOR_OPERATOR_IMAGE_TAG="${CONNECTOR_OPERATOR_IMAGE_TAG:-"202405211614-main"}"
-    CONNECTOR_IMAGE_TAG="${CONNECTOR_IMAGE_TAG:-"0c72380"}"
-    NEPTUNE_IMAGE_TAG="${NEPTUNE_IMAGE_TAG:-"18998b7"}"
+
+
 
     # ------------ ASTRA CONNECTOR ------------
     ASTRA_CONTROL_URL="${ASTRA_CONTROL_URL:-"astra.netapp.io"}"
@@ -376,6 +376,11 @@ config_image_is_custom() {
     local -r component_name="$1"
     local -r default_registry="$2"
     local -r default_base_repo="$3"
+    local -r default_tag="$4"
+    if [ $# -ne 4 ]; then
+      echo "config_image_is_custom() expects 4 arguments, but received $#."
+      return 1
+    fi
 
     [ -z "$component_name" ] && fatal "no component_name given"
 
@@ -386,7 +391,6 @@ config_image_is_custom() {
 
     local -r default_image_name_var="__DEFAULT_${component_name}_IMAGE_NAME"
     local -r default_repo="$(join_rpath "$default_base_repo" "${!default_image_name_var}")"
-    local -r default_tag="$__DEFAULT_IMAGE_TAG"
     local -r default_image="$(as_full_image "$default_registry" "$default_repo" "$default_tag")"
 
     [ -z "${!registry_var}" ] && fatal "component '$component_name' invalid: variable '$registry_var' is empty"
@@ -399,49 +403,51 @@ config_image_is_custom() {
 }
 
 config_trident_operator_image_is_custom() {
-    if config_image_is_custom "TRIDENT_OPERATOR" "$__DEFAULT_DOCKER_HUB_IMAGE_REGISTRY" "$__DEFAULT_DOCKER_HUB_IMAGE_BASE_REPO"; then
+    if config_image_is_custom "TRIDENT_OPERATOR" "$__DEFAULT_DOCKER_HUB_IMAGE_REGISTRY" "$__DEFAULT_DOCKER_HUB_IMAGE_BASE_REPO" "$__TRIDENT_VERSION"; then
         return 0
     fi
     return 1
 }
 
 config_trident_autosupport_image_is_custom() {
-    if config_image_is_custom "TRIDENT_AUTOSUPPORT" "$__DEFAULT_DOCKER_HUB_IMAGE_REGISTRY" "$__DEFAULT_DOCKER_HUB_IMAGE_BASE_REPO"; then
+    if config_image_is_custom "TRIDENT_AUTOSUPPORT" "$__DEFAULT_DOCKER_HUB_IMAGE_REGISTRY" "$__DEFAULT_DOCKER_HUB_IMAGE_BASE_REPO" "$__TRIDENT_VERSION"; then
         return 0
     fi
     return 1
 }
 
 config_trident_image_is_custom() {
-    if config_image_is_custom "TRIDENT" "$__DEFAULT_DOCKER_HUB_IMAGE_REGISTRY" "$__DEFAULT_DOCKER_HUB_IMAGE_BASE_REPO"; then
+    if config_image_is_custom "TRIDENT" "$__DEFAULT_DOCKER_HUB_IMAGE_REGISTRY" "$__DEFAULT_DOCKER_HUB_IMAGE_BASE_REPO" "$__TRIDENT_VERSION"; then
         return 0
     fi
     return 1
 }
 
 config_connector_operator_image_is_custom() {
-    if config_image_is_custom "CONNECTOR_OPERATOR" "$__DEFAULT_DOCKER_HUB_IMAGE_REGISTRY" "$__DEFAULT_DOCKER_HUB_IMAGE_BASE_REPO"; then
+    if config_image_is_custom "CONNECTOR_OPERATOR" "$__DEFAULT_DOCKER_HUB_IMAGE_REGISTRY" "$__DEFAULT_DOCKER_HUB_IMAGE_BASE_REPO" "$__TRIDENT_VERSION"; then
         return 0
     fi
     return 1
 }
 
 config_connector_image_is_custom() {
-    if config_image_is_custom "CONNECTOR" "$__DEFAULT_ASTRA_IMAGE_REGISTRY" "$__DEFAULT_ASTRA_IMAGE_BASE_REPO"; then
+    # CONNECTOR_IMAGE_TAG is optional, if the user set this consider it custom
+    if [ -n "$CONNECTOR_IMAGE_TAG" ]; then
         return 0
     fi
     return 1
 }
 
 config_neptune_image_is_custom() {
-    if config_image_is_custom "NEPTUNE" "$__DEFAULT_ASTRA_IMAGE_REGISTRY" "$__DEFAULT_ASTRA_IMAGE_BASE_REPO"; then
+    # NEPTUNE_IMAGE_TAG is optional, if the user set this consider it custom
+    if [ -n "$NEPTUNE_IMAGE_TAG" ]; then
         return 0
     fi
     return 1
 }
 
 config_acp_image_is_custom() {
-    if config_image_is_custom "TRIDENT_ACP" "$__DEFAULT_ASTRA_IMAGE_REGISTRY" "$__DEFAULT_ASTRA_IMAGE_BASE_REPO"; then
+    if config_image_is_custom "TRIDENT_ACP" "$__DEFAULT_ASTRA_IMAGE_REGISTRY" "$__DEFAULT_ASTRA_IMAGE_BASE_REPO" "$__TRIDENT_VERSION"; then
         return 0
     fi
     return 1
@@ -1438,8 +1444,6 @@ step_check_config() {
     connector_vars+=("CONNECTOR_IMAGE_REPO" "$CONNECTOR_IMAGE_REPO")
     connector_vars+=("NEPTUNE_IMAGE_REPO" "$NEPTUNE_IMAGE_REPO")
     connector_vars+=("CONNECTOR_OPERATOR_IMAGE_TAG" "$CONNECTOR_OPERATOR_IMAGE_TAG")
-    connector_vars+=("CONNECTOR_IMAGE_TAG" "$CONNECTOR_IMAGE_TAG")
-    connector_vars+=("NEPTUNE_IMAGE_TAG" "$NEPTUNE_IMAGE_TAG")
     connector_vars+=("ASTRA_CONTROL_URL" "$ASTRA_CONTROL_URL")
     connector_vars+=("ASTRA_API_TOKEN" "$ASTRA_API_TOKEN")
     connector_vars+=("ASTRA_ACCOUNT_ID" "$ASTRA_ACCOUNT_ID")
@@ -1676,13 +1680,40 @@ step_check_all_images_can_be_pulled() {
         if config_connector_operator_image_is_custom; then images_to_check+=("$custom")
         else images_to_check+=("$default"); fi
 
-        images_to_check+=("$CONNECTOR_IMAGE_REGISTRY" "$CONNECTOR_IMAGE_REPO" "$CONNECTOR_IMAGE_TAG")
-        if config_connector_image_is_custom; then images_to_check+=("$custom")
-        else images_to_check+=("$default"); fi
 
-        images_to_check+=("$NEPTUNE_IMAGE_REGISTRY" "$NEPTUNE_IMAGE_REPO" "$NEPTUNE_IMAGE_TAG")
-        if config_neptune_image_is_custom; then images_to_check+=("$custom")
-        else images_to_check+=("$default"); fi
+        if config_connector_image_is_custom; then
+          # Only check connector image if user has overridden the connector-operator's default.
+          # We do not know the default version and cannot check it due to it being hard coded within the connector-operator image.
+          images_to_check+=("$CONNECTOR_IMAGE_REGISTRY" "$CONNECTOR_IMAGE_REPO" "$CONNECTOR_IMAGE_TAG" "$custom")
+        else
+          # Get the default connector tag
+          local file_content
+          file_content=$(curl -sS "https://raw.githubusercontent.com/NetApp/astra-connector-operator/$CONNECTOR_OPERATOR_IMAGE_TAG/common/connector_version.txt")
+          # Trim new lines and white space
+          local -r connector_tag="${file_content//[[:space:]]/}"
+          if [ -z "$connector_tag" ]; then
+             logwarn "Cannot guarantee the existence of the Connector image due to a failure in resolving the default image tag, skipping check"
+          else
+            images_to_check+=("$CONNECTOR_IMAGE_REGISTRY" "$CONNECTOR_IMAGE_REPO" "$connector_tag" "$default")
+          fi
+        fi
+
+        if config_neptune_image_is_custom; then
+          # Only check neptune image if user has overridden the connector-operator's default.
+          # We do not know the default version and cannot check it due to it being hard coded within the connector-operator image.
+          images_to_check+=("$NEPTUNE_IMAGE_REGISTRY" "$NEPTUNE_IMAGE_REPO" "$NEPTUNE_IMAGE_TAG" "$custom")
+        else
+          # Get the default connector tag
+          local file_content
+          file_content=$(curl -sS "https://raw.githubusercontent.com/NetApp/astra-connector-operator/$CONNECTOR_OPERATOR_IMAGE_TAG/common/neptune_manager_tag.txt")
+          # Trim new lines and white space
+          local -r neptune_tag="${file_content//[[:space:]]/}"
+          if [ -z "$neptune_tag" ]; then
+             logwarn "Cannot guarantee the existence of the Neptune image due to a failure in resolving the default image tag, skipping check"
+          else
+            images_to_check+=("$NEPTUNE_IMAGE_REGISTRY" "$NEPTUNE_IMAGE_REPO" "$neptune_tag" "$default")
+          fi
+        fi
     fi
     if components_include_acp; then
       images_to_check+=("$TRIDENT_ACP_IMAGE_REGISTRY" "$TRIDENT_ACP_IMAGE_REPO" "$TRIDENT_ACP_IMAGE_TAG")
@@ -2060,12 +2091,8 @@ spec:
   imageRegistry:
     name: "${connector_registry}"
     secret: "${connector_regcred_name}"
-  astraConnect:
-    image: "${connector_tag}" # This field sets the tag, not the image
-  neptune:
-    image: "${neptune_tag}" # This field sets the tag, not the image
   autoSupport:
-    enrolled: ${connector_autosupport_enrolled} 
+    enrolled: ${connector_autosupport_enrolled}
     url: ${connector_autosupport_url}
   natsSyncClient:
     cloudBridgeURL: ${astra_url}
@@ -2073,6 +2100,17 @@ EOF
     if [ -n "$host_alias_ip" ]; then
         echo "    hostAliasIP: $host_alias_ip" >> "$crs_file"
     fi
+
+    if [ -n "$connector_tag" ]; then
+      echo "  astraConnect:" >> "$crs_file"
+      echo "    image: \"${connector_tag}\" # This field sets the tag, not the image" >> "$crs_file"
+    fi
+
+    if [ -n "$neptune_tag" ]; then
+      echo "  neptune:" >> "$crs_file"
+      echo "    image: \"${neptune_tag}\" # This field sets the tag, not the image" >> "$crs_file"
+    fi
+
     echo "---" >> "$crs_file"
 
     logdebug "$crs_file: OK"
