@@ -21,7 +21,7 @@ _EXISTING_TRIDENT_NAMESPACE=""
 _EXISTING_TRIDENT_IMAGE=""
 _EXISTING_TRIDENT_ACP_ENABLED=""
 _EXISTING_TRIDENT_ACP_IMAGE=""
-_EXISTING_TRIDENT_IMAGE_PULL_SECRETS="" # Space-delimited values, e.g. 'secret1 secret2 secret3'
+_EXISTING_TORC_PULL_SECRETS="" # Space-delimited values, e.g. 'secret1 secret2 secret3'
 _EXISTING_TRIDENT_OPERATOR_IMAGE=""
 
 # _PATCHES_ variables contain the k8s patches that will be applied after we've applied all CRs and kustomize resources.
@@ -209,7 +209,7 @@ set_log_level() {
     [ "$LOG_LEVEL" == "fatal" ] && LOG_LEVEL="$__FATAL"
 }
 
-set_config_from_string() {
+ingest_config_string() {
     local -r config_str="$1"
     [ -z "$config_str" ] && fatal "no config string given"
     local -r tmp_env="$__TMP_ENV"
@@ -235,10 +235,10 @@ load_config_from_file_if_given() {
     local -r previous_env="$(env)"
 
     # Set config file values first
-    set_config_from_string "$(cat "$config_file")"
+    ingest_config_string "$(cat "$config_file")"
 
     # Set previous env second to allow vars provided through the command line to take priority
-    set_config_from_string "$previous_env"
+    ingest_config_string "$previous_env"
     set_log_level
 
     # Check if api token was populated after sourcing config file
@@ -793,22 +793,6 @@ str_contains_at_least_one() {
     return 1
 }
 
-str_contains_at_least_one_word() {
-    local -r str_to_check="$1"
-    local -a words=("${@:2}")
-
-    [ -z "$str_to_check" ] && fatal "no str_to_check provided"
-    [ "${#words[@]}" -eq 0 ] && fatal "no words provided"
-
-    for word in "${words[@]}" ; do
-        if echo "$str_to_check" | grep -qw -- "$keyword"; then
-            return 0
-        fi
-    done
-
-    return 1
-}
-
 str_matches_at_least_one() {
     local -r str_to_check="$1"
     local -a keywords=("${@:2}")
@@ -1220,6 +1204,20 @@ EOF
     done
 
     echo "$yaml_labels"
+}
+
+pull_secret_exists() {
+    local -r secret="${1:-""}"
+    local -r namespace="$2"
+
+    [ -z "$secret" ] && return 0
+    [ -z "$namespace" ] && fatal "no namespace given"
+
+    if [ -z "$(kubectl get secret "$secret" -o name 2> /dev/null)" ]; then
+        return 1
+    fi
+
+    return 0
 }
 
 apply_kubectl_patch() {
@@ -1665,10 +1663,27 @@ step_check_volumesnapshotclasses() {
 }
 
 step_check_namespace_exists() {
+    local err_msg=""
+    local registry="<REGISTRY>"
+
+    # Best effort guess at which registry to put in the create command
+    if components_include_connector; then
+        registry="$CONNECTOR_IMAGE_REGISTRY"
+    elif components_include_trident && ! str_contains_at_least_one "$(get_config_trident_image)" "docker.io/netapp" ; then
+        registry="$TRIDENT_IMAGE_REGISTRY"
+    elif components_include_acp; then
+        registry="$TRIDENT_ACP_IMAGE_REGISTRY"
+    fi
+
+    local create_secret_cmd="kubectl create secret docker-registry '$IMAGE_PULL_SECRET' -n '$NAMESPACE'"
+    create_secret_cmd+=" --docker-server='$registry' --docker-username='<USERNAME>' --docker-password='<PASSWORD>'"
+
     if [ -z "$(kubectl get namespace "$NAMESPACE" -o name 2> /dev/null)" ]; then
         if [ -n "$IMAGE_PULL_SECRET" ]; then
-            local err_msg="The specified namespace '$NAMESPACE' does not exist on the cluster, but IMAGE_PULL_SECRET is set."
-            err_msg+=" Please create the namespace and secret, or unset IMAGE_PULL_SECRET."
+            err_msg="The specified NAMESPACE '$NAMESPACE' does not exist on the cluster, but IMAGE_PULL_SECRET is set."
+            err_msg+=" Please create the namespace and secret:"
+            err_msg+="${__NEWLINE}    - kubectl create namespace '$NAMESPACE'"
+            err_msg+="${__NEWLINE}    - $create_secret_cmd"
             add_problem "namespace '$NAMESPACE': not found but IMAGE_PULL_SECRET is set" "$err_msg"
             exit_if_problems
         fi
@@ -1676,10 +1691,14 @@ step_check_namespace_exists() {
             kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
             logdebug "namespace '$NAMESPACE': OK"
         else
-            local -r err_msg="User chose not to create the namespace. Please create the namespace and/or run the script again."
+            err_msg="User chose not to create the namespace. Please create the namespace and/or run the script again."
             add_problem "User chose not to create the namespace. Exiting." "$err_msg"
             exit_if_problems
         fi
+    elif [ -n "$IMAGE_PULL_SECRET" ] && ! pull_secret_exists "$IMAGE_PULL_SECRET" "$NAMESPACE"; then
+        err_msg="The specified IMAGE_PULL_SECRET '$IMAGE_PULL_SECRET' does not exist on the cluster. Please create it:"
+        err_msg+="${__NEWLINE}    - $create_secret_cmd"
+        add_problem "pull secret '$IMAGE_PULL_SECRET' not found in namespace '$NAMESPACE'" "$err_msg"
     fi
 }
 
@@ -2220,12 +2239,12 @@ step_collect_existing_trident_info() {
     fi
 
     # TORC imagePullSecrets
-    local -r pull_secrets="$(echo "$torc_json" | jq -r '.spec.imagePullSecrets | join(" ")' 2> /dev/null)"
-    if [ -n "$pull_secrets" ] && [ "$pull_secrets" != "null" ]; then
-        logdebug "trident pull secrets: $pull_secrets"
-        _EXISTING_TRIDENT_IMAGE_PULL_SECRETS="$pull_secrets"
+    local -r torc_pull_secrets="$(echo "$torc_json" | jq -r '.spec.imagePullSecrets | join(" ")' 2> /dev/null)"
+    if [ -n "$torc_pull_secrets" ] && [ "$torc_pull_secrets" != "null" ]; then
+        logdebug "torc pull secrets: $torc_pull_secrets"
+        _EXISTING_TORC_PULL_SECRETS="$torc_pull_secrets"
     else
-        logdebug "trident pull secrets: not found"
+        logdebug "torc pull secrets: not found"
     fi
 
     # Trident operator
@@ -2244,6 +2263,14 @@ step_collect_existing_trident_info() {
         fi
     else
         logdebug "trident operator: not found"
+    fi
+    
+    local -r op_pull_secrets="$(echo "$trident_operator_json" | jq -r '.spec.imagePullSecrets | join(" ")' 2> /dev/null)"
+    if [ -n "$op_pull_secrets" ] && [ "$op_pull_secrets" != "null" ]; then
+        logdebug "trident operator pull secrets: $op_pull_secrets"
+        _EXISTING_TRIDENT_OPERATOR_PULL_SECRETS="$op_pull_secrets"
+    else
+        logdebug "trident operator pull secrets: not found"
     fi
 }
 
@@ -2310,6 +2337,16 @@ step_generate_trident_operator_patch() {
     logheader $__DEBUG "Generating Trident Operator patch"
     local -r patch='[{"op":"replace","path":"/spec/template/spec/containers/0/image","value":"'"$new_image"'"}]'
     _PATCHES_TRIDENT_OPERATOR+=("deploy/trident-operator -n '$namespace' --type=json -p '$(echo "$patch" | jq '.')'")
+    
+    # Update image pull secrets if needed
+    if [ -n "$_EXISTING_TRIDENT_OPERATOR_PULL_SECRETS" ] && [ -n "$IMAGE_PULL_SECRET" ]; then
+        if echo "$_EXISTING_TRIDENT_OPERATOR_PULL_SECRETS" | grep -qw "$IMAGE_PULL_SECRET" &> /dev/null; then
+            logdebug "image pull secret '$IMAGE_PULL_SECRET' already present in trident-operator ($_EXISTING_TRIDENT_OPERATOR_PULL_SECRETS)"
+        else
+            torc_patch_list+='{"op":"add","path":"/spec/imagePullSecrets/-","value":"'"$IMAGE_PULL_SECRET"'"},'
+        fi
+    fi
+
 }
 
 step_generate_torc_patch() {
@@ -2342,9 +2379,11 @@ step_generate_torc_patch() {
     fi
 
     # Update image pull secrets if needed
-    if [ -n "$_EXISTING_TRIDENT_IMAGE_PULL_SECRETS" ] && [ -n "$IMAGE_PULL_SECRET" ]; then
-        if str_contains_at_least_one_word "$_EXISTING_TRIDENT_IMAGE_PULL_SECRETS" "$IMAGE_PULL_SECRET"; then
-            echo "WIP"
+    if [ -n "$_EXISTING_TORC_PULL_SECRETS" ] && [ -n "$IMAGE_PULL_SECRET" ]; then
+        if echo "$_EXISTING_TORC_PULL_SECRETS" | grep -qw "$IMAGE_PULL_SECRET" &> /dev/null; then
+            logdebug "image pull secret '$IMAGE_PULL_SECRET' already present in torc ($_EXISTING_TORC_PULL_SECRETS)"
+        else
+            torc_patch_list+='{"op":"add","path":"/spec/imagePullSecrets/-","value":"'"$IMAGE_PULL_SECRET"'"},'
         fi
     fi
 
