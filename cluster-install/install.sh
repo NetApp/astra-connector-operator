@@ -62,7 +62,7 @@ readonly __COMPONENTS_VALID_VALUES=("$__COMPONENTS_ALL_ASTRA_CONTROL" "$__COMPON
 readonly __DEFAULT_DOCKER_HUB_IMAGE_REGISTRY="docker.io"
 readonly __DEFAULT_DOCKER_HUB_IMAGE_BASE_REPO="netapp"
 readonly __DEFAULT_ASTRA_IMAGE_REGISTRY="cr.astra.netapp.io"
-readonly __DEFAULT_IMAGE_TAG="$__RELEASE_VERSION"
+readonly __DEFAULT_ASTRA_IMAGE_BASE_REPO=""
 
 readonly __DEFAULT_TRIDENT_OPERATOR_IMAGE_NAME="trident-operator"
 readonly __DEFAULT_TRIDENT_AUTOSUPPORT_IMAGE_NAME="trident-autosupport"
@@ -183,8 +183,6 @@ get_configs() {
         TRIDENT_AUTOSUPPORT_IMAGE_TAG="${TRIDENT_AUTOSUPPORT_IMAGE_TAG:-$TRIDENT_IMAGE_TAG}"
         TRIDENT_ACP_IMAGE_TAG="${TRIDENT_ACP_IMAGE_TAG:-$TRIDENT_IMAGE_TAG}"
     CONNECTOR_OPERATOR_IMAGE_TAG="${CONNECTOR_OPERATOR_IMAGE_TAG:-"202405211614-main"}"
-
-
 
     # ------------ ASTRA CONNECTOR ------------
     ASTRA_CONTROL_URL="${ASTRA_CONTROL_URL:-"astra.netapp.io"}"
@@ -355,6 +353,17 @@ get_config_acp_image() {
     as_full_image "$TRIDENT_ACP_IMAGE_REGISTRY" "$TRIDENT_ACP_IMAGE_REPO" "$TRIDENT_ACP_IMAGE_TAG"
 }
 
+get_config_connector_operator_image() {
+    as_full_image "$CONNECTOR_OPERATOR_IMAGE_REGISTRY" "$CONNECTOR_OPERATOR_IMAGE_REPO" "$CONNECTOR_OPERATOR_IMAGE_TAG"
+}
+
+get_config_connector_image() {
+    as_full_image "$CONNECTOR_IMAGE_REGISTRY" "$CONNECTOR_IMAGE_REPO" "$CONNECTOR_IMAGE_TAG"
+}
+
+get_config_neptune_image() {
+    as_full_image "$NEPTUNE_IMAGE_REGISTRY" "$NEPTUNE_IMAGE_REPO" "$NEPTUNE_IMAGE_TAG"
+}
 
 trident_image_needs_upgraded() {
     local -r configured_image="$(get_config_trident_image)"
@@ -391,6 +400,24 @@ acp_image_needs_upgraded() {
 acp_is_enabled() {
     logdebug "Checking if ACP is enabled: '$_EXISTING_TRIDENT_ACP_ENABLED'"
     [ "$_EXISTING_TRIDENT_ACP_ENABLED" == "true" ] && return 0
+    return 1
+}
+
+config_has_at_least_one_custom_registry_or_repo() {
+    local -r docker_hub_default="$(join_rpath "$__DEFAULT_DOCKER_HUB_IMAGE_REGISTRY" "$__DEFAULT_DOCKER_HUB_IMAGE_BASE_REPO")"
+    local -r astra_reg_default="$(join_rpath "$__DEFAULT_ASTRA_IMAGE_REGISTRY" "$__DEFAULT_ASTRA_IMAGE_BASE_REPO")"
+
+    # Docker hub images
+    get_config_trident_operator_image | starts_with "$docker_hub_default" && return 0
+    get_config_trident_autosupport_image | starts_with "$docker_hub_default" && return 0
+    get_config_trident_image | starts_with "$docker_hub_default" && return 0
+    get_config_connector_operator_image | starts_with "$docker_hub_default" && return 0
+
+    # Astra registry images
+    get_config_connector_image | starts_with "$astra_reg_default" && return 0
+    get_config_neptune_image | starts_with "$astra_reg_default" && return 0
+    get_config_trident_acp_image | starts_with "$astra_reg_default" && return 0
+
     return 1
 }
 
@@ -601,7 +628,7 @@ loginfo() {
 }
 
 logwarn() {
-    log_at_level $__WARN "WARNING: $1"
+    log_at_level $__WARN "${__NEWLINE}WARNING: $1"
 }
 
 logerror() {
@@ -777,6 +804,22 @@ join_rpath() {
     echo "$joined"
 }
 
+starts_with() {
+    local str_to_check="" && read -r str_to_check
+    local -r substring="$1"
+
+    [ -z "$str_to_check" ] && fatal "no str_to_check given"
+    [ -z "$substring" ] && fatal "no substring given"
+
+    case $str_to_check in
+        "$substring"*)
+            return 0
+            ;;
+    esac
+
+    return 1
+}
+
 str_contains_at_least_one() {
     local -r str_to_check="$1"
     local -a keywords=("${@:2}")
@@ -938,7 +981,6 @@ make_astra_control_request() {
     if [ -z "$ASTRA_ACCOUNT_ID" ]; then fatal "no ASTRA_ACCOUNT_ID found"; fi
     if [ -z "$ASTRA_API_TOKEN" ]; then fatal "no ASTRA_API_TOKEN found"; fi
 
-    # TODO ASTRACTL-32772: make it so including https:// and http:// is optional in ASTRA_CONTROL_URL
     local -r url="$ASTRA_CONTROL_URL/accounts/$ASTRA_ACCOUNT_ID$sub_path"
     local -r method="GET"
     local headers=("-H" 'Content-Type: application/json')
@@ -1027,10 +1069,11 @@ get_registry_credentials_from_pull_secret() {
     # 6. Get the first matching entry's `.value.auth`, which would be `B64_ENCODED_USERNAME_PASSWORD` here
     # 7. The `B64_ENCODED_USERNAME_PASSWORD` can then be passed to curl via
     # `-H 'Authorization: Basic B64_ENCODED_USERNAME_PASSWORD'` without having to decode it first.
-    local -r contents="$(kubectl get secret "$pull_secret" -n "$namespace" -o json 2> /dev/null)"
+    local -r contents="$(kubectl get secret "$pull_secret" -n "$namespace" -o json 2> "$__ERR_FILE")"
     if [ -z "$contents" ]; then
-        # TODO: differentiate between connectivity errors and actual 'not found' errors
-        add_problem "pull secret '$namespace.$pull_secret': not found" "Pull secret '$pull_secret' not found in namespace '$namespace'"
+        local err="$(get_captured_err)"
+        [ -z "$err" ] && err="unknown error"
+        add_problem "Failed to get '$pull_secret' in namespace '$namespace': $err"
         return 1
     fi
 
@@ -1213,7 +1256,7 @@ pull_secret_exists() {
     [ -z "$secret" ] && return 0
     [ -z "$namespace" ] && fatal "no namespace given"
 
-    if [ -z "$(kubectl get secret "$secret" -o name 2> /dev/null)" ]; then
+    if [ -z "$(kubectl get secret "$secret" -n "$namespace" 2> /dev/null)" ]; then
         return 1
     fi
 
@@ -1554,8 +1597,17 @@ step_check_config() {
         if [ -z "$NAMESPACE" ]; then
             prompt_user "NAMESPACE" "NAMESPACE is required when specifying an IMAGE_PULL_SECRET. Please enter the namespace:"
         fi
-        add_to_config_builder "IMAGE_PULL_SECRET"
+    elif config_has_at_least_one_custom_registry_or_repo; then
+        local custom_reg_warning="We detected one or more custom registry or repo values"
+        custom_reg_warning+=", but no IMAGE_PULL_SECRET was specified. If any of your images are hosted in a private"
+        custom_reg_warning+=" registry, an image pull secret will need to be created and IMAGE_PULL_SECRET set."
+        if prompts_disabled; then
+            logwarn "$custom_reg_warning"
+        elif prompt_user_yes_no "$custom_reg_warning${__NEWLINE}Would you like to specify it now?"; then
+            prompt_user "IMAGE_PULL_SECRET" "Enter a value for IMAGE_PULL_SECRET: "
+        fi
     fi
+    add_to_config_builder "IMAGE_PULL_SECRET"
     add_to_config_builder "NAMESPACE"
 
     if prompts_disabled; then
@@ -1662,7 +1714,7 @@ step_check_volumesnapshotclasses() {
     fi
 }
 
-step_check_namespace_exists() {
+step_check_namespace_and_pull_secret_exist() {
     local err_msg=""
 
     # Best effort guess at which registry to put in the create command
@@ -1697,8 +1749,8 @@ step_check_namespace_exists() {
             exit_if_problems
         fi
     elif [ -n "$IMAGE_PULL_SECRET" ] && ! pull_secret_exists "$IMAGE_PULL_SECRET" "$NAMESPACE"; then
-        err_msg="The specified IMAGE_PULL_SECRET '$IMAGE_PULL_SECRET' does not exist on the cluster. Please create it:"
-        err_msg+="${__NEWLINE}    - $create_secret_cmd"
+        err_msg="The specified IMAGE_PULL_SECRET '$IMAGE_PULL_SECRET' does not exist in namespace '$NAMESPACE'."
+        err_msg+=" Please create it:${__NEWLINE}    - $create_secret_cmd"
         add_problem "pull secret '$IMAGE_PULL_SECRET' not found in namespace '$NAMESPACE'" "$err_msg"
     fi
 }
@@ -2278,6 +2330,7 @@ step_collect_existing_trident_info() {
 step_existing_trident_flags_compatibility_check() {
     [ "$COMPONENTS" == "$__COMPONENTS_ALL_ASTRA_CONTROL" ] && return 0
     ! existing_trident_needs_modifications && return 0
+    existing_trident_can_be_modified && return 0
 
     local msg="Existing Trident install requires an upgrade but DO_NOT_MODIFY_EXISTING_TRIDENT=true,"
     msg+=" and no other valid operations can be done due to COMPONENTS=$COMPONENTS."
@@ -2336,18 +2389,27 @@ step_generate_trident_operator_patch() {
     [ -z "$new_image" ] && fatal "no trident operator image found"
 
     logheader $__DEBUG "Generating Trident Operator patch"
-    local -r patch='[{"op":"replace","path":"/spec/template/spec/containers/0/image","value":"'"$new_image"'"}]'
-    _PATCHES_TRIDENT_OPERATOR+=("deploy/trident-operator -n '$namespace' --type=json -p '$(echo "$patch" | jq '.')'")
-    
+    local -r patch='{"op":"replace","path":"/spec/template/spec/containers/0/image","value":"'"$new_image"'"}'
+    local -a patch_list="$patch"
+
     # Update image pull secrets if needed
-    if [ -n "$_EXISTING_TRIDENT_OPERATOR_PULL_SECRETS" ] && [ -n "$IMAGE_PULL_SECRET" ]; then
+    if [ -n "$IMAGE_PULL_SECRET" ]; then
         if echo "$_EXISTING_TRIDENT_OPERATOR_PULL_SECRETS" | grep -qw "$IMAGE_PULL_SECRET" &> /dev/null; then
             logdebug "image pull secret '$IMAGE_PULL_SECRET' already present in trident-operator ($_EXISTING_TRIDENT_OPERATOR_PULL_SECRETS)"
         else
-            torc_patch_list+='{"op":"add","path":"/spec/imagePullSecrets/-","value":"'"$IMAGE_PULL_SECRET"'"},'
+            local -r secret_obj='{"name": "'"$IMAGE_PULL_SECRET"'"}'
+            if [ -z "$_EXISTING_TRIDENT_OPERATOR_PULL_SECRETS" ]; then
+                patch_list+='{"op":"replace","path":"/spec/imagePullSecrets","value":['"$secret_obj"']},'
+            else
+                patch_list+='{"op":"add","path":"/spec/imagePullSecrets/-","value":"'"$secret_obj"'"},'
+            fi
         fi
     fi
 
+    if [ "${#patch_list[@]}" -gt 0 ]; then
+        patch_list="'$(echo "[${patch_list%,}]" | jq '.')'"
+        _PATCHES_TRIDENT_OPERATOR+=("deploy/trident-operator -n '$namespace' --type=json -p $patch_list")
+    fi
 }
 
 step_generate_torc_patch() {
@@ -2380,15 +2442,20 @@ step_generate_torc_patch() {
     fi
 
     # Update image pull secrets if needed
-    if [ -n "$_EXISTING_TORC_PULL_SECRETS" ] && [ -n "$IMAGE_PULL_SECRET" ]; then
+    if [ -n "$IMAGE_PULL_SECRET" ]; then
         if echo "$_EXISTING_TORC_PULL_SECRETS" | grep -qw "$IMAGE_PULL_SECRET" &> /dev/null; then
             logdebug "image pull secret '$IMAGE_PULL_SECRET' already present in torc ($_EXISTING_TORC_PULL_SECRETS)"
         else
-            torc_patch_list+='{"op":"add","path":"/spec/imagePullSecrets/-","value":"'"$IMAGE_PULL_SECRET"'"},'
+            local -r secret_obj='{"name": "'"$IMAGE_PULL_SECRET"'"}'
+            if [ -z "$_EXISTING_TRIDENT_OPERATOR_PULL_SECRETS" ]; then
+                torc_patch_list+='{"op":"replace","path":"/spec/imagePullSecrets","value":"'"$IMAGE_PULL_SECRET"'"},'
+            else
+                torc_patch_list+='{"op":"add","path":"/spec/imagePullSecrets/-","value":"'"$IMAGE_PULL_SECRET"'"},'
+            fi
         fi
     fi
 
-    if [ "${#torc_patch_list[@]}" -gt 0 ]; then
+    if [ -z "$torc_patch_list" ]; then
         torc_patch_list="'$(echo "[${torc_patch_list%,}]" | jq '.')'"
         _PATCHES_TORC+=("tridentorchestrator $torc_name --type=json -p ${torc_patch_list}")
     fi
@@ -2671,7 +2738,10 @@ exit_if_problems
 step_check_volumesnapshotclasses
 
 # REGISTRY access
-if [ -n "$NAMESPACE" ]; then step_check_namespace_exists; fi
+if [ -n "$NAMESPACE" ]; then
+    step_check_namespace_and_pull_secret_exist
+    exit_if_problems
+fi
 if [ "$SKIP_IMAGE_CHECK" != "true" ]; then
     step_check_all_images_can_be_pulled
 else
@@ -2720,7 +2790,11 @@ if trident_will_be_installed_or_modified; then
                     step_generate_torc_patch "$_EXISTING_TORC_NAME" "$(get_config_trident_image)" "" "" "$(get_config_trident_autosupport_image)"
                     trident_operator_image_needs_upgraded && step_generate_trident_operator_patch
                 else
-                    loginfo "Trident will not be upgraded."
+                    _msg="You have chosen to use a version of Trident that is not supported with the current version"
+                    _msg+=" of Astra Control. This may result in some App Data Management operations not functioning"
+                    _msg+=" correctly or being blocked within Astra Control. It is highly recommended to upgrade"
+                    _msg+=" Trident to ensure compatibility and proper functionality."
+                    logwarn "$_msg"
                 fi
             # Trident operator upgrade (standalone)
             elif trident_operator_image_needs_upgraded; then
