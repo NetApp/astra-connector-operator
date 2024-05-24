@@ -218,7 +218,7 @@ jobs:
           asset_content_type: text/yaml
 
       - name: Set install.sh versions
-#        if: ${{  github.event.pull_request.base.ref == 'add-install-script-to-release' || startsWith(github.ref, 'refs/heads/release-') }}
+        if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-') }}
         run: |
           export VERSION=$(cat VERSION)
           cp ./cluster-install/install.sh ./build/install.sh
@@ -226,7 +226,7 @@ jobs:
           sed -i "s/readonly __GIT_REF_CONNECTOR_OPERATOR=\"\"/readonly __GIT_REF_CONNECTOR_OPERATOR=\"$VERSION\"/g" ./build/install.sh
 
       - name: Upload install.sh
-#        if: ${{  github.event.pull_request.base.ref == 'add-install-script-to-release' || startsWith(github.ref, 'refs/heads/release-') }}
+        if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-') }}
         id: upload-install-script
         uses: actions/upload-release-asset@v1
         env:
@@ -240,7 +240,7 @@ jobs:
           asset_content_type: application/x-sh
 
       - name: Upload example env file
-#        if: ${{  github.event.pull_request.base.ref == 'add-install-script-to-release' || startsWith(github.ref, 'refs/heads/release-') }}
+        if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-') }}
         id: upload-example-install-env
         uses: actions/upload-release-asset@v1
         env:
