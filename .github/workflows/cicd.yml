@@ -222,7 +222,7 @@ jobs:
           TAG_VERSION: "${{ steps.vars.outputs.version }}"
         run: |
           export VERSION=$(cat VERSION)
-          cp cluster-install/install.sh ./build/install.sh
+          cp ./cluster-install/install.sh ./build/install.sh
           sed -i 's/readonly __GIT_REF_CONNECTOR_OPERATOR=""/readonly __GIT_REF_CONNECTOR_OPERATOR="$VERSION"/g' ./build/install.sh
           sed -i.bak 's/readonly __GIT_REF_CONNECTOR_OPERATOR=""/readonly __GIT_REF_CONNECTOR_OPERATOR="1234"/g' ./build/install.sh
 
