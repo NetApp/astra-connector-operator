@@ -176,7 +176,7 @@ jobs:
           prerelease: false
 
       - name: Upload astraconnector yaml
-        if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-') }}
+        if: ${{ github.ref == 'add-install-script-to-release' || startsWith(github.ref, 'refs/heads/release-') }}
         id: upload-astraconnector-yaml
         uses: actions/upload-release-asset@v1
         env:
@@ -190,7 +190,7 @@ jobs:
           asset_content_type: text/yaml
 
       - name: Upload default-image manifest
-        if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-') }}
+        if: ${{ github.ref == 'add-install-script-to-release' || startsWith(github.ref, 'refs/heads/release-') }}
         id: upload-manifest
         uses: actions/upload-release-asset@v1
         env:
@@ -204,7 +204,7 @@ jobs:
           asset_content_type: text/plain
 
       - name: Upload astraconnector_operator.yaml
-        if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-') }}
+        if: ${{ github.ref == 'add-install-script-to-release' || startsWith(github.ref, 'refs/heads/release-') }}
         id: upload-astraconnector-operator-yaml
         uses: actions/upload-release-asset@v1
         env:
@@ -218,6 +218,7 @@ jobs:
           asset_content_type: text/yaml
 
       - name: Set install.sh versions
+        if: ${{ github.ref == 'add-install-script-to-release' || startsWith(github.ref, 'refs/heads/release-') }}
         env:
           TAG_VERSION: "${{ steps.vars.outputs.version }}"
         run: |
@@ -227,7 +228,7 @@ jobs:
           sed -i.bak 's/readonly __GIT_REF_CONNECTOR_OPERATOR=""/readonly __GIT_REF_CONNECTOR_OPERATOR="1234"/g' ./build/install.sh
 
       - name: Upload install.sh
-        if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-') }}
+        if: ${{ github.ref == 'add-install-script-to-release' || startsWith(github.ref, 'refs/heads/release-') }}
         id: upload-install-script
         uses: actions/upload-release-asset@v1
         env:
@@ -241,7 +242,7 @@ jobs:
           asset_content_type: application/x-sh
 
       - name: Upload example env file
-        if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-') }}
+        if: ${{ github.ref == 'add-install-script-to-release' || startsWith(github.ref, 'refs/heads/release-') }}
         id: upload-example-install-env
         uses: actions/upload-release-asset@v1
         env:
