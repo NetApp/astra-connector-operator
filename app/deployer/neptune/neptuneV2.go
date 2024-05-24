@@ -239,6 +239,7 @@ func (n NeptuneClientDeployerV2) GetDeploymentObjects(m *v1.AstraConnector, ctx 
 	mutateFunc := func() error {
 		// Get the containers
 		containers := deployment.Spec.Template.Spec.Containers
+		newContainers := make([]corev1.Container, 0, 2)
 
 		for i, container := range containers {
 			if container.Name == "manager" {
@@ -247,12 +248,13 @@ func (n NeptuneClientDeployerV2) GetDeploymentObjects(m *v1.AstraConnector, ctx 
 						containers[i].Env[j].Value = m.Spec.AutoSupport.URL
 					}
 				}
+				container.Image = neptuneImage
 			}
+			newContainers = append(newContainers, container)
 		}
 
 		// Update the containers in the deployment
-		deployment.Spec.Template.Spec.Containers = containers
-
+		deployment.Spec.Template.Spec.Containers = newContainers
 		return nil
 	}
 
