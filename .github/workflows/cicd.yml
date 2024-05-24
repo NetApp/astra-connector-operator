@@ -223,7 +223,7 @@ jobs:
           export VERSION=$(cat VERSION)
           cp ./cluster-install/install.sh ./build/install.sh
           sed -i "s/readonly __DEFAULT_CONNECTOR_OPERATOR_IMAGE_TAG=\"\"/readonly __DEFAULT_CONNECTOR_OPERATOR_IMAGE_TAG=\"$VERSION\"/g" ./build/install.sh
-          sed -i "s/readonly __GIT_REF_CONNECTOR_OPERATOR=\"\"/readonly __GIT_REF_CONNECTOR_OPERATOR=\"$VERSION\"/g" ./build/install.sh
+          sed -i "s/readonly __GIT_REF_CONNECTOR_OPERATOR=\"main\"/readonly __GIT_REF_CONNECTOR_OPERATOR=\"$VERSION\"/g" ./build/install.sh
 
       - name: Upload install.sh
         if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-') }}

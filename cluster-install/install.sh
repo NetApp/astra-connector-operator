@@ -42,7 +42,7 @@ readonly __TRIDENT_VERSION="${__TRIDENT_VERSION_OVERRIDE:-"$__RELEASE_VERSION"}"
 readonly -a __REQUIRED_TOOLS=("git" "jq" "kubectl" "curl" "grep" "sort" "uniq" "find" "base64" "wc" "awk")
 
 # __GIT_REF_CONNECTOR_OPERATOR is set via github Actions when added to the Git Release
-readonly __GIT_REF_CONNECTOR_OPERATOR="" # Determines the ACOP branch from which the kustomize resources will be pulled
+readonly __GIT_REF_CONNECTOR_OPERATOR="main" # Determines the ACOP branch from which the kustomize resources will be pulled
 readonly __GIT_REF_TRIDENT="ASTRACTL-32138-temporary-stand-in" # Determines the Trident branch from which the kustomize resources will be pulled
 
 # Kustomize is 1.14+ only
