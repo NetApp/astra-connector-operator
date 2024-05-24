@@ -5,7 +5,6 @@ on:
     branches:
       - main
       - 'release-*'
-      - add-install-script-to-release
   pull_request:
     branches: '*'
   workflow_dispatch:
@@ -152,6 +151,8 @@ jobs:
           export MANIFEST_FILEPATH=./$MANIFEST_FILENAME
           echo "MANIFEST_FILEPATH=$MANIFEST_FILEPATH" >> $GITHUB_ENV
           echo "MANIFEST_FILENAME=$MANIFEST_FILENAME" >> $GITHUB_ENV
+          export INSTALL_SCRIPT_FILENAME="install-$VERSION.sh"
+          echo "INSTALL_SCRIPT_FILENAME=$INSTALL_SCRIPT_FILENAME" >> $GITHUB_ENV
           go run scripts/create_default_images_manifest.go $MANIFEST_FILEPATH $VERSION
           cat $MANIFEST_FILEPATH
 
@@ -219,13 +220,11 @@ jobs:
 
       - name: Set install.sh versions
 #        if: ${{  github.event.pull_request.base.ref == 'add-install-script-to-release' || startsWith(github.ref, 'refs/heads/release-') }}
-        env:
-          TAG_VERSION: "${{ steps.vars.outputs.version }}"
         run: |
           export VERSION=$(cat VERSION)
           cp ./cluster-install/install.sh ./build/install.sh
-          sed -i "s/readonly __DEFAULT_CONNECTOR_OPERATOR_IMAGE_TAG=\"\"/readonly __DEFAULT_CONNECTOR_OPERATOR_IMAGE_TAG=\"$TAG_VERSION\"/g" ./build/install.sh
-          sed -i "s/readonly __GIT_REF_CONNECTOR_OPERATOR=\"\"/readonly __GIT_REF_CONNECTOR_OPERATOR=\"$TAG_VERSION\"/g" ./build/install.sh
+          sed -i "s/readonly __DEFAULT_CONNECTOR_OPERATOR_IMAGE_TAG=\"\"/readonly __DEFAULT_CONNECTOR_OPERATOR_IMAGE_TAG=\"$VERSION\"/g" ./build/install.sh
+          sed -i "s/readonly __GIT_REF_CONNECTOR_OPERATOR=\"\"/readonly __GIT_REF_CONNECTOR_OPERATOR=\"$VERSION\"/g" ./build/install.sh
 
       - name: Upload install.sh
 #        if: ${{  github.event.pull_request.base.ref == 'add-install-script-to-release' || startsWith(github.ref, 'refs/heads/release-') }}
@@ -234,7 +233,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           FILE_PATH: "./build/install.sh"
-          ASSET_NAME: "install.sh"
+          ASSET_NAME: ${{ env.INSTALL_SCRIPT_FILENAME }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ${{ env.FILE_PATH }}
