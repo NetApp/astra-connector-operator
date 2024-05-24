@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - 'release-*'
+      - add-install-script-to-release
   pull_request:
     branches: '*'
   workflow_dispatch:
@@ -161,12 +162,13 @@ jobs:
           echo ::set-output name=version::$(cat VERSION)
 
       - name: Create Release
-        if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-') }}
+        if: ${{ github.ref == 'add-install-script-to-release' || startsWith(github.ref, 'refs/heads/release-') }}
         id: create_release
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG_VERSION: "${{ steps.vars.outputs.version }}"
+          TAG_VERSION: "ACTIONS-TEST-${{ steps.vars.outputs.version }}"
+#          TAG_VERSION: "${{ steps.vars.outputs.version }}"
         with:
           tag_name: ${{ env.TAG_VERSION }}
           release_name: Release ${{ env.TAG_VERSION }}
@@ -214,3 +216,40 @@ jobs:
           asset_path: ${{ env.FILE_PATH }}
           asset_name: ${{ env.ASSET_NAME }}
           asset_content_type: text/yaml
+
+      - name: Set install.sh versions
+        env:
+          TAG_VERSION: "${{ steps.vars.outputs.version }}"
+        run: |
+          export VERSION=$(cat VERSION)
+          cp cluster-install/install.sh ./build/install.sh
+          sed -i 's/readonly __GIT_REF_CONNECTOR_OPERATOR=""/readonly __GIT_REF_CONNECTOR_OPERATOR="$VERSION"/g' ./build/install.sh
+          sed -i.bak 's/readonly __GIT_REF_CONNECTOR_OPERATOR=""/readonly __GIT_REF_CONNECTOR_OPERATOR="1234"/g' ./build/install.sh
+
+      - name: Upload install.sh
+        if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-') }}
+        id: upload-install-script
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FILE_PATH: "./build/install.sh"
+          ASSET_NAME: "install.sh"
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ env.FILE_PATH }}
+          asset_name: ${{ env.ASSET_NAME }}
+          asset_content_type: application/x-sh
+
+      - name: Upload example env file
+        if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-') }}
+        id: upload-install-script
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FILE_PATH: "./cluster-install/install-example-config.env"
+          ASSET_NAME: "install-example-config.env"
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ env.FILE_PATH }}
+          asset_name: ${{ env.ASSET_NAME }}
+          asset_content_type: text/plain
