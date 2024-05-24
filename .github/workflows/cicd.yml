@@ -172,7 +172,7 @@ jobs:
         with:
           tag_name: ${{ env.TAG_VERSION }}
           release_name: Release ${{ env.TAG_VERSION }}
-          draft: false
+          draft: true
           prerelease: false
 
       - name: Upload astraconnector yaml
@@ -224,8 +224,8 @@ jobs:
         run: |
           export VERSION=$(cat VERSION)
           cp ./cluster-install/install.sh ./build/install.sh
-          sed -i "s/readonly __DEFAULT_CONNECTOR_OPERATOR_IMAGE_TAG=\"\"/readonly __DEFAULT_CONNECTOR_OPERATOR_IMAGE_TAG=\"$VERSION\"/g" ./build/install.sh
-          sed -i "s/readonly __GIT_REF_CONNECTOR_OPERATOR=\"\"/readonly __GIT_REF_CONNECTOR_OPERATOR=\"$VERSION\"/g" ./build/install.sh
+          sed -i "s/readonly __DEFAULT_CONNECTOR_OPERATOR_IMAGE_TAG=\"\"/readonly __DEFAULT_CONNECTOR_OPERATOR_IMAGE_TAG=\"$TAG_VERSION\"/g" ./build/install.sh
+          sed -i "s/readonly __GIT_REF_CONNECTOR_OPERATOR=\"\"/readonly __GIT_REF_CONNECTOR_OPERATOR=\"$TAG_VERSION\"/g" ./build/install.sh
 
       - name: Upload install.sh
 #        if: ${{  github.event.pull_request.base.ref == 'add-install-script-to-release' || startsWith(github.ref, 'refs/heads/release-') }}

@@ -174,7 +174,7 @@ get_configs() {
     # ------------ IMAGE TAG ------------
     # Docker TAG environment variables
     # __DEFAULT_CONNECTOR_OPERATOR_IMAGE_TAG is set via Github Actions before adding this script to the Git Release
-    __DEFAULT_CONNECTOR_OPERATOR_IMAGE_TAG=""
+    readonly __DEFAULT_CONNECTOR_OPERATOR_IMAGE_TAG=""
 
     TRIDENT_IMAGE_TAG="${TRIDENT_IMAGE_TAG:-$__TRIDENT_VERSION}"
         TRIDENT_OPERATOR_IMAGE_TAG="${TRIDENT_OPERATOR_IMAGE_TAG:-$TRIDENT_IMAGE_TAG}"
