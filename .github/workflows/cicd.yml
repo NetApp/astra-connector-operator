@@ -139,13 +139,13 @@ jobs:
           make docker-push
 
       - name: Build Install YAMLs
-        if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-') }}
+        if:  ${{  github.event.pull_request.base.ref == 'add-install-script-to-release' || startsWith(github.ref, 'refs/heads/release-') }}
         run: |
           export VERSION=$(cat VERSION)
           make release
 
       - name: Build default-image manifest file
-        if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-') }}
+        if:  ${{  github.event.pull_request.base.ref == 'add-install-script-to-release' || startsWith(github.ref, 'refs/heads/release-') }}
         run: |
           export VERSION=$(cat VERSION)
           export MANIFEST_FILENAME=default-images-$VERSION.manifest
@@ -156,7 +156,7 @@ jobs:
           cat $MANIFEST_FILEPATH
 
       - name: Get Version
-        if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-') }}
+        if:  ${{  github.event.pull_request.base.ref == 'add-install-script-to-release' || startsWith(github.ref, 'refs/heads/release-') }}
         id: vars
         run:
           echo ::set-output name=version::$(cat VERSION)
