@@ -1239,7 +1239,9 @@ k8s_get_resource() {
         return 0
     fi
 
-    local -r base_msg="A failure occurred when checking if resource '$resource' (namespace: $namespace) exists"
+    local base_msg="A failure occurred when checking if resource '$resource'"
+    [ -n "$namespace" ] base_msg+=" (namespace: $namespace)"
+    base_msg+=" exists"
     if echo "$captured_err" | grep -q "NotFound" &> /dev/null; then
         logdebug "got NotFound error for resource '$resource', letting it through" >& 2
     elif echo "$captured_err" | grep -q "error executing jsonpath"; then
