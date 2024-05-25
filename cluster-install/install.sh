@@ -22,7 +22,7 @@ _EXISTING_TRIDENT_IMAGE=""
 _EXISTING_TRIDENT_ACP_ENABLED=""
 _EXISTING_TRIDENT_ACP_IMAGE=""
 _EXISTING_TRIDENT_OPERATOR_IMAGE=""
-_ANSWER_TO_TRIDENT_OPERATOR_UPGRADE=""
+_USER_ACCEPTED_TRIDENT_OPERATOR_UPGRADE="" # "true" if yes, "false" if no, "" if the question was never asked
 
 # _PATCHES_ variables contain the k8s patches that will be applied after we've applied all CRs and kustomize resources.
 # Entries should omit the 'kubectl patch' from the command, e.g. `deploy/astraconnect -n astra --type=json -p '[...]'`
@@ -2531,9 +2531,9 @@ step_generate_and_apply_resource_limit_patches() {
     # itself does "support" resource limits, in the sense that they don't get cleared out when we set them.
 
     # Trident Operator
-    if [ -z "$_ANSWER_TO_TRIDENT_OPERATOR_UPGRADE" ]; then
+    if [ -z "$_USER_ACCEPTED_TRIDENT_OPERATOR_UPGRADE" ]; then
         logdebug "no trident upgrade operator was needed, skipping trident operator resource limits"
-    elif [ "$_ANSWER_TO_TRIDENT_OPERATOR_UPGRADE" != "yes" ]; then
+    elif [ "$_USER_ACCEPTED_TRIDENT_OPERATOR_UPGRADE" != "true" ]; then
         logdebug "user declined trident operator upgrade, skipping trident operator resource limits"
     elif ! trident_will_be_installed_or_modified; then
         logdebug "skipping trident operator resource limits"
@@ -2601,6 +2601,7 @@ step_monitor_deployment_progress() {
 
     logheader "$__INFO" "$(prefix_dryrun "Monitoring deployment progress...")"
     if ! is_dry_run; then
+        loginfo "Waiting for operators to detect changes..."
         sleep 20 # Wait for initial resources to be created and operators to detect changes
     fi
 
@@ -2712,7 +2713,7 @@ if trident_will_be_installed_or_modified; then
                     step_generate_torc_patch "$_EXISTING_TORC_NAME" "$(get_config_trident_image)" "" "" "$(get_config_trident_autosupport_image)"
                     if trident_operator_image_needs_upgraded; then
                         step_generate_trident_operator_patch
-                        _ANSWER_TO_TRIDENT_OPERATOR_UPGRADE="yes"
+                        _USER_ACCEPTED_TRIDENT_OPERATOR_UPGRADE="true"
                     fi
                 else
                     _msg="You have chosen to use a version of Trident that is not supported with the current version"
@@ -2720,16 +2721,16 @@ if trident_will_be_installed_or_modified; then
                     _msg+=" correctly or being blocked within Astra Control. It is highly recommended to upgrade"
                     _msg+=" Trident to ensure compatibility and proper functionality."
                     logwarn "$_msg"
-                    _ANSWER_TO_TRIDENT_OPERATOR_UPGRADE="no"
+                    _USER_ACCEPTED_TRIDENT_OPERATOR_UPGRADE="false"
                 fi
             # Trident operator upgrade (standalone)
             elif trident_operator_image_needs_upgraded; then
                 if config_trident_operator_image_is_custom || prompt_user_yes_no "Would you like to upgrade the Trident Operator?"; then
                     step_generate_trident_operator_patch
-                    _ANSWER_TO_TRIDENT_OPERATOR_UPGRADE="yes"
+                    _USER_ACCEPTED_TRIDENT_OPERATOR_UPGRADE="true"
                 else
                     loginfo "Trident Operator will not be upgraded."
-                    _ANSWER_TO_TRIDENT_OPERATOR_UPGRADE="no"
+                    _USER_ACCEPTED_TRIDENT_OPERATOR_UPGRADE="false"
                 fi
             fi
         else
