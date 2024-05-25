@@ -2589,11 +2589,6 @@ step_apply_resources() {
     if [ -f "$crs_file_path" ]; then
         logdebug "apply CRs"
         if ! is_dry_run; then
-            if grep -q "AstraConnector" $crs_file_path; then
-                logdebug "delete previous astraconnect if it exists"
-                # Operator doesn't change the astraconnect spec automatically so we need to delete it first (if it exists)
-                kubectl delete -n "$(get_connector_namespace)" deploy/astraconnect &> /dev/null
-            fi
             output="$(kubectl apply -f "$crs_file_path")"
             logdebug "$output"
         else
