@@ -2934,7 +2934,7 @@ step_cleanup_tmp_files() {
 #======================================================================
 process_args "$@"
 set_log_level
-logln $__INFO "====== Astra Cluster Installer ${__RELEASE_VERSION} ======"
+logln $__INFO "====== Astra Unified Installer ${__RELEASE_VERSION} ======"
 load_config_from_file_if_given "$CONFIG_FILE"
 exit_if_problems
 
