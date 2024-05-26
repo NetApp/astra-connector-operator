@@ -2811,7 +2811,6 @@ step_generate_and_apply_resource_limit_patches() {
     local -r patch_path="resources"
     local -r patch_value="$_PROCESSED_RESOURCE_LIMITS"
     local -a patches_list_for_debugging=()
-    local err_msg=""
 
     logheader "$__INFO" "$(prefix_dryrun "Applying resource limits (this may take a few minutes)...")"
     logdebug "configured limits: $patch_value"
