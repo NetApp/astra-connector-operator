@@ -1240,7 +1240,7 @@ k8s_get_resource() {
     fi
 
     local base_msg="A failure occurred when checking if resource '$resource'"
-    [ -n "$namespace" ] base_msg+=" (namespace: $namespace)"
+    [ -n "$namespace" ] && base_msg+=" (namespace: $namespace)"
     base_msg+=" exists"
     if echo "$captured_err" | grep -q "NotFound" &> /dev/null; then
         logdebug "got NotFound error for resource '$resource', letting it through" >& 2
