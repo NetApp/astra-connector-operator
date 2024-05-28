@@ -40,7 +40,7 @@ _PROCESSED_RESOURCE_LIMITS=""
 readonly __RELEASE_VERSION="24.02"
 readonly __TRIDENT_VERSION="${__TRIDENT_VERSION_OVERRIDE:-"$__RELEASE_VERSION"}"
 
-readonly -a __REQUIRED_TOOLS=("jq" "kubectl" "curl" "grep" "sort" "uniq" "find" "base64" "wc" "awk")
+readonly -a __REQUIRED_TOOLS=("git" "jq" "kubectl" "curl" "grep" "sort" "uniq" "find" "base64" "wc" "awk")
 
 readonly __GIT_REF_CONNECTOR_OPERATOR="main" # Determines the ACOP branch from which the kustomize resources will be pulled
 readonly __GIT_REF_TRIDENT="ASTRACTL-32138-temporary-stand-in" # Determines the Trident branch from which the kustomize resources will be pulled
@@ -74,6 +74,7 @@ readonly __DEFAULT_TRIDENT_ACP_IMAGE_NAME="trident-acp"
 
 readonly __DEFAULT_CONNECTOR_NAMESPACE="astra-connector"
 readonly __DEFAULT_TRIDENT_NAMESPACE="trident"
+readonly __DEFAULT_TORC_NAME="trident"
 
 readonly __PRODUCTION_AUTOSUPPORT_URL="https://support.netapp.com/put/AsupPut"
 
@@ -171,14 +172,14 @@ get_configs() {
             TRIDENT_ACP_IMAGE_REPO="${TRIDENT_ACP_IMAGE_REPO:-"$(join_rpath "$ASTRA_BASE_REPO" "$__DEFAULT_TRIDENT_ACP_IMAGE_NAME")"}"
 
     # ------------ IMAGE TAG ------------
+    # Docker TAG environment variables
     TRIDENT_IMAGE_TAG="${TRIDENT_IMAGE_TAG:-$__TRIDENT_VERSION}"
         TRIDENT_OPERATOR_IMAGE_TAG="${TRIDENT_OPERATOR_IMAGE_TAG:-$TRIDENT_IMAGE_TAG}"
         TRIDENT_AUTOSUPPORT_IMAGE_TAG="${TRIDENT_AUTOSUPPORT_IMAGE_TAG:-$TRIDENT_IMAGE_TAG}"
-        TRIDENT_IMAGE_TAG="${TRIDENT_IMAGE_TAG:-$TRIDENT_IMAGE_TAG}"
         TRIDENT_ACP_IMAGE_TAG="${TRIDENT_ACP_IMAGE_TAG:-$TRIDENT_IMAGE_TAG}"
     CONNECTOR_OPERATOR_IMAGE_TAG="${CONNECTOR_OPERATOR_IMAGE_TAG:-"202405211614-main"}"
-    CONNECTOR_IMAGE_TAG="${CONNECTOR_IMAGE_TAG:-"0c72380"}"
-    NEPTUNE_IMAGE_TAG="${NEPTUNE_IMAGE_TAG:-"18998b7"}"
+
+
 
     # ------------ ASTRA CONNECTOR ------------
     ASTRA_CONTROL_URL="${ASTRA_CONTROL_URL:-"astra.netapp.io"}"
@@ -217,13 +218,13 @@ load_config_from_file_if_given() {
 
     # shellcheck disable=SC1090
     source "$config_file"
+    set_log_level
 
     # check if api token was populated after sourcing config file
     if [ "$api_token" != "$ASTRA_API_TOKEN" ]; then
         logwarn "$token_warning"
     fi
 
-    set_log_level
     logheader $__DEBUG "Loaded configuration from file: $config_file"
 }
 
@@ -376,6 +377,11 @@ config_image_is_custom() {
     local -r component_name="$1"
     local -r default_registry="$2"
     local -r default_base_repo="$3"
+    local -r default_tag="$4"
+    if [ $# -ne 4 ]; then
+      echo "config_image_is_custom() expects 4 arguments, but received $#."
+      return 1
+    fi
 
     [ -z "$component_name" ] && fatal "no component_name given"
 
@@ -386,7 +392,6 @@ config_image_is_custom() {
 
     local -r default_image_name_var="__DEFAULT_${component_name}_IMAGE_NAME"
     local -r default_repo="$(join_rpath "$default_base_repo" "${!default_image_name_var}")"
-    local -r default_tag="$__DEFAULT_IMAGE_TAG"
     local -r default_image="$(as_full_image "$default_registry" "$default_repo" "$default_tag")"
 
     [ -z "${!registry_var}" ] && fatal "component '$component_name' invalid: variable '$registry_var' is empty"
@@ -399,49 +404,51 @@ config_image_is_custom() {
 }
 
 config_trident_operator_image_is_custom() {
-    if config_image_is_custom "TRIDENT_OPERATOR" "$__DEFAULT_DOCKER_HUB_IMAGE_REGISTRY" "$__DEFAULT_DOCKER_HUB_IMAGE_BASE_REPO"; then
+    if config_image_is_custom "TRIDENT_OPERATOR" "$__DEFAULT_DOCKER_HUB_IMAGE_REGISTRY" "$__DEFAULT_DOCKER_HUB_IMAGE_BASE_REPO" "$__TRIDENT_VERSION"; then
         return 0
     fi
     return 1
 }
 
 config_trident_autosupport_image_is_custom() {
-    if config_image_is_custom "TRIDENT_AUTOSUPPORT" "$__DEFAULT_DOCKER_HUB_IMAGE_REGISTRY" "$__DEFAULT_DOCKER_HUB_IMAGE_BASE_REPO"; then
+    if config_image_is_custom "TRIDENT_AUTOSUPPORT" "$__DEFAULT_DOCKER_HUB_IMAGE_REGISTRY" "$__DEFAULT_DOCKER_HUB_IMAGE_BASE_REPO" "$__TRIDENT_VERSION"; then
         return 0
     fi
     return 1
 }
 
 config_trident_image_is_custom() {
-    if config_image_is_custom "TRIDENT" "$__DEFAULT_DOCKER_HUB_IMAGE_REGISTRY" "$__DEFAULT_DOCKER_HUB_IMAGE_BASE_REPO"; then
+    if config_image_is_custom "TRIDENT" "$__DEFAULT_DOCKER_HUB_IMAGE_REGISTRY" "$__DEFAULT_DOCKER_HUB_IMAGE_BASE_REPO" "$__TRIDENT_VERSION"; then
         return 0
     fi
     return 1
 }
 
 config_connector_operator_image_is_custom() {
-    if config_image_is_custom "CONNECTOR_OPERATOR" "$__DEFAULT_DOCKER_HUB_IMAGE_REGISTRY" "$__DEFAULT_DOCKER_HUB_IMAGE_BASE_REPO"; then
+    if config_image_is_custom "CONNECTOR_OPERATOR" "$__DEFAULT_DOCKER_HUB_IMAGE_REGISTRY" "$__DEFAULT_DOCKER_HUB_IMAGE_BASE_REPO" "$__TRIDENT_VERSION"; then
         return 0
     fi
     return 1
 }
 
 config_connector_image_is_custom() {
-    if config_image_is_custom "CONNECTOR" "$__DEFAULT_ASTRA_IMAGE_REGISTRY" "$__DEFAULT_ASTRA_IMAGE_BASE_REPO"; then
+    # CONNECTOR_IMAGE_TAG is optional, if the user set this consider it custom
+    if [ -n "$CONNECTOR_IMAGE_TAG" ]; then
         return 0
     fi
     return 1
 }
 
 config_neptune_image_is_custom() {
-    if config_image_is_custom "NEPTUNE" "$__DEFAULT_ASTRA_IMAGE_REGISTRY" "$__DEFAULT_ASTRA_IMAGE_BASE_REPO"; then
+    # NEPTUNE_IMAGE_TAG is optional, if the user set this consider it custom
+    if [ -n "$NEPTUNE_IMAGE_TAG" ]; then
         return 0
     fi
     return 1
 }
 
 config_acp_image_is_custom() {
-    if config_image_is_custom "TRIDENT_ACP" "$__DEFAULT_ASTRA_IMAGE_REGISTRY" "$__DEFAULT_ASTRA_IMAGE_BASE_REPO"; then
+    if config_image_is_custom "TRIDENT_ACP" "$__DEFAULT_ASTRA_IMAGE_REGISTRY" "$__DEFAULT_ASTRA_IMAGE_BASE_REPO" "$__TRIDENT_VERSION"; then
         return 0
     fi
     return 1
@@ -573,7 +580,7 @@ loginfo() {
 }
 
 logwarn() {
-    log_at_level $__WARN "$1"
+    log_at_level $__WARN "WARNING: $1"
 }
 
 logerror() {
@@ -820,12 +827,11 @@ tool_is_installed() {
     local -r tool="$1"
     if [ -z "$tool" ]; then fatal "no tool name provided"; fi
 
-    if
-        command -v "$tool" &>/dev/null
+    if command -v "$tool" &>/dev/null; then
         return 0
-    then
-        return 1
     fi
+
+    return 1
 }
 
 version_in_range() {
@@ -1096,7 +1102,13 @@ check_if_image_can_be_pulled_via_curl() {
     if [ "$SKIP_TLS_VALIDATION" == "true" ]; then
         args+=("-k")
     fi
-    args+=("-H" "Accept: application/vnd.docker.distribution.manifest.v2+json")
+    # We accept all formats via '*/*' because we only really care about the status code, but certain multi-platform
+    # images require a more specific format and will return 404 if we only use '*/*', so we add those formats as well
+    local accept_formats="*/*"
+    accept_formats+=", application/vnd.docker.distribution.manifest.list.v1+json"
+    accept_formats+=", application/vnd.docker.distribution.manifest.list.v2+json"
+    accept_formats+=", application/vnd.oci.image.index.v1+json" # Required for ACP
+    args+=("-H" "Accept: $accept_formats")
 
     local -r result="$(curl -X GET "${args[@]}" "https://$registry/v2/$image_repo/manifests/$image_tag" 2> "$__ERR_FILE")"
     local -r curl_err="$(get_captured_err)"
@@ -1370,6 +1382,33 @@ create_kubectl_patch_for_containers() {
     _return_value="$resource -n $namespace --type=json -p '$json_patch'"
 }
 
+backup_kubernetes_resource() {
+    local -r kind="$1"
+    local -r resource_name="$2"
+    local -r directory="$3"
+    local -r namespace="${4:-""}"
+
+    [ -z "$kind" ] && fatal "no kind given"
+    [ -z "$resource_name" ] && fatal "no resource_name given"
+    [ -z "$directory" ] && fatal "no directory given"
+    ! [ -d "$directory" ] && fatal "directory '$directory' does not exist"
+
+    local namespace_arg=""
+    local backup_name="BACKUP_"
+    if [ -n "$namespace" ]; then
+        namespace_arg="--namespace='$namespace'"
+        backup_name+="${namespace}_"
+    fi
+    backup_name+="${kind}_${resource_name}.yaml"
+
+    local -r resource_name_yaml="$(kubectl get "$kind" "$resource_name" "$namespace_arg" -o yaml 2> $__ERR_FILE)"
+    [ -z "$resource_name_yaml" ] && return 1
+    _return_error="$(get_captured_err)"
+
+    echo "$resource_name_yaml" > "${directory}/${backup_name}"
+    echo "$backup_name"
+}
+
 exit_if_problems() {
     if [ ${#_PROBLEMS[@]} -ne 0 ]; then
         debug_is_on && print_built_config
@@ -1406,8 +1445,6 @@ step_check_config() {
     connector_vars+=("CONNECTOR_IMAGE_REPO" "$CONNECTOR_IMAGE_REPO")
     connector_vars+=("NEPTUNE_IMAGE_REPO" "$NEPTUNE_IMAGE_REPO")
     connector_vars+=("CONNECTOR_OPERATOR_IMAGE_TAG" "$CONNECTOR_OPERATOR_IMAGE_TAG")
-    connector_vars+=("CONNECTOR_IMAGE_TAG" "$CONNECTOR_IMAGE_TAG")
-    connector_vars+=("NEPTUNE_IMAGE_TAG" "$NEPTUNE_IMAGE_TAG")
     connector_vars+=("ASTRA_CONTROL_URL" "$ASTRA_CONTROL_URL")
     connector_vars+=("ASTRA_API_TOKEN" "$ASTRA_API_TOKEN")
     connector_vars+=("ASTRA_ACCOUNT_ID" "$ASTRA_ACCOUNT_ID")
@@ -1501,8 +1538,14 @@ step_check_config() {
     add_to_config_builder "CONNECTOR_AUTOSUPPORT_ENROLLED"
     add_to_config_builder "CONNECTOR_AUTOSUPPORT_URL"
 
+    # Add our default labels
+    local -r label_indent="    "
+    local -a default_labels=("app.kubernetes.io/created-by=astra-cluster-install-script")
+    _PROCESSED_LABELS="$(process_labels_to_yaml "${default_labels[*]}" "$label_indent")"
+
+    # Add user's custom labels
     if [ -n "${LABELS}" ]; then
-        _PROCESSED_LABELS="$(process_labels_to_yaml "${LABELS}" "    ")"
+        _PROCESSED_LABELS+="${__NEWLINE}$(process_labels_to_yaml "${LABELS}" "$label_indent")"
         if [ -z "${_PROCESSED_LABELS}" ]; then
             add_problem "label processing: failed" "The given LABELS could not be parsed."
         fi
@@ -1638,13 +1681,40 @@ step_check_all_images_can_be_pulled() {
         if config_connector_operator_image_is_custom; then images_to_check+=("$custom")
         else images_to_check+=("$default"); fi
 
-        images_to_check+=("$CONNECTOR_IMAGE_REGISTRY" "$CONNECTOR_IMAGE_REPO" "$CONNECTOR_IMAGE_TAG")
-        if config_connector_image_is_custom; then images_to_check+=("$custom")
-        else images_to_check+=("$default"); fi
 
-        images_to_check+=("$NEPTUNE_IMAGE_REGISTRY" "$NEPTUNE_IMAGE_REPO" "$NEPTUNE_IMAGE_TAG")
-        if config_neptune_image_is_custom; then images_to_check+=("$custom")
-        else images_to_check+=("$default"); fi
+        if config_connector_image_is_custom; then
+          # Only check connector image if user has overridden the connector-operator's default.
+          # We do not know the default version and cannot check it due to it being hard coded within the connector-operator image.
+          images_to_check+=("$CONNECTOR_IMAGE_REGISTRY" "$CONNECTOR_IMAGE_REPO" "$CONNECTOR_IMAGE_TAG" "$custom")
+        else
+          # Get the default connector tag
+          local file_content
+          file_content=$(curl -sS "https://raw.githubusercontent.com/NetApp/astra-connector-operator/$CONNECTOR_OPERATOR_IMAGE_TAG/common/connector_version.txt")
+          # Trim new lines and white space
+          local -r connector_tag="${file_content//[[:space:]]/}"
+          if [ -z "$connector_tag" ]; then
+             logwarn "Cannot guarantee the existence of the Connector image due to a failure in resolving the default image tag, skipping check"
+          else
+            images_to_check+=("$CONNECTOR_IMAGE_REGISTRY" "$CONNECTOR_IMAGE_REPO" "$connector_tag" "$default")
+          fi
+        fi
+
+        if config_neptune_image_is_custom; then
+          # Only check neptune image if user has overridden the connector-operator's default.
+          # We do not know the default version and cannot check it due to it being hard coded within the connector-operator image.
+          images_to_check+=("$NEPTUNE_IMAGE_REGISTRY" "$NEPTUNE_IMAGE_REPO" "$NEPTUNE_IMAGE_TAG" "$custom")
+        else
+          # Get the default connector tag
+          local file_content
+          file_content=$(curl -sS "https://raw.githubusercontent.com/NetApp/astra-connector-operator/$CONNECTOR_OPERATOR_IMAGE_TAG/common/neptune_manager_tag.txt")
+          # Trim new lines and white space
+          local -r neptune_tag="${file_content//[[:space:]]/}"
+          if [ -z "$neptune_tag" ]; then
+             logwarn "Cannot guarantee the existence of the Neptune image due to a failure in resolving the default image tag, skipping check"
+          else
+            images_to_check+=("$NEPTUNE_IMAGE_REGISTRY" "$NEPTUNE_IMAGE_REPO" "$neptune_tag" "$default")
+          fi
+        fi
     fi
     if components_include_acp; then
       images_to_check+=("$TRIDENT_ACP_IMAGE_REGISTRY" "$TRIDENT_ACP_IMAGE_REPO" "$TRIDENT_ACP_IMAGE_TAG")
@@ -1717,7 +1787,7 @@ step_check_all_images_can_be_pulled() {
                 #
                 # And so, we'll try to check the image tag using the pull secret credentials (if provided),
                 # and it's great if it succeeds, but it's generally expected to fail.
-                logwarn "* Cannot guarantee the existence of custom Docker Hub image '$full_image', skipping."
+                logwarn "Cannot guarantee the existence of custom Docker Hub image '$full_image', skipping."
             elif [ "$status" != 200 ] || [ -n "$error" ]; then
                 add_problem "$problem: $error ($status)"
             fi
@@ -1837,7 +1907,7 @@ step_determine_resource_limit_preset() {
     fi
     exit_if_problems
 
-    loginfo "Resource limit preset is '$RESOURCE_LIMITS_PRESET'"
+    loginfo "* Resource limit preset is '$RESOURCE_LIMITS_PRESET'"
     add_to_config_builder RESOURCE_LIMITS_PRESET
     if [ "$RESOURCE_LIMITS_PRESET" == "$__RESOURCE_LIMITS_CUSTOM" ]; then
         if ! prompt_user_number_greater_than_zero RESOURCE_LIMITS_CUSTOM_CPU "Enter a CPU limit:"; then
@@ -1856,7 +1926,7 @@ step_determine_resource_limit_preset() {
     fi
 
     _PROCESSED_RESOURCE_LIMITS="{\"limits\": $(get_limits_for_preset "$RESOURCE_LIMITS_PRESET")}"
-    loginfo "Proceeding with resource limits: $(get_limits_for_preset_fancy "$RESOURCE_LIMITS_PRESET")"
+    loginfo "* Proceeding with resource limits: $(get_limits_for_preset_fancy "$RESOURCE_LIMITS_PRESET")"
 }
 
 step_init_generated_dirs_and_files() {
@@ -2022,12 +2092,8 @@ spec:
   imageRegistry:
     name: "${connector_registry}"
     secret: "${connector_regcred_name}"
-  astraConnect:
-    image: "${connector_tag}" # This field sets the tag, not the image
-  neptune:
-    image: "${neptune_tag}" # This field sets the tag, not the image
   autoSupport:
-    enrolled: ${connector_autosupport_enrolled} 
+    enrolled: ${connector_autosupport_enrolled}
     url: ${connector_autosupport_url}
   natsSyncClient:
     cloudBridgeURL: ${astra_url}
@@ -2035,6 +2101,17 @@ EOF
     if [ -n "$host_alias_ip" ]; then
         echo "    hostAliasIP: $host_alias_ip" >> "$crs_file"
     fi
+
+    if [ -n "$connector_tag" ]; then
+      echo "  astraConnect:" >> "$crs_file"
+      echo "    image: \"${connector_tag}\" # This field sets the tag, not the image" >> "$crs_file"
+    fi
+
+    if [ -n "$neptune_tag" ]; then
+      echo "  neptune:" >> "$crs_file"
+      echo "    image: \"${neptune_tag}\" # This field sets the tag, not the image" >> "$crs_file"
+    fi
+
     echo "---" >> "$crs_file"
 
     logdebug "$crs_file: OK"
@@ -2071,13 +2148,10 @@ step_collect_existing_trident_info() {
         logdebug "trident namespace '$trident_ns': not found"
         loginfo "* Trident Orchestrator exists, but configured namespace '$trident_ns' not found on cluster."
         return 0
-    else
-        logdebug "trident namespace '$trident_ns': OK"
     fi
     _EXISTING_TORC_NAME="$(echo "$torc_json" | jq -r '.metadata.name')"
     _EXISTING_TRIDENT_NAMESPACE="$trident_ns"
-    logdebug "trident orchestrator: $_EXISTING_TORC_NAME"
-    logdebug "trident namespace: $trident_ns"
+    loginfo "* Trident namespace: '$_EXISTING_TRIDENT_NAMESPACE'"
 
     # Trident image
     local -r trident_image="$(echo "$torc_json" | jq -r ".spec.tridentImage" 2> /dev/null)"
@@ -2158,6 +2232,7 @@ step_generate_trident_fresh_install_yaml() {
         "- https://github.com/NetApp-Polaris/astra-connector/trident-deploy-files-tmp?ref=$__GIT_REF_TRIDENT"
     logdebug "$kustomization_file: added resources entry for trident operator"
 
+    local -r torc_name="$__DEFAULT_TORC_NAME"
     local -r trident_image="$(get_config_trident_image)"
     local -r autosupport_image="$(get_config_trident_autosupport_image)"
     local -r acp_image="$(get_config_acp_image)"
@@ -2166,7 +2241,7 @@ step_generate_trident_fresh_install_yaml() {
     local enable_acp="true"
     local labels_field_and_content=""
     if [ -n "$IMAGE_PULL_SECRET" ]; then pull_secret='["'$IMAGE_PULL_SECRET'"]'; fi
-    if [ -n "$PROCESSED_LABELS" ]; then
+    if [ -n "$_PROCESSED_LABELS" ]; then
         labels_field_and_content="${__NEWLINE}  labels:${__NEWLINE}${_PROCESSED_LABELS}"
     fi
 
@@ -2174,7 +2249,7 @@ step_generate_trident_fresh_install_yaml() {
 apiVersion: trident.netapp.io/v1
 kind: TridentOrchestrator
 metadata:
-  name: "trident"
+  name: "$torc_name"
   namespace: "${namespace}"${labels_field_and_content}
 spec:
   autosupportImage: "${autosupport_image}"
@@ -2294,11 +2369,6 @@ step_apply_resources() {
     if [ -f "$crs_file_path" ]; then
         logdebug "apply CRs"
         if ! is_dry_run; then
-            if grep -q "AstraConnector" $crs_file_path; then
-                logdebug "delete previous astraconnect if it exists"
-                # Operator doesn't change the astraconnect spec automatically so we need to delete it first (if it exists)
-                kubectl delete -n "$(get_connector_namespace)" deploy/astraconnect &> /dev/null
-            fi
             output="$(kubectl apply -f "$crs_file_path")"
             logdebug "$output"
         else
@@ -2344,6 +2414,18 @@ step_apply_torc_patches() {
         disclaimer+="${__NEWLINE}# TridentOrchestrator resource when upgrading Trident or enabling ACP."
         disclaimer+="${__NEWLINE}"
         append_lines_to_file "${__GENERATED_PATCHES_TORC_FILE}" "$disclaimer" "${patches[@]}"
+    fi
+
+    # Take a backup of the TORC just in case
+    if [ -n "$_EXISTING_TORC_NAME" ]; then
+        local -r backup="$(backup_kubernetes_resource "tridentorchestrator" "$_EXISTING_TORC_NAME" "$__GENERATED_CRS_DIR")"
+        if [ -n "$backup" ]; then
+            loginfo "* Created backup for TridentOrchestrator '$_EXISTING_TORC_NAME': '$backup'"
+        elif [ -n "$_return_error" ]; then
+            logdebug "failed to create backup for TridentOrchestrator '$_EXISTING_TORC_NAME': $_return_error"
+        else
+            logdebug "failed to create backup for TridentOrchestrator '$_EXISTING_TORC_NAME': unknown error"
+        fi
     fi
 
     apply_kubectl_patches "${patches[@]}"
@@ -2453,12 +2535,13 @@ step_monitor_deployment_progress() {
         fi
     fi
 
+    local -r torc_name="${_EXISTING_TORC_NAME:-"$__DEFAULT_TORC_NAME"}"
     if trident_will_be_installed_or_modified; then
         if is_dry_run; then
             logdebug "skip monitoring trident components because it's a dry run"
         elif ! wait_for_deployment_running "trident-operator" "$trident_ns" "3"; then
             add_problem "trident operator: failed" "The Trident Operator failed to deploy"
-        elif ! wait_for_cr_state "torc/$_EXISTING_TORC_NAME" ".status.status" "Installed" "$trident_ns" "12"; then
+        elif ! wait_for_cr_state "torc/$torc_name" ".status.status" "Installed" "$trident_ns" "12"; then
             add_problem "trident: failed" "Trident failed to deploy: status never reached 'Installed'"
         fi
     fi

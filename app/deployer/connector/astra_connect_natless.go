@@ -80,7 +80,7 @@ func (d *AstraConnectDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx co
 						Env: []corev1.EnvVar{
 							{
 								Name:  "LOG_LEVEL", // todo should this match what operator is
-								Value: "trace",
+								Value: "info",
 							},
 							{
 								Name:  "NATS_DISABLED",
@@ -144,7 +144,25 @@ func (d *AstraConnectDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx co
 			},
 		}
 	}
-	return []client.Object{dep}, model.NonMutateFn, nil
+
+	mutateFunc := func() error {
+		// Get the containers
+		containers := dep.Spec.Template.Spec.Containers
+		newContainers := make([]corev1.Container, 0, 1)
+
+		for _, container := range containers {
+			if container.Name == common.AstraConnectName {
+				container.Image = connectorImage
+			}
+			newContainers = append(newContainers, container)
+		}
+
+		// Update the containers in the deployment
+		dep.Spec.Template.Spec.Containers = newContainers
+		return nil
+	}
+
+	return []client.Object{dep}, mutateFunc, nil
 }
 
 // GetServiceObjects returns an Astra-Connect Service object
@@ -223,6 +241,8 @@ func (d *AstraConnectDeployer) GetClusterRoleObjects(m *v1.AstraConnector, ctx c
 					"backuprestores",
 					"exechooks",
 					"exechooksruns",
+					"kopiavolumebackups",
+					"kopiavolumerestores",
 					"pvccopies",
 					"pvcerases",
 					"resourcebackups",
