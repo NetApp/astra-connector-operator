@@ -2544,7 +2544,7 @@ if trident_will_be_installed_or_modified; then
             if trident_image_needs_upgraded; then
                 # if trident version < 23.10
                 if version_higher_or_equal "23.07" "$_EXISTING_TRIDENT_VERSION"; then
-                    logwarn "Your Trident installation is at version 23.07, while the lowest required version to enable ACP is 23.10."
+                    logwarn "Your Trident installation is at version $_EXISTING_TRIDENT_VERSION, while the lowest required version to enable ACP is 23.10."
                 fi
 
                 if config_trident_image_is_custom; then
