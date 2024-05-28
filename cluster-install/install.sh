@@ -2094,7 +2094,7 @@ step_collect_existing_trident_info() {
         logwarn "Failed to resolve existing Trident version. ACP may not be supported without an upgrade!"
     else
         _EXISTING_TRIDENT_VERSION="$trident_version"
-        logdebug "trident version found: $trident_version"
+        loginfo "* Trident version: $trident_version"
     fi
 
     # ACP enabled/disabled
