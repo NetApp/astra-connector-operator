@@ -55,7 +55,7 @@ func (n NeptuneClientDeployerV2) GetDeploymentObjects(m *v1.AstraConnector, ctx 
 	}
 
 	neptuneImage = fmt.Sprintf("%s/controller:%s", imageRegistry, containerImage)
-	rbacProxyImage := fmt.Sprintf("%s/kube-rbac-proxy:v0.14.1", imageRegistry)
+	rbacProxyImage := fmt.Sprintf("%s/%s", imageRegistry, common.RbacProxyImage)
 	log.Info("Using Neptune image", "image", neptuneImage)
 
 	deploymentLabels := map[string]string{

@@ -30,7 +30,7 @@ const (
 	ConnectorV2Capability      = "connectorV2" // V2 refers specifically to Arch 3.0 connector and beyond
 	ConnectorWatcherCapability = "watcherV1"
 
-	AstraManagedClustersAPIVersion = "1.2"
+	RbacProxyImage = "kube-rbac-proxy:v0.14.1"
 )
 
 // Embed image tags
