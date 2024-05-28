@@ -138,32 +138,30 @@ jobs:
           make docker-push
 
       - name: Build Install YAMLs
-        if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-') }}
+#        if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-') }}
         run: |
           export VERSION=$(cat VERSION)
           make release
 
       - name: Build default-image manifest file
-        if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-') }}
+#        if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-') }}
         run: |
           export VERSION=$(cat VERSION)
           export MANIFEST_FILENAME=default-images-$VERSION.manifest
           export MANIFEST_FILEPATH=./$MANIFEST_FILENAME
           echo "MANIFEST_FILEPATH=$MANIFEST_FILEPATH" >> $GITHUB_ENV
           echo "MANIFEST_FILENAME=$MANIFEST_FILENAME" >> $GITHUB_ENV
-          export INSTALL_SCRIPT_FILENAME="install-$VERSION.sh"
-          echo "INSTALL_SCRIPT_FILENAME=$INSTALL_SCRIPT_FILENAME" >> $GITHUB_ENV
           go run scripts/create_default_images_manifest.go $MANIFEST_FILEPATH $VERSION
           cat $MANIFEST_FILEPATH
 
       - name: Get Version
-        if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-') }}
+#        if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-') }}
         id: vars
         run:
           echo ::set-output name=version::$(cat VERSION)
 
       - name: Create Release
-        if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-') }}
+#        if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-') }}
         id: create_release
         uses: actions/create-release@v1
         env:
@@ -172,11 +170,11 @@ jobs:
         with:
           tag_name: ${{ env.TAG_VERSION }}
           release_name: Release ${{ env.TAG_VERSION }}
-          draft: false
+          draft: true
           prerelease: false
 
       - name: Upload astraconnector yaml
-        if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-') }}
+#        if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-') }}
         id: upload-astraconnector-yaml
         uses: actions/upload-release-asset@v1
         env:
@@ -190,7 +188,7 @@ jobs:
           asset_content_type: text/yaml
 
       - name: Upload default-image manifest
-        if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-') }}
+#        if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-') }}
         id: upload-manifest
         uses: actions/upload-release-asset@v1
         env:
@@ -204,7 +202,7 @@ jobs:
           asset_content_type: text/plain
 
       - name: Upload astraconnector_operator.yaml
-        if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-') }}
+#        if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-') }}
         id: upload-astraconnector-operator-yaml
         uses: actions/upload-release-asset@v1
         env:
@@ -218,7 +216,7 @@ jobs:
           asset_content_type: text/yaml
 
       - name: Set install.sh versions
-        if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-') }}
+#        if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-') }}
         run: |
           export VERSION=$(cat VERSION)
           cp ./cluster-install/install.sh ./build/install.sh
@@ -226,13 +224,13 @@ jobs:
           sed -i "s/readonly __GIT_REF_CONNECTOR_OPERATOR=\"main\"/readonly __GIT_REF_CONNECTOR_OPERATOR=\"$VERSION\"/g" ./build/install.sh
 
       - name: Upload install.sh
-        if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-') }}
+#        if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-') }}
         id: upload-install-script
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           FILE_PATH: "./build/install.sh"
-          ASSET_NAME: ${{ env.INSTALL_SCRIPT_FILENAME }}
+          ASSET_NAME: "install.sh"
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ${{ env.FILE_PATH }}
@@ -240,7 +238,7 @@ jobs:
           asset_content_type: application/x-sh
 
       - name: Upload example env file
-        if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-') }}
+#        if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-') }}
         id: upload-example-install-env
         uses: actions/upload-release-asset@v1
         env:
