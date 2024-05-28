@@ -2564,11 +2564,20 @@ if trident_will_be_installed_or_modified; then
                 fi
 
                 if components_include_connector; then
-                    if prompt_user_yes_no "Would you like to upgrade Trident? If you choose no, ACP will remain disabled"; then
-                        step_generate_torc_patch "$_EXISTING_TORC_NAME" "$(get_config_trident_image)" "" "" "$(get_config_trident_autosupport_image)"
-                        trident_operator_image_needs_upgraded && step_generate_trident_operator_patch
+                    if acp_is_enabled; then
+                        if prompt_user_yes_no "Would you like to upgrade Trident?"; then
+                            step_generate_torc_patch "$_EXISTING_TORC_NAME" "$(get_config_trident_image)" "" "" "$(get_config_trident_autosupport_image)"
+                            trident_operator_image_needs_upgraded && step_generate_trident_operator_patch
+                        else
+                            loginfo "Trident will not be upgraded"
+                        fi
                     else
-                        loginfo "Trident will not be upgraded and ACP will remain disabled."
+                        if prompt_user_yes_no "Would you like to upgrade Trident? If you choose no, ACP will remain disabled"; then
+                            step_generate_torc_patch "$_EXISTING_TORC_NAME" "$(get_config_trident_image)" "" "" "$(get_config_trident_autosupport_image)"
+                            trident_operator_image_needs_upgraded && step_generate_trident_operator_patch
+                        else
+                            loginfo "Trident will not be upgraded and ACP will remain disabled."
+                        fi
                     fi
                 fi
             # Trident operator upgrade (standalone)
