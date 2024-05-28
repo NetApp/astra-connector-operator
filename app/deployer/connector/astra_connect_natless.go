@@ -126,7 +126,12 @@ func (d *AstraConnectDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx co
 						},
 						Resources: corev1.ResourceRequirements{
 							Limits: corev1.ResourceList{
-								corev1.ResourceCPU: resource.MustParse("0.1"),
+								// corev1.ResourceCPU:    resource.MustParse("1000m"), // todo set this from cr
+								corev1.ResourceMemory: resource.MustParse("1Gi"),
+							},
+							Requests: corev1.ResourceList{
+								corev1.ResourceCPU:    resource.MustParse("0.1"),
+								corev1.ResourceMemory: resource.MustParse("1Gi"),
 							},
 						},
 						SecurityContext: conf.GetSecurityContext(),

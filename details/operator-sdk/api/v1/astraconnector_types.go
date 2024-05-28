@@ -5,6 +5,7 @@
 package v1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -61,11 +62,13 @@ type AstraConnect struct {
 	Replicas int32 `json:"replicas,omitempty"`
 }
 
+// Neptune
 // +kubebuilder:validation:Optional
-
+// +kubebuilder:default={limits: {memory: "2Gi"}, requests: {cpu: "0.5", memory: "2Gi"}}
 type Neptune struct {
-	Image              string `json:"image,omitempty"`
-	JobImagePullPolicy string `json:"jobImagePullPolicy,omitempty"`
+	Image                string                      `json:"image,omitempty"`
+	JobImagePullPolicy   string                      `json:"jobImagePullPolicy,omitempty"`
+	ResourceRequirements corev1.ResourceRequirements `json:"resources,omitempty"`
 }
 
 // AstraConnectorSpec defines the desired state of AstraConnector

@@ -150,16 +150,7 @@ func (n NeptuneClientDeployerV2) GetDeploymentObjects(m *v1.AstraConnector, ctx 
 									Protocol:      corev1.ProtocolTCP,
 								},
 							},
-							Resources: corev1.ResourceRequirements{
-								Limits: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("1000m"),
-									corev1.ResourceMemory: resource.MustParse("256Mi"),
-								},
-								Requests: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("10m"),
-									corev1.ResourceMemory: resource.MustParse("128Mi"),
-								},
-							},
+							Resources: m.Spec.Neptune.ResourceRequirements,
 							SecurityContext: &corev1.SecurityContext{
 								AllowPrivilegeEscalation: pointer.Bool(false),
 							},
