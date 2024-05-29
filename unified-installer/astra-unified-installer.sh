@@ -1548,7 +1548,7 @@ step_check_config() {
 
     # Add our default labels
     local -r label_indent="    "
-    local -a default_labels=("app.kubernetes.io/created-by=astra-cluster-install-script")
+    local -a default_labels=("app.kubernetes.io/created-by=astra-unified-installer")
     _PROCESSED_LABELS_WITH_DEFAULT="$(process_labels_to_yaml "${default_labels[*]}" "$label_indent")"
 
     # Add user's custom labels
@@ -2032,7 +2032,7 @@ step_generate_astra_connector_yaml() {
     local -r encoded_creds=$(echo -n "$username:$password" | base64)
 
     insert_into_file_after_pattern "$kustomization_file" "resources:" \
-        "- https://github.com/NetApp/astra-connector-operator/cluster-install/?ref=$__GIT_REF_CONNECTOR_OPERATOR"
+        "- https://github.com/NetApp/astra-connector-operator/unified-installer/?ref=$__GIT_REF_CONNECTOR_OPERATOR"
     logdebug "$kustomization_file: added resources entry for connector kustomization"
 
     # NATLESS feature flag patch

@@ -219,7 +219,7 @@ jobs:
         if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-') }}
         run: |
           export VERSION=$(cat VERSION)
-          cp ./cluster-install/astra-unified-installer.sh ./build/astra-unified-installer.sh
+          cp ./unified-installer/astra-unified-installer.sh ./build/astra-unified-installer.sh
           sed -i "s/readonly __DEFAULT_CONNECTOR_OPERATOR_IMAGE_TAG=\"\"/readonly __DEFAULT_CONNECTOR_OPERATOR_IMAGE_TAG=\"$VERSION\"/g" ./build/astra-unified-installer.sh
           sed -i "s/readonly __GIT_REF_CONNECTOR_OPERATOR=\"main\"/readonly __GIT_REF_CONNECTOR_OPERATOR=\"$VERSION\"/g" ./build/astra-unified-installer.sh
 
@@ -243,7 +243,7 @@ jobs:
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          FILE_PATH: "./cluster-install/install-example-config.env"
+          FILE_PATH: "./unified-installer/install-example-config.env"
           ASSET_NAME: "install-example-config.env"
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
