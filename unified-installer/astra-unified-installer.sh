@@ -30,7 +30,7 @@ _PATCHES_TORC=() # Patches for the TridentOrchestrator
 _PATCHES_TRIDENT_OPERATOR=() # Patches for the Trident Operator
 
 # _PROCESSED_LABELS_WITH_DEFAULT will contain an already indented, YAML-compliant "map" (in string form) of the given LABELS.
-# Example: "    label1: value1\n    label2: value2\n    label3: value3" plus app.kubernetes.io/created-by: astra-cluster-install-script
+# Example: "    label1: value1\n    label2: value2\n    label3: value3" plus app.kubernetes.io/created-by: astra-unified-installer
 _PROCESSED_LABELS_WITH_DEFAULT=""
 
 # _PROCESSED_LABELS will contain an already indented, YAML-compliant "map" (in string form) of the given LABELS.
