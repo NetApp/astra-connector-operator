@@ -215,22 +215,22 @@ jobs:
           asset_name: ${{ env.ASSET_NAME }}
           asset_content_type: text/yaml
 
-      - name: Set install.sh versions
+      - name: Set astra-unified-installer.sh default versions
         if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-') }}
         run: |
           export VERSION=$(cat VERSION)
-          cp ./cluster-install/install.sh ./build/install.sh
-          sed -i "s/readonly __DEFAULT_CONNECTOR_OPERATOR_IMAGE_TAG=\"\"/readonly __DEFAULT_CONNECTOR_OPERATOR_IMAGE_TAG=\"$VERSION\"/g" ./build/install.sh
-          sed -i "s/readonly __GIT_REF_CONNECTOR_OPERATOR=\"main\"/readonly __GIT_REF_CONNECTOR_OPERATOR=\"$VERSION\"/g" ./build/install.sh
+          cp ./cluster-install/astra-unified-installer.sh ./build/astra-unified-installer.sh
+          sed -i "s/readonly __DEFAULT_CONNECTOR_OPERATOR_IMAGE_TAG=\"\"/readonly __DEFAULT_CONNECTOR_OPERATOR_IMAGE_TAG=\"$VERSION\"/g" ./build/astra-unified-installer.sh
+          sed -i "s/readonly __GIT_REF_CONNECTOR_OPERATOR=\"main\"/readonly __GIT_REF_CONNECTOR_OPERATOR=\"$VERSION\"/g" ./build/astra-unified-installer.sh
 
-      - name: Upload install.sh
+      - name: Upload astra-unified-installer.sh
         if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-') }}
         id: upload-install-script
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          FILE_PATH: "./build/install.sh"
-          ASSET_NAME: "install.sh"
+          FILE_PATH: "./build/astra-unified-installer.sh"
+          ASSET_NAME: "astra-unified-installer.sh"
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ${{ env.FILE_PATH }}
