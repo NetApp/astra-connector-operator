@@ -46,6 +46,7 @@ readonly __TRIDENT_VERSION="${__TRIDENT_VERSION_OVERRIDE:-"$__RELEASE_VERSION"}"
 
 readonly -a __REQUIRED_TOOLS=("git" "jq" "kubectl" "curl" "grep" "sort" "uniq" "find" "base64" "wc" "awk")
 
+# __GIT_REF_CONNECTOR_OPERATOR is set via github Actions when added to the Git Release
 readonly __GIT_REF_CONNECTOR_OPERATOR="main" # Determines the ACOP branch from which the kustomize resources will be pulled
 readonly __GIT_REF_TRIDENT="ASTRACTL-32138-temporary-stand-in" # Determines the Trident branch from which the kustomize resources will be pulled
 
@@ -177,11 +178,14 @@ get_configs() {
 
     # ------------ IMAGE TAG ------------
     # Docker TAG environment variables
+    # __DEFAULT_CONNECTOR_OPERATOR_IMAGE_TAG is set via Github Actions before adding this script to the Git Release
+    readonly __DEFAULT_CONNECTOR_OPERATOR_IMAGE_TAG=""
+
     TRIDENT_IMAGE_TAG="${TRIDENT_IMAGE_TAG:-$__TRIDENT_VERSION}"
         TRIDENT_OPERATOR_IMAGE_TAG="${TRIDENT_OPERATOR_IMAGE_TAG:-$TRIDENT_IMAGE_TAG}"
         TRIDENT_AUTOSUPPORT_IMAGE_TAG="${TRIDENT_AUTOSUPPORT_IMAGE_TAG:-$TRIDENT_IMAGE_TAG}"
         TRIDENT_ACP_IMAGE_TAG="${TRIDENT_ACP_IMAGE_TAG:-$TRIDENT_IMAGE_TAG}"
-    CONNECTOR_OPERATOR_IMAGE_TAG="${CONNECTOR_OPERATOR_IMAGE_TAG:-"202405211614-main"}"
+    CONNECTOR_OPERATOR_IMAGE_TAG="${CONNECTOR_OPERATOR_IMAGE_TAG:-$__DEFAULT_CONNECTOR_OPERATOR_IMAGE_TAG}"
 
 
 

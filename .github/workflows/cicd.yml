@@ -214,3 +214,39 @@ jobs:
           asset_path: ${{ env.FILE_PATH }}
           asset_name: ${{ env.ASSET_NAME }}
           asset_content_type: text/yaml
+
+      - name: Set astra-unified-installer.sh default versions
+        if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-') }}
+        run: |
+          export VERSION=$(cat VERSION)
+          cp ./cluster-install/astra-unified-installer.sh ./build/astra-unified-installer.sh
+          sed -i "s/readonly __DEFAULT_CONNECTOR_OPERATOR_IMAGE_TAG=\"\"/readonly __DEFAULT_CONNECTOR_OPERATOR_IMAGE_TAG=\"$VERSION\"/g" ./build/astra-unified-installer.sh
+          sed -i "s/readonly __GIT_REF_CONNECTOR_OPERATOR=\"main\"/readonly __GIT_REF_CONNECTOR_OPERATOR=\"$VERSION\"/g" ./build/astra-unified-installer.sh
+
+      - name: Upload astra-unified-installer.sh
+        if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-') }}
+        id: upload-install-script
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FILE_PATH: "./build/astra-unified-installer.sh"
+          ASSET_NAME: "astra-unified-installer.sh"
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ env.FILE_PATH }}
+          asset_name: ${{ env.ASSET_NAME }}
+          asset_content_type: application/x-sh
+
+      - name: Upload example env file
+        if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-') }}
+        id: upload-example-install-env
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FILE_PATH: "./cluster-install/install-example-config.env"
+          ASSET_NAME: "install-example-config.env"
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ env.FILE_PATH }}
+          asset_name: ${{ env.ASSET_NAME }}
+          asset_content_type: text/plain
