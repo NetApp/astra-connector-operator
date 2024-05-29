@@ -29,6 +29,10 @@ _EXISTING_TRIDENT_OPERATOR_IMAGE=""
 _PATCHES_TORC=() # Patches for the TridentOrchestrator
 _PATCHES_TRIDENT_OPERATOR=() # Patches for the Trident Operator
 
+# _PROCESSED_LABELS_WITH_DEFAULT will contain an already indented, YAML-compliant "map" (in string form) of the given LABELS.
+# Example: "    label1: value1\n    label2: value2\n    label3: value3" plus app.kubernetes.io/created-by: astra-cluster-install-script
+_PROCESSED_LABELS_WITH_DEFAULT=""
+
 # _PROCESSED_LABELS will contain an already indented, YAML-compliant "map" (in string form) of the given LABELS.
 # Example: "    label1: value1\n    label2: value2\n    label3: value3"
 _PROCESSED_LABELS=""
@@ -1541,16 +1545,25 @@ step_check_config() {
     # Add our default labels
     local -r label_indent="    "
     local -a default_labels=("app.kubernetes.io/created-by=astra-cluster-install-script")
-    _PROCESSED_LABELS="$(process_labels_to_yaml "${default_labels[*]}" "$label_indent")"
+    _PROCESSED_LABELS_WITH_DEFAULT="$(process_labels_to_yaml "${default_labels[*]}" "$label_indent")"
 
     # Add user's custom labels
     if [ -n "${LABELS}" ]; then
-        _PROCESSED_LABELS+="${__NEWLINE}$(process_labels_to_yaml "${LABELS}" "$label_indent")"
-        if [ -z "${_PROCESSED_LABELS}" ]; then
+        _PROCESSED_LABELS_WITH_DEFAULT+="${__NEWLINE}$(process_labels_to_yaml "${LABELS}" "$label_indent")"
+        if [ -z "${_PROCESSED_LABELS_WITH_DEFAULT}" ]; then
             add_problem "label processing: failed" "The given LABELS could not be parsed."
         fi
     fi
     add_to_config_builder "LABELS"
+
+     # Add user's custom labels
+        if [ -n "${LABELS}" ]; then
+            _PROCESSED_LABELS+="$(process_labels_to_yaml "${LABELS}" "$label_indent")"
+            if [ -z "${_PROCESSED_LABELS}" ]; then
+                add_problem "label processing: failed" "The given LABELS could not be parsed."
+            fi
+        fi
+        add_to_config_builder "LABELS"
 }
 
 step_check_tools_are_installed() {
@@ -2072,6 +2085,10 @@ EOF
     logdebug "$kustomization_file: added secrets"
 
     # ASTRA CONNECTOR CR
+    local labels_field_and_content_with_default=""
+        if [ -n "$_PROCESSED_LABELS_WITH_DEFAULT" ]; then
+            labels_field_and_content_with_default="${__NEWLINE}  labels:${__NEWLINE}${_PROCESSED_LABELS_WITH_DEFAULT}"
+        fi
     local labels_field_and_content=""
     if [ -n "$_PROCESSED_LABELS" ]; then
         labels_field_and_content="${__NEWLINE}  labels:${__NEWLINE}${_PROCESSED_LABELS}"
@@ -2081,14 +2098,14 @@ apiVersion: astra.netapp.io/v1
 kind: AstraConnector
 metadata:
   name: astra-connector
-  namespace: "${connector_namespace}"${labels_field_and_content}
+  namespace: "${connector_namespace}"${labels_field_and_content_with_default}
 spec:
   astra:
     accountId: ${account_id}
     tokenRef: astra-api-token
     cloudId: ${cloud_id}
     clusterId: ${cluster_id}
-    skipTLSValidation: ${skip_tls_validation}  # Should be set to false in production environments
+    skipTLSValidation: ${skip_tls_validation}  # Should be set to false in production environments${labels_field_and_content}
   imageRegistry:
     name: "${connector_registry}"
     secret: "${connector_regcred_name}"
@@ -2241,8 +2258,8 @@ step_generate_trident_fresh_install_yaml() {
     local enable_acp="true"
     local labels_field_and_content=""
     if [ -n "$IMAGE_PULL_SECRET" ]; then pull_secret='["'$IMAGE_PULL_SECRET'"]'; fi
-    if [ -n "$_PROCESSED_LABELS" ]; then
-        labels_field_and_content="${__NEWLINE}  labels:${__NEWLINE}${_PROCESSED_LABELS}"
+    if [ -n "$_PROCESSED_LABELS_WITH_DEFAULT" ]; then
+        labels_field_and_content="${__NEWLINE}  labels:${__NEWLINE}${$_PROCESSED_LABELS_WITH_DEFAULT}"
     fi
 
     cat <<EOF >> "$crs_file"
@@ -2699,7 +2716,7 @@ if trident_will_be_installed_or_modified; then
 fi
 
 # IMAGE REMAPS, LABELS, RESOURCE LIMITS yaml
-step_add_labels_to_kustomization "${_PROCESSED_LABELS}" "${__GENERATED_KUSTOMIZATION_FILE}" "${__GENERATED_CRS_FILE}"
+step_add_labels_to_kustomization "${_PROCESSED_LABELS_WITH_DEFAULT}" "${__GENERATED_KUSTOMIZATION_FILE}" "${__GENERATED_CRS_FILE}"
 step_add_image_remaps_to_kustomization
 exit_if_problems
 
