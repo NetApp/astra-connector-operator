@@ -19,6 +19,7 @@ _TRIDENT_COLLECTION_STEP_CALLED="false"
 _EXISTING_TORC_NAME="" # TORC is short for TridentOrchestrator (works with kubectl too)
 _EXISTING_TRIDENT_NAMESPACE=""
 _EXISTING_TRIDENT_IMAGE=""
+_EXISTING_TRIDENT_VERSION=""
 _EXISTING_TRIDENT_ACP_ENABLED=""
 _EXISTING_TRIDENT_ACP_IMAGE=""
 _EXISTING_TRIDENT_OPERATOR_IMAGE=""
@@ -27,6 +28,10 @@ _EXISTING_TRIDENT_OPERATOR_IMAGE=""
 # Entries should omit the 'kubectl patch' from the command, e.g. `deploy/astraconnect -n astra --type=json -p '[...]'`
 _PATCHES_TORC=() # Patches for the TridentOrchestrator
 _PATCHES_TRIDENT_OPERATOR=() # Patches for the Trident Operator
+
+# _PROCESSED_LABELS_WITH_DEFAULT will contain an already indented, YAML-compliant "map" (in string form) of the given LABELS.
+# Example: "    label1: value1\n    label2: value2\n    label3: value3" plus app.kubernetes.io/created-by: astra-cluster-install-script
+_PROCESSED_LABELS_WITH_DEFAULT=""
 
 # _PROCESSED_LABELS will contain an already indented, YAML-compliant "map" (in string form) of the given LABELS.
 # Example: "    label1: value1\n    label2: value2\n    label3: value3"
@@ -1540,16 +1545,25 @@ step_check_config() {
     # Add our default labels
     local -r label_indent="    "
     local -a default_labels=("app.kubernetes.io/created-by=astra-cluster-install-script")
-    _PROCESSED_LABELS="$(process_labels_to_yaml "${default_labels[*]}" "$label_indent")"
+    _PROCESSED_LABELS_WITH_DEFAULT="$(process_labels_to_yaml "${default_labels[*]}" "$label_indent")"
 
     # Add user's custom labels
     if [ -n "${LABELS}" ]; then
-        _PROCESSED_LABELS+="${__NEWLINE}$(process_labels_to_yaml "${LABELS}" "$label_indent")"
-        if [ -z "${_PROCESSED_LABELS}" ]; then
+        _PROCESSED_LABELS_WITH_DEFAULT+="${__NEWLINE}$(process_labels_to_yaml "${LABELS}" "$label_indent")"
+        if [ -z "${_PROCESSED_LABELS_WITH_DEFAULT}" ]; then
             add_problem "label processing: failed" "The given LABELS could not be parsed."
         fi
     fi
     add_to_config_builder "LABELS"
+
+     # Add user's custom labels
+        if [ -n "${LABELS}" ]; then
+            _PROCESSED_LABELS+="$(process_labels_to_yaml "${LABELS}" "$label_indent")"
+            if [ -z "${_PROCESSED_LABELS}" ]; then
+                add_problem "label processing: failed" "The given LABELS could not be parsed."
+            fi
+        fi
+        add_to_config_builder "LABELS"
 }
 
 step_check_tools_are_installed() {
@@ -2071,6 +2085,10 @@ EOF
     logdebug "$kustomization_file: added secrets"
 
     # ASTRA CONNECTOR CR
+    local labels_field_and_content_with_default=""
+        if [ -n "$_PROCESSED_LABELS_WITH_DEFAULT" ]; then
+            labels_field_and_content_with_default="${__NEWLINE}  labels:${__NEWLINE}${_PROCESSED_LABELS_WITH_DEFAULT}"
+        fi
     local labels_field_and_content=""
     if [ -n "$_PROCESSED_LABELS" ]; then
         labels_field_and_content="${__NEWLINE}  labels:${__NEWLINE}${_PROCESSED_LABELS}"
@@ -2080,14 +2098,14 @@ apiVersion: astra.netapp.io/v1
 kind: AstraConnector
 metadata:
   name: astra-connector
-  namespace: "${connector_namespace}"${labels_field_and_content}
+  namespace: "${connector_namespace}"${labels_field_and_content_with_default}
 spec:
   astra:
     accountId: ${account_id}
     tokenRef: astra-api-token
     cloudId: ${cloud_id}
     clusterId: ${cluster_id}
-    skipTLSValidation: ${skip_tls_validation}  # Should be set to false in production environments
+    skipTLSValidation: ${skip_tls_validation}  # Should be set to false in production environments${labels_field_and_content}
   imageRegistry:
     name: "${connector_registry}"
     secret: "${connector_regcred_name}"
@@ -2161,6 +2179,15 @@ step_collect_existing_trident_info() {
         logdebug "trident image: not found"
     fi
 
+    # Trident version
+    local -r trident_version="$(kubectl get tridentversions -n trident -o json | jq -r '.items.[0].trident_version' 2> /dev/null)"
+    if [ -z "$trident_version" ]; then
+        logwarn "Failed to resolve existing Trident version. ACP may not be supported without an upgrade!"
+    else
+        _EXISTING_TRIDENT_VERSION="$trident_version"
+        loginfo "* Trident version: $trident_version"
+    fi
+
     # ACP enabled/disabled
     local -r acp_enabled="$(echo "$torc_json" | jq -r '.spec.enableACP' 2> /dev/null)"
     if [ "$acp_enabled" == "true" ]; then
@@ -2231,8 +2258,8 @@ step_generate_trident_fresh_install_yaml() {
     local enable_acp="true"
     local labels_field_and_content=""
     if [ -n "$IMAGE_PULL_SECRET" ]; then pull_secret='["'$IMAGE_PULL_SECRET'"]'; fi
-    if [ -n "$_PROCESSED_LABELS" ]; then
-        labels_field_and_content="${__NEWLINE}  labels:${__NEWLINE}${_PROCESSED_LABELS}"
+    if [ -n "$_PROCESSED_LABELS_WITH_DEFAULT" ]; then
+        labels_field_and_content="${__NEWLINE}  labels:${__NEWLINE}${$_PROCESSED_LABELS_WITH_DEFAULT}"
     fi
 
     cat <<EOF >> "$crs_file"
@@ -2615,11 +2642,43 @@ if trident_will_be_installed_or_modified; then
         if components_include_trident; then
             # Trident upgrade (includes operator upgrade if needed)
             if trident_image_needs_upgraded; then
-                if config_trident_image_is_custom || prompt_user_yes_no "Would you like to upgrade Trident?"; then
-                    step_generate_torc_patch "$_EXISTING_TORC_NAME" "$(get_config_trident_image)" "" "" "$(get_config_trident_autosupport_image)"
-                    trident_operator_image_needs_upgraded && step_generate_trident_operator_patch
-                else
-                    loginfo "Trident will not be upgraded."
+                # if trident version < 23.10
+                if version_higher_or_equal "23.07" "$_EXISTING_TRIDENT_VERSION"; then
+                    logwarn "Your Trident installation is at version $_EXISTING_TRIDENT_VERSION, while the lowest required version to enable ACP is 23.10."
+                fi
+
+                if config_trident_image_is_custom; then
+                    local -r custom_image="$(as_full_image "$TRIDENT_IMAGE_REGISTRY" "$TRIDENT_IMAGE_REPO" "$TRIDENT_IMAGE_TAG")"
+                    local warning_message="Warning: we cannot verify the version of the custom Trident image you provided"
+                    warning_message += " ($custom_image). ACP support cannot be guaranteed if upgrading to that image."
+                    logwarn "$warning_message"
+                fi
+
+                if ! components_include_connector && (components_include_trident || components_include_acp); then
+                    if prompt_user_yes_no "Would you like to upgrade Trident? Choosing no will exit the script (yes/no):"; then
+                        step_generate_torc_patch "$_EXISTING_TORC_NAME" "$(get_config_trident_image)" "" "" "$(get_config_trident_autosupport_image)"
+                        trident_operator_image_needs_upgraded && step_generate_trident_operator_patch
+                    else
+                        exit 0
+                    fi
+                fi
+
+                if components_include_connector; then
+                    if acp_is_enabled; then
+                        if prompt_user_yes_no "Would you like to upgrade Trident?"; then
+                            step_generate_torc_patch "$_EXISTING_TORC_NAME" "$(get_config_trident_image)" "" "" "$(get_config_trident_autosupport_image)"
+                            trident_operator_image_needs_upgraded && step_generate_trident_operator_patch
+                        else
+                            loginfo "Trident will not be upgraded"
+                        fi
+                    else
+                        if prompt_user_yes_no "Would you like to upgrade Trident? If you choose no, ACP will remain disabled"; then
+                            step_generate_torc_patch "$_EXISTING_TORC_NAME" "$(get_config_trident_image)" "" "" "$(get_config_trident_autosupport_image)"
+                            trident_operator_image_needs_upgraded && step_generate_trident_operator_patch
+                        else
+                            loginfo "Trident will not be upgraded and ACP will remain disabled."
+                        fi
+                    fi
                 fi
             # Trident operator upgrade (standalone)
             elif trident_operator_image_needs_upgraded; then
@@ -2657,7 +2716,7 @@ if trident_will_be_installed_or_modified; then
 fi
 
 # IMAGE REMAPS, LABELS, RESOURCE LIMITS yaml
-step_add_labels_to_kustomization "${_PROCESSED_LABELS}" "${__GENERATED_KUSTOMIZATION_FILE}" "${__GENERATED_CRS_FILE}"
+step_add_labels_to_kustomization "${_PROCESSED_LABELS_WITH_DEFAULT}" "${__GENERATED_KUSTOMIZATION_FILE}" "${__GENERATED_CRS_FILE}"
 step_add_image_remaps_to_kustomization
 exit_if_problems
 
