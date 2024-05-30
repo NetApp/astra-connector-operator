@@ -29,6 +29,10 @@ _EXISTING_TRIDENT_OPERATOR_IMAGE=""
 _PATCHES_TORC=() # Patches for the TridentOrchestrator
 _PATCHES_TRIDENT_OPERATOR=() # Patches for the Trident Operator
 
+# _PROCESSED_LABELS_WITH_DEFAULT will contain an already indented, YAML-compliant "map" (in string form) of the given LABELS.
+# Example: "    label1: value1\n    label2: value2\n    label3: value3" plus app.kubernetes.io/created-by: astra-unified-installer
+_PROCESSED_LABELS_WITH_DEFAULT=""
+
 # _PROCESSED_LABELS will contain an already indented, YAML-compliant "map" (in string form) of the given LABELS.
 # Example: "    label1: value1\n    label2: value2\n    label3: value3"
 _PROCESSED_LABELS=""
@@ -42,6 +46,7 @@ readonly __TRIDENT_VERSION="${__TRIDENT_VERSION_OVERRIDE:-"$__RELEASE_VERSION"}"
 
 readonly -a __REQUIRED_TOOLS=("git" "jq" "kubectl" "curl" "grep" "sort" "uniq" "find" "base64" "wc" "awk")
 
+# __GIT_REF_CONNECTOR_OPERATOR is set via github Actions when added to the Git Release
 readonly __GIT_REF_CONNECTOR_OPERATOR="main" # Determines the ACOP branch from which the kustomize resources will be pulled
 readonly __GIT_REF_TRIDENT="ASTRACTL-32138-temporary-stand-in" # Determines the Trident branch from which the kustomize resources will be pulled
 
@@ -173,11 +178,14 @@ get_configs() {
 
     # ------------ IMAGE TAG ------------
     # Docker TAG environment variables
+    # __DEFAULT_CONNECTOR_OPERATOR_IMAGE_TAG is set via Github Actions before adding this script to the Git Release
+    readonly __DEFAULT_CONNECTOR_OPERATOR_IMAGE_TAG=""
+
     TRIDENT_IMAGE_TAG="${TRIDENT_IMAGE_TAG:-$__TRIDENT_VERSION}"
         TRIDENT_OPERATOR_IMAGE_TAG="${TRIDENT_OPERATOR_IMAGE_TAG:-$TRIDENT_IMAGE_TAG}"
         TRIDENT_AUTOSUPPORT_IMAGE_TAG="${TRIDENT_AUTOSUPPORT_IMAGE_TAG:-$TRIDENT_IMAGE_TAG}"
         TRIDENT_ACP_IMAGE_TAG="${TRIDENT_ACP_IMAGE_TAG:-$TRIDENT_IMAGE_TAG}"
-    CONNECTOR_OPERATOR_IMAGE_TAG="${CONNECTOR_OPERATOR_IMAGE_TAG:-"202405211614-main"}"
+    CONNECTOR_OPERATOR_IMAGE_TAG="${CONNECTOR_OPERATOR_IMAGE_TAG:-$__DEFAULT_CONNECTOR_OPERATOR_IMAGE_TAG}"
 
 
 
@@ -1540,17 +1548,26 @@ step_check_config() {
 
     # Add our default labels
     local -r label_indent="    "
-    local -a default_labels=("app.kubernetes.io/created-by=astra-cluster-install-script")
-    _PROCESSED_LABELS="$(process_labels_to_yaml "${default_labels[*]}" "$label_indent")"
+    local -a default_labels=("app.kubernetes.io/created-by=astra-unified-installer")
+    _PROCESSED_LABELS_WITH_DEFAULT="$(process_labels_to_yaml "${default_labels[*]}" "$label_indent")"
 
     # Add user's custom labels
     if [ -n "${LABELS}" ]; then
-        _PROCESSED_LABELS+="${__NEWLINE}$(process_labels_to_yaml "${LABELS}" "$label_indent")"
-        if [ -z "${_PROCESSED_LABELS}" ]; then
+        _PROCESSED_LABELS_WITH_DEFAULT+="${__NEWLINE}$(process_labels_to_yaml "${LABELS}" "$label_indent")"
+        if [ -z "${_PROCESSED_LABELS_WITH_DEFAULT}" ]; then
             add_problem "label processing: failed" "The given LABELS could not be parsed."
         fi
     fi
     add_to_config_builder "LABELS"
+
+     # Add user's custom labels
+        if [ -n "${LABELS}" ]; then
+            _PROCESSED_LABELS+="$(process_labels_to_yaml "${LABELS}" "$label_indent")"
+            if [ -z "${_PROCESSED_LABELS}" ]; then
+                add_problem "label processing: failed" "The given LABELS could not be parsed."
+            fi
+        fi
+        add_to_config_builder "LABELS"
 }
 
 step_check_tools_are_installed() {
@@ -2015,7 +2032,7 @@ step_generate_astra_connector_yaml() {
     local -r encoded_creds=$(echo -n "$username:$password" | base64)
 
     insert_into_file_after_pattern "$kustomization_file" "resources:" \
-        "- https://github.com/NetApp/astra-connector-operator/cluster-install/?ref=$__GIT_REF_CONNECTOR_OPERATOR"
+        "- https://github.com/NetApp/astra-connector-operator/unified-installer/?ref=$__GIT_REF_CONNECTOR_OPERATOR"
     logdebug "$kustomization_file: added resources entry for connector kustomization"
 
     # NATLESS feature flag patch
@@ -2072,6 +2089,10 @@ EOF
     logdebug "$kustomization_file: added secrets"
 
     # ASTRA CONNECTOR CR
+    local labels_field_and_content_with_default=""
+        if [ -n "$_PROCESSED_LABELS_WITH_DEFAULT" ]; then
+            labels_field_and_content_with_default="${__NEWLINE}  labels:${__NEWLINE}${_PROCESSED_LABELS_WITH_DEFAULT}"
+        fi
     local labels_field_and_content=""
     if [ -n "$_PROCESSED_LABELS" ]; then
         labels_field_and_content="${__NEWLINE}  labels:${__NEWLINE}${_PROCESSED_LABELS}"
@@ -2081,14 +2102,14 @@ apiVersion: astra.netapp.io/v1
 kind: AstraConnector
 metadata:
   name: astra-connector
-  namespace: "${connector_namespace}"${labels_field_and_content}
+  namespace: "${connector_namespace}"${labels_field_and_content_with_default}
 spec:
   astra:
     accountId: ${account_id}
     tokenRef: astra-api-token
     cloudId: ${cloud_id}
     clusterId: ${cluster_id}
-    skipTLSValidation: ${skip_tls_validation}  # Should be set to false in production environments
+    skipTLSValidation: ${skip_tls_validation}  # Should be set to false in production environments${labels_field_and_content}
   imageRegistry:
     name: "${connector_registry}"
     secret: "${connector_regcred_name}"
@@ -2241,8 +2262,8 @@ step_generate_trident_fresh_install_yaml() {
     local enable_acp="true"
     local labels_field_and_content=""
     if [ -n "$IMAGE_PULL_SECRET" ]; then pull_secret='["'$IMAGE_PULL_SECRET'"]'; fi
-    if [ -n "$_PROCESSED_LABELS" ]; then
-        labels_field_and_content="${__NEWLINE}  labels:${__NEWLINE}${_PROCESSED_LABELS}"
+    if [ -n "$_PROCESSED_LABELS_WITH_DEFAULT" ]; then
+        labels_field_and_content="${__NEWLINE}  labels:${__NEWLINE}${$_PROCESSED_LABELS_WITH_DEFAULT}"
     fi
 
     cat <<EOF >> "$crs_file"
@@ -2699,7 +2720,7 @@ if trident_will_be_installed_or_modified; then
 fi
 
 # IMAGE REMAPS, LABELS, RESOURCE LIMITS yaml
-step_add_labels_to_kustomization "${_PROCESSED_LABELS}" "${__GENERATED_KUSTOMIZATION_FILE}" "${__GENERATED_CRS_FILE}"
+step_add_labels_to_kustomization "${_PROCESSED_LABELS_WITH_DEFAULT}" "${__GENERATED_KUSTOMIZATION_FILE}" "${__GENERATED_CRS_FILE}"
 step_add_image_remaps_to_kustomization
 exit_if_problems
 
