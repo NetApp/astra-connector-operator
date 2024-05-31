@@ -77,22 +77,6 @@ func (n NeptuneClientDeployerV2) GetDeploymentObjects(m *v1.AstraConnector, ctx 
 	maps.Copy(podLabels, m.Spec.Labels)
 	neptuneReplicas := int32(common.NeptuneReplicas)
 
-	var neptuneResourceSize corev1.ResourceRequirements
-	if m.Spec.Neptune.ResourceRequirements.Limits == nil && m.Spec.Neptune.ResourceRequirements.Requests == nil {
-		log.Info("Using default Resource Requirements for Neptune")
-		neptuneResourceSize = corev1.ResourceRequirements{
-			Limits: corev1.ResourceList{
-				corev1.ResourceMemory: resource.MustParse("2Gi"),
-			},
-			Requests: corev1.ResourceList{
-				corev1.ResourceCPU:    resource.MustParse("0.5"),
-				corev1.ResourceMemory: resource.MustParse("2Gi"),
-			},
-		}
-	} else {
-		neptuneResourceSize = m.Spec.Neptune.ResourceRequirements
-	}
-
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      common.NeptuneName,
@@ -218,7 +202,8 @@ func (n NeptuneClientDeployerV2) GetDeploymentObjects(m *v1.AstraConnector, ctx 
 								InitialDelaySeconds: 5,
 								PeriodSeconds:       10,
 							},
-							Resources: neptuneResourceSize,
+							Resources: getNeptuneResourceLimit(m.Spec.Neptune.ResourceRequirements.Limits,
+								m.Spec.Neptune.ResourceRequirements.Requests),
 							SecurityContext: &corev1.SecurityContext{
 								AllowPrivilegeEscalation: pointer.Bool(false),
 								ReadOnlyRootFilesystem:   pointer.Bool(true),
@@ -266,6 +251,29 @@ func (n NeptuneClientDeployerV2) GetDeploymentObjects(m *v1.AstraConnector, ctx 
 	}
 
 	return deps, mutateFunc, nil
+}
+
+func getNeptuneResourceLimit(limit, request corev1.ResourceList) corev1.ResourceRequirements {
+	var neptuneResourceSize corev1.ResourceRequirements
+	if limit != nil {
+		neptuneResourceSize.Limits = limit
+	} else {
+		// not set let's set default
+		neptuneResourceSize.Limits = corev1.ResourceList{
+			corev1.ResourceMemory: resource.MustParse("2Gi"),
+		}
+	}
+
+	if request != nil {
+		neptuneResourceSize.Requests = request
+	} else {
+		// not set let's set default
+		neptuneResourceSize.Requests = corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse("0.5"),
+			corev1.ResourceMemory: resource.MustParse("2Gi"),
+		}
+	}
+	return neptuneResourceSize
 }
 
 func getNeptuneEnvVars(imageRegistry, containerImage, jobImagePullPolicy, pullSecret, asupUrl string, mLabels map[string]string) []corev1.EnvVar {

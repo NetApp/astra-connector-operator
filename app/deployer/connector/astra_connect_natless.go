@@ -55,22 +55,6 @@ func (d *AstraConnectDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx co
 	connectorImage = fmt.Sprintf("%s/astra-connector:%s", imageRegistry, containerImage)
 	log.Info("Using AstraConnector image", "image", connectorImage)
 
-	var connectResourceSize corev1.ResourceRequirements
-	if m.Spec.AstraConnect.ResourceRequirements.Limits == nil && m.Spec.AstraConnect.ResourceRequirements.Requests == nil {
-		log.Info("Using default Resource Requirements for astra connector")
-		connectResourceSize = corev1.ResourceRequirements{
-			Limits: corev1.ResourceList{
-				corev1.ResourceMemory: resource.MustParse("1Gi"),
-			},
-			Requests: corev1.ResourceList{
-				corev1.ResourceCPU:    resource.MustParse("0.1"),
-				corev1.ResourceMemory: resource.MustParse("1Gi"),
-			},
-		}
-	} else {
-		connectResourceSize = m.Spec.AstraConnect.ResourceRequirements
-	}
-
 	dep := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      common.AstraConnectName,
@@ -140,7 +124,8 @@ func (d *AstraConnectDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx co
 								},
 							},
 						},
-						Resources:       connectResourceSize,
+						Resources: getConnectorResourceLimit(m.Spec.AstraConnect.ResourceRequirements.Limits,
+							m.Spec.AstraConnect.ResourceRequirements.Requests),
 						SecurityContext: conf.GetSecurityContext(),
 					}},
 					ServiceAccountName: common.AstraConnectName,
@@ -175,6 +160,29 @@ func (d *AstraConnectDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx co
 	}
 
 	return []client.Object{dep}, mutateFunc, nil
+}
+
+func getConnectorResourceLimit(limit, request corev1.ResourceList) corev1.ResourceRequirements {
+	var connectResourceSize corev1.ResourceRequirements
+	if limit != nil {
+		connectResourceSize.Limits = limit
+	} else {
+		// not set let's set default
+		connectResourceSize.Limits = corev1.ResourceList{
+			corev1.ResourceMemory: resource.MustParse("1Gi"),
+		}
+	}
+
+	if request != nil {
+		connectResourceSize.Requests = request
+	} else {
+		// not set let's set default
+		connectResourceSize.Requests = corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse("0.1"),
+			corev1.ResourceMemory: resource.MustParse("1Gi"),
+		}
+	}
+	return connectResourceSize
 }
 
 // GetServiceObjects returns an Astra-Connect Service object
