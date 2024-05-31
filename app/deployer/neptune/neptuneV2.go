@@ -77,7 +77,7 @@ func (n NeptuneClientDeployerV2) GetDeploymentObjects(m *v1.AstraConnector, ctx 
 	maps.Copy(podLabels, m.Spec.Labels)
 	neptuneReplicas := int32(common.NeptuneReplicas)
 
-	neptuneResourceSize := corev1.ResourceRequirements{}
+	var neptuneResourceSize corev1.ResourceRequirements
 	if m.Spec.Neptune.ResourceRequirements.Limits == nil && m.Spec.Neptune.ResourceRequirements.Requests == nil {
 		log.Info("Using default Resource Requirements for Neptune")
 		neptuneResourceSize = corev1.ResourceRequirements{

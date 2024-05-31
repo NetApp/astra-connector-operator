@@ -55,7 +55,7 @@ func (d *AstraConnectDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx co
 	connectorImage = fmt.Sprintf("%s/astra-connector:%s", imageRegistry, containerImage)
 	log.Info("Using AstraConnector image", "image", connectorImage)
 
-	connectResourceSize := corev1.ResourceRequirements{}
+	var connectResourceSize corev1.ResourceRequirements
 	if m.Spec.AstraConnect.ResourceRequirements.Limits == nil && m.Spec.AstraConnect.ResourceRequirements.Requests == nil {
 		log.Info("Using default Resource Requirements for astra connector")
 		connectResourceSize = corev1.ResourceRequirements{
