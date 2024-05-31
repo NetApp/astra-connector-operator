@@ -77,6 +77,22 @@ func (n NeptuneClientDeployerV2) GetDeploymentObjects(m *v1.AstraConnector, ctx 
 	maps.Copy(podLabels, m.Spec.Labels)
 	neptuneReplicas := int32(common.NeptuneReplicas)
 
+	neptuneResourceSize := corev1.ResourceRequirements{}
+	if m.Spec.Neptune.ResourceRequirements.Limits == nil && m.Spec.Neptune.ResourceRequirements.Requests == nil {
+		log.Info("Using default Resource Requirements for Neptune")
+		neptuneResourceSize = corev1.ResourceRequirements{
+			Limits: corev1.ResourceList{
+				corev1.ResourceMemory: resource.MustParse("2Gi"),
+			},
+			Requests: corev1.ResourceList{
+				corev1.ResourceCPU:    resource.MustParse("0.5"),
+				corev1.ResourceMemory: resource.MustParse("2Gi"),
+			},
+		}
+	} else {
+		neptuneResourceSize = m.Spec.Neptune.ResourceRequirements
+	}
+
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      common.NeptuneName,
@@ -150,7 +166,16 @@ func (n NeptuneClientDeployerV2) GetDeploymentObjects(m *v1.AstraConnector, ctx 
 									Protocol:      corev1.ProtocolTCP,
 								},
 							},
-							Resources: m.Spec.Neptune.ResourceRequirements,
+							Resources: corev1.ResourceRequirements{
+								Limits: corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse("1000m"),
+									corev1.ResourceMemory: resource.MustParse("256Mi"),
+								},
+								Requests: corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse("10m"),
+									corev1.ResourceMemory: resource.MustParse("128Mi"),
+								},
+							},
 							SecurityContext: &corev1.SecurityContext{
 								AllowPrivilegeEscalation: pointer.Bool(false),
 							},
@@ -193,16 +218,7 @@ func (n NeptuneClientDeployerV2) GetDeploymentObjects(m *v1.AstraConnector, ctx 
 								InitialDelaySeconds: 5,
 								PeriodSeconds:       10,
 							},
-							Resources: corev1.ResourceRequirements{
-								Limits: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("1000m"),
-									corev1.ResourceMemory: resource.MustParse("1280Mi"),
-								},
-								Requests: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("100m"),
-									corev1.ResourceMemory: resource.MustParse("640Mi"),
-								},
-							},
+							Resources: neptuneResourceSize,
 							SecurityContext: &corev1.SecurityContext{
 								AllowPrivilegeEscalation: pointer.Bool(false),
 								ReadOnlyRootFilesystem:   pointer.Bool(true),

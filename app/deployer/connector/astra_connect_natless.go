@@ -55,6 +55,22 @@ func (d *AstraConnectDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx co
 	connectorImage = fmt.Sprintf("%s/astra-connector:%s", imageRegistry, containerImage)
 	log.Info("Using AstraConnector image", "image", connectorImage)
 
+	connectResourceSize := corev1.ResourceRequirements{}
+	if m.Spec.AstraConnect.ResourceRequirements.Limits == nil && m.Spec.AstraConnect.ResourceRequirements.Requests == nil {
+		log.Info("Using default Resource Requirements for astra connector")
+		connectResourceSize = corev1.ResourceRequirements{
+			Limits: corev1.ResourceList{
+				corev1.ResourceMemory: resource.MustParse("1Gi"),
+			},
+			Requests: corev1.ResourceList{
+				corev1.ResourceCPU:    resource.MustParse("0.1"),
+				corev1.ResourceMemory: resource.MustParse("1Gi"),
+			},
+		}
+	} else {
+		connectResourceSize = m.Spec.AstraConnect.ResourceRequirements
+	}
+
 	dep := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      common.AstraConnectName,
@@ -124,16 +140,7 @@ func (d *AstraConnectDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx co
 								},
 							},
 						},
-						Resources: corev1.ResourceRequirements{
-							Limits: corev1.ResourceList{
-								// corev1.ResourceCPU:    resource.MustParse("1000m"), // todo set this from cr
-								corev1.ResourceMemory: resource.MustParse("1Gi"),
-							},
-							Requests: corev1.ResourceList{
-								corev1.ResourceCPU:    resource.MustParse("0.1"),
-								corev1.ResourceMemory: resource.MustParse("1Gi"),
-							},
-						},
+						Resources:       connectResourceSize,
 						SecurityContext: conf.GetSecurityContext(),
 					}},
 					ServiceAccountName: common.AstraConnectName,

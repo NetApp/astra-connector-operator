@@ -59,12 +59,12 @@ type Nats struct {
 type AstraConnect struct {
 	Image string `json:"image,omitempty"`
 	// +kubebuilder:default:=1
-	Replicas int32 `json:"replicas,omitempty"`
+	Replicas             int32                       `json:"replicas,omitempty"`
+	ResourceRequirements corev1.ResourceRequirements `json:"resources,omitempty"`
 }
 
 // Neptune
 // +kubebuilder:validation:Optional
-// +kubebuilder:default={limits: {memory: "2Gi"}, requests: {cpu: "0.5", memory: "2Gi"}}
 type Neptune struct {
 	Image                string                      `json:"image,omitempty"`
 	JobImagePullPolicy   string                      `json:"jobImagePullPolicy,omitempty"`
