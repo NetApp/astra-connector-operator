@@ -48,7 +48,8 @@ readonly -a __REQUIRED_TOOLS=("git" "jq" "kubectl" "curl" "grep" "sort" "uniq" "
 
 # __GIT_REF_CONNECTOR_OPERATOR is set via github Actions when added to the Git Release
 readonly __GIT_REF_CONNECTOR_OPERATOR="main" # Determines the ACOP branch from which the kustomize resources will be pulled
-readonly __GIT_REF_TRIDENT="ASTRACTL-32138-temporary-stand-in" # Determines the Trident branch from which the kustomize resources will be pulled
+# TODO point to stable/24.06 when branch and image is available
+readonly __GIT_REF_TRIDENT="TmpTrident24.02" # Determines the Trident branch from which the kustomize resources will be pulled
 
 # Kustomize is 1.14+ only
 readonly __KUBECTL_MIN_VERSION="1.14"
@@ -2248,9 +2249,9 @@ step_generate_trident_fresh_install_yaml() {
 
     logheader $__DEBUG "Generating Trident YAML files..."
 
-    # TODO ASTRACTL-32138: use _KUBERNETES_VERSION to choose the right bundle yaml (pre 1.25 or post 1.25)
+    # TODO point to https://github.com/NetApp/trident when 24.06 image is available
     insert_into_file_after_pattern "$kustomization_file" "resources:" \
-        "- https://github.com/NetApp-Polaris/astra-connector/trident-deploy-files-tmp?ref=$__GIT_REF_TRIDENT"
+        "- https://github.com/NetApp/astra-connector-operator/trident-temp/deploy?ref=$__GIT_REF_TRIDENT"
     logdebug "$kustomization_file: added resources entry for trident operator"
 
     local -r torc_name="$__DEFAULT_TORC_NAME"
@@ -2263,7 +2264,7 @@ step_generate_trident_fresh_install_yaml() {
     local labels_field_and_content=""
     if [ -n "$IMAGE_PULL_SECRET" ]; then pull_secret='["'$IMAGE_PULL_SECRET'"]'; fi
     if [ -n "$_PROCESSED_LABELS_WITH_DEFAULT" ]; then
-        labels_field_and_content="${__NEWLINE}  labels:${__NEWLINE}${$_PROCESSED_LABELS_WITH_DEFAULT}"
+        labels_field_and_content="${__NEWLINE}  labels:${__NEWLINE}${_PROCESSED_LABELS_WITH_DEFAULT}"
     fi
 
     cat <<EOF >> "$crs_file"
