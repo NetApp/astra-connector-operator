@@ -454,16 +454,9 @@ spec:
                   fieldPath: metadata.name
             - name: OPERATOR_NAME
               value: trident-operator
-          image: docker.io/netapp/trident-operator:24.02.1
+          image: docker.io/netapp/trident-operator:23.10.0
           imagePullPolicy: IfNotPresent
           name: trident-operator
-          resources:
-            requests:
-              cpu: "10m"
-              memory: "40Mi"
-            limits:
-              cpu: "20m"
-              memory: "80Mi"
           securityContext:
             capabilities:
               drop:
