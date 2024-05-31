@@ -151,7 +151,11 @@ jobs:
           export MANIFEST_FILEPATH=./$MANIFEST_FILENAME
           echo "MANIFEST_FILEPATH=$MANIFEST_FILEPATH" >> $GITHUB_ENV
           echo "MANIFEST_FILENAME=$MANIFEST_FILENAME" >> $GITHUB_ENV
-          go run scripts/create_default_images_manifest.go $MANIFEST_FILEPATH $VERSION
+          if [[ "${{ github.ref }}" == 'refs/heads/main' ]]; then
+            go run scripts/create_default_images_manifest.go $MANIFEST_FILEPATH $VERSION false
+          else
+            go run scripts/create_default_images_manifest.go $MANIFEST_FILEPATH $VERSION true
+          fi
           cat $MANIFEST_FILEPATH
 
       - name: Get Version
