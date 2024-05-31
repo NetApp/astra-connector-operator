@@ -352,6 +352,8 @@ func (d *AstraConnectDeployer) GetRoleObjects(m *v1.AstraConnector, ctx context.
 					"snapshotinplacerestores",
 					"snapshotrestores",
 					"astraconnectors",
+					"kopiavolumebackups",
+					"kopiavolumerestores",
 				},
 				Verbs: []string{"create", "update", "delete"},
 			},
