@@ -2593,11 +2593,10 @@ step_generate_trident_operator_patch() {
         if echo "$_EXISTING_TRIDENT_OPERATOR_PULL_SECRETS" | grep -q "^${IMAGE_PULL_SECRET}$" &> /dev/null; then
             logdebug "image pull secret '$IMAGE_PULL_SECRET' already present in trident-operator"
         else
-            local -r secret_obj='{"name": "'"$IMAGE_PULL_SECRET"'"}'
             if [ -z "$_EXISTING_TRIDENT_OPERATOR_PULL_SECRETS" ]; then
-                patch_list+=',{"op":"replace","path":"/spec/template/spec/imagePullSecrets","value":['"$secret_obj"']}'
+                patch_list+=',{"op":"replace","path":"/spec/template/spec/imagePullSecrets","value":[{"name":"'"$IMAGE_PULL_SECRET"'"}]}'
             else
-                patch_list+=',{"op":"add","path":"/spec/template/spec/imagePullSecrets/-","value":'"$secret_obj"'}'
+                patch_list+=',{"op":"add","path":"/spec/template/spec/imagePullSecrets/-","value":{"name":"'"$IMAGE_PULL_SECRET"'"}}'
             fi
         fi
     fi
@@ -2618,6 +2617,7 @@ step_generate_torc_patch() {
     if [ -z "$torc_name" ]; then fatal "no trident orchestrator name was given"; fi
 
     logheader $__DEBUG "Generating TORC patch"
+
     local torc_patch_list=""
 
     # Trident
@@ -2643,9 +2643,8 @@ step_generate_torc_patch() {
         if echo "$_EXISTING_TORC_PULL_SECRETS" | grep -q "^${IMAGE_PULL_SECRET}$" &> /dev/null; then
             logdebug "image pull secret '$IMAGE_PULL_SECRET' already present in torc"
         else
-            local -r secret_obj='{"name": "'"$IMAGE_PULL_SECRET"'"}'
             if [ -z "$_EXISTING_TRIDENT_OPERATOR_PULL_SECRETS" ]; then
-                torc_patch_list+='{"op":"replace","path":"/spec/imagePullSecrets","value":"'"$IMAGE_PULL_SECRET"'"},'
+                torc_patch_list+='{"op":"replace","path":"/spec/imagePullSecrets","value":["'"$IMAGE_PULL_SECRET"'"]},'
             else
                 torc_patch_list+='{"op":"add","path":"/spec/imagePullSecrets/-","value":"'"$IMAGE_PULL_SECRET"'"},'
             fi
