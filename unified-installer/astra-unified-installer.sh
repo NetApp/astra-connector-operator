@@ -37,9 +37,6 @@ _PROCESSED_LABELS_WITH_DEFAULT=""
 # Example: "    label1: value1\n    label2: value2\n    label3: value3"
 _PROCESSED_LABELS=""
 
-# _PROCESSED_RESOURCE_LIMITS will contain the JSON form of the resource limits, e.g. `{"cpu": "3", "memory": "6Gi"}`
-_PROCESSED_RESOURCE_LIMITS=""
-
 # ------------ CONSTANTS ------------
 readonly __RELEASE_VERSION="24.02"
 readonly __TRIDENT_VERSION="${__TRIDENT_VERSION_OVERRIDE:-"$__RELEASE_VERSION"}"
@@ -124,10 +121,6 @@ get_configs() {
     IMAGE_PULL_SECRET="${IMAGE_PULL_SECRET:-}" # TODO ASTRACTL-32772: skip prompt if IMAGE_REGISTRY is default
     NAMESPACE="${NAMESPACE:-}" # Overrides EVERY resource's namespace (for fresh installs only, not upgrades)
     LABELS="${LABELS:-}"
-    # RESOURCE_LIMITS_PRESET will only be used if both RESOURCE_LIMITS_CUSTOM_CPU and RESOURCE_LIMITS_CUSTOM_MEMORY are empty.
-    RESOURCE_LIMITS_PRESET="${RESOURCE_LIMITS_PRESET:-}"
-    RESOURCE_LIMITS_CUSTOM_CPU="${RESOURCE_LIMITS_CUSTOM_CPU:-}" # Plain number
-    RESOURCE_LIMITS_CUSTOM_MEMORY="${RESOURCE_LIMITS_CUSTOM_MEMORY:-}" # Plain number, assumed to be in 'Gi'
     # SKIP_TLS_VALIDATION will skip TLS validation for all requests made during the script.
     SKIP_TLS_VALIDATION="${SKIP_TLS_VALIDATION:-"false"}"
 
@@ -1856,7 +1849,22 @@ step_generate_astra_connector_yaml() {
         "- https://github.com/NetApp/astra-connector-operator/unified-installer/?ref=$__GIT_REF_CONNECTOR_OPERATOR"
     logdebug "$kustomization_file: added resources entry for connector kustomization"
 
-    # Todo oscar figure out size
+    # Default memory limit
+    memory_limit=2
+    snapshot_count=""
+    if prompt_user_yes_no "Do you anticipate having more than 10,000 snapshots and backups existing at the same time at any point? "; then
+        prompt_user_number_greater_than_zero snapshot_count "Please estimate the maximum number of snapshots and backups you expect to have existing simultaneously within this cluster? (enter number value): "
+        # Calculate estimated_memory and round up to the nearest integer
+        estimated_memory=$(echo "$snapshot_count 5000" | awk '{printf("%d\n", ($1/$2)+0.6)}')
+
+        # If estimated_memory is greater than memory_limit, set memory_limit to estimated_memory
+        if (( estimated_memory > memory_limit )); then
+            memory_limit=$estimated_memory
+        fi
+    fi
+    loginfo "Memory limit set to: $memory_limit GB"
+
+
 
     # SECRET GENERATOR
     cat <<EOF >> "$kustomization_file"
@@ -1918,6 +1926,13 @@ spec:
     url: ${connector_autosupport_url}
   natsSyncClient:
     cloudBridgeURL: ${astra_url}
+  neptune:
+    resources:
+      limits:
+        memory: ${memory_limit}Gi
+      requests:
+        cpu: ".5"
+        memory: ${memory_limit}Gi
 EOF
     if [ -n "$host_alias_ip" ]; then
         echo "    hostAliasIP: $host_alias_ip" >> "$crs_file"
@@ -2341,7 +2356,6 @@ exit_if_problems
 
 # ------------ YAML GENERATION ------------
 step_check_kubeconfig_choice
-step_determine_resource_limit_preset
 step_init_generated_dirs_and_files
 step_kustomize_global_namespace_if_needed "$NAMESPACE" "$__GENERATED_KUSTOMIZATION_FILE"
 
