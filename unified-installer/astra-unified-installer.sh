@@ -37,9 +37,6 @@ _PROCESSED_LABELS_WITH_DEFAULT=""
 # Example: "    label1: value1\n    label2: value2\n    label3: value3"
 _PROCESSED_LABELS=""
 
-# _PROCESSED_RESOURCE_LIMITS will contain the JSON form of the resource limits, e.g. `{"cpu": "3", "memory": "6Gi"}`
-_PROCESSED_RESOURCE_LIMITS=""
-
 # ------------ CONSTANTS ------------
 readonly __RELEASE_VERSION="24.02"
 readonly __TRIDENT_VERSION="${__TRIDENT_VERSION_OVERRIDE:-"$__RELEASE_VERSION"}"
@@ -90,15 +87,6 @@ readonly __GENERATED_OPERATORS_DIR="$__GENERATED_CRS_DIR/operators"
 readonly __GENERATED_KUSTOMIZATION_FILE="$__GENERATED_OPERATORS_DIR/kustomization.yaml"
 readonly __GENERATED_PATCHES_TORC_FILE="$__GENERATED_CRS_DIR/post-deploy-patches_torc"
 readonly __GENERATED_PATCHES_TRIDENT_OPERATOR_FILE="$__GENERATED_OPERATORS_DIR/post-deploy-patches_trident-operator"
-readonly __GENERATED_PATCHES_RESOURCE_LIMITS="$__GENERATED_CRS_DIR/post-deploy-patches_resource_limits"
-
-readonly __RESOURCE_LIMITS_SMALL="small"
-readonly __RESOURCE_LIMITS_MEDIUM="medium"
-readonly __RESOURCE_LIMITS_LARGE="large"
-readonly __RESOURCE_LIMITS_CUSTOM="custom"
-readonly __RESOURCE_LIMITS_SKIP="skip"
-readonly __RESOURCE_LIMITS_VALID_PRESETS=("$__RESOURCE_LIMITS_SMALL" "$__RESOURCE_LIMITS_MEDIUM" \
-    "$__RESOURCE_LIMITS_LARGE" "$__RESOURCE_LIMITS_CUSTOM" "$__RESOURCE_LIMITS_SKIP")
 
 readonly __DEBUG=10
 readonly __INFO=20
@@ -133,10 +121,6 @@ get_configs() {
     IMAGE_PULL_SECRET="${IMAGE_PULL_SECRET:-}" # TODO ASTRACTL-32772: skip prompt if IMAGE_REGISTRY is default
     NAMESPACE="${NAMESPACE:-}" # Overrides EVERY resource's namespace (for fresh installs only, not upgrades)
     LABELS="${LABELS:-}"
-    # RESOURCE_LIMITS_PRESET will only be used if both RESOURCE_LIMITS_CUSTOM_CPU and RESOURCE_LIMITS_CUSTOM_MEMORY are empty.
-    RESOURCE_LIMITS_PRESET="${RESOURCE_LIMITS_PRESET:-}"
-    RESOURCE_LIMITS_CUSTOM_CPU="${RESOURCE_LIMITS_CUSTOM_CPU:-}" # Plain number
-    RESOURCE_LIMITS_CUSTOM_MEMORY="${RESOURCE_LIMITS_CUSTOM_MEMORY:-}" # Plain number, assumed to be in 'Gi'
     # SKIP_TLS_VALIDATION will skip TLS validation for all requests made during the script.
     SKIP_TLS_VALIDATION="${SKIP_TLS_VALIDATION:-"false"}"
 
@@ -471,60 +455,6 @@ prompts_disabled() {
 is_dry_run() {
     [ "${DRY_RUN}" == "true" ] && return 0
     return 1
-}
-
-get_preset_recommendation() {
-    local -r node_count="$1"
-    local -r namespace_count="$2"
-
-    [ "$node_count" -lt 1 ] && fatal "invalid node_count '$node_count' given: must be a number greater than 0"
-    [ "$namespace_count" -lt 1 ] && fatal "invalid namespace_count '$namespace_count' given: must be a number greater than 0"
-
-    # TODO: these are placeholder recommendations
-    if [ "$node_count" -gt 5 ] || [ "$namespace_count" -lt 25 ]; then
-        echo "${__RESOURCE_LIMITS_SMALL}"
-    elif [ "$node_count" -gt 15 ] || [ "$namespace_count" -lt 75 ]; then
-        echo "${__RESOURCE_LIMITS_MEDIUM}"
-    else
-        echo "${__RESOURCE_LIMITS_LARGE}"
-    fi
-}
-
-get_limits_for_preset() {
-    local -r preset="$1"
-    [ -z "$preset" ] && fatal "no preset given"
-
-    # TODO: these are placeholders too
-    if [ "$preset" == "$__RESOURCE_LIMITS_SMALL" ]; then
-        echo '{"cpu": "1", "memory": "2Gi"}'
-    elif [ "$preset" == "$__RESOURCE_LIMITS_MEDIUM" ]; then
-        echo '{"cpu": "3", "memory": "6Gi"}'
-    elif [ "$preset" == "$__RESOURCE_LIMITS_LARGE" ]; then
-        echo '{"cpu": "6", "memory": "12Gi"}'
-    elif [ "$preset" == "$__RESOURCE_LIMITS_CUSTOM" ]; then
-        local -r custom_cpu="${RESOURCE_LIMITS_CUSTOM_CPU:-"(manual)"}"
-        local custom_mem="${RESOURCE_LIMITS_CUSTOM_MEMORY:-"(manual)"}"
-        [ -n "$RESOURCE_LIMITS_CUSTOM_MEMORY" ] && custom_mem+="Gi"
-        echo '{"cpu": "'"$custom_cpu"'", "memory": "'"$custom_mem"'"}'
-    elif [ "$preset" == "$__RESOURCE_LIMITS_SKIP" ]; then
-        echo ""
-    elif str_matches_at_least_one "$preset" "${__RESOURCE_LIMITS_VALID_PRESETS[@]}"; then
-        fatal "preset '$preset' is apparently valid but this function hasn't been updated to take it into account"
-    fi
-
-    [ -z "$preset" ] && fatal "invalid preset '$preset' given"
-}
-
-get_limits_for_preset_fancy() {
-    get_limits_for_preset "$1" | jq -r '"cpu: \(.cpu), memory: \(.memory)"'
-}
-
-get_limits_list_fancy() {
-    local msg=""
-    for preset in "${__RESOURCE_LIMITS_VALID_PRESETS[@]}" ; do
-        msg+="$preset -- $(get_limits_for_preset_fancy "$preset")${__NEWLINE}"
-    done
-    echo "${msg%${__NEWLINE}}"
 }
 
 #----------------------------------------------------------------------
@@ -1332,65 +1262,6 @@ get_container_count() {
     return 1
 }
 
-create_kubectl_patch_for_containers() {
-    local -r resource="$1" # Format: '$kind/$resource_name'
-    local -r namespace="$2"
-    local -r resource_path="$3" # Relative to the root of the container spec, e.g. "resources/limits"
-    local -r patch_value="$4" # 'value' field of the JSON patch, e.g. `{"cpu": "5", "memory": "2Gi"}`
-    local -r kind="$(dirname "$resource")"
-
-    [ -z "$resource" ] && fatal "no resource given"
-    [ -z "$namespace" ] && fatal "no namespace given"
-    [ -z "$resource_path" ] && fatal "no resource_path given"
-    [ -z "$patch_value" ] && fatal "no patch_value given"
-    if ! echo "$resource" | grep -q -- "/"; then fatal "invalid format for given resource '$resource': use 'kind/resource_name'"; fi
-    if ! echo "$patch_value" | jq '.' &> /dev/null; then fatal "given patch_value '$patch_value' is not valid JSON"; fi
-    if [ "$kind" != "deploy" ] && [ "$kind" != "pod" ]; then fatal "unsupported kind '$kind' given"; fi
-
-    local containers_list_path_slash="/spec/template/spec/containers"
-
-    local container_count=0
-    local wait_timeout="" # Empty value == use default
-    local dry_run_warning=""
-    if is_dry_run; then
-        # If dry running, the resource won't be created (though it might already exist) so no point in waiting
-        wait_timeout=0
-        dry_run_warning='"WARNING": "DRYRUN-GENERATED-PATCH",'
-    fi
-
-    if wait_for_resource_created "$resource" "$namespace" "$wait_timeout"; then
-        container_count="$(get_container_count "$resource" "$namespace")"
-        logdebug "found $container_count containers"
-    elif is_dry_run; then
-        container_count=1
-        logdebug "resource '$resource' in namespace '$namespace' not found, continuing anyway because this is a dry run"
-    else
-        fatal "resource '$resource' in namespace '$namespace' was never created"
-    fi
-
-    if [ -z "$container_count" ] || (( container_count <= 0 )); then
-        fatal "failed to get container count from resource '$resource' in namespace '$namespace'"
-    fi
-
-    local json_patch="[${__NEWLINE}"
-    local current
-    for (( i=0; i<"$container_count"; i++ )); do
-        current='{'$dry_run_warning'"op": "add","path": "'
-        current+=$containers_list_path_slash'/'$i'/'$resource_path'","value": '$patch_value'}'
-        json_patch+="$(echo "$current" | jq -r '.'),"
-        if (( i < container_count-1 )); then
-            json_patch+="${__NEWLINE}"
-        fi
-    done
-
-    json_patch="${json_patch%,}" # Remove trailing comma
-    json_patch+="]"
-
-    # Using the global _return_value var instead of 'echo' otherwise we can't log anything else without
-    # forcing the consumer of the function to use `tail -n 1` every time
-    _return_value="$resource -n $namespace --type=json -p '$json_patch'"
-}
-
 backup_kubernetes_resource() {
     local -r kind="$1"
     local -r resource_name="$2"
@@ -1889,64 +1760,6 @@ step_detect_resource_count() {
     _return_value="$_count"
 }
 
-step_determine_resource_limit_preset() {
-    local valid_presets=("${__RESOURCE_LIMITS_VALID_PRESETS[@]}")
-    local valid_presets_str="${__RESOURCE_LIMITS_VALID_PRESETS[*]}"
-    logheader "$__INFO" "Resolving resource limit configuration..."
-
-    if [ -n "$RESOURCE_LIMITS_CUSTOM_CPU" ] || [ -n "$RESOURCE_LIMITS_CUSTOM_MEMORY" ]; then
-        RESOURCE_LIMITS_PRESET="$__RESOURCE_LIMITS_CUSTOM"
-        loginfo "Custom resource limits have been set by user ($(get_limits_for_preset_fancy "$__RESOURCE_LIMITS_CUSTOM"))"
-    elif [ -z "$RESOURCE_LIMITS_PRESET" ]; then
-        step_detect_resource_count "nodes"
-        local -r node_count="$_return_value"
-
-        step_detect_resource_count "namespaces"
-        local -r namespace_count="$_return_value"
-
-        exit_if_problems
-
-        RESOURCE_LIMITS_PRESET="$(get_preset_recommendation "$node_count" "$namespace_count")"
-        if ! str_matches_at_least_one "$RESOURCE_LIMITS_PRESET" "${valid_presets[@]}"; then
-            fatal "the recommended preset ($RESOURCE_LIMITS_PRESET) is invalid: valid values are ($valid_presets_str)"
-        fi
-
-        local -r preset_fancy="$(get_limits_for_preset_fancy "$RESOURCE_LIMITS_PRESET")"
-        local msg="For $node_count nodes and $namespace_count namespaces,"
-        msg+=" the recommended resource limit preset is: $RESOURCE_LIMITS_PRESET ($preset_fancy)${__NEWLINE}"
-        msg+="Proceed with preset '$RESOURCE_LIMITS_PRESET' (choose no to enter a preset manually)?"
-        if ! prompt_user_yes_no "$msg"; then
-            msg="${__NEWLINE}Available presets:${__NEWLINE}"
-            msg+="$(get_limits_list_fancy)${__NEWLINE}"
-            loginfo "$msg"
-            RESOURCE_LIMITS_PRESET=""
-            prompt_user_select_one RESOURCE_LIMITS_PRESET "${valid_presets[@]}"
-        fi
-    fi
-    exit_if_problems
-
-    loginfo "* Resource limit preset is '$RESOURCE_LIMITS_PRESET'"
-    add_to_config_builder RESOURCE_LIMITS_PRESET
-    if [ "$RESOURCE_LIMITS_PRESET" == "$__RESOURCE_LIMITS_CUSTOM" ]; then
-        if ! prompt_user_number_greater_than_zero RESOURCE_LIMITS_CUSTOM_CPU "Enter a CPU limit:"; then
-            add_problem "RESOURCE_LIMITS_CUSTOM_CPU value '$RESOURCE_LIMITS_CUSTOM_CPU' is invalid"
-        fi
-        # Would ideally allow the user to input the suffix themselves to allow greater flexibility,
-        # but that would require more complex parsing of their input. Maybe later, if it proves to
-        # be needed.
-        if ! prompt_user_number_greater_than_zero RESOURCE_LIMITS_CUSTOM_MEMORY "Enter a memory limit (Gi):"; then
-            add_problem "RESOURCE_LIMITS_CUSTOM_MEMORY value '$RESOURCE_LIMITS_CUSTOM_MEMORY' is invalid"
-        fi
-        add_to_config_builder RESOURCE_LIMITS_CUSTOM_CPU
-        add_to_config_builder RESOURCE_LIMITS_CUSTOM_MEMORY
-    elif [ "$RESOURCE_LIMITS_PRESET" == "$__RESOURCE_LIMITS_SKIP" ]; then
-        return 0
-    fi
-
-    _PROCESSED_RESOURCE_LIMITS="{\"limits\": $(get_limits_for_preset "$RESOURCE_LIMITS_PRESET")}"
-    loginfo "* Proceeding with resource limits: $(get_limits_for_preset_fancy "$RESOURCE_LIMITS_PRESET")"
-}
-
 step_init_generated_dirs_and_files() {
     local -r kustomization_file="$__GENERATED_KUSTOMIZATION_FILE"
     local -r kustomization_dir="$(dirname "$kustomization_file")"
@@ -2036,28 +1849,22 @@ step_generate_astra_connector_yaml() {
         "- https://github.com/NetApp/astra-connector-operator/unified-installer/?ref=$__GIT_REF_CONNECTOR_OPERATOR"
     logdebug "$kustomization_file: added resources entry for connector kustomization"
 
-    # NATLESS feature flag patch
-    local -r natless_patch="natless_patch.yaml"
-    # We need to specify the original namespace (as it is set in the Astra Connector Operator repo)
-    # because namespace overrides are applied AFTER patches (such as this one), so the namespace won't be
-    # modified yet.
-    local -r original_acop_namespace="system"
-    cat <<EOF > "$kustomization_dir/$natless_patch"
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: operator-controller-manager
-  namespace: $original_acop_namespace
-spec:
-  template:
-    spec:
-      containers:
-        - name: manager
-          env:
-            - name: ACOP_FEATUREFLAGS_NATLESS
-              value: "true"
-EOF
-    insert_into_file_after_pattern "$kustomization_file" "patches:" "- path: ./$natless_patch"
+    # Default memory limit
+    memory_limit=2
+    snapshot_count=""
+    if prompt_user_yes_no "Do you anticipate having more than 10,000 snapshots and backups existing at the same time at any point? "; then
+        prompt_user_number_greater_than_zero snapshot_count "Please estimate the maximum number of snapshots and backups you expect to have existing simultaneously within this cluster? (enter number value): "
+        # Calculate estimated_memory and round up to the nearest integer
+        estimated_memory=$(echo "$snapshot_count 5000" | awk '{printf("%d\n", ($1/$2)+0.6)}')
+
+        # If estimated_memory is greater than memory_limit, set memory_limit to estimated_memory
+        if (( estimated_memory > memory_limit )); then
+            memory_limit=$estimated_memory
+        fi
+    fi
+    loginfo "Memory limit set to: $memory_limit GB"
+
+
 
     # SECRET GENERATOR
     cat <<EOF >> "$kustomization_file"
@@ -2119,6 +1926,13 @@ spec:
     url: ${connector_autosupport_url}
   natsSyncClient:
     cloudBridgeURL: ${astra_url}
+  neptune:
+    resources:
+      limits:
+        memory: ${memory_limit}Gi
+      requests:
+        cpu: ".5"
+        memory: ${memory_limit}Gi
 EOF
     if [ -n "$host_alias_ip" ]; then
         echo "    hostAliasIP: $host_alias_ip" >> "$crs_file"
@@ -2454,85 +2268,6 @@ step_apply_torc_patches() {
     logdebug "done"
 }
 
-# step_generate_and_apply_resource_limit_patches generates and applies patches in one go, and should
-# be called after we've applied all resources. This is because the content of the patches is dynamically
-# generated based on the live resources, which itself is necessary for both the Neptune controller and the
-# Astra connector since they are created by the operators, not by us. This does mean we could technically set
-# the resource limits on the operators before we apply the resources, but whatever time we save is minimal
-# compared to the extra complexity it would introduce due to having two separate processes.
-step_generate_and_apply_resource_limit_patches() {
-    [ "$RESOURCE_LIMITS_PRESET" == "$__RESOURCE_LIMITS_SKIP" ] && return 0
-    [ -z "$_PROCESSED_RESOURCE_LIMITS" ] && fatal "_PROCESSED_RESOURCE_LIMITS is empty"
-
-    local -r connector_ns="$(get_connector_namespace)"
-    local -r trident_ns="$(get_trident_namespace)"
-    local -r patch_path="resources"
-    local -r patch_value="$_PROCESSED_RESOURCE_LIMITS"
-    local -a patches_list_for_debugging=()
-
-    logheader "$__INFO" "$(prefix_dryrun "Applying resource limits...")"
-    logdebug "configured limits: $patch_value"
-
-    # Note 1: The order we patch these is somewhat important to minimize downtime, as the operators create resources
-    # (such as the Neptune controller) after a delay. And so, operators get patched first, and operator-created
-    # resources second, ideally in the order they are created.
-    #
-    # Note 2: Trident does not support setting resource limits as of this writing; the Trident Operator will clear out
-    # any resource limits we set on the controller (even if it's post-deployment). That said, the Trident Operator
-    # itself does "support" resource limits, in the sense that they don't get cleared out when we set them.
-
-    # Trident Operator
-    if ! trident_will_be_installed_or_modified; then
-        logdebug "skipping trident operator resource limits"
-    elif create_kubectl_patch_for_containers "deploy/trident-operator" "$trident_ns" "$patch_path" "$patch_value"; then
-        patches_list_for_debugging+=("$_return_value")
-        apply_kubectl_patch "$_return_value"
-    else
-        add_problem "Failed to create resource limit patch for the Trident Operator deployment (unknown error)"
-    fi
-
-    # Connector operator
-    if ! components_include_connector; then
-        logdebug "skipping connector operator resource limits"
-    elif create_kubectl_patch_for_containers "deploy/operator-controller-manager" "$connector_ns" "$patch_path" "$patch_value"; then
-        patches_list_for_debugging+=("$_return_value")
-        apply_kubectl_patch "$_return_value"
-    else
-        add_problem "Failed to create resource limit patch for the Astra Connector deployment (unknown error)"
-    fi
-    exit_if_problems
-
-    # Neptune controller
-    if ! components_include_neptune; then
-        logdebug "skipping neptune resource limits"
-    elif create_kubectl_patch_for_containers "deploy/neptune-controller-manager" "$connector_ns" "$patch_path" "$patch_value"; then
-        patches_list_for_debugging+=("$_return_value")
-        apply_kubectl_patch "$_return_value"
-    else
-        add_problem "Failed to create resource limit patch for the Neptune deployment (unknown error)"
-    fi
-
-    # Connector
-    if ! components_include_connector; then
-        logdebug "skipping connector resource limits"
-    elif create_kubectl_patch_for_containers "deploy/astraconnect" "$connector_ns" "$patch_path" "$patch_value"; then
-        patches_list_for_debugging+=("$_return_value")
-        apply_kubectl_patch "$_return_value"
-    else
-        add_problem "Failed to create resource limit patch for the Astra Connector deployment (unknown error)"
-    fi
-
-    if debug_is_on && [ "${#patches[@]}" -gt 0 ]; then
-        local disclaimer="# THIS FILE IS FOR DEBUGGING PURPOSES ONLY. These are the patches applied to the"
-        disclaimer+="${__NEWLINE}# Trident Operator deployment when upgrading the Trident Operator."
-        disclaimer+="${__NEWLINE}"
-        append_lines_to_file "${__GENERATED_PATCHES_RESOURCE_LIMITS}" "$disclaimer" "${patches[@]}"
-    fi
-    exit_if_problems
-
-    logdebug "done"
-}
-
 step_monitor_deployment_progress() {
     local -r connector_operator_ns="$(get_connector_operator_namespace)"
     local -r connector_ns="$(get_connector_namespace)"
@@ -2621,7 +2356,6 @@ exit_if_problems
 
 # ------------ YAML GENERATION ------------
 step_check_kubeconfig_choice
-step_determine_resource_limit_preset
 step_init_generated_dirs_and_files
 step_kustomize_global_namespace_if_needed "$NAMESPACE" "$__GENERATED_KUSTOMIZATION_FILE"
 
@@ -2729,7 +2463,6 @@ exit_if_problems
 step_apply_resources
 step_apply_trident_operator_patches
 step_apply_torc_patches
-step_generate_and_apply_resource_limit_patches
 step_monitor_deployment_progress
 exit_if_problems
 
