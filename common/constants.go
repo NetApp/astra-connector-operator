@@ -13,7 +13,7 @@ import (
 
 const (
 	DefaultImageRegistry = "netappdownloads.jfrog.io/docker-astra-control-staging/arch30/neptune"
-	PrivateImageRegistry = "cr.astra.netapp.io"
+	AstraImageRegistry   = "cr.astra.netapp.io"
 
 	AstraConnectName                 = "astraconnect"
 	AstraConnectorOperatorRepository = "netapp/astra-connector-operator"

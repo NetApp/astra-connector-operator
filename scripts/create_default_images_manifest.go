@@ -25,7 +25,7 @@ func main() {
 	// Gather the full image name and versions
 	defaultImageRegistry := ""
 	if isRelease == "true" {
-		defaultImageRegistry = common.PrivateImageRegistry
+		defaultImageRegistry = common.AstraImageRegistry
 	} else {
 		defaultImageRegistry = common.DefaultImageRegistry
 	}
