@@ -551,6 +551,9 @@ spec:
                       - name
                       - namespace
                       type: object
+                    sourceSnapshotHandle:
+                      description: SourceSnapshotHandle contains the snapshot handle for the SourcePVC
+                      type: string
                   required:
                   - destinationPVC
                   - destinationTMR
