@@ -31,6 +31,7 @@ func main() {
 		// fmt.Sprintf("%s/%s", defaultImageRegistry, common.NatsDefaultImage),
 		fmt.Sprintf("%s:%s", common.AstraConnectorOperatorRepository, connectorOperatorVersion),
 		fmt.Sprintf("%s/trident-autosupport:%s", defaultImageRegistry, common.AsupImageTag),
+		fmt.Sprintf("%s/%s", defaultImageRegistry, common.RbacProxyImage),
 	}
 
 	// Include Neptune related images

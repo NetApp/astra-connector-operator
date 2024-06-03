@@ -37,4 +37,6 @@ build/
 
 # Unified Installer: ignore env files that devs may end up keeping around (but whitelist the example)
 cluster-install/*.env
+unified-installer/*.env
 !cluster-install/install-example-config.env
+!unified-installer/install-example-config.env
