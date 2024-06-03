@@ -1860,9 +1860,7 @@ step_generate_astra_connector_yaml() {
         # that our guidance is to increase the memory 1GB for every 5k snapshots/backups beyond our 10k default
         if [ $snapshot_count -ge 15000 ]; then
           additional_snapshots=$(echo "$snapshot_count 10000" | awk '{printf("%d\n", $1-$2)}')
-          echo "DEBUG, additional_snapshots=${additional_snapshots}"
           estimated_memory=$(echo "$additional_snapshots 5000" | awk '{printf("%d\n", ($1/$2)+2)}')
-          echo "DEBUG, estimated_memory=${estimated_memory}"
         else
           estimated_memory=2
         fi
