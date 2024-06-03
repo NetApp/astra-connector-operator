@@ -1855,7 +1855,7 @@ step_generate_astra_connector_yaml() {
     memory_limit=2
     if [  "$DISABLE_PROMPTS" != "true" ]; then
       if prompt_user_yes_no "Do you anticipate having more than 10,000 snapshots and backups existing at the same time at any point? "; then
-          snapshot_count="" # Default snapshot count
+          local snapshot_count="" # Default snapshot count
           prompt_user_number_greater_than_zero snapshot_count "Please estimate the maximum number of snapshots and backups you expect to have existing simultaneously within this cluster? (enter number value): "
           # Calculate estimated_memory and round up to the nearest integer
 
