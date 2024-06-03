@@ -609,7 +609,7 @@ prompt_user_yes_no() {
     local prompt=$1
     local result
     if [ -z "$prompt" ]; then fatal "no prompt message was given"; fi
-    if [ "$DISABLE_PROMPTS" == "true" ]; then return 0; fi
+    if [ "$DISABLE_PROMPTS" == "true" ]; then return 1; fi
 
     echo
     while true; do
@@ -653,6 +653,8 @@ prompt_user_number_greater_than_zero() {
     local -r variable_name="$1"
     local -r initial_prompt_msg="$2"
     [ -z "$variable_name" ] && fatal "no variable name given"
+
+    echo "variable_name: ${variable_name}"
 
     if [ -z "${!variable_name}" ]; then
         prompt_user "${variable_name}" "${initial_prompt_msg% } "
@@ -1852,19 +1854,13 @@ step_generate_astra_connector_yaml() {
     # Default memory limit
     memory_limit=2
     if prompt_user_yes_no "Do you anticipate having more than 10,000 snapshots and backups existing at the same time at any point? "; then
-        snapshot_count="10000" # Default snapshot count
+        snapshot_count="" # Default snapshot count
         prompt_user_number_greater_than_zero snapshot_count "Please estimate the maximum number of snapshots and backups you expect to have existing simultaneously within this cluster? (enter number value): "
         # Calculate estimated_memory and round up to the nearest integer
 
         # Our default value of 2GB is sufficient to handle 10k snapshots/backups. If a customer intends to scale beyond
         # that our guidance is to increase the memory 1GB for every 5k snapshots/backups beyond our 10k default
-        if [ $snapshot_count -ge 15000 ]; then
-          additional_snapshots=$(echo "$snapshot_count 10000" | awk '{printf("%d\n", $1-$2)}')
-          estimated_memory=$(echo "$additional_snapshots 5000" | awk '{printf("%d\n", ($1/$2)+2)}')
-        else
-          estimated_memory=2
-        fi
-
+        estimated_memory=$(echo "$snapshot_count 5000" | awk '{printf("%d\n", $1/$2)}')
 
         # If estimated_memory is greater than memory_limit, set memory_limit to estimated_memory
         if (( estimated_memory > memory_limit )); then
