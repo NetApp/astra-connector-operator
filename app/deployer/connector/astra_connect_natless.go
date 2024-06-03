@@ -217,77 +217,85 @@ func (d *AstraConnectDeployer) GetServiceAccountObjects(m *v1.AstraConnector, ct
 }
 
 func (d *AstraConnectDeployer) GetClusterRoleObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
+	rules := []rbacv1.PolicyRule{
+		{
+			APIGroups: []string{""},
+			Resources: []string{"namespaces", "persistentvolumes", "nodes", "pods", "services"},
+			Verbs:     []string{"watch", "list", "get"},
+		},
+		{
+			APIGroups: []string{"storage.k8s.io"},
+			Resources: []string{"storageclasses"},
+			Verbs:     []string{"update", "watch", "list", "get"},
+		},
+		{
+			APIGroups: []string{"storage.k8s.io"},
+			Resources: []string{"csidrivers"},
+			Verbs:     []string{"watch", "list", "get"},
+		},
+		{
+			APIGroups: []string{"snapshot.storage.k8s.io"},
+			Resources: []string{"volumesnapshotclasses"},
+			Verbs:     []string{"watch", "list", "get"},
+		},
+		{
+			APIGroups: []string{"trident.netapp.io"},
+			Resources: []string{"tridentversions", "tridentorchestrators"},
+			Verbs:     []string{"watch", "list", "get"},
+		},
+		{
+			APIGroups: []string{"astra.netapp.io"},
+			Resources: []string{
+				"applications",
+				"appmirrorrelationships",
+				"appmirrorupdates",
+				"appvaults",
+				"autosupportbundles",
+				"autosupportbundleschedules",
+				"backups",
+				"backupinplacerestores",
+				"backuprestores",
+				"exechooks",
+				"exechooksruns",
+				"kopiavolumebackups",
+				"kopiavolumerestores",
+				"pvccopies",
+				"pvcerases",
+				"resourcebackups",
+				"resourcedeletes",
+				"resourcerestores",
+				"resourcesummaryuploads",
+				"resticvolumebackups",
+				"resticvolumerestores",
+				"schedules",
+				"shutdownsnapshots",
+				"snapshots",
+				"snapshotinplacerestores",
+				"snapshotrestores",
+				"astraconnectors",
+			},
+			Verbs: []string{"watch", "list", "get"},
+		},
+		{
+			APIGroups: []string{"security.openshift.io"},
+			Resources: []string{"securitycontextconstraints"},
+			Verbs:     []string{"use"},
+		},
+	}
+
 	clusterRole := &rbacv1.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: common.AstraConnectName,
 		},
-		Rules: []rbacv1.PolicyRule{
-			{
-				APIGroups: []string{""},
-				Resources: []string{"namespaces", "persistentvolumes", "nodes", "pods", "services"},
-				Verbs:     []string{"watch", "list", "get"},
-			},
-			{
-				APIGroups: []string{"storage.k8s.io"},
-				Resources: []string{"storageclasses"},
-				Verbs:     []string{"update", "watch", "list", "get"},
-			},
-			{
-				APIGroups: []string{"storage.k8s.io"},
-				Resources: []string{"csidrivers"},
-				Verbs:     []string{"watch", "list", "get"},
-			},
-			{
-				APIGroups: []string{"snapshot.storage.k8s.io"},
-				Resources: []string{"volumesnapshotclasses"},
-				Verbs:     []string{"watch", "list", "get"},
-			},
-			{
-				APIGroups: []string{"trident.netapp.io"},
-				Resources: []string{"tridentversions", "tridentorchestrators"},
-				Verbs:     []string{"watch", "list", "get"},
-			},
-			{
-				APIGroups: []string{"astra.netapp.io"},
-				Resources: []string{
-					"applications",
-					"appmirrorrelationships",
-					"appmirrorupdates",
-					"appvaults",
-					"autosupportbundles",
-					"autosupportbundleschedules",
-					"backups",
-					"backupinplacerestores",
-					"backuprestores",
-					"exechooks",
-					"exechooksruns",
-					"kopiavolumebackups",
-					"kopiavolumerestores",
-					"pvccopies",
-					"pvcerases",
-					"resourcebackups",
-					"resourcedeletes",
-					"resourcerestores",
-					"resourcesummaryuploads",
-					"resticvolumebackups",
-					"resticvolumerestores",
-					"schedules",
-					"shutdownsnapshots",
-					"snapshots",
-					"snapshotinplacerestores",
-					"snapshotrestores",
-					"astraconnectors",
-				},
-				Verbs: []string{"watch", "list", "get"},
-			},
-			{
-				APIGroups: []string{"security.openshift.io"},
-				Resources: []string{"securitycontextconstraints"},
-				Verbs:     []string{"use"},
-			},
-		},
+		Rules: rules,
 	}
-	return []client.Object{clusterRole}, model.NonMutateFn, nil
+
+	mutateFn := func() error {
+		clusterRole.Rules = rules
+		return nil
+	}
+
+	return []client.Object{clusterRole}, mutateFn, nil
 }
 
 func (d *AstraConnectDeployer) GetClusterRoleBindingObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
