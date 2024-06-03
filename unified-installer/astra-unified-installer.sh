@@ -1851,11 +1851,22 @@ step_generate_astra_connector_yaml() {
 
     # Default memory limit
     memory_limit=2
-    snapshot_count=""
     if prompt_user_yes_no "Do you anticipate having more than 10,000 snapshots and backups existing at the same time at any point? "; then
+        snapshot_count="10000" # Default snapshot count
         prompt_user_number_greater_than_zero snapshot_count "Please estimate the maximum number of snapshots and backups you expect to have existing simultaneously within this cluster? (enter number value): "
         # Calculate estimated_memory and round up to the nearest integer
-        estimated_memory=$(echo "$snapshot_count 5000" | awk '{printf("%d\n", ($1/$2)+0.6)}')
+
+        # Our default value of 2GB is sufficient to handle 10k snapshots/backups. If a customer intends to scale beyond
+        # that our guidance is to increase the memory 1GB for every 5k snapshots/backups beyond our 10k default
+        if [ $snapshot_count -ge 15000 ]; then
+          additional_snapshots=$(echo "$snapshot_count 10000" | awk '{printf("%d\n", $1-$2)}')
+          echo "DEBUG, additional_snapshots=${additional_snapshots}"
+          estimated_memory=$(echo "$additional_snapshots 5000" | awk '{printf("%d\n", ($1/$2)+2)}')
+          echo "DEBUG, estimated_memory=${estimated_memory}"
+        else
+          estimated_memory=2
+        fi
+
 
         # If estimated_memory is greater than memory_limit, set memory_limit to estimated_memory
         if (( estimated_memory > memory_limit )); then
@@ -1863,7 +1874,6 @@ step_generate_astra_connector_yaml() {
         fi
     fi
     loginfo "Memory limit set to: $memory_limit GB"
-
 
 
     # SECRET GENERATOR
