@@ -450,7 +450,6 @@ trident_is_missing() {
     return 1
 }
 
-
 trident_will_be_installed_or_modified() {
     if [ "$_TRIDENT_COLLECTION_STEP_CALLED" != "true" ]; then
         fatal "this function should not be called until existing Trident information has been collected"
@@ -478,14 +477,6 @@ get_config_acp_image() {
 
 get_config_connector_operator_image() {
     as_full_image "$CONNECTOR_OPERATOR_IMAGE_REGISTRY" "$CONNECTOR_OPERATOR_IMAGE_REPO" "$CONNECTOR_OPERATOR_IMAGE_TAG"
-}
-
-get_config_connector_image() {
-    as_full_image "$CONNECTOR_IMAGE_REGISTRY" "$CONNECTOR_IMAGE_REPO" "$CONNECTOR_IMAGE_TAG"
-}
-
-get_config_neptune_image() {
-    as_full_image "$NEPTUNE_IMAGE_REGISTRY" "$NEPTUNE_IMAGE_REPO" "$NEPTUNE_IMAGE_TAG"
 }
 
 trident_image_needs_upgraded() {
@@ -538,25 +529,47 @@ acp_is_enabled() {
     return 1
 }
 
-config_has_at_least_one_custom_registry_or_repo() {
+# get_config_custom_registries will echo all image registries (including the base repo) that have had their default
+# overridden by the user, one per line. Example:
+#     my.registry.io/base/repo
+#     my.registry.io/base/repo
+#     my.registry.io/other/repo
+#     other.registry.io
+# If there are no custom registries, the function returns code 1.
+get_config_custom_registries_with_repo() {
     local -r docker_hub_default="$(join_rpath "$__DEFAULT_DOCKER_HUB_IMAGE_REGISTRY" "$__DEFAULT_DOCKER_HUB_IMAGE_BASE_REPO")"
     local -r astra_reg_default="$(join_rpath "$__DEFAULT_ASTRA_IMAGE_REGISTRY" "$__DEFAULT_ASTRA_IMAGE_BASE_REPO")"
+    local -a custom_registries=()
 
     if components_include_trident || components_include_acp; then
-        get_config_trident_operator_image | starts_with "$docker_hub_default" || return 0
-        get_config_trident_autosupport_image | starts_with "$docker_hub_default" || return 0
-        get_config_trident_image | starts_with "$docker_hub_default" || return 0
+        get_config_trident_operator_image | starts_with "$docker_hub_default" || custom_registries+=("$TRIDENT_OPERATOR_IMAGE_REGISTRY")
+        get_config_trident_autosupport_image | starts_with "$docker_hub_default" || custom_registries+=("$TRIDENT_AUTOSUPPORT_IMAGE_REGISTRY")
+        get_config_trident_image | starts_with "$docker_hub_default" || custom_registries+=("$TRIDENT_IMAGE_REGISTRY")
     fi
     if components_include_acp; then
-        get_config_acp_image | starts_with "$astra_reg_default" || return 0
+        get_config_acp_image | starts_with "$astra_reg_default" || custom_registries+=("$TRIDENT_ACP_IMAGE_REGISTRY")
     fi
     if components_include_connector; then
-        get_config_connector_operator_image | starts_with "$docker_hub_default" || return 0
-        get_config_connector_image | starts_with "$astra_reg_default" || return 0
-        get_config_neptune_image | starts_with "$astra_reg_default" || return 0
+        # The Connector and Neptune tags are resolved by the Connector Operator in most cases, so those images
+        # don't have a "get_config_" since the tag would often just be empty. We construct the registry/repo
+        # manually instead, since that's really all we care about.
+        local -r connector_reg_and_repo="$(join_rpath "$CONNECTOR_IMAGE_REGISTRY" "$CONNECTOR_IMAGE_REPO")"
+        local -r neptune_reg_and_repo="$(join_rpath "$NEPTUNE_IMAGE_REGISTRY" "$NEPTUNE_IMAGE_REPO")"
+
+        get_config_connector_operator_image | starts_with "$docker_hub_default" || custom_registries+=("$CONNECTOR_OPERATOR_IMAGE_REGISTRY")
+        echo "$connector_reg_and_repo" | starts_with "$astra_reg_default" || custom_registries+=("$CONNECTOR_IMAGE_REGISTRY")
+        echo "$neptune_reg_and_repo" | starts_with "$astra_reg_default" || custom_registries+=("$NEPTUNE_IMAGE_REGISTRY")
     fi
 
-    return 1
+    if [ "${#custom_registries[@]}" -eq 0 ]; then
+        return 1
+    fi
+
+    for reg in "${custom_registries[@]}" ; do
+        echo "$reg"
+    done
+
+    return 0
 }
 
 config_image_is_custom() {
@@ -1668,7 +1681,7 @@ step_check_config() {
         if [ -z "$NAMESPACE" ]; then
             prompt_user "NAMESPACE" "NAMESPACE is required when specifying an IMAGE_PULL_SECRET. Please enter the namespace:"
         fi
-    elif config_has_at_least_one_custom_registry_or_repo; then
+    elif get_config_custom_registries_with_repo; then
         local custom_reg_warning="We detected one or more custom registry or repo values"
         custom_reg_warning+=", but no IMAGE_PULL_SECRET was specified. If any of your images are hosted in a private"
         custom_reg_warning+=" registry, an image pull secret will need to be created and IMAGE_PULL_SECRET set."
@@ -1810,16 +1823,10 @@ step_check_namespace_and_pull_secret_exist() {
 
     [ -z "$namespace" ] && return 0
 
-    # Best effort guess at which registry to put in the create command
+    # Get the first custom registry we come across to put in the `kubectl create secret` command of the error message
     local registry="<REGISTRY>"
-    if components_include_connector; then
-        registry="$CONNECTOR_IMAGE_REGISTRY"
-    # Skip if Trident's image is still set to our default of 'docker.io/netapp', which is public
-    elif components_include_trident && ! str_contains_at_least_one "$(get_config_trident_image)" "docker.io/netapp" ; then
-        registry="$TRIDENT_IMAGE_REGISTRY"
-    elif components_include_acp; then
-        registry="$TRIDENT_ACP_IMAGE_REGISTRY"
-    fi
+    local -r custom_registry="$(get_config_custom_registries_with_repo | head -n 1)"
+    [ -n "$custom_registry" ] && registry="$custom_registry"
 
     local create_secret_cmd="kubectl create secret docker-registry '$pull_secret' -n '$namespace'"
     create_secret_cmd+=" --docker-server='$registry' --docker-username='<USERNAME>' --docker-password='<PASSWORD>'"
