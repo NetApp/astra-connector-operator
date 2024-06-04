@@ -40,8 +40,9 @@ _PROCESSED_LABELS=""
 # ------------ CONSTANTS ------------
 readonly __RELEASE_VERSION="24.02"
 readonly __TRIDENT_VERSION="${__TRIDENT_VERSION_OVERRIDE:-"$__RELEASE_VERSION"}"
+readonly __BANNER="Astra Unified Installer ${__RELEASE_VERSION}"
 
-readonly -a __REQUIRED_TOOLS=("git" "jq" "kubectl" "curl" "grep" "sort" "uniq" "find" "base64" "wc" "awk")
+readonly -a __REQUIRED_TOOLS=("git" "jq" "kubectl" "curl" "grep" "sort" "uniq" "find" "base64" "wc" "awk" "tail" "head")
 
 # __GIT_REF_CONNECTOR_OPERATOR is set via github Actions when added to the Git Release
 readonly __GIT_REF_CONNECTOR_OPERATOR="main" # Determines the ACOP branch from which the kustomize resources will be pulled
@@ -98,16 +99,38 @@ readonly __FATAL=50
 # You can then use `get_captured_err` to get the captured error. Example:
 #     captured_stdout="$(curl -sS https://bad-url.com 2> "$_ERR_FILE")"
 #     captured_stderr="$(get_captured_err)"
-readonly __ERR_FILE="tmp_last_captured_error.txt"
+readonly __ERR_FILE="tmp-astra-unified-installer-last-captured-error.txt"
+
+# __TMP_ENV is used to store the user's env vars so that we can then re-apply them after having sourced
+# their config file. This allows us to make command line vars take precedence over what's in the config file.
+readonly __TMP_ENV="tmp-astra-unified-installer-env-file.env"
+
 readonly __NEWLINE=$'\n' # This is for readability
 
 #----------------------------------------------------------------------
 #-- Script config
 #----------------------------------------------------------------------
+process_args() {
+    for arg in "$@"; do
+        case $arg in
+            --help|-h)
+                print_help
+                exit 0
+                ;;
+            *)
+                echo "Unknown option: $arg"
+                echo
+                print_usage_and_options
+                exit 0
+                ;;
+        esac
+    done
+}
+
 get_configs() {
     # ------------ SCRIPT BEHAVIOR ------------
     CONFIG_FILE="${CONFIG_FILE:-}" # Overrides environment variables specified via command line
-    DRY_RUN="${DRY_RUN:-"true"}" # Skips applying generated resources
+    DRY_RUN="${DRY_RUN:-"false"}" # Skips applying generated resources
     SKIP_IMAGE_CHECK="${SKIP_IMAGE_CHECK:-"false"}" # Skips checking whether images exist or not
     SKIP_ASTRA_CHECK="${SKIP_ASTRA_CHECK:-"false"}" # Skips AC URL, cloud ID, and cluster ID check
     # DISABLE_PROMPTS skips prompting the user when something notable is about to happen (such as a Trident Upgrade).
@@ -172,8 +195,6 @@ get_configs() {
         TRIDENT_ACP_IMAGE_TAG="${TRIDENT_ACP_IMAGE_TAG:-$TRIDENT_IMAGE_TAG}"
     CONNECTOR_OPERATOR_IMAGE_TAG="${CONNECTOR_OPERATOR_IMAGE_TAG:-$__DEFAULT_CONNECTOR_OPERATOR_IMAGE_TAG}"
 
-
-
     # ------------ ASTRA CONNECTOR ------------
     ASTRA_CONTROL_URL="${ASTRA_CONTROL_URL:-"astra.netapp.io"}"
     ASTRA_CONTROL_URL="$(process_url "$ASTRA_CONTROL_URL" "https://")"
@@ -188,6 +209,99 @@ get_configs() {
     CONNECTOR_AUTOSUPPORT_URL="${CONNECTOR_AUTOSUPPORT_URL:-$__PRODUCTION_AUTOSUPPORT_URL}"
 }
 
+print_usage_and_options() {
+    cat <<EOF
+Usage:
+  ENV_VAR_1="value" ENV_VAR_2="value" ./astra-unified-installer.sh [options]
+
+Options:
+  --help/-h    Show the help message and exit.
+EOF
+}
+
+print_help() {
+    cat <<EOF
+====== ${__BANNER}: Help ======
+
+$(print_usage_and_options)
+
+Required Environment Variables:
+  KUBECONFIG                        Path to the KUBECONFIG for the cluster you'd like to manage. Required.
+  ASTRA_API_TOKEN                   The Astra API token. Required, provided by the Astra Control UI.
+  ASTRA_CONTROL_URL                 The Astra Control URL. Required, provided by the Astra Control UI.
+  ASTRA_ACCOUNT_ID                  The Astra account ID. Required, provided by the Astra Control UI.
+  ASTRA_CLOUD_ID                    The Astra cloud ID. Required, provided by the Astra Control UI.
+  ASTRA_CLUSTER_ID                  The Astra cluster ID. Required, provided by the Astra Control UI.
+
+Optional Environment Variables:
+  ----- Script Functionality
+  CONFIG_FILE                        Path to a configuration file. Overrides environment variables specified via command line.
+  DRY_RUN                            Skips applying generated resources when set to true. Default is false.
+  SKIP_IMAGE_CHECK                   Skips checking if images exist when set to true. Default is false.
+  SKIP_ASTRA_CHECK                   Skips all checks requiring a connection to Astra Control when set to true. Default is false.
+  SKIP_TLS_VALIDATION                Skips TLS validation for all requests to Astra Control, including the Connector (unless CONNECTOR_SKIP_TLS_VALIDATION is set) when set to true. Default is false.
+  DISABLE_PROMPTS                    Skips all prompts, answering 'yes' by default when set to true. Default is false.
+  DO_NOT_MODIFY_EXISTING_TRIDENT     Prevents any and all modification to the existing Trident installation (if any), regardless of which COMPONENTS is chosen. Required if DISABLE_PROMPTS is true, otherwise defaults to false.
+
+  ----- General Configuration
+  COMPONENTS                         One of [${__COMPONENTS_VALID_VALUES[*]}]. Determines what will be installed/upgraded. Default is ALL_ASTRA_CONTROL.
+  IMAGE_PULL_SECRET                  Image pull secret for the Docker registry.
+  NAMESPACE                          Overrides EVERY resource's namespace (for fresh installs only, not upgrades).
+  LABELS                             Labels to be added to the generated resources (disclaimer: does not apply labels to resources created by the operators).
+  RESOURCE_LIMITS_PRESET             Resource limit preset to use. Overridden by RESOURCE_LIMITS_CUSTOM_CPU and RESOURCE_LIMITS_CUSTOM_MEMORY (disclaimer: resource limits not currently supported by Trident).
+  RESOURCE_LIMITS_CUSTOM_CPU         Custom CPU resource limit. Plain number.
+  RESOURCE_LIMITS_CUSTOM_MEMORY      Custom Memory resource limit (in 'Gi')'. Plain number (i.e. do not include the 'Gi').
+
+  ----- Image Configuration
+    Image configuration is separated into three distinct parts:
+      - Registry ("private.registry.io")
+      - Repository ("some/repository/path/trident")
+      - Tag ("24.02")
+
+    Given the following images :
+      - Trident Operator:    private.registry.io/some/repository/path/trident-operator:24.02
+      - Trident Autosupport: private.registry.io/some/repository/path/trident-autosupport:24.02
+      - Trident:             private.registry.io/some/repository/path/trident:24.02
+      - Trident ACP:         private.registry.io/some/repository/path/trident-acp:24.02
+      - Connector Operator:  private.registry.io/some/repository/path/astra-connector-operator:202405211614-main
+
+    An appropriate configuration might be:
+      - IMAGE_REGISTRY="private.registry.io"
+      - IMAGE_BASE_REPO="some/repository/path"
+      - TRIDENT_IMAGE_TAG="24.02"
+      - CONNECTOR_OPERATOR_IMAGE_TAG="202405211614-main"
+
+  IMAGE_REGISTRY                     The default Docker registry to pull all images from. Overridden by values below.
+  TRIDENT_OPERATOR_IMAGE_REGISTRY    The Docker registry to pull the Trident Operator image from.
+  TRIDENT_AUTOSUPPORT_IMAGE_REGISTRY The Docker registry to pull the Trident Autosupport image from.
+  TRIDENT_IMAGE_REGISTRY             The Docker registry to pull the Trident image from.
+  CONNECTOR_OPERATOR_IMAGE_REGISTRY  The Docker registry to pull the Connector Operator image from.
+  CONNECTOR_IMAGE_REGISTRY           The Docker registry to pull the Connector image from.
+  NEPTUNE_IMAGE_REGISTRY             The Docker registry to pull the Neptune image from.
+  TRIDENT_ACP_IMAGE_REGISTRY         The Docker registry to pull the Trident ACP image from.
+
+  IMAGE_BASE_REPO                    The default base repository path (i.e. excluding the image name) for all images. Overridden by values below.
+  TRIDENT_OPERATOR_IMAGE_REPO        The repository path for the Trident Operator image.
+  TRIDENT_AUTOSUPPORT_IMAGE_REPO     The repository path for the Trident Autosupport image.
+  TRIDENT_IMAGE_REPO                 The repository path for the Trident image.
+  CONNECTOR_OPERATOR_IMAGE_REPO      The repository path for the Connector Operator image.
+  CONNECTOR_IMAGE_REPO               The repository path for the Connector image.
+  NEPTUNE_IMAGE_REPO                 The repository path for the Neptune image.
+  TRIDENT_ACP_IMAGE_REPO             The repository path for the Trident ACP image.
+
+  TRIDENT_IMAGE_TAG                  The tag for the Trident image. Overridden by other 'TRIDENT_' values below.
+  TRIDENT_OPERATOR_IMAGE_TAG         The tag for the Trident Operator image.
+  TRIDENT_AUTOSUPPORT_IMAGE_TAG      The tag for the Trident Autosupport image.
+  TRIDENT_ACP_IMAGE_TAG              The tag for the Trident ACP image.
+  CONNECTOR_OPERATOR_IMAGE_TAG       The tag for the Connector Operator image.
+
+  ----- Connector Configuration
+  CONNECTOR_HOST_ALIAS_IP            Sets a host alias in the Astra Connector pod for connecting to the given ASTRA_CONTROL_URL.
+  CONNECTOR_SKIP_TLS_VALIDATION      (WARNING: Not for production use!) Skips TLS validation for the Connector's requests to Astra Control if set to true.
+  CONNECTOR_AUTOSUPPORT_ENROLLED     Enrolls the Connector in autosupport if set to true. Default is false.
+EOF
+}
+
 set_log_level() {
     LOG_LEVEL="${LOG_LEVEL:-"$__INFO"}"
     [ "$LOG_LEVEL" == "debug" ] && LOG_LEVEL="$__DEBUG"
@@ -195,6 +309,17 @@ set_log_level() {
     [ "$LOG_LEVEL" == "warn" ] && LOG_LEVEL="$__WARN"
     [ "$LOG_LEVEL" == "error" ] && LOG_LEVEL="$__ERROR"
     [ "$LOG_LEVEL" == "fatal" ] && LOG_LEVEL="$__FATAL"
+}
+
+ingest_config_string() {
+    local -r config_str="$1"
+    [ -z "$config_str" ] && fatal "no config string given"
+    local -r tmp_env="$__TMP_ENV"
+
+    echo "$config_str" > "$tmp_env"
+    # shellcheck disable=SC1090
+    source "$tmp_env"
+    rm -f "$tmp_env" &> /dev/null
 }
 
 load_config_from_file_if_given() {
@@ -208,15 +333,37 @@ load_config_from_file_if_given() {
         add_problem "CONFIG_FILE '$config_file' does not exist" "Given CONFIG_FILE '$config_file' does not exist"
         return 1
     fi
+    # Store the current env so it can be re-applied after sourcing the config file
+    # Note: we do some ugly looking bash magic here, because we want to double quote each value
+    # so they are sourced properly, but without potentially affecting the contents. Particularly,
+    # values containing '=' are tricky since that's also the assignment operator.
+    local previous_env_double_quoted=""
+    while IFS= read -r line; do
+        # Remove the longest match (two '%') of '=*' (equal sign + wildcard) from the end of the line ('%' as opposed
+        # to '#'). This ensures we only keep the key, without potentially catching an '=' that's part of the
+        # variable's value (such as in b64 encoded values).
+        key="${line%%=*}"
 
-    # shellcheck disable=SC1090
-    source "$config_file"
+        # This does something similar, but this time removing the shortest match (one '#') of '*='
+        # (wildcard + equal sign) from the beginning ('#' as opposed to '%'), keeping only the value.
+        value="${line#*=}"
+
+        # Rebuild the env with the double quotes
+        previous_env_double_quoted+="$key=\"$value\"${__NEWLINE}"
+    done < <(env)
+
+    # Set config file values first
+    ingest_config_string "$(cat "$config_file")"
     set_log_level
 
-    # check if api token was populated after sourcing config file
+    # Check if api token was populated after sourcing config file
     if [ "$api_token" != "$ASTRA_API_TOKEN" ]; then
         logwarn "$token_warning"
     fi
+
+    # Set previous env second to allow vars provided through the command line to take priority
+    ingest_config_string "$previous_env_double_quoted"
+    set_log_level
 
     logheader $__DEBUG "Loaded configuration from file: $config_file"
 }
@@ -301,7 +448,6 @@ trident_is_missing() {
     return 1
 }
 
-
 trident_will_be_installed_or_modified() {
     if [ "$_TRIDENT_COLLECTION_STEP_CALLED" != "true" ]; then
         fatal "this function should not be called until existing Trident information has been collected"
@@ -327,8 +473,10 @@ get_config_acp_image() {
     as_full_image "$TRIDENT_ACP_IMAGE_REGISTRY" "$TRIDENT_ACP_IMAGE_REPO" "$TRIDENT_ACP_IMAGE_TAG"
 }
 
-
 trident_image_needs_upgraded() {
+    if [ "$_TRIDENT_COLLECTION_STEP_CALLED" != "true" ]; then
+        fatal "this function should not be called until existing Trident information has been collected"
+    fi
     local -r configured_image="$(get_config_trident_image)"
 
     logdebug "Checking if Trident image needs upgraded: $_EXISTING_TRIDENT_IMAGE vs $configured_image"
@@ -340,6 +488,9 @@ trident_image_needs_upgraded() {
 }
 
 trident_operator_image_needs_upgraded() {
+    if [ "$_TRIDENT_COLLECTION_STEP_CALLED" != "true" ]; then
+        fatal "this function should not be called until existing Trident information has been collected"
+    fi
     local -r configured_image="$(get_config_trident_operator_image)"
 
     logdebug "Checking if Trident image needs upgraded: $_EXISTING_TRIDENT_OPERATOR_IMAGE vs $configured_image"
@@ -351,6 +502,9 @@ trident_operator_image_needs_upgraded() {
 }
 
 acp_image_needs_upgraded() {
+    if [ "$_TRIDENT_COLLECTION_STEP_CALLED" != "true" ]; then
+        fatal "this function should not be called until existing Trident information has been collected"
+    fi
     local -r configured_image="$(get_config_acp_image)"
 
     logdebug "Checking if ACP image needs upgraded: $_EXISTING_TRIDENT_ACP_IMAGE vs $configured_image"
@@ -361,6 +515,9 @@ acp_image_needs_upgraded() {
 }
 
 acp_is_enabled() {
+    if [ "$_TRIDENT_COLLECTION_STEP_CALLED" != "true" ]; then
+        fatal "this function should not be called until existing Trident information has been collected"
+    fi
     logdebug "Checking if ACP is enabled: '$_EXISTING_TRIDENT_ACP_ENABLED'"
     [ "$_EXISTING_TRIDENT_ACP_ENABLED" == "true" ] && return 0
     return 1
@@ -690,7 +847,7 @@ join_rpath() {
     for (( i = 0; i < ${#args[@]}; i+=1 )); do
         args[i]="${args[i]#/}" # Remove starting slash if present
         args[i]="${args[i]%/}" # Remove trailing slash if present
-        if [ "$i" -eq 0 ]; then joined="${args[i]}"
+        if [ -z "$joined" ]; then joined="${args[i]}"
         else joined="$joined/${args[i]}"; fi
     done
 
@@ -857,7 +1014,6 @@ make_astra_control_request() {
     if [ -z "$ASTRA_ACCOUNT_ID" ]; then fatal "no ASTRA_ACCOUNT_ID found"; fi
     if [ -z "$ASTRA_API_TOKEN" ]; then fatal "no ASTRA_API_TOKEN found"; fi
 
-    # TODO ASTRACTL-32772: make it so including https:// and http:// is optional in ASTRA_CONTROL_URL
     local -r url="$ASTRA_CONTROL_URL/accounts/$ASTRA_ACCOUNT_ID$sub_path"
     local -r method="GET"
     local headers=("-H" 'Content-Type: application/json')
@@ -1165,7 +1321,7 @@ wait_for_deployment_running() {
     local -r sleep_time="5" # Seconds
     local -r max_checks="$(( (timeout * 60) / sleep_time ))"
     local counter=0
-    loginfo "Waiting on deployment/$deployment (timeout: $timeout)..."
+    loginfo "Waiting on deployment/$deployment (timeout: ${timeout}m)..."
     while ((counter < max_checks)); do
         if kubectl rollout status -n "$namespace" "deploy/$deployment" -w=false &> /dev/null; then
             logdebug "deploy/$deployment is now running"
@@ -1189,6 +1345,8 @@ wait_for_cr_state() {
     [ -z "$resource" ] && fatal "no resource given"
     [ -z "$path" ] && fatal "no JSON path given"
     [ -z "$desired_state" ] && fatal "no desired state given"
+
+    loginfo "Waiting on $resource -> $path to reach '$desired_state' (timeout: ${timeout}m)..."
 
     local -r sleep_time="5" # Seconds
     local -r max_checks="$(( (timeout * 60) / sleep_time ))"
@@ -1431,17 +1589,13 @@ step_check_config() {
         if [ -z "${_PROCESSED_LABELS_WITH_DEFAULT}" ]; then
             add_problem "label processing: failed" "The given LABELS could not be parsed."
         fi
+
+        _PROCESSED_LABELS+="$(process_labels_to_yaml "${LABELS}" "$label_indent")"
+        if [ -z "${_PROCESSED_LABELS}" ]; then
+            add_problem "label processing: failed" "The given LABELS could not be parsed."
+        fi
     fi
     add_to_config_builder "LABELS"
-
-     # Add user's custom labels
-        if [ -n "${LABELS}" ]; then
-            _PROCESSED_LABELS+="$(process_labels_to_yaml "${LABELS}" "$label_indent")"
-            if [ -z "${_PROCESSED_LABELS}" ]; then
-                add_problem "label processing: failed" "The given LABELS could not be parsed."
-            fi
-        fi
-        add_to_config_builder "LABELS"
 }
 
 step_check_tools_are_installed() {
@@ -1871,7 +2025,6 @@ step_generate_astra_connector_yaml() {
     fi
     loginfo "Memory limit set to: $memory_limit GB"
 
-
     # SECRET GENERATOR
     cat <<EOF >> "$kustomization_file"
 generatorOptions:
@@ -2056,6 +2209,7 @@ step_collect_existing_trident_info() {
 step_existing_trident_flags_compatibility_check() {
     [ "$COMPONENTS" == "$__COMPONENTS_ALL_ASTRA_CONTROL" ] && return 0
     ! existing_trident_needs_modifications && return 0
+    existing_trident_can_be_modified && return 0
 
     local msg="Existing Trident install requires an upgrade but DO_NOT_MODIFY_EXISTING_TRIDENT=true,"
     msg+=" and no other valid operations can be done due to COMPONENTS=$COMPONENTS."
@@ -2164,7 +2318,7 @@ step_add_labels_to_kustomization() {
     logheader $__DEBUG "Adding labels to kustomization and crs file"
 
     local -r content="labels:${__NEWLINE}- pairs:${__NEWLINE}${processed_labels}"
-    insert_into_file_after_pattern "${kustomization_file}" "kind:" "${content}"
+    insert_into_file_after_pattern "${kustomization_file}" "kind: Kustomization" "${content}"
 
     logdebug "kustomization labels: OK"
 }
@@ -2204,16 +2358,29 @@ step_apply_resources() {
     logdebug "apply operator resources"
     local output=""
     if ! is_dry_run; then
-        output="$(kubectl apply -k "$operators_dir" 2>&1)"
+        output="$(kubectl apply -k "$operators_dir" 2> "$__ERR_FILE")"
+        captured_err="$(get_captured_err)"
+        if echo "$captured_err" | grep -q "Warning:"; then
+            logdebug "captured warning when applying kustomize resources:${__NEWLINE}$captured_err"
+        elif echo "$captured_err" | grep -q "no objects passed to apply"; then
+            logdebug "no kustomize resources to apply, skipping"
+        elif [ -z "$output" ] || [ -n "$captured_err" ]; then
+            add_problem "Failed to apply kustomize resources: $captured_err"
+        fi
         logdebug "kustomize apply output:${__NEWLINE}$output"
     fi
+    exit_if_problems
     loginfo "* Astra operators have been applied to the cluster."
 
     # Apply CRs (if we have any)
     if [ -f "$crs_file_path" ]; then
         logdebug "apply CRs"
         if ! is_dry_run; then
-            output="$(kubectl apply -f "$crs_file_path")"
+            output="$(kubectl apply -f "$crs_file_path" 2> "$__ERR_FILE")"
+            captured_err="$(get_captured_err)"
+            if [ -z "$output" ] || [ -n "$captured_err" ]; then
+                add_problem "Failed to apply CRs: $captured_err"
+            fi
             logdebug "$output"
         else
             logdebug "skipped due to dry run"
@@ -2222,6 +2389,7 @@ step_apply_resources() {
     else
         logdebug "No CRs file to apply"
     fi
+    exit_if_problems
 }
 
 step_apply_trident_operator_patches() {
@@ -2283,6 +2451,7 @@ step_monitor_deployment_progress() {
 
     logheader "$__INFO" "$(prefix_dryrun "Monitoring deployment progress...")"
     if ! is_dry_run; then
+        loginfo "Waiting for operators to detect changes..."
         sleep 20 # Wait for initial resources to be created and operators to detect changes
     fi
 
@@ -2320,8 +2489,9 @@ step_cleanup_tmp_files() {
 #======================================================================
 #== Main
 #======================================================================
+process_args "$@"
 set_log_level
-logln $__INFO "====== Astra Cluster Installer ${__RELEASE_VERSION} ======"
+logln $__INFO "====== ${__BANNER} ======"
 load_config_from_file_if_given "$CONFIG_FILE"
 exit_if_problems
 
