@@ -1930,8 +1930,6 @@ spec:
   autoSupport:
     enrolled: ${connector_autosupport_enrolled}
     url: ${connector_autosupport_url}
-  natsSyncClient:
-    cloudBridgeURL: ${astra_url}
   neptune:
     resources:
       limits:
@@ -1940,6 +1938,10 @@ spec:
         cpu: ".5"
         memory: ${memory_limit}Gi
 EOF
+    {
+      echo "  natsSyncClient:"
+      echo "    cloudBridgeURL: ${astra_url}"
+    }  >> "$crs_file"
     if [ -n "$host_alias_ip" ]; then
         echo "    hostAliasIP: $host_alias_ip" >> "$crs_file"
     fi
