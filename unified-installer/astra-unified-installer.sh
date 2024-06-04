@@ -1282,10 +1282,12 @@ k8s_get_resource() {
     # Note on "NotFound" errors:
     #
     # "NotFound" errors are OK because it just means the resource wasn't found, at which point we echo an empty string
-    # (equivalent to returning null). We don't necessarily stop script execution just because a resource wasn't found.
+    # (basically equivalent to returning null or nil in other languages). We don't necessarily stop script execution
+    # just because a resource wasn't found.
     #
     # On the other hand, other types of errors (such as connection timeouts) need to stop script execution since it
-    # means we still don't actually know if the resource exists or not.
+    # means we still don't actually know if the resource exists or not, so we call add_problem, which is akin to
+    # 'throwing' an error.
     #
     # For example, we look for the existence of the TORC to determine whether Trident is installed or not -- this means
     # that, if we interpret a "Connection Timeout" error to mean "Trident is not installed" (instead of adding them as
