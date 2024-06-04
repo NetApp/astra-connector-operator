@@ -236,10 +236,10 @@ Optional Environment Variables:
   SKIP_ASTRA_CHECK                   Skips all checks requiring a connection to Astra Control when set to true. Default is false.
   SKIP_TLS_VALIDATION                Skips TLS validation for all requests to Astra Control, including the Connector (unless CONNECTOR_SKIP_TLS_VALIDATION is set) when set to true. Default is false.
   DISABLE_PROMPTS                    Skips all prompts, answering 'yes' by default when set to true. Default is false.
-  DO_NOT_MODIFY_EXISTING_TRIDENT     Prevents any and all modification to the existing Trident installation (if any). Required if DISABLE_PROMPTS is true, otherwise defaults to false.
+  DO_NOT_MODIFY_EXISTING_TRIDENT     Prevents any and all modification to the existing Trident installation (if any), regardless of which COMPONENTS is chosen. Required if DISABLE_PROMPTS is true, otherwise defaults to false.
 
   ----- General Configuration
-  COMPONENTS                         Determines what will be installed/upgraded. Default is ALL_ASTRA_CONTROL.
+  COMPONENTS                         One of [${__COMPONENTS_VALID_VALUES[*]}]. Determines what will be installed/upgraded. Default is ALL_ASTRA_CONTROL.
   IMAGE_PULL_SECRET                  Image pull secret for the Docker registry.
   NAMESPACE                          Overrides EVERY resource's namespace (for fresh installs only, not upgrades).
   LABELS                             Labels to be added to the generated resources (disclaimer: does not apply labels to resources created by the operators).
