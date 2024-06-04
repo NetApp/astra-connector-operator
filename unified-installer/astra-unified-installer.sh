@@ -2545,6 +2545,7 @@ exit_if_problems
 step_existing_trident_flags_compatibility_check
 exit_if_problems
 
+_user_declined_trident_upgrade=""
 if trident_will_be_installed_or_modified; then
     if trident_is_missing; then
         step_generate_trident_fresh_install_yaml
@@ -2555,43 +2556,29 @@ if trident_will_be_installed_or_modified; then
         if components_include_trident; then
             # Trident upgrade (includes operator upgrade if needed)
             if trident_image_needs_upgraded; then
-                # if trident version < 23.10
-                if version_higher_or_equal "23.07" "$_EXISTING_TRIDENT_VERSION"; then
+                # Warn if trident version < 23.10 (ACP requires 23.10+)
+                if ! existing_trident_supports_acp; then
                     logwarn "Your Trident installation is at version $_EXISTING_TRIDENT_VERSION, while the lowest required version to enable ACP is 23.10."
                 fi
 
+                _generate_torc_args=("$_EXISTING_TORC_NAME" "$(get_config_trident_image)" "" "" "$(get_config_trident_autosupport_image)")
                 if config_trident_image_is_custom; then
-                    local -r custom_image="$(as_full_image "$TRIDENT_IMAGE_REGISTRY" "$TRIDENT_IMAGE_REPO" "$TRIDENT_IMAGE_TAG")"
-                    local warning_message="Warning: we cannot verify the version of the custom Trident image you provided"
-                    warning_message += " ($custom_image). ACP support cannot be guaranteed if upgrading to that image."
-                    logwarn "$warning_message"
-                fi
+                    _warning_message="We cannot verify the version of the custom Trident image you provided"
+                    _warning_message+=" ($(get_config_trident_image). ACP support (23.10+) is not guaranteed."
+                    logwarn "$_warning_message"
 
-                if ! components_include_connector && (components_include_trident || components_include_acp); then
-                    if prompt_user_yes_no "Would you like to upgrade Trident? Choosing no will exit the script (yes/no):"; then
-                        step_generate_torc_patch "$_EXISTING_TORC_NAME" "$(get_config_trident_image)" "" "" "$(get_config_trident_autosupport_image)"
-                        trident_operator_image_needs_upgraded && step_generate_trident_operator_patch
-                    else
-                        exit 0
-                    fi
-                fi
-
-                if components_include_connector; then
-                    if acp_is_enabled; then
-                        if prompt_user_yes_no "Would you like to upgrade Trident?"; then
-                            step_generate_torc_patch "$_EXISTING_TORC_NAME" "$(get_config_trident_image)" "" "" "$(get_config_trident_autosupport_image)"
-                            trident_operator_image_needs_upgraded && step_generate_trident_operator_patch
-                        else
-                            loginfo "Trident will not be upgraded"
-                        fi
-                    else
-                        if prompt_user_yes_no "Would you like to upgrade Trident? If you choose no, ACP will remain disabled"; then
-                            step_generate_torc_patch "$_EXISTING_TORC_NAME" "$(get_config_trident_image)" "" "" "$(get_config_trident_autosupport_image)"
-                            trident_operator_image_needs_upgraded && step_generate_trident_operator_patch
-                        else
-                            loginfo "Trident will not be upgraded and ACP will remain disabled."
-                        fi
-                    fi
+                    step_generate_torc_patch "${_generate_torc_args[@]}"
+                    trident_operator_image_needs_upgraded && step_generate_trident_operator_patch
+                elif prompt_user_yes_no "Would you like to upgrade Trident?"; then
+                    step_generate_torc_patch "${_generate_torc_args[@]}"
+                    trident_operator_image_needs_upgraded && step_generate_trident_operator_patch
+                else
+                    _user_declined_trident_upgrade="true"
+                    _msg="You have chosen to use a version of Trident that is not supported with the current version"
+                    _msg+=" of Astra Control. This may result in some App Data Management operations not functioning"
+                    _msg+=" correctly or being blocked within Astra Control. It is highly recommended to upgrade"
+                    _msg+=" Trident to ensure compatibility and proper functionality."
+                    logwarn "$_msg"
                 fi
             # Trident operator upgrade (standalone)
             elif trident_operator_image_needs_upgraded; then
@@ -2607,8 +2594,12 @@ if trident_will_be_installed_or_modified; then
 
         # Upgrade/Enable ACP?
         if components_include_acp; then
+            # Skip enabling ACP if existing Trident doesn't support ACP and user declined upgrade
+            if [ "$_user_declined_trident_upgrade" ] && ! existing_trident_supports_acp; then
+                logwarn "Current Trident version does not support ACP, and Trident upgrade was declined. ACP will NOT be enabled."
             # Enable ACP if needed (includes ACP upgrade)
-            if ! acp_is_enabled; then
+            elif ! acp_is_enabled; then
+
                 if config_acp_image_is_custom || prompt_user_yes_no "Would you like to enable ACP?"; then
                     step_generate_torc_patch "$_EXISTING_TORC_NAME" "" "$(get_config_acp_image)" "true"
                 else
@@ -2625,6 +2616,7 @@ if trident_will_be_installed_or_modified; then
         else
             logdebug "Skipping ACP changes (COMPONENTS=${COMPONENTS})"
         fi
+
     fi
 fi
 
