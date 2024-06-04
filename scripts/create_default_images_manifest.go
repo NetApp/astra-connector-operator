@@ -12,17 +12,23 @@ import (
 
 func main() {
 	// Get cmd line args
-	if len(os.Args) < 3 {
-		fmt.Println("Usage: go run create_default_images_manifest.go <output_file_path> <version>")
+	if len(os.Args) < 4 {
+		fmt.Println("Usage: go run create_default_images_manifest.go <output_file_path> <version> <is-release>")
 		os.Exit(1)
 	}
 	destinationFilePath := os.Args[1]
 	connectorOperatorVersion := os.Args[2]
+	isRelease := os.Args[3]
 
 	fmt.Printf("Creating default-image manifest file %s\n", destinationFilePath)
 
 	// Gather the full image name and versions
-	defaultImageRegistry := common.DefaultImageRegistry
+	defaultImageRegistry := ""
+	if isRelease == "true" {
+		defaultImageRegistry = common.AstraImageRegistry
+	} else {
+		defaultImageRegistry = common.DefaultImageRegistry
+	}
 
 	// Connector images
 	images := []string{
