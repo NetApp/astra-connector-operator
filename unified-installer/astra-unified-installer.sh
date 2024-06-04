@@ -654,6 +654,8 @@ prompt_user_number_greater_than_zero() {
     local -r initial_prompt_msg="$2"
     [ -z "$variable_name" ] && fatal "no variable name given"
 
+    echo "variable_name: ${variable_name}"
+
     if [ -z "${!variable_name}" ]; then
         prompt_user "${variable_name}" "${initial_prompt_msg% } "
     fi
@@ -1851,19 +1853,23 @@ step_generate_astra_connector_yaml() {
 
     # Default memory limit
     memory_limit=2
-    snapshot_count=""
-    if prompt_user_yes_no "Do you anticipate having more than 10,000 snapshots and backups existing at the same time at any point? "; then
-        prompt_user_number_greater_than_zero snapshot_count "Please estimate the maximum number of snapshots and backups you expect to have existing simultaneously within this cluster? (enter number value): "
-        # Calculate estimated_memory and round up to the nearest integer
-        estimated_memory=$(echo "$snapshot_count 5000" | awk '{printf("%d\n", ($1/$2)+0.6)}')
+    if [  "$DISABLE_PROMPTS" != "true" ]; then
+      if prompt_user_yes_no "Do you anticipate having more than 10,000 snapshots and backups existing at the same time at any point? "; then
+          local snapshot_count="" # Default snapshot count
+          prompt_user_number_greater_than_zero snapshot_count "Please estimate the maximum number of snapshots and backups you expect to have existing simultaneously within this cluster? (enter number value): "
+          # Calculate estimated_memory and round up to the nearest integer
 
-        # If estimated_memory is greater than memory_limit, set memory_limit to estimated_memory
-        if (( estimated_memory > memory_limit )); then
-            memory_limit=$estimated_memory
-        fi
+          # Our default value of 2GB is sufficient to handle 10k snapshots/backups. If a customer intends to scale beyond
+          # that our guidance is to increase the memory 1GB for every 5k snapshots/backups beyond our 10k default
+          estimated_memory=$(echo "$snapshot_count 5000" | awk '{printf("%d\n", $1/$2)}')
+
+          # If estimated_memory is greater than memory_limit, set memory_limit to estimated_memory
+          if (( estimated_memory > memory_limit )); then
+              memory_limit=$estimated_memory
+          fi
+      fi
     fi
     loginfo "Memory limit set to: $memory_limit GB"
-
 
 
     # SECRET GENERATOR
