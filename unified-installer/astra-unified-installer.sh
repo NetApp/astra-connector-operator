@@ -40,6 +40,7 @@ _PROCESSED_LABELS=""
 # ------------ CONSTANTS ------------
 readonly __RELEASE_VERSION="24.02"
 readonly __TRIDENT_VERSION="${__TRIDENT_VERSION_OVERRIDE:-"$__RELEASE_VERSION"}"
+readonly __BANNER="Astra Unified Installer ${__RELEASE_VERSION}"
 
 readonly -a __REQUIRED_TOOLS=("git" "jq" "kubectl" "curl" "grep" "sort" "uniq" "find" "base64" "wc" "awk" "tail" "head")
 
@@ -98,11 +99,11 @@ readonly __FATAL=50
 # You can then use `get_captured_err` to get the captured error. Example:
 #     captured_stdout="$(curl -sS https://bad-url.com 2> "$_ERR_FILE")"
 #     captured_stderr="$(get_captured_err)"
-readonly __ERR_FILE="tmp_last_captured_error.txt"
+readonly __ERR_FILE="tmp-astra-unified-installer-last-captured-error.txt"
 
 # __TMP_ENV is used to store the user's env vars so that we can then re-apply them after having sourced
 # their config file. This allows us to make command line vars take precedence over what's in the config file.
-readonly __TMP_ENV="tmp.env"
+readonly __TMP_ENV="tmp-astra-unified-installer-env-file.env"
 
 readonly __NEWLINE=$'\n' # This is for readability
 
@@ -211,14 +212,23 @@ get_configs() {
 
 print_help() {
     cat <<EOF
-Here is a list of available options and environment variables for configuring the Astra cluster installation script.
-Values which are required and have no default value are marked with '*'.
+====== ${__BANNER}: Help ======
+
+Usage:
+  ENV_VAR_1="value" ENV_VAR_2="value" ./astra-unified-installer.sh [options]
 
 Options:
   --help/-h    Show this message and exit.
-  --required   Prints all required environment variables which do not have a default value.
 
-Environment Variables:
+Required Environment Variables:
+  KUBECONFIG                        Path to the KUBECONFIG for the cluster you'd like to manage. Required.
+  ASTRA_API_TOKEN                   The Astra API token. Required, provided by the Astra Control UI.
+  ASTRA_CONTROL_URL                 The Astra Control URL. Required, provided by the Astra Control UI.
+  ASTRA_ACCOUNT_ID                  The Astra account ID. Required, provided by the Astra Control UI.
+  ASTRA_CLOUD_ID                    The Astra cloud ID. Required, provided by the Astra Control UI.
+  ASTRA_CLUSTER_ID                  The Astra cluster ID. Required, provided by the Astra Control UI.
+
+Optional Environment Variables:
   ----- Script Functionality
   CONFIG_FILE                        Path to a configuration file. Overrides environment variables specified via command line.
   DRY_RUN                            Skips applying generated resources when set to true. Default is false.
@@ -229,7 +239,6 @@ Environment Variables:
   DO_NOT_MODIFY_EXISTING_TRIDENT     Prevents any and all modification to the existing Trident installation (if any). Required if DISABLE_PROMPTS is true, otherwise defaults to false.
 
   ----- General Configuration
-  *KUBECONFIG                        Path to the KUBECONFIG for the cluster you'd like to manage. Required.
   COMPONENTS                         Determines what will be installed/upgraded. Default is ALL_ASTRA_CONTROL.
   IMAGE_PULL_SECRET                  Image pull secret for the Docker registry.
   NAMESPACE                          Overrides EVERY resource's namespace (for fresh installs only, not upgrades).
@@ -282,12 +291,7 @@ Environment Variables:
   CONNECTOR_OPERATOR_IMAGE_TAG       The tag for the Connector Operator image.
 
   ----- Connector Configuration
-  *ASTRA_CONTROL_URL                 The Astra Control URL. Required, provided by the Astra Control UI.
-  *ASTRA_API_TOKEN                   The Astra API token. Required, provided by the Astra Control UI.
-  *ASTRA_ACCOUNT_ID                  The Astra account ID. Required, provided by the Astra Control UI.
-  *ASTRA_CLOUD_ID                    The Astra cloud ID. Required, provided by the Astra Control UI.
-  *ASTRA_CLUSTER_ID                  The Astra cluster ID. Required, provided by the Astra Control UI.
-  CONNECTOR_HOST_ALIAS_IP            Sets a host alias for the Astra Connector pod.
+  CONNECTOR_HOST_ALIAS_IP            Sets a host alias in the Astra Connector pod for connecting to the given ASTRA_CONTROL_URL.
   CONNECTOR_SKIP_TLS_VALIDATION      (WARNING: Not for production use!) Skips TLS validation for the Connector's requests to Astra Control if set to true.
   CONNECTOR_AUTOSUPPORT_ENROLLED     Enrolls the Connector in autosupport if set to true. Default is false.
 EOF
@@ -2480,7 +2484,7 @@ step_cleanup_tmp_files() {
 #======================================================================
 process_args "$@"
 set_log_level
-logln $__INFO "====== Astra Unified Installer ${__RELEASE_VERSION} ======"
+logln $__INFO "====== ${__BANNER} ======"
 load_config_from_file_if_given "$CONFIG_FILE"
 exit_if_problems
 
