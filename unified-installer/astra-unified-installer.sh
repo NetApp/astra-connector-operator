@@ -514,6 +514,13 @@ acp_is_enabled() {
     return 1
 }
 
+existing_trident_supports_acp() {
+    if [ "$_TRIDENT_COLLECTION_STEP_CALLED" != "true" ]; then
+        fatal "this function should not be called until existing Trident information has been collected"
+    fi
+    version_higher_or_equal "23.07" "$_EXISTING_TRIDENT_VERSION"
+}
+
 config_image_is_custom() {
     local -r component_name="$1"
     local -r default_registry="$2"
