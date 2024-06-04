@@ -484,6 +484,9 @@ get_config_neptune_image() {
 }
 
 trident_image_needs_upgraded() {
+    if [ "$_TRIDENT_COLLECTION_STEP_CALLED" != "true" ]; then
+        fatal "this function should not be called until existing Trident information has been collected"
+    fi
     local -r configured_image="$(get_config_trident_image)"
 
     logdebug "Checking if Trident image needs upgraded: $_EXISTING_TRIDENT_IMAGE vs $configured_image"
@@ -495,6 +498,9 @@ trident_image_needs_upgraded() {
 }
 
 trident_operator_image_needs_upgraded() {
+    if [ "$_TRIDENT_COLLECTION_STEP_CALLED" != "true" ]; then
+        fatal "this function should not be called until existing Trident information has been collected"
+    fi
     local -r configured_image="$(get_config_trident_operator_image)"
 
     logdebug "Checking if Trident image needs upgraded: $_EXISTING_TRIDENT_OPERATOR_IMAGE vs $configured_image"
@@ -506,6 +512,9 @@ trident_operator_image_needs_upgraded() {
 }
 
 acp_image_needs_upgraded() {
+    if [ "$_TRIDENT_COLLECTION_STEP_CALLED" != "true" ]; then
+        fatal "this function should not be called until existing Trident information has been collected"
+    fi
     local -r configured_image="$(get_config_acp_image)"
 
     logdebug "Checking if ACP image needs upgraded: $_EXISTING_TRIDENT_ACP_IMAGE vs $configured_image"
@@ -516,6 +525,9 @@ acp_image_needs_upgraded() {
 }
 
 acp_is_enabled() {
+    if [ "$_TRIDENT_COLLECTION_STEP_CALLED" != "true" ]; then
+        fatal "this function should not be called until existing Trident information has been collected"
+    fi
     logdebug "Checking if ACP is enabled: '$_EXISTING_TRIDENT_ACP_ENABLED'"
     [ "$_EXISTING_TRIDENT_ACP_ENABLED" == "true" ] && return 0
     return 1
@@ -2828,7 +2840,6 @@ if trident_will_be_installed_or_modified; then
         else
             logdebug "Skipping ACP changes (COMPONENTS=${COMPONENTS})"
         fi
-
     fi
 fi
 
