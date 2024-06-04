@@ -239,7 +239,7 @@ Optional Environment Variables:
   DO_NOT_MODIFY_EXISTING_TRIDENT     Prevents any and all modification to the existing Trident installation (if any). Required if DISABLE_PROMPTS is true, otherwise defaults to false.
 
   ----- General Configuration
-  COMPONENTS                         Determines what will be installed/upgraded. Default is ALL_ASTRA_CONTROL.
+  COMPONENTS                         One of [${__COMPONENTS_VALID_VALUES[*]}]. Determines what will be installed/upgraded. Default is ALL_ASTRA_CONTROL.
   IMAGE_PULL_SECRET                  Image pull secret for the Docker registry.
   NAMESPACE                          Overrides EVERY resource's namespace (for fresh installs only, not upgrades).
   LABELS                             Labels to be added to the generated resources (disclaimer: does not apply labels to resources created by the operators).
