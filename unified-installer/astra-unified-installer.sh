@@ -1276,10 +1276,21 @@ EOF
 }
 
 # k8s_get_resource will get the given k8s resource in the given format and echo the output.
-# If an error occurs, a problem will be added if the error is NOT "NotFound". This is to prevent
-# misdiagnosing all errors as "the resource wasn't found", which can be dangerous (especially
-# considering we look for the existence of the TORC to determine whether Trident is installed or not).
+# If a connection error (or any type of error except for "NotFound") occurs, a problem will be added to make sure
+# script execution is halted.
 k8s_get_resource() {
+    # Note on "NotFound" errors:
+    #
+    # "NotFound" errors are OK because it just means the resource wasn't found, at which point we echo an empty string
+    # (equivalent to returning null). We don't necessarily stop script execution just because a resource wasn't found.
+    #
+    # On the other hand, other types of errors (such as connection timeouts) need to stop script execution since it
+    # means we still don't actually know if the resource exists or not.
+    #
+    # For example, we look for the existence of the TORC to determine whether Trident is installed or not -- this means
+    # that, if we interpret a "Connection Timeout" error to mean "Trident is not installed" (instead of adding them as
+    # a problem), then we're going to continue execution of the script and attempt to install Trident on a cluster that
+    # may already have it installed.
     local -r resource="$1"
     local -r namespace="${2:-""}"
     local -r format="${3:-"json"}"
