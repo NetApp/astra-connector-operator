@@ -233,13 +233,16 @@ func (n NeptuneClientDeployerV2) GetDeploymentObjects(m *v1.AstraConnector, ctx 
 		containers := deployment.Spec.Template.Spec.Containers
 		newContainers := make([]corev1.Container, 0, 2)
 
-		for i, container := range containers {
+		for _, container := range containers {
 			if container.Name == "manager" {
-				for j, envVar := range container.Env {
-					if envVar.Name == "NEPTUNE_AUTOSUPPORT_URL" {
-						containers[i].Env[j].Value = m.Spec.AutoSupport.URL
-					}
-				}
+				container.Env = getNeptuneEnvVars(
+					imageRegistry,
+					containerImage,
+					m.Spec.Neptune.JobImagePullPolicy,
+					m.Spec.ImageRegistry.Secret,
+					m.Spec.AutoSupport.URL,
+					m.Spec.Labels,
+				)
 				container.Image = neptuneImage
 			}
 			newContainers = append(newContainers, container)
