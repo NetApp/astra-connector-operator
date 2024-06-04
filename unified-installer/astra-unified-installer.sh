@@ -1786,6 +1786,87 @@ EOF
     fi
 }
 
+step_kustomize_global_pull_secret_if_needed() {
+    local -r global_pull_secret="${1:-""}"
+    local -r kustomization_file="${2}"
+    local -r kustomization_dir="$(dirname "$kustomization_file")"
+    local -r connector_namespace="$(get_connector_namespace)"
+    local -r trident_namespace="$(get_trident_namespace)"
+    local -r connector_registry="$(join_rpath "$CONNECTOR_IMAGE_REGISTRY" "$(get_base_repo "$CONNECTOR_IMAGE_REPO")")"
+    local -r trident_acp_registry="$(join_rpath "$TRIDENT_ACP_IMAGE_REGISTRY" "$(get_base_repo "$TRIDENT_ACP_IMAGE_REPO")")"
+    local -r encoded_creds=$(echo -n "$ASTRA_ACCOUNT_ID:$ASTRA_API_TOKEN" | base64)
+
+    [ -z "$kustomization_file" ] && fatal "no kustomization file given"
+    [ ! -f "$kustomization_file" ] && fatal "kustomization file '$kustomization_file' does not exist"
+
+       # SECRET GENERATOR
+    cat <<EOF >> "$kustomization_file"
+generatorOptions:
+  disableNameSuffixHash: true
+secretGenerator:
+- name: astra-api-token
+  namespace: "${connector_namespace}"
+  literals:
+  - apiToken="${ASTRA_API_TOKEN}"
+EOF
+    if [ -z "$global_pull_secret" ]; then
+        # if image pull secret is empty, set same name for connector and trident secret so torc patch works as expected
+        IMAGE_PULL_SECRET="astra-regcred"
+        if components_include_connector; then
+            cat <<EOF >> "$kustomization_file"
+- name: "${IMAGE_PULL_SECRET}"
+  namespace: "${connector_namespace}"
+  type: kubernetes.io/dockerconfigjson
+  literals:
+  - |
+    .dockerconfigjson={
+      "auths": {
+        "${connector_registry}": {
+          "username": "$ASTRA_ACCOUNT_ID",
+          "password": "$ASTRA_API_TOKEN",
+          "auth": "${encoded_creds}"
+        }
+      }
+    }
+EOF
+            logdebug "$kustomization_file: added connector secret to namespace $connector_namespace"
+        fi
+    
+        if components_include_trident && [ "$trident_namespace" != "$connector_namespace" ]; then
+            cat <<EOF >> "$kustomization_file"
+- name: "${IMAGE_PULL_SECRET}"
+  namespace: "${trident_namespace}"
+  type: kubernetes.io/dockerconfigjson
+  literals:
+  - |
+    .dockerconfigjson={
+      "auths": {
+        "${trident_acp_registry}": {
+          "username": "$ASTRA_ACCOUNT_ID",
+          "password": "$ASTRA_API_TOKEN",
+          "auth": "${encoded_creds}"
+        }
+      }
+    }
+EOF
+            logdebug "$kustomization_file: added trident acp secret to namespace $trident_namespace"
+        fi
+    fi
+
+    
+
+    insert_into_file_after_pattern "$kustomization_file" "patches:" '
+- target:
+    kind: Deployment
+  patch: |-
+    - op: replace
+      path: /spec/template/spec/imagePullSecrets
+      value:
+        - name: "'"${global_pull_secret}"'"
+'
+    logdebug "$kustomization_file: added pull secret patch ($global_pull_secret)"
+}
+
 step_kustomize_global_namespace_if_needed() {
     local -r global_namespace="${1:-""}"
     local -r kustomization_file="${2}"
@@ -1863,38 +1944,6 @@ step_generate_astra_connector_yaml() {
         fi
     fi
     loginfo "Memory limit set to: $memory_limit GB"
-
-
-
-    # SECRET GENERATOR
-    cat <<EOF >> "$kustomization_file"
-generatorOptions:
-  disableNameSuffixHash: true
-secretGenerator:
-- name: astra-api-token
-  namespace: "${connector_namespace}"
-  literals:
-  - apiToken="${api_token}"
-EOF
-    if [ -z "$IMAGE_PULL_SECRET" ]; then
-        cat <<EOF >> "$kustomization_file"
-- name: "${connector_regcred_name}"
-  namespace: "${connector_namespace}"
-  type: kubernetes.io/dockerconfigjson
-  literals:
-  - |
-    .dockerconfigjson={
-      "auths": {
-        "${connector_registry}": {
-          "username": "${username}",
-          "password": "${password}",
-          "auth": "${encoded_creds}"
-        }
-      }
-    }
-EOF
-    fi
-    logdebug "$kustomization_file: added secrets"
 
     # ASTRA CONNECTOR CR
     local labels_field_and_content_with_default=""
@@ -2106,8 +2155,27 @@ step_generate_trident_operator_patch() {
     [ -z "$new_image" ] && fatal "no trident operator image found"
 
     logheader $__DEBUG "Generating Trident Operator patch"
-    local -r patch='[{"op":"replace","path":"/spec/template/spec/containers/0/image","value":"'"$new_image"'"}]'
-    _PATCHES_TRIDENT_OPERATOR+=("deploy/trident-operator -n '$namespace' --type=json -p '$(echo "$patch" | jq '.')'")
+    local -r image_patch='{"op":"replace","path":"/spec/template/spec/containers/0/image","value":"'"$new_image"'"}'
+    local -a patch_list="$image_patch"
+
+    # Update image pull secrets if needed
+    if [ -n "$IMAGE_PULL_SECRET" ]; then
+        if echo "$_EXISTING_TRIDENT_OPERATOR_PULL_SECRETS" | grep -q "^${IMAGE_PULL_SECRET}$" &> /dev/null; then
+            logdebug "image pull secret '$IMAGE_PULL_SECRET' already present in trident-operator"
+        else
+            if [ -z "$_EXISTING_TRIDENT_OPERATOR_PULL_SECRETS" ]; then
+                patch_list+=',{"op":"replace","path":"/spec/template/spec/imagePullSecrets","value":[{"name":"'"$IMAGE_PULL_SECRET"'"}]}'
+            else
+                patch_list+=',{"op":"add","path":"/spec/template/spec/imagePullSecrets/-","value":{"name":"'"$IMAGE_PULL_SECRET"'"}}'
+            fi
+        fi
+    fi
+
+    if [ -n "$patch_list" ]; then
+        echo "[${patch_list%,}]"
+        patch_list="'$(echo "[${patch_list%,}]" | jq '.')'"
+        _PATCHES_TRIDENT_OPERATOR+=("deploy/trident-operator -n '$namespace' --type=json -p $patch_list")
+    fi
 }
 
 step_generate_torc_patch() {
@@ -2119,6 +2187,7 @@ step_generate_torc_patch() {
     if [ -z "$torc_name" ]; then fatal "no trident orchestrator name was given"; fi
 
     logheader $__DEBUG "Generating TORC patch"
+
     local torc_patch_list=""
 
     # Trident
@@ -2139,7 +2208,20 @@ step_generate_torc_patch() {
         torc_patch_list+='{"op":"replace","path":"/spec/autosupportImage","value":"'"$autosupport_image"'"},'
     fi
 
-    if [ "${#torc_patch_list[@]}" -gt 0 ]; then
+    # Update image pull secrets if needed
+    if [ -n "$IMAGE_PULL_SECRET" ]; then
+        if echo "$_EXISTING_TORC_PULL_SECRETS" | grep -q "^${IMAGE_PULL_SECRET}$" &> /dev/null; then
+            logdebug "image pull secret '$IMAGE_PULL_SECRET' already present in torc"
+        else
+            if [ -z "$_EXISTING_TRIDENT_OPERATOR_PULL_SECRETS" ]; then
+                torc_patch_list+='{"op":"replace","path":"/spec/imagePullSecrets","value":["'"$IMAGE_PULL_SECRET"'"]},'
+            else
+                torc_patch_list+='{"op":"add","path":"/spec/imagePullSecrets/-","value":"'"$IMAGE_PULL_SECRET"'"},'
+            fi
+        fi
+    fi
+
+    if [ -n "$torc_patch_list" ]; then
         torc_patch_list="'$(echo "[${torc_patch_list%,}]" | jq '.')'"
         _PATCHES_TORC+=("tridentorchestrator $torc_name --type=json -p ${torc_patch_list}")
     fi
@@ -2195,17 +2277,31 @@ step_apply_resources() {
     # Apply operator resources
     logdebug "apply operator resources"
     local output=""
+    local captured_err=""
     if ! is_dry_run; then
-        output="$(kubectl apply -k "$operators_dir" 2>&1)"
+        output="$(kubectl apply -k "$operators_dir" 2> "$__ERR_FILE")"
+        captured_err="$(get_captured_err)"
+        if echo "$captured_err" | grep -q "Warning:"; then
+            logdebug "captured warning when applying kustomize resources:${__NEWLINE}$captured_err"
+        elif echo "$captured_err" | grep -q "no objects passed to apply"; then
+            logdebug "no kustomize resources to apply, skipping"
+        elif [ -z "$output" ] || [ -n "$captured_err" ]; then
+            add_problem "Failed to apply kustomize resources: $captured_err"
+        fi
         logdebug "kustomize apply output:${__NEWLINE}$output"
     fi
+    exit_if_problems
     loginfo "* Astra operators have been applied to the cluster."
 
     # Apply CRs (if we have any)
     if [ -f "$crs_file_path" ]; then
         logdebug "apply CRs"
         if ! is_dry_run; then
-            output="$(kubectl apply -f "$crs_file_path")"
+            output="$(kubectl apply -f "$crs_file_path" 2> "$__ERR_FILE")"
+            captured_err="$(get_captured_err)"
+            if [ -z "$output" ] || [ -n "$captured_err" ]; then
+                add_problem "Failed to apply CRs: $captured_err"
+            fi
             logdebug "$output"
         else
             logdebug "skipped due to dry run"
@@ -2214,6 +2310,7 @@ step_apply_resources() {
     else
         logdebug "No CRs file to apply"
     fi
+    exit_if_problems
 }
 
 step_apply_trident_operator_patches() {
@@ -2358,6 +2455,7 @@ exit_if_problems
 step_check_kubeconfig_choice
 step_init_generated_dirs_and_files
 step_kustomize_global_namespace_if_needed "$NAMESPACE" "$__GENERATED_KUSTOMIZATION_FILE"
+step_kustomize_global_pull_secret_if_needed "$IMAGE_PULL_SECRET" "$__GENERATED_KUSTOMIZATION_FILE"
 
 # CONNECTOR yaml
 if components_include_connector; then
@@ -2436,6 +2534,8 @@ if trident_will_be_installed_or_modified; then
             # Enable ACP if needed (includes ACP upgrade)
             if ! acp_is_enabled; then
                 if config_acp_image_is_custom || prompt_user_yes_no "Would you like to enable ACP?"; then
+                    # create trident-acp secret
+                    kubectl create secret docker-registry "$IMAGE_PULL_SECRET" --docker-username="$ASTRA_ACCOUNT_ID" --docker-password="$ASTRA_API_TOKEN" -n trident --docker-server="$TRIDENT_ACP_IMAGE_REGISTRY"
                     step_generate_torc_patch "$_EXISTING_TORC_NAME" "" "$(get_config_acp_image)" "true"
                 else
                     loginfo "ACP will not be enabled."
@@ -2443,6 +2543,8 @@ if trident_will_be_installed_or_modified; then
             # ACP upgrade (ACP already enabled)
             elif acp_image_needs_upgraded; then
                 if config_acp_image_is_custom || prompt_user_yes_no "Would you like to upgrade ACP?"; then
+                    # create trident-acp secret
+                    kubectl create secret docker-registry "$IMAGE_PULL_SECRET" --docker-username="$ASTRA_ACCOUNT_ID" --docker-password="$ASTRA_API_TOKEN" -n trident --docker-server="$TRIDENT_ACP_IMAGE_REGISTRY"
                     step_generate_torc_patch "$_EXISTING_TORC_NAME" "" "$(get_config_acp_image)" "true"
                 else
                     loginfo "ACP will not be upgraded."
