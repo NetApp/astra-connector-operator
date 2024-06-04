@@ -236,7 +236,7 @@ Optional Environment Variables:
   SKIP_ASTRA_CHECK                   Skips all checks requiring a connection to Astra Control when set to true. Default is false.
   SKIP_TLS_VALIDATION                Skips TLS validation for all requests to Astra Control, including the Connector (unless CONNECTOR_SKIP_TLS_VALIDATION is set) when set to true. Default is false.
   DISABLE_PROMPTS                    Skips all prompts, answering 'yes' by default when set to true. Default is false.
-  DO_NOT_MODIFY_EXISTING_TRIDENT     Prevents any and all modification to the existing Trident installation (if any). Required if DISABLE_PROMPTS is true, otherwise defaults to false.
+  DO_NOT_MODIFY_EXISTING_TRIDENT     Prevents any and all modification to the existing Trident installation (if any), regardless of which COMPONENTS is chosen. Required if DISABLE_PROMPTS is true, otherwise defaults to false.
 
   ----- General Configuration
   COMPONENTS                         One of [${__COMPONENTS_VALID_VALUES[*]}]. Determines what will be installed/upgraded. Default is ALL_ASTRA_CONTROL.
