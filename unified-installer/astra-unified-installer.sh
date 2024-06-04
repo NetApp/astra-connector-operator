@@ -843,7 +843,7 @@ join_rpath() {
     for (( i = 0; i < ${#args[@]}; i+=1 )); do
         args[i]="${args[i]#/}" # Remove starting slash if present
         args[i]="${args[i]%/}" # Remove trailing slash if present
-        if [ "$i" -eq 0 ]; then joined="${args[i]}"
+        if [ -z "$joined" ]; then joined="${args[i]}"
         else joined="$joined/${args[i]}"; fi
     done
 
@@ -1585,17 +1585,13 @@ step_check_config() {
         if [ -z "${_PROCESSED_LABELS_WITH_DEFAULT}" ]; then
             add_problem "label processing: failed" "The given LABELS could not be parsed."
         fi
+
+        _PROCESSED_LABELS+="$(process_labels_to_yaml "${LABELS}" "$label_indent")"
+        if [ -z "${_PROCESSED_LABELS}" ]; then
+            add_problem "label processing: failed" "The given LABELS could not be parsed."
+        fi
     fi
     add_to_config_builder "LABELS"
-
-     # Add user's custom labels
-        if [ -n "${LABELS}" ]; then
-            _PROCESSED_LABELS+="$(process_labels_to_yaml "${LABELS}" "$label_indent")"
-            if [ -z "${_PROCESSED_LABELS}" ]; then
-                add_problem "label processing: failed" "The given LABELS could not be parsed."
-            fi
-        fi
-        add_to_config_builder "LABELS"
 }
 
 step_check_tools_are_installed() {
@@ -2019,8 +2015,6 @@ step_generate_astra_connector_yaml() {
         fi
     fi
     loginfo "Memory limit set to: $memory_limit GB"
-
-
 
     # SECRET GENERATOR
     cat <<EOF >> "$kustomization_file"
@@ -2612,11 +2606,10 @@ if trident_will_be_installed_or_modified; then
                     loginfo "ACP will not be upgraded."
                 fi
             fi
-            fi
-
         else
             logdebug "Skipping ACP changes (COMPONENTS=${COMPONENTS})"
         fi
+
     fi
 fi
 
