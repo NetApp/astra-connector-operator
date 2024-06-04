@@ -2104,10 +2104,70 @@ step_kustomize_global_pull_secret_if_needed() {
     local -r global_pull_secret="${1:-""}"
     local -r kustomization_file="${2}"
     local -r kustomization_dir="$(dirname "$kustomization_file")"
-    [ -z "$global_pull_secret" ] && return 0
+    local -r connector_namespace="$(get_connector_namespace)"
+    local -r trident_namespace="$(get_trident_namespace)"
+    local -r connector_registry="$(join_rpath "$CONNECTOR_IMAGE_REGISTRY" "$(get_base_repo "$CONNECTOR_IMAGE_REPO")")"
+    local -r trident_acp_registry="$(join_rpath "$TRIDENT_ACP_IMAGE_REGISTRY" "$(get_base_repo "$TRIDENT_ACP_IMAGE_REPO")")"
+    local -r encoded_creds=$(echo -n "$ASTRA_ACCOUNT_ID:$ASTRA_API_TOKEN" | base64)
 
     [ -z "$kustomization_file" ] && fatal "no kustomization file given"
     [ ! -f "$kustomization_file" ] && fatal "kustomization file '$kustomization_file' does not exist"
+
+       # SECRET GENERATOR
+    cat <<EOF >> "$kustomization_file"
+generatorOptions:
+  disableNameSuffixHash: true
+secretGenerator:
+- name: astra-api-token
+  namespace: "${connector_namespace}"
+  literals:
+  - apiToken="${ASTRA_API_TOKEN}"
+EOF
+    if [ -z "$global_pull_secret" ]; then
+        # if image pull secret is empty, set same name for connector and trident secret so torc patch works as expected
+        IMAGE_PULL_SECRET="astra-regcred"
+        if components_include_connector; then
+            cat <<EOF >> "$kustomization_file"
+- name: "${IMAGE_PULL_SECRET}"
+  namespace: "${connector_namespace}"
+  type: kubernetes.io/dockerconfigjson
+  literals:
+  - |
+    .dockerconfigjson={
+      "auths": {
+        "${connector_registry}": {
+          "username": "$ASTRA_ACCOUNT_ID",
+          "password": "$ASTRA_API_TOKEN",
+          "auth": "${encoded_creds}"
+        }
+      }
+    }
+EOF
+            logdebug "$kustomization_file: added connector secret to namespace $connector_namespace"
+        fi
+
+        if components_include_trident && [ "$trident_namespace" != "$connector_namespace" ]; then
+            cat <<EOF >> "$kustomization_file"
+- name: "${IMAGE_PULL_SECRET}"
+  namespace: "${trident_namespace}"
+  type: kubernetes.io/dockerconfigjson
+  literals:
+  - |
+    .dockerconfigjson={
+      "auths": {
+        "${trident_acp_registry}": {
+          "username": "$ASTRA_ACCOUNT_ID",
+          "password": "$ASTRA_API_TOKEN",
+          "auth": "${encoded_creds}"
+        }
+      }
+    }
+EOF
+            logdebug "$kustomization_file: added trident acp secret to namespace $trident_namespace"
+        fi
+    fi
+
+
 
     insert_into_file_after_pattern "$kustomization_file" "patches:" '
 - target:
@@ -2168,38 +2228,6 @@ step_generate_astra_connector_yaml() {
         fi
     fi
     loginfo "Memory limit set to: $memory_limit GB"
-
-
-
-    # SECRET GENERATOR
-    cat <<EOF >> "$kustomization_file"
-generatorOptions:
-  disableNameSuffixHash: true
-secretGenerator:
-- name: astra-api-token
-  namespace: "${connector_namespace}"
-  literals:
-  - apiToken="${api_token}"
-EOF
-    if [ -z "$IMAGE_PULL_SECRET" ]; then
-        cat <<EOF >> "$kustomization_file"
-- name: "${connector_regcred_name}"
-  namespace: "${connector_namespace}"
-  type: kubernetes.io/dockerconfigjson
-  literals:
-  - |
-    .dockerconfigjson={
-      "auths": {
-        "${connector_registry}": {
-          "username": "${username}",
-          "password": "${password}",
-          "auth": "${encoded_creds}"
-        }
-      }
-    }
-EOF
-    fi
-    logdebug "$kustomization_file: added secrets"
 
     # ASTRA CONNECTOR CR
     local labels_field_and_content_with_default=""
@@ -2814,6 +2842,8 @@ if trident_will_be_installed_or_modified; then
             # Enable ACP if needed (includes ACP upgrade)
             if ! acp_is_enabled; then
                 if config_acp_image_is_custom || prompt_user_yes_no "Would you like to enable ACP?"; then
+                    # create trident-acp secret
+                    kubectl create secret docker-registry "$IMAGE_PULL_SECRET" --docker-username="$ASTRA_ACCOUNT_ID" --docker-password="$ASTRA_API_TOKEN" -n trident --docker-server="$TRIDENT_ACP_IMAGE_REGISTRY"
                     step_generate_torc_patch "$_EXISTING_TORC_NAME" "" "$(get_config_acp_image)" "true"
                 else
                     loginfo "ACP will not be enabled."
@@ -2821,6 +2851,8 @@ if trident_will_be_installed_or_modified; then
             # ACP upgrade (ACP already enabled)
             elif acp_image_needs_upgraded; then
                 if config_acp_image_is_custom || prompt_user_yes_no "Would you like to upgrade ACP?"; then
+                    # create trident-acp secret
+                    kubectl create secret docker-registry "$IMAGE_PULL_SECRET" --docker-username="$ASTRA_ACCOUNT_ID" --docker-password="$ASTRA_API_TOKEN" -n trident --docker-server="$TRIDENT_ACP_IMAGE_REGISTRY"
                     step_generate_torc_patch "$_EXISTING_TORC_NAME" "" "$(get_config_acp_image)" "true"
                 else
                     loginfo "ACP will not be upgraded."
