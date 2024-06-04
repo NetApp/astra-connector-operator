@@ -117,11 +117,10 @@ process_args() {
                 print_help
                 exit 0
                 ;;
-            --required)
-                local msg="Listed below are all required environment variables which do not have a default value"
-                msg+=" (and so must be provided by the user):${__NEWLINE}"
-                echo "$msg"
-                print_help | grep '\*[A-Z]\+'
+            *)
+                echo "Unknown option: $arg"
+                echo
+                print_usage_and_options
                 exit 0
                 ;;
         esac
@@ -210,15 +209,21 @@ get_configs() {
     CONNECTOR_AUTOSUPPORT_URL="${CONNECTOR_AUTOSUPPORT_URL:-$__PRODUCTION_AUTOSUPPORT_URL}"
 }
 
-print_help() {
+print_usage_and_options() {
     cat <<EOF
-====== ${__BANNER}: Help ======
-
 Usage:
   ENV_VAR_1="value" ENV_VAR_2="value" ./astra-unified-installer.sh [options]
 
 Options:
-  --help/-h    Show this message and exit.
+  --help/-h    Show the help message and exit.
+EOF
+}
+
+print_help() {
+    cat <<EOF
+====== ${__BANNER}: Help ======
+
+$(print_usage_and_options)
 
 Required Environment Variables:
   KUBECONFIG                        Path to the KUBECONFIG for the cluster you'd like to manage. Required.
