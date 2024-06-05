@@ -1129,6 +1129,7 @@ generate_docker_registry_secret() {
     local -r namespace="$4"
     local -r docker_server="$5"
     local -r secret_filename="$6"
+    local -r content="  labels:${__NEWLINE}${_PROCESSED_LABELS}"
 
     [ -z "$pull_secret" ] && fatal "no pull secret given"
     [ -z "$docker_username" ] && fatal "no docker username given"
@@ -1145,6 +1146,7 @@ generate_docker_registry_secret() {
         return 1
     else
         echo "$secret_yaml" > "$secret_filename"
+        insert_into_file_after_pattern "${secret_filename}" "metadata:" "${content}"
         return 0
     fi
 }
