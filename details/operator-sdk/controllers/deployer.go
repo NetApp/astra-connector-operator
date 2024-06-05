@@ -44,7 +44,7 @@ var resources = []createResourceParams{
 	{createMessage: CreateDeployment, errorMessage: ErrorCreateDeployments, getResource: model.Deployer.GetDeploymentObjects, clusterScope: false},
 }
 
-func (r *AstraConnectorController) deployResources(ctx context.Context, deployer model.Deployer, astraConnector *installer.AstraConnector, natsSyncClientStatus *installer.NatsSyncClientStatus) error {
+func (r *AstraConnectorController) deployResources(ctx context.Context, deployer model.Deployer, astraConnector *installer.AstraConnector, astraConnectorStatus *installer.AstraConnectorStatus) error {
 	log := ctrllog.FromContext(ctx)
 	k8sUtil := k8s.NewK8sUtil(r.Client, r.Clientset, log)
 
@@ -62,18 +62,18 @@ func (r *AstraConnectorController) deployResources(ctx context.Context, deployer
 			key := client.ObjectKeyFromObject(kubeObject)
 			statusMsg := fmt.Sprintf(funcList.createMessage, key.Namespace, key.Name)
 			log.Info(statusMsg)
-			natsSyncClientStatus.Status = statusMsg
-			_ = r.updateAstraConnectorStatus(ctx, astraConnector, *natsSyncClientStatus)
+			astraConnectorStatus.Status = statusMsg
+			_ = r.updateAstraConnectorStatus(ctx, astraConnector, *astraConnectorStatus)
 
 			result, err := k8sUtil.CreateOrUpdateResource(ctx, kubeObject, astraConnector, mutateFunc)
 			if err != nil {
-				return r.formatError(ctx, astraConnector, log, funcList.errorMessage, key.Namespace, key.Name, err, natsSyncClientStatus)
+				return r.formatError(ctx, astraConnector, log, funcList.errorMessage, key.Namespace, key.Name, err, astraConnectorStatus)
 			} else {
 				waitCtx, cancel := context.WithCancel(ctx)
 				defer cancel()
 				err = r.waitForResourceReady(waitCtx, kubeObject, astraConnector)
 				if err != nil {
-					return r.formatError(ctx, astraConnector, log, funcList.errorMessage, key.Namespace, key.Name, err, natsSyncClientStatus)
+					return r.formatError(ctx, astraConnector, log, funcList.errorMessage, key.Namespace, key.Name, err, astraConnectorStatus)
 				}
 				log.Info(fmt.Sprintf("Successfully %s resources", result))
 			}
@@ -158,10 +158,10 @@ func (r *AstraConnectorController) waitForResourceReady(ctx context.Context, kub
 
 func (r *AstraConnectorController) formatError(ctx context.Context, astraConnector *installer.AstraConnector,
 	log logr.Logger, errorMessage, namespace, name string, err error,
-	natsSyncClientStatus *installer.NatsSyncClientStatus) error {
+	astraConnectorStatus *installer.AstraConnectorStatus) error {
 	statusMsg := fmt.Sprintf(errorMessage, namespace, name)
-	natsSyncClientStatus.Status = statusMsg
-	_ = r.updateAstraConnectorStatus(ctx, astraConnector, *natsSyncClientStatus)
+	astraConnectorStatus.Status = statusMsg
+	_ = r.updateAstraConnectorStatus(ctx, astraConnector, *astraConnectorStatus)
 	log.Error(err, statusMsg)
 	return errors.Wrapf(err, statusMsg)
 }

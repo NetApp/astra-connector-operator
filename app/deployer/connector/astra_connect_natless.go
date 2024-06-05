@@ -54,6 +54,7 @@ func (d *AstraConnectDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx co
 
 	connectorImage = fmt.Sprintf("%s/astra-connector:%s", imageRegistry, containerImage)
 	log.Info("Using AstraConnector image", "image", connectorImage)
+	replicaCount := int32(1)
 
 	dep := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -65,7 +66,7 @@ func (d *AstraConnectDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx co
 		},
 		Spec: appsv1.DeploymentSpec{
 			// TODO remove option to set replica count in CRD. This should always only-ever be 1
-			Replicas: &m.Spec.AstraConnect.Replicas,
+			Replicas: &replicaCount,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: ls,
 			},
@@ -92,7 +93,7 @@ func (d *AstraConnectDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx co
 							},
 							{
 								Name:  "ASTRA_CONTROL_URL",
-								Value: m.Spec.NatsSyncClient.CloudBridgeURL,
+								Value: m.Spec.Astra.AstraControlURL,
 							},
 							{
 								Name:  "ACCOUNT_ID",
@@ -108,7 +109,7 @@ func (d *AstraConnectDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx co
 							},
 							{
 								Name:  "HOST_ALIAS_IP",
-								Value: m.Spec.NatsSyncClient.HostAliasIP,
+								Value: m.Spec.Astra.HostAliasIP,
 							},
 							{
 								Name:  "SKIP_TLS_VALIDATION",

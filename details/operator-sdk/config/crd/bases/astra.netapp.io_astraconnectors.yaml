@@ -17,13 +17,13 @@ spec:
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
-    - jsonPath: .status.natsSyncClient.registered
+    - jsonPath: .status.registered
       name: Registered
       type: string
-    - jsonPath: .status.natsSyncClient.astraClusterID
+    - jsonPath: .status.astraClusterID
       name: AstraClusterID
       type: string
-    - jsonPath: .status.natsSyncClient.status
+    - jsonPath: .status.status
       name: Status
       type: string
     name: v1
@@ -50,11 +50,15 @@ spec:
                 properties:
                   accountId:
                     type: string
+                  astraURL:
+                    type: string
                   cloudId:
                     type: string
                   clusterId:
                     type: string
                   clusterName:
+                    type: string
+                  hostAliasIP:
                     type: string
                   skipTLSValidation:
                     type: boolean
@@ -71,10 +75,6 @@ spec:
                 properties:
                   image:
                     type: string
-                  replicas:
-                    default: 1
-                    format: int32
-                    type: integer
                   resources:
                     description: ResourceRequirements describes the compute resource
                       requirements.
@@ -159,28 +159,6 @@ spec:
                   type: string
                 description: Labels any additional labels wanted to be added to resources
                 type: object
-              nats:
-                properties:
-                  image:
-                    type: string
-                  replicas:
-                    default: 1
-                    format: int32
-                    type: integer
-                type: object
-              natsSyncClient:
-                properties:
-                  cloudBridgeURL:
-                    type: string
-                  hostAliasIP:
-                    type: string
-                  image:
-                    type: string
-                  replicas:
-                    default: 1
-                    format: int32
-                    type: integer
-                type: object
               neptune:
                 description: Neptune
                 properties:
@@ -248,16 +226,12 @@ spec:
           status:
             description: AstraConnectorStatus defines the observed state of AstraConnector
             properties:
-              natsSyncClient:
-                description: NatsSyncClientStatus defines the observed state of NatsSyncClient
-                properties:
-                  astraClusterID:
-                    type: string
-                  registered:
-                    type: string
-                  status:
-                    type: string
-                type: object
+              astraClusterID:
+                type: string
+              registered:
+                type: string
+              status:
+                type: string
             type: object
         type: object
     served: true
