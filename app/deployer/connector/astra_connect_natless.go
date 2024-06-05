@@ -56,6 +56,12 @@ func (d *AstraConnectDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx co
 	log.Info("Using AstraConnector image", "image", connectorImage)
 	replicaCount := int32(1)
 
+	if m.Spec.Astra.ClusterId == "" && m.Spec.Astra.ClusterName == "" {
+		err := fmt.Errorf("clusterID and clusterName both cannot be empty")
+		log.Error(err, "Bad config")
+		return nil, nil, err
+	}
+
 	dep := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      common.AstraConnectName,

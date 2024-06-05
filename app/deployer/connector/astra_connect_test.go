@@ -37,6 +37,9 @@ func TestAstraConnectGetDeploymentObjects(t *testing.T) {
 				Image:    "test-image",
 				Replicas: 3,
 			},
+			Astra: v1.Astra{
+				ClusterId: "123",
+			},
 			Labels: map[string]string{"Label1": "Value1"},
 		},
 	}
@@ -65,6 +68,39 @@ func TestAstraConnectGetDeploymentObjects(t *testing.T) {
 
 	assert.Equal(t, 1, len(deployment.Spec.Template.Spec.ImagePullSecrets))
 	assert.Equal(t, "test-secret", deployment.Spec.Template.Spec.ImagePullSecrets[0].Name)
+}
+
+func TestAstraConnect_ClusterIDAndNameEmpty(t *testing.T) {
+	deployer := connector.NewAstraConnectorDeployer()
+	ctx := context.Background()
+
+	astraConnector := &v1.AstraConnector{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-astra-connector",
+			Namespace: "test-namespace",
+		},
+		Spec: v1.AstraConnectorSpec{
+			AutoSupport: v1.AutoSupport{Enrolled: true,
+				URL: "https://my-asup"},
+
+			ImageRegistry: v1.ImageRegistry{
+				Name:   "test-registry",
+				Secret: "test-secret",
+			},
+
+			AstraConnect: v1.AstraConnect{
+				Image:    "test-image",
+				Replicas: 3,
+			},
+			Astra:  v1.Astra{},
+			Labels: map[string]string{"Label1": "Value1"},
+		},
+	}
+
+	objects, f, err := deployer.GetDeploymentObjects(astraConnector, ctx)
+	assert.Error(t, err)
+	assert.Nil(t, objects)
+	assert.Nil(t, f)
 }
 
 func DummyAstraConnector() v1.AstraConnector {
