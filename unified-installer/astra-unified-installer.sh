@@ -2903,7 +2903,7 @@ if trident_will_be_installed_or_modified; then
             if ! acp_is_enabled; then
                 if config_acp_image_is_custom || prompt_user_yes_no "Would you like to enable Astra Control Provisioner?"; then
                     # create trident-acp secret
-                    generate_docker_registry_secret "$IMAGE_PULL_SECRET" "$ASTRA_ACCOUNT_ID" "$ASTRA_API_TOKEN" "$__DEFAULT_TRIDENT_NAMESPACE" "$TRIDENT_ACP_IMAGE_REGISTRY" "$__GENERATED_TRIDENT_ACP_SECRET_FILE"
+                    generate_docker_registry_secret "$IMAGE_PULL_SECRET" "$ASTRA_ACCOUNT_ID" "$ASTRA_API_TOKEN" "$(get_trident_namespace)" "$TRIDENT_ACP_IMAGE_REGISTRY" "$__GENERATED_TRIDENT_ACP_SECRET_FILE"
                     step_generate_torc_patch "$_EXISTING_TORC_NAME" "" "$(get_config_acp_image)" "true"
                 else
                     loginfo "Astra Control Provisioner will not be enabled."
@@ -2912,7 +2912,7 @@ if trident_will_be_installed_or_modified; then
             elif acp_image_needs_upgraded; then
                 if config_acp_image_is_custom || prompt_user_yes_no "Would you like to upgrade Astra Control Provisioner?"; then
                     # create trident-acp secret
-                    generate_docker_registry_secret "$IMAGE_PULL_SECRET" "$ASTRA_ACCOUNT_ID" "$ASTRA_API_TOKEN" "$__DEFAULT_TRIDENT_NAMESPACE" "$TRIDENT_ACP_IMAGE_REGISTRY" "$__GENERATED_TRIDENT_ACP_SECRET_FILE"
+                    generate_docker_registry_secret "$IMAGE_PULL_SECRET" "$ASTRA_ACCOUNT_ID" "$ASTRA_API_TOKEN" "$(get_trident_namespace)" "$TRIDENT_ACP_IMAGE_REGISTRY" "$__GENERATED_TRIDENT_ACP_SECRET_FILE"
                     step_generate_torc_patch "$_EXISTING_TORC_NAME" "" "$(get_config_acp_image)" "true"
                 else
                     loginfo "Astra Control Provisioner will not be upgraded."
