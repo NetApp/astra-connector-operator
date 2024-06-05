@@ -155,8 +155,7 @@ get_configs() {
     # Note: the registry should not include a repository path. For example, if an image is hosted at
     # `cr.astra.netapp.io/common/image/path/astra-connector`, then the registry should be set to
     # `cr.astra.netapp.io` and NOT `cr.astra.netapp.io/common/image/path`.
-#    IMAGE_REGISTRY="${IMAGE_REGISTRY}"
-    IMAGE_REGISTRY="docker.repo.eng.netapp.com"
+    IMAGE_REGISTRY="${IMAGE_REGISTRY}"
         DOCKER_HUB_IMAGE_REGISTRY="${DOCKER_HUB_IMAGE_REGISTRY:-${IMAGE_REGISTRY:-$__DEFAULT_DOCKER_HUB_IMAGE_REGISTRY}}"
             TRIDENT_OPERATOR_IMAGE_REGISTRY="${TRIDENT_OPERATOR_IMAGE_REGISTRY:-$DOCKER_HUB_IMAGE_REGISTRY}"
             TRIDENT_AUTOSUPPORT_IMAGE_REGISTRY="${TRIDENT_AUTOSUPPORT_IMAGE_REGISTRY:-$DOCKER_HUB_IMAGE_REGISTRY}"
@@ -174,7 +173,7 @@ get_configs() {
     # IMAGE_BASE_REPO should be set to `common/image/repo`. To be more specific, this should be the URL
     # that can be used to access the `/v2/` endpoint. Taking the previous example, the /v2/ route would be
     # at `cr.astra.netapp.io/v2/`.
-    IMAGE_BASE_REPO=${IMAGE_BASE_REPO:-"palice"}
+    IMAGE_BASE_REPO=${IMAGE_BASE_REPO:-""}
         DOCKER_HUB_BASE_REPO="${DOCKER_HUB_BASE_REPO:-${IMAGE_BASE_REPO:-$__DEFAULT_DOCKER_HUB_IMAGE_BASE_REPO}}"
             TRIDENT_OPERATOR_IMAGE_REPO="${TRIDENT_OPERATOR_IMAGE_REPO:-"$(join_rpath "$DOCKER_HUB_BASE_REPO" "$__DEFAULT_TRIDENT_OPERATOR_IMAGE_NAME")"}"
             TRIDENT_AUTOSUPPORT_IMAGE_REPO="${TRIDENT_AUTOSUPPORT_IMAGE_REPO:-"$(join_rpath "$DOCKER_HUB_BASE_REPO" "$__DEFAULT_TRIDENT_AUTOSUPPORT_IMAGE_NAME")"}"
@@ -2664,12 +2663,17 @@ step_apply_resources() {
 
         output="$(kubectl apply -k "$operators_dir" 2> "$__ERR_FILE")"
         captured_err="$(get_captured_err)"
-        if echo "$captured_err" | grep -q "Warning:"; then
-            logdebug "captured warning when applying kustomize resources:${__NEWLINE}$captured_err"
-        elif echo "$captured_err" | grep -q "no objects passed to apply"; then
-            logdebug "no kustomize resources to apply, skipping"
-        elif [ -z "$output" ] || [ -n "$captured_err" ]; then
-            add_problem "Failed to apply kustomize resources: $captured_err"
+
+        if [ -n "$captured_err" ]; then
+            while IFS= read -r line; do
+                if echo "$line" | grep -q "Warning:"; then
+                    logdebug "captured warning when applying kustomize resources:${__NEWLINE}$captured_err"
+                elif echo "$line" | grep -q "no objects passed to apply"; then
+                    logdebug "no kustomize resources to apply, skipping"
+                elif [ -z "$output" ] || [ -n "$line" ]; then
+                    add_problem "Failed to apply kustomize resources: $line"
+                fi
+            done < <(echo "$captured_err")
         fi
         logdebug "kustomize apply output:${__NEWLINE}$output"
     fi
