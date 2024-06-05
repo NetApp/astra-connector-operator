@@ -12,9 +12,9 @@ import (
 type Astra struct {
 	// +kubebuilder:validation:Required
 	AccountId string `json:"accountId"`
-	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Optional
 	CloudId string `json:"cloudId"`
-	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Optional
 	ClusterId string `json:"clusterId"`
 	// +kubebuilder:validation:Optional
 	ClusterName string `json:"clusterName,omitempty"`
