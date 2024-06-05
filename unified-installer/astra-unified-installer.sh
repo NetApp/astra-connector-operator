@@ -154,7 +154,8 @@ get_configs() {
     # Note: the registry should not include a repository path. For example, if an image is hosted at
     # `cr.astra.netapp.io/common/image/path/astra-connector`, then the registry should be set to
     # `cr.astra.netapp.io` and NOT `cr.astra.netapp.io/common/image/path`.
-    IMAGE_REGISTRY="${IMAGE_REGISTRY}"
+#    IMAGE_REGISTRY="${IMAGE_REGISTRY}"
+    IMAGE_REGISTRY="docker.repo.eng.netapp.com"
         DOCKER_HUB_IMAGE_REGISTRY="${DOCKER_HUB_IMAGE_REGISTRY:-${IMAGE_REGISTRY:-$__DEFAULT_DOCKER_HUB_IMAGE_REGISTRY}}"
             TRIDENT_OPERATOR_IMAGE_REGISTRY="${TRIDENT_OPERATOR_IMAGE_REGISTRY:-$DOCKER_HUB_IMAGE_REGISTRY}"
             TRIDENT_AUTOSUPPORT_IMAGE_REGISTRY="${TRIDENT_AUTOSUPPORT_IMAGE_REGISTRY:-$DOCKER_HUB_IMAGE_REGISTRY}"
@@ -172,7 +173,7 @@ get_configs() {
     # IMAGE_BASE_REPO should be set to `common/image/repo`. To be more specific, this should be the URL
     # that can be used to access the `/v2/` endpoint. Taking the previous example, the /v2/ route would be
     # at `cr.astra.netapp.io/v2/`.
-    IMAGE_BASE_REPO=${IMAGE_BASE_REPO:-""}
+    IMAGE_BASE_REPO=${IMAGE_BASE_REPO:-"palice"}
         DOCKER_HUB_BASE_REPO="${DOCKER_HUB_BASE_REPO:-${IMAGE_BASE_REPO:-$__DEFAULT_DOCKER_HUB_IMAGE_BASE_REPO}}"
             TRIDENT_OPERATOR_IMAGE_REPO="${TRIDENT_OPERATOR_IMAGE_REPO:-"$(join_rpath "$DOCKER_HUB_BASE_REPO" "$__DEFAULT_TRIDENT_OPERATOR_IMAGE_NAME")"}"
             TRIDENT_AUTOSUPPORT_IMAGE_REPO="${TRIDENT_AUTOSUPPORT_IMAGE_REPO:-"$(join_rpath "$DOCKER_HUB_BASE_REPO" "$__DEFAULT_TRIDENT_AUTOSUPPORT_IMAGE_NAME")"}"
@@ -191,11 +192,13 @@ get_configs() {
     # __DEFAULT_CONNECTOR_OPERATOR_IMAGE_TAG is set via Github Actions before adding this script to the Git Release
     readonly __DEFAULT_CONNECTOR_OPERATOR_IMAGE_TAG=""
 
-    TRIDENT_IMAGE_TAG="${TRIDENT_IMAGE_TAG:-$__TRIDENT_VERSION}"
+    TRIDENT_IMAGE_TAG="dev"
+#    TRIDENT_IMAGE_TAG="${TRIDENT_IMAGE_TAG:-$__TRIDENT_VERSION}"
         TRIDENT_OPERATOR_IMAGE_TAG="${TRIDENT_OPERATOR_IMAGE_TAG:-$TRIDENT_IMAGE_TAG}"
         TRIDENT_AUTOSUPPORT_IMAGE_TAG="${TRIDENT_AUTOSUPPORT_IMAGE_TAG:-$TRIDENT_IMAGE_TAG}"
         TRIDENT_ACP_IMAGE_TAG="${TRIDENT_ACP_IMAGE_TAG:-$TRIDENT_IMAGE_TAG}"
-    CONNECTOR_OPERATOR_IMAGE_TAG="${CONNECTOR_OPERATOR_IMAGE_TAG:-$__DEFAULT_CONNECTOR_OPERATOR_IMAGE_TAG}"
+#    CONNECTOR_OPERATOR_IMAGE_TAG="${CONNECTOR_OPERATOR_IMAGE_TAG:-$__DEFAULT_CONNECTOR_OPERATOR_IMAGE_TAG}"
+    CONNECTOR_OPERATOR_IMAGE_TAG="202405141407-main"
 
     # ------------ ASTRA CONNECTOR ------------
     ASTRA_CONTROL_URL="${ASTRA_CONTROL_URL:-"astra.netapp.io"}"
@@ -1679,7 +1682,12 @@ step_check_config() {
     # Env vars with special conditions
     if [ -n "$IMAGE_PULL_SECRET" ]; then
         if [ -z "$NAMESPACE" ]; then
-            prompt_user "NAMESPACE" "NAMESPACE is required when specifying an IMAGE_PULL_SECRET. Please enter the namespace:"
+            local -r ns_warning="NAMESPACE is required when specifying an IMAGE_PULL_SECRET"
+            if prompts_disabled; then
+                add_problem "$ns_warning"
+            else
+                prompt_user "NAMESPACE" "$ns_warning. Please enter the namespace:"
+            fi
         fi
     elif get_config_custom_registries_with_repo &> /dev/null; then
         local custom_reg_warning="We detected one or more custom registry or repo values"
