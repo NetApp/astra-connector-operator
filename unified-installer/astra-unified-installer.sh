@@ -87,9 +87,13 @@ readonly __PRODUCTION_AUTOSUPPORT_URL="https://support.netapp.com/put/AsupPut"
 readonly __GENERATED_CRS_DIR="./astra-generated"
 readonly __GENERATED_CRS_FILE="$__GENERATED_CRS_DIR/crs.yaml"
 readonly __GENERATED_OPERATORS_DIR="$__GENERATED_CRS_DIR/operators"
+readonly __GENERATED_OPERATORS_TRIDENT_DIR="$__GENERATED_CRS_DIR/operators/trident"
+readonly __GENERATED_OPERATORS_CONNECTOR_DIR="$__GENERATED_CRS_DIR/operators/connector"
 readonly __GENERATED_KUSTOMIZATION_FILE="$__GENERATED_OPERATORS_DIR/kustomization.yaml"
-readonly __GENERATED_PATCHES_TORC_FILE="$__GENERATED_CRS_DIR/post-deploy-patches_torc"
-readonly __GENERATED_PATCHES_TRIDENT_OPERATOR_FILE="$__GENERATED_OPERATORS_DIR/post-deploy-patches_trident-operator"
+readonly __GENERATED_TRIDENT_KUSTOMIZATION_FILE="$__GENERATED_OPERATORS_TRIDENT_DIR/kustomization.yaml"
+readonly __GENERATED_CONNECTOR_KUSTOMIZATION_FILE="$__GENERATED_OPERATORS_CONNECTOR_DIR/kustomization.yaml"
+readonly __GENERATED_PATCHES_TORC_FILE="$__GENERATED_OPERATORS_TRIDENT_DIR/post-deploy-patches_torc"
+readonly __GENERATED_PATCHES_TRIDENT_OPERATOR_FILE="$__GENERATED_OPERATORS_TRIDENT_DIR/post-deploy-patches_trident-operator"
 
 readonly __DEBUG=10
 readonly __INFO=20
@@ -145,6 +149,8 @@ get_configs() {
     COMPONENTS="${COMPONENTS:-$__COMPONENTS_ALL_ASTRA_CONTROL}" # Determines what we'll install/upgrade
     IMAGE_PULL_SECRET="${IMAGE_PULL_SECRET:-}" # TODO ASTRACTL-32772: skip prompt if IMAGE_REGISTRY is default
     NAMESPACE="${NAMESPACE:-}" # Overrides EVERY resource's namespace (for fresh installs only, not upgrades)
+        CONNECTOR_NAMESPACE="$(get_connector_namespace)"
+        TRIDENT_NAMESPACE="$(get_trident_namespace)"
     LABELS="${LABELS:-}"
     # SKIP_TLS_VALIDATION will skip TLS validation for all requests made during the script.
     SKIP_TLS_VALIDATION="${SKIP_TLS_VALIDATION:-"false"}"
@@ -412,7 +418,7 @@ components_include_acp() {
 }
 
 get_trident_namespace() {
-    echo "${_EXISTING_TRIDENT_NAMESPACE:-"${NAMESPACE:-"${__DEFAULT_TRIDENT_NAMESPACE}"}"}"
+    echo "${_EXISTING_TRIDENT_NAMESPACE:-"${TRIDENT_NAMESPACE:-"${NAMESPACE:-"$__DEFAULT_TRIDENT_NAMESPACE"}"}"}"
 }
 
 get_connector_operator_namespace() {
@@ -420,7 +426,7 @@ get_connector_operator_namespace() {
 }
 
 get_connector_namespace() {
-    echo "${NAMESPACE:-"${__DEFAULT_CONNECTOR_NAMESPACE}"}"
+    echo "${CONNECTOR_NAMESPACE:-"${NAMESPACE:-"$__DEFAULT_CONNECTOR_NAMESPACE"}"}"
 }
 
 existing_trident_can_be_modified() {
@@ -1677,11 +1683,7 @@ step_check_config() {
     done
 
     # Env vars with special conditions
-    if [ -n "$IMAGE_PULL_SECRET" ]; then
-        if [ -z "$NAMESPACE" ]; then
-            prompt_user "NAMESPACE" "NAMESPACE is required when specifying an IMAGE_PULL_SECRET. Please enter the namespace:"
-        fi
-    elif get_config_custom_registries_with_repo; then
+    if get_config_custom_registries_with_repo; then
         local custom_reg_warning="We detected one or more custom registry or repo values"
         custom_reg_warning+=", but no IMAGE_PULL_SECRET was specified. If any of your images are hosted in a private"
         custom_reg_warning+=" registry, an image pull secret will need to be created and IMAGE_PULL_SECRET set."
@@ -2107,18 +2109,18 @@ EOF
     fi
 }
 
-step_kustomize_global_namespace_if_needed() {
-    local -r global_namespace="${1:-""}"
+add_namespace_transformer_to_kustomization() {
+    local -r namespace="${1:-""}"
     local -r kustomization_file="${2}"
     local -r kustomization_dir="$(dirname "$kustomization_file")"
-    [ -z "$global_namespace" ] && return 0
 
+    [ -z "$namespace" ] && fatal "no namespace given"
     [ -z "$kustomization_file" ] && fatal "no kustomization file given"
     [ ! -f "$kustomization_file" ] && fatal "kustomization file '$kustomization_file' does not exist"
 
     # Add kustomization to set metadata.namespace where it's not already set
-    echo "namespace: $global_namespace" >> "$kustomization_file"
-    logdebug "$kustomization_file: added namespace field ($global_namespace)"
+    echo "namespace: $namespace" >> "$kustomization_file"
+    logdebug "$kustomization_file: added namespace field ($namespace)"
 
     # This transformer is more forceful than the `namespace` field above but is necessary to set
     # the namespace on a few resources that aren't caught by the former (the subjects in rolebindings for example).
@@ -2128,11 +2130,14 @@ apiVersion: builtin
 kind: NamespaceTransformer
 metadata:
   name: thisFieldDoesNotActuallyMatterForTransformers
-  namespace: "${global_namespace}"
+  namespace: "${namespace}"
 fieldSpecs:
 - path: metadata/namespace
   create: true
 EOF
+    if grep -q "^transformers:" < "$kustomization_file"; then
+        echo "transformers:" >> "$kustomization_file"
+    fi
     insert_into_file_after_pattern "$kustomization_file" "transformers:" "- $transformer_file_name"
     logdebug "$kustomization_file: added namespace transformer ($transformer_file_name)"
 }
@@ -2159,12 +2164,11 @@ step_kustomize_global_pull_secret_if_needed() {
 }
 
 step_generate_astra_connector_yaml() {
-    local -r kustomization_file="$__GENERATED_KUSTOMIZATION_FILE"
-    local -r kustomization_dir="$(dirname "$kustomization_file")"
+    local -r top_kustomization_file="$__GENERATED_KUSTOMIZATION_FILE"
+    local -r connector_kustomization_file="$__GENERATED_CONNECTOR_KUSTOMIZATION_FILE"
+    local -r connector_kustomization_dir="$(dirname "$connector_kustomization_file")"
     local -r crs_file="$__GENERATED_CRS_FILE"
 
-    [ ! -d "$kustomization_dir" ] && fatal "kustomization directory '$kustomization_dir' does not exist"
-    [ ! -f "$kustomization_file" ] && fatal "kustomization file '$kustomization_file' does not exist"
     [ ! -f "$crs_file" ] && touch "$crs_file"
 
     logheader $__DEBUG "Generating Astra Connector YAML files..."
@@ -2187,9 +2191,23 @@ step_generate_astra_connector_yaml() {
     local -r password="$api_token"
     local -r encoded_creds=$(echo -n "$username:$password" | base64)
 
-    insert_into_file_after_pattern "$kustomization_file" "resources:" \
+    mkdir -p "$connector_kustomization_dir"
+    if [ ! -f "$connector_kustomization_file" ]; then
+        cat <<EOF > "$connector_kustomization_file"
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+metadata:
+  namespace: "${connector_namespace}"
+resources:
+patches:
+transformers:
+EOF
+        logdebug "$connector_kustomization_file: OK"
+    fi
+    insert_into_file_after_pattern "$top_kustomization_file" "resources:" "- ./$connector_kustomization_dir"
+    insert_into_file_after_pattern "$connector_kustomization_file" "resources:" \
         "- https://github.com/NetApp/astra-connector-operator/unified-installer/?ref=$__GIT_REF_CONNECTOR_OPERATOR"
-    logdebug "$kustomization_file: added resources entry for connector kustomization"
+    logdebug "$connector_kustomization_file: added resources entry for connector kustomization"
 
     # Default memory limit
     memory_limit=2
@@ -2210,9 +2228,12 @@ step_generate_astra_connector_yaml() {
       fi
     fi
     loginfo "Memory limit set to: $memory_limit GB"
+    
+    # NAMESPACE
+    add_namespace_transformer_to_kustomization "$connector_namespace" "$connector_kustomization_file"
 
     # SECRET GENERATOR
-    cat <<EOF >> "$kustomization_file"
+    cat <<EOF >> "$connector_kustomization_file"
 generatorOptions:
   disableNameSuffixHash: true
 secretGenerator:
@@ -2222,7 +2243,7 @@ secretGenerator:
   - apiToken="${api_token}"
 EOF
     if [ -z "$IMAGE_PULL_SECRET" ]; then
-        cat <<EOF >> "$kustomization_file"
+        cat <<EOF >> "$connector_kustomization_file"
 - name: "${connector_regcred_name}"
   namespace: "${connector_namespace}"
   type: kubernetes.io/dockerconfigjson
@@ -2239,7 +2260,7 @@ EOF
     }
 EOF
     fi
-    logdebug "$kustomization_file: added secrets"
+    logdebug "$connector_kustomization_file: added secrets"
 
     # ASTRA CONNECTOR CR
     local labels_field_and_content_with_default=""
@@ -2420,17 +2441,31 @@ step_existing_trident_flags_compatibility_check() {
 }
 
 step_generate_trident_fresh_install_yaml() {
-    local -r kustomization_file="$__GENERATED_KUSTOMIZATION_FILE"
+    local -r top_kustomization_file="$__GENERATED_KUSTOMIZATION_FILE"
+    local -r trident_kustomization_file="$__GENERATED_TRIDENT_KUSTOMIZATION_FILE"
+    local -r trident_kustomization_dir="$(dirname "$trident_kustomization_file")"
     local -r crs_file="$__GENERATED_CRS_FILE"
-    [ ! -f "$kustomization_file" ] && fatal "kustomization file '$kustomization_file' does not exist"
+
     [ ! -f "$crs_file" ] && touch "$crs_file"
 
     logheader $__DEBUG "Generating Astra Trident YAML files..."
 
+    mkdir -p "$trident_kustomization_dir"
+    if [ ! -f "$trident_kustomization_file" ]; then
+        cat <<EOF > "$kustomization_file"
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+patches:
+transformers:
+EOF
+        logdebug "$trident_kustomization_file: OK"
+    fi
     # TODO point to https://github.com/NetApp/trident when 24.06 image is available
-    insert_into_file_after_pattern "$kustomization_file" "resources:" \
+    insert_into_file_after_pattern "$top_kustomization_file" "resources:" "- ./${trident_kustomization_dir}"
+    insert_into_file_after_pattern "$trident_kustomization_file" "resources:" \
         "- https://github.com/NetApp/astra-connector-operator/trident-temp/deploy?ref=$__GIT_REF_TRIDENT"
-    logdebug "$kustomization_file: added resources entry for trident operator"
+    logdebug "$trident_kustomization_file: added resources entry for trident operator"
 
     local -r torc_name="$__DEFAULT_TORC_NAME"
     local -r trident_image="$(get_config_trident_image)"
@@ -2774,7 +2809,7 @@ exit_if_problems
 # ------------ YAML GENERATION ------------
 step_check_kubeconfig_choice
 step_init_generated_dirs_and_files
-step_kustomize_global_namespace_if_needed "$NAMESPACE" "$__GENERATED_KUSTOMIZATION_FILE"
+#step_kustomize_global_namespace_if_needed "$NAMESPACE" "$__GENERATED_KUSTOMIZATION_FILE"
 step_kustomize_global_pull_secret_if_needed "$IMAGE_PULL_SECRET" "$__GENERATED_KUSTOMIZATION_FILE"
 
 # CONNECTOR yaml
