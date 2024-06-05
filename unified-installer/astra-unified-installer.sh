@@ -2559,7 +2559,7 @@ step_generate_torc_patch() {
             if [ -z "$_EXISTING_TRIDENT_OPERATOR_PULL_SECRETS" ]; then
                 torc_patch_list+='{"op":"replace","path":"/spec/imagePullSecrets","value":['"$IMAGE_PULL_SECRET"']},'
             else
-                torc_patch_list+='{"op":"add","path":"/spec/imagePullSecrets/-","value":'"$IMAGE_PULL_SECRET"'},'
+                torc_patch_list+='{"op":"add","path":"/spec/imagePullSecrets/-","value":"'"$IMAGE_PULL_SECRET"'"},'
             fi
         fi
     fi
