@@ -2883,7 +2883,7 @@ if trident_will_be_installed_or_modified; then
                 fi
             # ACP upgrade (ACP already enabled)
             elif acp_image_needs_upgraded; then
-                if config_acp_image_is_custom || prompt_user_yes_no "Would you like to upgrade ACP?"; then
+                if config_acp_image_is_custom || prompt_user_yes_no "Would you like to upgrade Astra Control Provisioner?"; then
                     # create trident-acp secret
                     kubectl create secret docker-registry "$IMAGE_PULL_SECRET" --docker-username="$ASTRA_ACCOUNT_ID" --docker-password="$ASTRA_API_TOKEN" -n trident --docker-server="$TRIDENT_ACP_IMAGE_REGISTRY" --dry-run=client -o yaml > "$__GENERATED_TRIDENT_ACP_SECRET_FILE"
                     step_generate_torc_patch "$_EXISTING_TORC_NAME" "" "$(get_config_acp_image)" "true"
