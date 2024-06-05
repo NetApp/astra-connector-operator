@@ -243,14 +243,14 @@ Optional Environment Variables:
   SKIP_ASTRA_CHECK                   Skips all checks requiring a connection to Astra Control when set to true. Default is false.
   SKIP_TLS_VALIDATION                Skips TLS validation for all requests to Astra Control, including the Connector (unless CONNECTOR_SKIP_TLS_VALIDATION is set) when set to true. Default is false.
   DISABLE_PROMPTS                    Skips all prompts, answering 'yes' by default when set to true. Default is false.
-  DO_NOT_MODIFY_EXISTING_TRIDENT     Prevents any and all modification to the existing Trident installation (if any), regardless of which COMPONENTS is chosen. Required if DISABLE_PROMPTS is true, otherwise defaults to false.
+  DO_NOT_MODIFY_EXISTING_TRIDENT     Prevents any and all modification to the existing Astra Trident installation (if any), regardless of which COMPONENTS is chosen. Required if DISABLE_PROMPTS is true, otherwise defaults to false.
 
   ----- General Configuration
   COMPONENTS                         One of [${__COMPONENTS_VALID_VALUES[*]}]. Determines what will be installed/upgraded. Default is ALL_ASTRA_CONTROL.
   IMAGE_PULL_SECRET                  Image pull secret for the Docker registry.
   NAMESPACE                          Overrides EVERY resource's namespace (for fresh installs only, not upgrades).
   LABELS                             Labels to be added to the generated resources (disclaimer: does not apply labels to resources created by the operators).
-  RESOURCE_LIMITS_PRESET             Resource limit preset to use. Overridden by RESOURCE_LIMITS_CUSTOM_CPU and RESOURCE_LIMITS_CUSTOM_MEMORY (disclaimer: resource limits not currently supported by Trident).
+  RESOURCE_LIMITS_PRESET             Resource limit preset to use. Overridden by RESOURCE_LIMITS_CUSTOM_CPU and RESOURCE_LIMITS_CUSTOM_MEMORY (disclaimer: resource limits not currently supported by Astra Trident).
   RESOURCE_LIMITS_CUSTOM_CPU         Custom CPU resource limit. Plain number.
   RESOURCE_LIMITS_CUSTOM_MEMORY      Custom Memory resource limit (in 'Gi')'. Plain number (i.e. do not include the 'Gi').
 
@@ -261,10 +261,10 @@ Optional Environment Variables:
       - Tag ("24.02")
 
     Given the following images :
-      - Trident Operator:    private.registry.io/some/repository/path/trident-operator:24.02
-      - Trident Autosupport: private.registry.io/some/repository/path/trident-autosupport:24.02
-      - Trident:             private.registry.io/some/repository/path/trident:24.02
-      - Trident ACP:         private.registry.io/some/repository/path/trident-acp:24.02
+      - Astra Trident Operator:    private.registry.io/some/repository/path/trident-operator:24.02
+      - Astra Trident Autosupport: private.registry.io/some/repository/path/trident-autosupport:24.02
+      - Astra Trident:             private.registry.io/some/repository/path/trident:24.02
+      - Astra Trident ACP:         private.registry.io/some/repository/path/trident-acp:24.02
       - Connector Operator:  private.registry.io/some/repository/path/astra-connector-operator:202405211614-main
 
     An appropriate configuration might be:
@@ -274,27 +274,27 @@ Optional Environment Variables:
       - CONNECTOR_OPERATOR_IMAGE_TAG="202405211614-main"
 
   IMAGE_REGISTRY                     The default Docker registry to pull all images from. Overridden by values below.
-  TRIDENT_OPERATOR_IMAGE_REGISTRY    The Docker registry to pull the Trident Operator image from.
-  TRIDENT_AUTOSUPPORT_IMAGE_REGISTRY The Docker registry to pull the Trident Autosupport image from.
-  TRIDENT_IMAGE_REGISTRY             The Docker registry to pull the Trident image from.
+  TRIDENT_OPERATOR_IMAGE_REGISTRY    The Docker registry to pull the Astra Trident Operator image from.
+  TRIDENT_AUTOSUPPORT_IMAGE_REGISTRY The Docker registry to pull the Astra Trident Autosupport image from.
+  TRIDENT_IMAGE_REGISTRY             The Docker registry to pull the Astra Trident image from.
   CONNECTOR_OPERATOR_IMAGE_REGISTRY  The Docker registry to pull the Connector Operator image from.
   CONNECTOR_IMAGE_REGISTRY           The Docker registry to pull the Connector image from.
   NEPTUNE_IMAGE_REGISTRY             The Docker registry to pull the Neptune image from.
-  TRIDENT_ACP_IMAGE_REGISTRY         The Docker registry to pull the Trident ACP image from.
+  TRIDENT_ACP_IMAGE_REGISTRY         The Docker registry to pull the Astra Trident ACP image from.
 
   IMAGE_BASE_REPO                    The default base repository path (i.e. excluding the image name) for all images. Overridden by values below.
-  TRIDENT_OPERATOR_IMAGE_REPO        The repository path for the Trident Operator image.
-  TRIDENT_AUTOSUPPORT_IMAGE_REPO     The repository path for the Trident Autosupport image.
-  TRIDENT_IMAGE_REPO                 The repository path for the Trident image.
+  TRIDENT_OPERATOR_IMAGE_REPO        The repository path for the Astra Trident Operator image.
+  TRIDENT_AUTOSUPPORT_IMAGE_REPO     The repository path for the Astra Trident Autosupport image.
+  TRIDENT_IMAGE_REPO                 The repository path for the Astra Trident image.
   CONNECTOR_OPERATOR_IMAGE_REPO      The repository path for the Connector Operator image.
   CONNECTOR_IMAGE_REPO               The repository path for the Connector image.
   NEPTUNE_IMAGE_REPO                 The repository path for the Neptune image.
-  TRIDENT_ACP_IMAGE_REPO             The repository path for the Trident ACP image.
+  TRIDENT_ACP_IMAGE_REPO             The repository path for the Astra Trident ACP image.
 
-  TRIDENT_IMAGE_TAG                  The tag for the Trident image. Overridden by other 'TRIDENT_' values below.
-  TRIDENT_OPERATOR_IMAGE_TAG         The tag for the Trident Operator image.
-  TRIDENT_AUTOSUPPORT_IMAGE_TAG      The tag for the Trident Autosupport image.
-  TRIDENT_ACP_IMAGE_TAG              The tag for the Trident ACP image.
+  TRIDENT_IMAGE_TAG                  The tag for the Astra Trident image. Overridden by other 'TRIDENT_' values below.
+  TRIDENT_OPERATOR_IMAGE_TAG         The tag for the Astra Trident Operator image.
+  TRIDENT_AUTOSUPPORT_IMAGE_TAG      The tag for the Astra Trident Autosupport image.
+  TRIDENT_ACP_IMAGE_TAG              The tag for the Astra Trident ACP image.
   CONNECTOR_OPERATOR_IMAGE_TAG       The tag for the Connector Operator image.
 
   ----- Connector Configuration
@@ -430,7 +430,7 @@ existing_trident_can_be_modified() {
 
 existing_trident_needs_modifications() {
     if [ "$_TRIDENT_COLLECTION_STEP_CALLED" != "true" ]; then
-        fatal "this function should not be called until existing Trident information has been collected"
+        fatal "this function should not be called until existing Astra Trident information has been collected"
     fi
     trident_is_missing && return 1
 
@@ -444,7 +444,7 @@ existing_trident_needs_modifications() {
 
 trident_is_missing() {
     if [ "$_TRIDENT_COLLECTION_STEP_CALLED" != "true" ]; then
-        fatal "this function should not be called until existing Trident information has been collected"
+        fatal "this function should not be called until existing Astra Trident information has been collected"
     fi
     [ -z "$_EXISTING_TRIDENT_NAMESPACE" ] && return 0
     return 1
@@ -452,7 +452,7 @@ trident_is_missing() {
 
 trident_will_be_installed_or_modified() {
     if [ "$_TRIDENT_COLLECTION_STEP_CALLED" != "true" ]; then
-        fatal "this function should not be called until existing Trident information has been collected"
+        fatal "this function should not be called until existing Astra Trident information has been collected"
     fi
     if trident_is_missing; then return 0; fi
     if existing_trident_needs_modifications && existing_trident_can_be_modified; then return 0; fi
@@ -481,11 +481,11 @@ get_config_connector_operator_image() {
 
 trident_image_needs_upgraded() {
     if [ "$_TRIDENT_COLLECTION_STEP_CALLED" != "true" ]; then
-        fatal "this function should not be called until existing Trident information has been collected"
+        fatal "this function should not be called until existing Astra Trident information has been collected"
     fi
     local -r configured_image="$(get_config_trident_image)"
 
-    logdebug "Checking if Trident image needs upgraded: $_EXISTING_TRIDENT_IMAGE vs $configured_image"
+    logdebug "Checking if Astra Trident image needs upgraded: $_EXISTING_TRIDENT_IMAGE vs $configured_image"
     if [ "$_EXISTING_TRIDENT_IMAGE" != "$configured_image" ]; then
         return 0
     fi
@@ -495,11 +495,11 @@ trident_image_needs_upgraded() {
 
 trident_operator_image_needs_upgraded() {
     if [ "$_TRIDENT_COLLECTION_STEP_CALLED" != "true" ]; then
-        fatal "this function should not be called until existing Trident information has been collected"
+        fatal "this function should not be called until existing Astra Trident information has been collected"
     fi
     local -r configured_image="$(get_config_trident_operator_image)"
 
-    logdebug "Checking if Trident image needs upgraded: $_EXISTING_TRIDENT_OPERATOR_IMAGE vs $configured_image"
+    logdebug "Checking if Astra Trident image needs upgraded: $_EXISTING_TRIDENT_OPERATOR_IMAGE vs $configured_image"
     if [ "$_EXISTING_TRIDENT_OPERATOR_IMAGE" != "$configured_image" ]; then
         return 0
     fi
@@ -509,7 +509,7 @@ trident_operator_image_needs_upgraded() {
 
 acp_image_needs_upgraded() {
     if [ "$_TRIDENT_COLLECTION_STEP_CALLED" != "true" ]; then
-        fatal "this function should not be called until existing Trident information has been collected"
+        fatal "this function should not be called until existing Astra Trident information has been collected"
     fi
     local -r configured_image="$(get_config_acp_image)"
 
@@ -522,7 +522,7 @@ acp_image_needs_upgraded() {
 
 acp_is_enabled() {
     if [ "$_TRIDENT_COLLECTION_STEP_CALLED" != "true" ]; then
-        fatal "this function should not be called until existing Trident information has been collected"
+        fatal "this function should not be called until existing Astra Trident information has been collected"
     fi
     logdebug "Checking if ACP is enabled: '$_EXISTING_TRIDENT_ACP_ENABLED'"
     [ "$_EXISTING_TRIDENT_ACP_ENABLED" == "true" ] && return 0
@@ -2302,13 +2302,13 @@ EOF
 }
 
 step_collect_existing_trident_info() {
-    logheader $__INFO "Checking if Trident is installed..."
+    logheader $__INFO "Checking if Astra Trident is installed..."
     _TRIDENT_COLLECTION_STEP_CALLED="true"
 
     # TORC CR definition
     if ! k8s_resource_exists "crd/tridentorchestrators.trident.netapp.io"; then
         logdebug "tridentorchestrator crd: not found"
-        loginfo "* Trident installation not found."
+        loginfo "* Astra Trident installation not found."
         return 0
     else
         logdebug "tridentorchestrator crd: OK"
@@ -2318,7 +2318,7 @@ step_collect_existing_trident_info() {
     local -r torc_json="$(k8s_get_resource tridentorchestrator "" jsonpath='{.items[0]}')"
     if [ -z "$torc_json" ]; then
         logdebug "tridentorchestrator: not found"
-        loginfo "* Trident not found -- it will be installed."
+        loginfo "* Astra Trident not found -- it will be installed."
         return 0
     else
         logdebug "tridentorchestrator: OK"
@@ -2328,12 +2328,12 @@ step_collect_existing_trident_info() {
     local -r trident_ns="$(echo "$torc_json" | jq -r '.spec.namespace' 2> /dev/null)"
     if ! k8s_resource_exists "namespace/$trident_ns"; then
         logdebug "trident namespace '$trident_ns': not found"
-        loginfo "* Trident Orchestrator exists, but configured namespace '$trident_ns' not found on cluster."
+        loginfo "* Astra Trident Orchestrator exists, but configured namespace '$trident_ns' not found on cluster."
         return 0
     fi
     _EXISTING_TORC_NAME="$(echo "$torc_json" | jq -r '.metadata.name' 2> /dev/null)"
     _EXISTING_TRIDENT_NAMESPACE="$trident_ns"
-    loginfo "* Trident namespace: '$_EXISTING_TRIDENT_NAMESPACE'"
+    loginfo "* Astra Trident namespace: '$_EXISTING_TRIDENT_NAMESPACE'"
 
     # Trident image
     local -r trident_image="$(echo "$torc_json" | jq -r ".spec.tridentImage" 2> /dev/null)"
@@ -2347,10 +2347,10 @@ step_collect_existing_trident_info() {
     # Trident version
     local -r trident_version="$(kubectl get tridentversions -n trident -o json | jq -r '.items.[0].trident_version' 2> /dev/null)"
     if [ -z "$trident_version" ]; then
-        logwarn "Failed to resolve existing Trident version. ACP may not be supported without an upgrade!"
+        logwarn "Failed to resolve existing Astra Trident version. ACP may not be supported without an upgrade!"
     else
         _EXISTING_TRIDENT_VERSION="$trident_version"
-        loginfo "* Trident version: $trident_version"
+        loginfo "* Astra Trident version: $trident_version"
     fi
 
     # ACP enabled/disabled
@@ -2413,7 +2413,7 @@ step_existing_trident_flags_compatibility_check() {
     ! existing_trident_needs_modifications && return 0
     existing_trident_can_be_modified && return 0
 
-    local msg="Existing Trident install requires an upgrade but DO_NOT_MODIFY_EXISTING_TRIDENT=true,"
+    local msg="Existing Astra Trident install requires an upgrade but DO_NOT_MODIFY_EXISTING_TRIDENT=true,"
     msg+=" and no other valid operations can be done due to COMPONENTS=$COMPONENTS."
     add_problem "$msg"
     return 1
@@ -2425,7 +2425,7 @@ step_generate_trident_fresh_install_yaml() {
     [ ! -f "$kustomization_file" ] && fatal "kustomization file '$kustomization_file' does not exist"
     [ ! -f "$crs_file" ] && touch "$crs_file"
 
-    logheader $__DEBUG "Generating Trident YAML files..."
+    logheader $__DEBUG "Generating Astra Trident YAML files..."
 
     # TODO point to https://github.com/NetApp/trident when 24.06 image is available
     insert_into_file_after_pattern "$kustomization_file" "resources:" \
@@ -2469,7 +2469,7 @@ step_generate_trident_operator_patch() {
     [ -z "$namespace" ] && fatal "no existing trident namespace found"
     [ -z "$new_image" ] && fatal "no trident operator image found"
 
-    logheader $__DEBUG "Generating Trident Operator patch"
+    logheader $__DEBUG "Generating Astra Trident Operator patch"
     local -r image_patch='{"op":"replace","path":"/spec/template/spec/containers/0/image","value":"'"$new_image"'"}'
     local -a patch_list="$image_patch"
 
@@ -2569,7 +2569,7 @@ step_add_image_remaps_to_kustomization() {
         echo "- name: netapp/$__DEFAULT_TRIDENT_OPERATOR_IMAGE_NAME" >> "$kustomization_file"
         echo "  newName: $(join_rpath "$TRIDENT_OPERATOR_IMAGE_REGISTRY" "$TRIDENT_OPERATOR_IMAGE_REPO")" >> "$kustomization_file"
         echo "  newTag: \"$TRIDENT_OPERATOR_IMAGE_TAG\"" >> "$kustomization_file"
-        logdebug "$kustomization_file: added Trident Operator image remap"
+        logdebug "$kustomization_file: added Astra Trident Operator image remap"
     fi
     if components_include_connector; then
         # Connector operator
@@ -2629,7 +2629,7 @@ step_apply_resources() {
 }
 
 step_apply_trident_operator_patches() {
-    logheader "$__DEBUG" "$(prefix_dryrun "Applying Trident Operator patches...")"
+    logheader "$__DEBUG" "$(prefix_dryrun "Applying Astra Trident Operator patches...")"
     local -ra patches=("${_PATCHES_TRIDENT_OPERATOR[@]}")
     local -r patches_len="${#patches[@]}"
 
@@ -2639,7 +2639,7 @@ step_apply_trident_operator_patches() {
 
     if debug_is_on && [ "$patches_len" -gt 0 ]; then
         local disclaimer="# THIS FILE IS FOR DEBUGGING PURPOSES ONLY. These are the patches applied to the"
-        disclaimer+="${__NEWLINE}# Trident Operator deployment when upgrading the Trident Operator."
+        disclaimer+="${__NEWLINE}# Astra Trident Operator deployment when upgrading the Astra Trident Operator."
         disclaimer+="${__NEWLINE}"
         append_lines_to_file "${__GENERATED_PATCHES_TRIDENT_OPERATOR_FILE}" "$disclaimer" "${patches[@]}"
     fi
@@ -2659,7 +2659,7 @@ step_apply_torc_patches() {
 
     if debug_is_on && [ "$patches_len" -gt 0 ]; then
         local disclaimer="# THIS FILE IS FOR DEBUGGING PURPOSES ONLY. These are the patches applied to the"
-        disclaimer+="${__NEWLINE}# TridentOrchestrator resource when upgrading Trident or enabling ACP."
+        disclaimer+="${__NEWLINE}# TridentOrchestrator resource when upgrading Astra Trident or enabling ACP."
         disclaimer+="${__NEWLINE}"
         append_lines_to_file "${__GENERATED_PATCHES_TORC_FILE}" "$disclaimer" "${patches[@]}"
     fi
@@ -2710,9 +2710,9 @@ step_monitor_deployment_progress() {
         if is_dry_run; then
             logdebug "skip monitoring trident components because it's a dry run"
         elif ! wait_for_deployment_running "trident-operator" "$trident_ns" "3"; then
-            add_problem "trident operator: failed" "The Trident Operator failed to deploy"
+            add_problem "trident operator: failed" "The Astra Trident Operator failed to deploy"
         elif ! wait_for_cr_state "torc/$torc_name" ".status.status" "Installed" "$trident_ns" "12"; then
-            add_problem "trident: failed" "Trident failed to deploy: status never reached 'Installed'"
+            add_problem "trident: failed" "Astra Trident failed to deploy: status never reached 'Installed'"
         fi
     fi
 }
@@ -2793,7 +2793,7 @@ if trident_will_be_installed_or_modified; then
     if trident_is_missing; then
         step_generate_trident_fresh_install_yaml
     elif [ -z "$_EXISTING_TRIDENT_OPERATOR_IMAGE" ]; then
-        logwarn "Upgrading Trident without the Trident Operator is not currently supported, skipping."
+        logwarn "Upgrading Astra Trident without the Astra Trident Operator is not currently supported, skipping."
     elif existing_trident_can_be_modified; then
         # Upgrade Trident/Operator?
         if components_include_trident; then
@@ -2801,54 +2801,57 @@ if trident_will_be_installed_or_modified; then
             if trident_image_needs_upgraded; then
                 # Warn if trident version < 23.10 (ACP requires 23.10+)
                 if version_higher_or_equal "23.07" "$_EXISTING_TRIDENT_VERSION"; then
-                    logwarn "Your Trident installation is at version $_EXISTING_TRIDENT_VERSION, while the lowest required version to enable ACP is 23.10."
+                    _msg="Your Astra Trident installation is at version $_EXISTING_TRIDENT_VERSION, while the"
+                    _msg+=" lowest required version to enable the Astra Control Provisioner (Trident ACP) is 23.10."
+                    logwarn "$_msg"
                 fi
 
                 _generate_torc_args=("$_EXISTING_TORC_NAME" "$(get_config_trident_image)" "" "" "$(get_config_trident_autosupport_image)")
                 if config_trident_image_is_custom; then
-                    _warning_message="We cannot verify the version of the custom Trident image you provided"
-                    _warning_message+=" ($(get_config_trident_image). ACP support (23.10+) is not guaranteed."
+                    _warning_message="We cannot verify the version of the custom Astra Trident image you provided"
+                    _warning_message+=" ($(get_config_trident_image). Astra Control Provisioner (Trident ACP)"
+                    _warning_message+=" support (23.10+) is not guaranteed."
                     logwarn "$_warning_message"
 
                     step_generate_torc_patch "${_generate_torc_args[@]}"
                     trident_operator_image_needs_upgraded && step_generate_trident_operator_patch
-                elif prompt_user_yes_no "Would you like to upgrade Trident?"; then
+                elif prompt_user_yes_no "Would you like to upgrade Astra Trident?"; then
                     step_generate_torc_patch "${_generate_torc_args[@]}"
                     trident_operator_image_needs_upgraded && step_generate_trident_operator_patch
                 else
-                    _msg="You have chosen to use a version of Trident that is not supported with the current version"
+                    _msg="You have chosen to use a version of Astra Trident that is not supported with the current version"
                     _msg+=" of Astra Control. This may result in some App Data Management operations not functioning"
                     _msg+=" correctly or being blocked within Astra Control. It is highly recommended to upgrade"
-                    _msg+=" Trident to ensure compatibility and proper functionality."
+                    _msg+=" Astra Trident to ensure compatibility and proper functionality."
                     logwarn "$_msg"
                 fi
             # Trident operator upgrade (standalone)
             elif trident_operator_image_needs_upgraded; then
-                if config_trident_operator_image_is_custom || prompt_user_yes_no "Would you like to upgrade the Trident Operator?"; then
+                if config_trident_operator_image_is_custom || prompt_user_yes_no "Would you like to upgrade the Astra Trident Operator?"; then
                     step_generate_trident_operator_patch
                 else
-                    loginfo "Trident Operator will not be upgraded."
+                    loginfo "Astra Trident Operator will not be upgraded."
                 fi
             fi
         else
-            logdebug "Skipping Trident upgrade (COMPONENTS=${COMPONENTS}, DO_NOT_MODIFY_EXISTING_TRIDENT=${DO_NOT_MODIFY_EXISTING_TRIDENT})"
+            logdebug "Skipping Astra Trident upgrade (COMPONENTS=${COMPONENTS}, DO_NOT_MODIFY_EXISTING_TRIDENT=${DO_NOT_MODIFY_EXISTING_TRIDENT})"
         fi
 
         # Upgrade/Enable ACP?
         if components_include_acp; then
             # Enable ACP if needed (includes ACP upgrade)
             if ! acp_is_enabled; then
-                if config_acp_image_is_custom || prompt_user_yes_no "Would you like to enable ACP?"; then
+                if config_acp_image_is_custom || prompt_user_yes_no "Would you like to enable the Astra Control Provisioner (Trident ACP)?"; then
                     step_generate_torc_patch "$_EXISTING_TORC_NAME" "" "$(get_config_acp_image)" "true"
                 else
-                    loginfo "ACP will not be enabled."
+                    loginfo "The Astra Control Provisioner (Trident ACP) will not be enabled."
                 fi
             # ACP upgrade (ACP already enabled)
             elif acp_image_needs_upgraded; then
-                if config_acp_image_is_custom || prompt_user_yes_no "Would you like to upgrade ACP?"; then
+                if config_acp_image_is_custom || prompt_user_yes_no "Would you like to upgrade the Astra Control Provisioner (Trident ACP)?"; then
                     step_generate_torc_patch "$_EXISTING_TORC_NAME" "" "$(get_config_acp_image)" "true"
                 else
-                    loginfo "ACP will not be upgraded."
+                    loginfo "The Astra Control Provisioner (Trident ACP) will not be upgraded."
                 fi
             fi
         else
