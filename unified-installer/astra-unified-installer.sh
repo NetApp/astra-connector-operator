@@ -2455,7 +2455,7 @@ step_generate_trident_fresh_install_yaml() {
 
     mkdir -p "$trident_kustomization_dir"
     if [ ! -f "$trident_kustomization_file" ]; then
-        cat <<EOF > "$kustomization_file"
+        cat <<EOF > "$trident_kustomization_file"
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
