@@ -2264,6 +2264,13 @@ spec:
     cloudId: ${cloud_id}
     clusterId: ${cluster_id}
     skipTLSValidation: ${skip_tls_validation}  # Should be set to false in production environments${labels_field_and_content}
+EOF
+
+if [ -n "$host_alias_ip" ]; then
+    echo "    hostAliasIP: $host_alias_ip" >> "$crs_file"
+fi
+
+cat <<EOF >> "$crs_file"
   imageRegistry:
     name: "${connector_registry}"
     secret: "${connector_regcred_name}"
@@ -2278,9 +2285,6 @@ spec:
         cpu: ".5"
         memory: ${memory_limit}Gi
 EOF
-    if [ -n "$host_alias_ip" ]; then
-        echo "    hostAliasIP: $host_alias_ip" >> "$crs_file"
-    fi
 
     if [ -n "$connector_tag" ]; then
       echo "  astraConnect:" >> "$crs_file"
