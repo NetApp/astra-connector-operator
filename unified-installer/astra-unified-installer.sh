@@ -1709,7 +1709,12 @@ step_check_config() {
     # Env vars with special conditions
     if [ -n "$IMAGE_PULL_SECRET" ]; then
         if [ -z "$NAMESPACE" ]; then
-            prompt_user "NAMESPACE" "NAMESPACE is required when specifying an IMAGE_PULL_SECRET. Please enter the namespace:"
+            local -r ns_warning="NAMESPACE is required when specifying an IMAGE_PULL_SECRET"
+            if prompts_disabled; then
+                add_problem "$ns_warning"
+            else
+                prompt_user "NAMESPACE" "$ns_warning. Please enter the namespace:"
+            fi
         fi
     elif get_config_custom_registries_with_repo &> /dev/null; then
         local custom_reg_warning="We detected one or more custom registry or repo values"
@@ -2658,12 +2663,17 @@ step_apply_resources() {
 
         output="$(kubectl apply -k "$operators_dir" 2> "$__ERR_FILE")"
         captured_err="$(get_captured_err)"
-        if echo "$captured_err" | grep -q "Warning:"; then
-            logdebug "captured warning when applying kustomize resources:${__NEWLINE}$captured_err"
-        elif echo "$captured_err" | grep -q "no objects passed to apply"; then
-            logdebug "no kustomize resources to apply, skipping"
-        elif [ -z "$output" ] || [ -n "$captured_err" ]; then
-            add_problem "Failed to apply kustomize resources: $captured_err"
+
+        if [ -n "$captured_err" ]; then
+            while IFS= read -r line; do
+                if echo "$line" | grep -q "Warning:"; then
+                    logdebug "captured warning when applying kustomize resources:${__NEWLINE}$captured_err"
+                elif echo "$line" | grep -q "no objects passed to apply"; then
+                    logdebug "no kustomize resources to apply, skipping"
+                elif [ -z "$output" ] || [ -n "$line" ]; then
+                    add_problem "Failed to apply kustomize resources: $line"
+                fi
+            done < <(echo "$captured_err")
         fi
         logdebug "kustomize apply output:${__NEWLINE}$output"
     fi
