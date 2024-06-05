@@ -1398,8 +1398,17 @@ step_check_config() {
         if [ -z "$NAMESPACE" ]; then
             prompt_user "NAMESPACE" "NAMESPACE is required when specifying an IMAGE_PULL_SECRET. Please enter the namespace:"
         fi
-        add_to_config_builder "IMAGE_PULL_SECRET"
+    elif config_has_at_least_one_custom_registry_or_repo; then
+        local custom_reg_warning="We detected one or more custom registry or repo values"
+        custom_reg_warning+=", but no IMAGE_PULL_SECRET was specified. If any of your images are hosted in a private"
+        custom_reg_warning+=" registry, an image pull secret will need to be created and IMAGE_PULL_SECRET set."
+        if prompts_disabled; then
+            logwarn "$custom_reg_warning"
+        elif prompt_user_yes_no "$custom_reg_warning${__NEWLINE}Would you like to specify a pull secret now?"; then
+            prompt_user "IMAGE_PULL_SECRET" "Enter a value for IMAGE_PULL_SECRET: "
+        fi
     fi
+    add_to_config_builder "IMAGE_PULL_SECRET"
     add_to_config_builder "NAMESPACE"
 
     if prompts_disabled; then
@@ -2238,7 +2247,7 @@ step_add_labels_to_kustomization() {
     logheader $__DEBUG "Adding labels to kustomization and crs file"
 
     local -r content="labels:${__NEWLINE}- pairs:${__NEWLINE}${processed_labels}"
-    insert_into_file_after_pattern "${kustomization_file}" "kind:" "${content}"
+    insert_into_file_after_pattern "${kustomization_file}" "kind: Kustomization" "${content}"
 
     logdebug "kustomization labels: OK"
 }
