@@ -2658,7 +2658,12 @@ step_apply_resources() {
     if ! is_dry_run; then
         # apply trident-acp secret if it exists
         if [ -e "$__GENERATED_TRIDENT_ACP_SECRET_FILE" ]; then
-            kubectl apply -f "${__GENERATED_TRIDENT_ACP_SECRET_FILE}" -n "${trident_namespace}"
+            output="$(kubectl apply -f "$__GENERATED_TRIDENT_ACP_SECRET_FILE" -n "$(get_trident_namespace)" 2> "$__ERR_FILE")"
+            captured_err="$(get_captured_err)"
+            if [ -z "$output" ] || [ -n "$captured_err" ]; then
+                add_problem "Failed to apply ACS registry secret: $captured_err"
+            fi
+            logdebug "$output"
         fi
 
         output="$(kubectl apply -k "$operators_dir" 2> "$__ERR_FILE")"
