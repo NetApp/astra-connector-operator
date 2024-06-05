@@ -65,7 +65,6 @@ func (d *AstraConnectDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx co
 			},
 		},
 		Spec: appsv1.DeploymentSpec{
-			// TODO remove option to set replica count in CRD. This should always only-ever be 1
 			Replicas: &replicaCount,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: ls,
@@ -219,6 +218,11 @@ func (d *AstraConnectDeployer) GetServiceAccountObjects(m *v1.AstraConnector, ct
 
 func (d *AstraConnectDeployer) GetClusterRoleObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
 	rules := []rbacv1.PolicyRule{
+		{
+			APIGroups: []string{"rbac.authorization.k8s.io"},
+			Resources: []string{"clusterroles"},
+			Verbs:     []string{"get", "list"},
+		},
 		{
 			APIGroups: []string{""},
 			Resources: []string{"namespaces", "persistentvolumes", "nodes", "pods", "services"},
