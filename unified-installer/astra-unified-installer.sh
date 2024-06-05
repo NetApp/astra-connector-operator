@@ -17,12 +17,14 @@ _KUBERNETES_VERSION=""
 # existing Trident information (if any) has been collected.
 _TRIDENT_COLLECTION_STEP_CALLED="false"
 _EXISTING_TORC_NAME="" # TORC is short for TridentOrchestrator (works with kubectl too)
+_EXISTING_TORC_PULL_SECRETS="" # Newline-delimited values, e.g. 'secret1\nsecret2\nsecret3'
 _EXISTING_TRIDENT_NAMESPACE=""
 _EXISTING_TRIDENT_IMAGE=""
 _EXISTING_TRIDENT_VERSION=""
 _EXISTING_TRIDENT_ACP_ENABLED=""
 _EXISTING_TRIDENT_ACP_IMAGE=""
 _EXISTING_TRIDENT_OPERATOR_IMAGE=""
+_EXISTING_TRIDENT_OPERATOR_PULL_SECRETS="" # Newline-delimited values, e.g. 'secret1\nsecret2\nsecret3'
 
 # _PATCHES_ variables contain the k8s patches that will be applied after we've applied all CRs and kustomize resources.
 # Entries should omit the 'kubectl patch' from the command, e.g. `deploy/astraconnect -n astra --type=json -p '[...]'`
@@ -66,7 +68,7 @@ readonly __COMPONENTS_VALID_VALUES=("$__COMPONENTS_ALL_ASTRA_CONTROL" "$__COMPON
 readonly __DEFAULT_DOCKER_HUB_IMAGE_REGISTRY="docker.io"
 readonly __DEFAULT_DOCKER_HUB_IMAGE_BASE_REPO="netapp"
 readonly __DEFAULT_ASTRA_IMAGE_REGISTRY="cr.astra.netapp.io"
-readonly __DEFAULT_IMAGE_TAG="$__RELEASE_VERSION"
+readonly __DEFAULT_ASTRA_IMAGE_BASE_REPO=""
 
 readonly __DEFAULT_TRIDENT_OPERATOR_IMAGE_NAME="trident-operator"
 readonly __DEFAULT_TRIDENT_AUTOSUPPORT_IMAGE_NAME="trident-autosupport"
@@ -473,6 +475,10 @@ get_config_acp_image() {
     as_full_image "$TRIDENT_ACP_IMAGE_REGISTRY" "$TRIDENT_ACP_IMAGE_REPO" "$TRIDENT_ACP_IMAGE_TAG"
 }
 
+get_config_connector_operator_image() {
+    as_full_image "$CONNECTOR_OPERATOR_IMAGE_REGISTRY" "$CONNECTOR_OPERATOR_IMAGE_REPO" "$CONNECTOR_OPERATOR_IMAGE_TAG"
+}
+
 trident_image_needs_upgraded() {
     if [ "$_TRIDENT_COLLECTION_STEP_CALLED" != "true" ]; then
         fatal "this function should not be called until existing Trident information has been collected"
@@ -521,6 +527,49 @@ acp_is_enabled() {
     logdebug "Checking if ACP is enabled: '$_EXISTING_TRIDENT_ACP_ENABLED'"
     [ "$_EXISTING_TRIDENT_ACP_ENABLED" == "true" ] && return 0
     return 1
+}
+
+# get_config_custom_registries will echo all image registries (including the base repo) that have had their default
+# overridden by the user, one per line. Example:
+#     my.registry.io/base/repo
+#     my.registry.io/base/repo
+#     my.registry.io/other/repo
+#     other.registry.io
+# If there are no custom registries, the function returns code 1.
+get_config_custom_registries_with_repo() {
+    local -r docker_hub_default="$(join_rpath "$__DEFAULT_DOCKER_HUB_IMAGE_REGISTRY" "$__DEFAULT_DOCKER_HUB_IMAGE_BASE_REPO")"
+    local -r astra_reg_default="$(join_rpath "$__DEFAULT_ASTRA_IMAGE_REGISTRY" "$__DEFAULT_ASTRA_IMAGE_BASE_REPO")"
+    local -a custom_registries=()
+
+    if components_include_trident || components_include_acp; then
+        get_config_trident_operator_image | starts_with "$docker_hub_default" || custom_registries+=("$TRIDENT_OPERATOR_IMAGE_REGISTRY")
+        get_config_trident_autosupport_image | starts_with "$docker_hub_default" || custom_registries+=("$TRIDENT_AUTOSUPPORT_IMAGE_REGISTRY")
+        get_config_trident_image | starts_with "$docker_hub_default" || custom_registries+=("$TRIDENT_IMAGE_REGISTRY")
+    fi
+    if components_include_acp; then
+        get_config_acp_image | starts_with "$astra_reg_default" || custom_registries+=("$TRIDENT_ACP_IMAGE_REGISTRY")
+    fi
+    if components_include_connector; then
+        # The Connector and Neptune tags are resolved by the Connector Operator in most cases, so those images
+        # don't have a "get_config_" since the tag would often just be empty. We construct the registry/repo
+        # manually instead, since that's really all we care about.
+        local -r connector_reg_and_repo="$(join_rpath "$CONNECTOR_IMAGE_REGISTRY" "$CONNECTOR_IMAGE_REPO")"
+        local -r neptune_reg_and_repo="$(join_rpath "$NEPTUNE_IMAGE_REGISTRY" "$NEPTUNE_IMAGE_REPO")"
+
+        get_config_connector_operator_image | starts_with "$docker_hub_default" || custom_registries+=("$CONNECTOR_OPERATOR_IMAGE_REGISTRY")
+        echo "$connector_reg_and_repo" | starts_with "$astra_reg_default" || custom_registries+=("$CONNECTOR_IMAGE_REGISTRY")
+        echo "$neptune_reg_and_repo" | starts_with "$astra_reg_default" || custom_registries+=("$NEPTUNE_IMAGE_REGISTRY")
+    fi
+
+    if [ "${#custom_registries[@]}" -eq 0 ]; then
+        return 1
+    fi
+
+    for reg in "${custom_registries[@]}" ; do
+        echo "$reg"
+    done
+
+    return 0
 }
 
 config_image_is_custom() {
@@ -854,6 +903,24 @@ join_rpath() {
     echo "$joined"
 }
 
+# starts_with checks if a string starts with the given substring.
+# Usage: `echo "abc" | starts_with "ab"` returns 0 (true).
+starts_with() {
+    local str_to_check="" && read -r str_to_check
+    local -r substring="$1"
+
+    [ -z "$str_to_check" ] && fatal "no str_to_check given"
+    [ -z "$substring" ] && fatal "no substring given"
+
+    case $str_to_check in
+        "$substring"*)
+            return 0
+            ;;
+    esac
+
+    return 1
+}
+
 str_contains_at_least_one() {
     local -r str_to_check="$1"
     local -a keywords=("${@:2}")
@@ -1102,10 +1169,9 @@ get_registry_credentials_from_pull_secret() {
     # 6. Get the first matching entry's `.value.auth`, which would be `B64_ENCODED_USERNAME_PASSWORD` here
     # 7. The `B64_ENCODED_USERNAME_PASSWORD` can then be passed to curl via
     # `-H 'Authorization: Basic B64_ENCODED_USERNAME_PASSWORD'` without having to decode it first.
-    local -r contents="$(kubectl get secret "$pull_secret" -n "$namespace" -o json 2> /dev/null)"
+    local -r contents="$(k8s_get_resource "secret/$pull_secret" "$namespace" "json")"
     if [ -z "$contents" ]; then
-        # TODO: differentiate between connectivity errors and actual 'not found' errors
-        add_problem "pull secret '$namespace.$pull_secret': not found" "Pull secret '$pull_secret' not found in namespace '$namespace'"
+        add_problem "Pull secret '$pull_secret' not found in namespace '$namespace'"
         return 1
     fi
 
@@ -1172,8 +1238,8 @@ k8s_cluster_can_pull_from_docker_hub() {
         kubectl delete pod -n "$namespace" "$pod_name" > /dev/null || true
         return 0
     else
-        local -r message="$(kubectl get pod -n "$namespace" $pod_name -o jsonpath='{.status.containerStatuses[0].state.waiting.reason}')"
-        local -r reason="$(kubectl get pod -n "$namespace" $pod_name -o jsonpath='{.status.containerStatuses[0].state.waiting.message}')"
+        local -r message="$(k8s_get_resource "pod/$pod_name" "$namespace" jsonpath='{.status.containerStatuses[0].state.waiting.reason}')"
+        local -r reason="$(k8s_get_resource "pod/$pod_name" "$namespace" jsonpath='{.status.containerStatuses[0].state.waiting.message}')"
         kubectl delete pod -n "$namespace" "$pod_name" > /dev/null || true
         add_problem "$full_image: failed (${reason:-"unknown error"})" "Failed to pull image '$full_image': ${reason:-"unknown error"}: ${message:-""}"
         return 1
@@ -1281,6 +1347,68 @@ EOF
     echo "$yaml_labels"
 }
 
+# k8s_get_resource will get the given k8s resource in the given format and echo the output.
+# If a connection error (or any type of error except for "NotFound") occurs, a problem will be added to make sure
+# script execution is halted.
+k8s_get_resource() {
+    # Note on "NotFound" errors:
+    #
+    # "NotFound" errors are OK because it just means the resource wasn't found, at which point we echo an empty string
+    # (basically equivalent to returning null or nil in other languages). We don't necessarily stop script execution
+    # just because a resource wasn't found.
+    #
+    # On the other hand, other types of errors (such as connection timeouts) need to stop script execution since it
+    # means we still don't actually know if the resource exists or not, so we call add_problem, which is akin to
+    # 'throwing' an error.
+    #
+    # For example, we look for the existence of the TORC to determine whether Trident is installed or not -- this means
+    # that, if we interpret a "Connection Timeout" error to mean "Trident is not installed" (instead of adding them as
+    # a problem), then we're going to continue execution of the script and attempt to install Trident on a cluster that
+    # may already have it installed.
+    local -r resource="$1"
+    local -r namespace="${2:-""}"
+    local -r format="${3:-"json"}"
+
+    [ -z "$resource" ] && fatal "no resource given"
+
+    local -a args=()
+    [ -n "$namespace" ] && args+=("-n" "$namespace")
+
+    local -r output="$(kubectl get "$resource" "${args[@]}" -o "$format" 2> "$__ERR_FILE")"
+    local -r captured_err="$(get_captured_err)"
+    if [ -n "$output" ] && [ -z "$captured_err" ]; then
+        echo "$output"
+        return 0
+    fi
+
+    local base_msg="A failure occurred when checking if resource '$resource'"
+    [ -n "$namespace" ] && base_msg+=" (namespace: $namespace)"
+    base_msg+=" exists"
+    if echo "$captured_err" | grep -q "NotFound" &> /dev/null; then
+        logdebug "got NotFound error for resource '$resource', letting it through" >& 2
+    elif echo "$captured_err" | grep -q "error executing jsonpath"; then
+        logdebug "got jsonpath error for resource '$resource', letting it through" >& 2
+    elif [ -n "$captured_err" ]; then
+        logdebug "got unrecognized error for resource '$resource': $captured_err" >& 2
+        add_problem "$base_msg: $(echo "$captured_err" | tail -n 1)"
+    else
+        add_problem "$base_msg: unknown error"
+    fi
+
+    return 1
+}
+
+k8s_resource_exists() {
+    local -r resource="$1"
+    local -r namespace="$2"
+
+    if k8s_get_resource "$resource" "$namespace" 1> /dev/null; then
+        return 0
+    fi
+
+    return 1
+}
+
 apply_kubectl_patch() {
     local patch="$1"
     local dry_run_flag=""
@@ -1353,7 +1481,7 @@ wait_for_cr_state() {
     local counter=0
     local current_state=""
     while ((counter < max_checks)); do
-        current_state=$(kubectl get -n "$namespace" "$resource" -o jsonpath="{$path}" 2> /dev/null)
+        current_state=$(k8s_get_resource "$resource" "$namespace" jsonpath="{$path}")
 
         if [ "$current_state" == "$desired_state" ]; then
             logdebug "resource '$resource' has reached '$desired_state'"
@@ -1371,7 +1499,7 @@ wait_for_cr_state() {
 wait_for_resource_created() {
     local -r resource="$1"
     local -r namespace="$2"
-    local -r timeout="${3:-60}"
+    local -r timeout="${3:-120}"
 
     [ -z "$resource" ] && fatal "no resource given"
     [ -z "$namespace" ] && fatal "no namespace given"
@@ -1387,7 +1515,7 @@ wait_for_resource_created() {
     logdebug "waiting for resource '$resource' in namespace '$namespace' to be created (timeout=$timeout)"
     local counter=0
     while ((counter < max_checks)); do
-        if kubectl get -n "$namespace" "$resource" &> /dev/null; then
+        if k8s_resource_exists "$resource" "$namespace"; then
             logdebug "resource '$resource' found"
             return 0
         else
@@ -1412,7 +1540,7 @@ get_container_count() {
 
     local path=".spec.template.spec.containers"
     local count=0
-    count="$(kubectl get "$resource" -n "$namespace" -o json 2> /dev/null | jq -r "$path | length" 2> /dev/null)"
+    count="$(k8s_get_resource "$resource" "$namespace" "json" | jq -r "$path | length" 2> /dev/null)"
 
     if [ -n "$count" ] || (( count > 0 )); then
         echo "$count"
@@ -1433,17 +1561,12 @@ backup_kubernetes_resource() {
     [ -z "$directory" ] && fatal "no directory given"
     ! [ -d "$directory" ] && fatal "directory '$directory' does not exist"
 
-    local namespace_arg=""
-    local backup_name="BACKUP_"
-    if [ -n "$namespace" ]; then
-        namespace_arg="--namespace='$namespace'"
-        backup_name+="${namespace}_"
-    fi
-    backup_name+="${kind}_${resource_name}.yaml"
-
-    local -r resource_name_yaml="$(kubectl get "$kind" "$resource_name" "$namespace_arg" -o yaml 2> $__ERR_FILE)"
+    local -r resource_name_yaml="$(k8s_get_resource "$kind/$resource_name" "$namespace" "yaml")"
     [ -z "$resource_name_yaml" ] && return 1
-    _return_error="$(get_captured_err)"
+
+    local backup_name="BACKUP_"
+    [ -n "$namespace" ] && backup_name+="${namespace}_"
+    backup_name+="${kind}_${resource_name}.yaml"
 
     echo "$resource_name_yaml" > "${directory}/${backup_name}"
     echo "$backup_name"
@@ -1558,8 +1681,17 @@ step_check_config() {
         if [ -z "$NAMESPACE" ]; then
             prompt_user "NAMESPACE" "NAMESPACE is required when specifying an IMAGE_PULL_SECRET. Please enter the namespace:"
         fi
-        add_to_config_builder "IMAGE_PULL_SECRET"
+    elif get_config_custom_registries_with_repo &> /dev/null; then
+        local custom_reg_warning="We detected one or more custom registry or repo values"
+        custom_reg_warning+=", but no IMAGE_PULL_SECRET was specified. If any of your images are hosted in a private"
+        custom_reg_warning+=" registry, an image pull secret will need to be created and IMAGE_PULL_SECRET set."
+        if prompts_disabled; then
+            logwarn "$custom_reg_warning"
+        elif prompt_user_yes_no "$custom_reg_warning${__NEWLINE}Would you like to specify a pull secret now?"; then
+            prompt_user "IMAGE_PULL_SECRET" "Enter a value for IMAGE_PULL_SECRET: "
+        fi
     fi
+    add_to_config_builder "IMAGE_PULL_SECRET"
     add_to_config_builder "NAMESPACE"
 
     if prompts_disabled; then
@@ -1634,12 +1766,17 @@ step_check_k8s_version_in_range() {
 
     logheader $__DEBUG "Checking if Kubernetes version is within range ($minimum <=> $maximum)..."
 
-    local current; current="$(kubectl version -o json | jq -r '.serverVersion.gitVersion')"
+    local current; current="$(kubectl version -o json 2> "$__ERR_FILE" | jq -r '.serverVersion.gitVersion' 2> /dev/null)"
+    local -r captured_err="$(get_captured_err)"
+    if [ -z "$current" ] || [ "$current" == null ] || [ -n "$captured_err" ]; then
+        add_problem "Failed to get your cluster's Kubernetes version: $captured_err"
+        return 1
+    fi
+
     current=${current#v}
     _KUBERNETES_VERSION="$current"
-    # TODO: differentiate between a connection/timeout failure and an actual version failure
     if ! version_in_range "$current" "$minimum" "$maximum"; then
-        add_problem "k8s version '$current': not within range ($minimum-$maximum)"
+        add_problem "Your cluster's Kubernetes version '$current' is not within the supported range ($minimum-$maximum)"
     else
         logdebug "k8s version '$current': OK"
     fi
@@ -1652,41 +1789,69 @@ step_check_k8s_permissions() {
         logheader $__DEBUG "kubectl is not installed, skipping k8s permission check"
     fi
 
-    # TODO ASTRACTL-32772: differentiate between a connection/timeout failure and an actual permission failure
-    if [ "$(kubectl auth can-i '*' '*' --all-namespaces)" = "yes" ]; then
+    local -r has_permission="$(kubectl auth can-i '*' '*' --all-namespaces 2> "$__ERR_FILE")"
+    local -r captured_err="$(get_captured_err)"
+    if [ "$has_permission" == "yes" ]; then
         logdebug "k8s permissions: OK"
+        return 0
+    elif [ "$has_permission" != "yes" ]; then
+        add_problem "Kubernetes user does not have admin privileges"
+    elif [ -n "$captured_err" ]; then
+        add_problem "Failed to check if Kubernetes user has admin privilege: $captured_err"
     else
-        add_problem "k8s permissions: user does not have admin privileges" "Kubernetes user does not have admin privileges"
+        add_problem "Failed to check if Kubernetes user has admin privilege: unknown error"
     fi
+
 }
 
 step_check_volumesnapshotclasses() {
     logheader $__INFO "Checking for volumesnapshotclasses crd..."
 
-    local -r volsnapclass_crd="$(kubectl get crd volumesnapshotclasses.snapshot.storage.k8s.io -o name 2> /dev/null)"
-    if [ -z "$volsnapclass_crd" ]; then
-        logwarn "We didn't find the volumesnapshotclasses CRD on the cluster! Installation will proceed, but snapshots will not work until this is corrected."
+    if ! k8s_resource_exists "crd/volumesnapshotclasses.snapshot.storage.k8s.io"; then
+        local warning="We didn't find the volumesnapshotclasses CRD on the cluster! Installation will proceed"
+        warning+=", but snapshots will not work until this is corrected."
+        logwarn "$warning"
     else
         logdebug "volumesnapshotclasses crd: OK"
     fi
 }
 
-step_check_namespace_exists() {
-    if [ -z "$(kubectl get namespace "$NAMESPACE" -o name 2> /dev/null)" ]; then
-        if [ -n "$IMAGE_PULL_SECRET" ]; then
-            local err_msg="The specified namespace '$NAMESPACE' does not exist on the cluster, but IMAGE_PULL_SECRET is set."
-            err_msg+=" Please create the namespace and secret, or unset IMAGE_PULL_SECRET."
-            add_problem "namespace '$NAMESPACE': not found but IMAGE_PULL_SECRET is set" "$err_msg"
+step_check_namespace_and_pull_secret_exist() {
+    local -r namespace="$NAMESPACE"
+    local -r pull_secret="$IMAGE_PULL_SECRET"
+    local err_msg=""
+
+    [ -z "$namespace" ] && return 0
+
+    # Get the first custom registry we come across to put in the `kubectl create secret` command of the error message
+    local registry="<REGISTRY>"
+    local -r custom_registry="$(get_config_custom_registries_with_repo | head -n 1)"
+    [ -n "$custom_registry" ] && registry="$custom_registry"
+
+    local create_secret_cmd="kubectl create secret docker-registry '$pull_secret' -n '$namespace'"
+    create_secret_cmd+=" --docker-server='$registry' --docker-username='<USERNAME>' --docker-password='<PASSWORD>'"
+
+    if ! k8s_resource_exists "namespace/$namespace"; then
+        if [ -n "$pull_secret" ]; then
+            err_msg="The specified NAMESPACE '$namespace' does not exist on the cluster, but IMAGE_PULL_SECRET is set."
+            err_msg+=" Please create the namespace and secret:"
+            err_msg+="${__NEWLINE}    - kubectl create namespace '$namespace'"
+            err_msg+="${__NEWLINE}    - $create_secret_cmd"
+            add_problem "namespace '$namespace': not found but IMAGE_PULL_SECRET is set" "$err_msg"
             exit_if_problems
         fi
-        if prompt_user_yes_no "The namespace $NAMESPACE doesn't exist. Create it now? Choosing 'no' will exit"; then
-            kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
-            logdebug "namespace '$NAMESPACE': OK"
+        if prompt_user_yes_no "The namespace $namespace doesn't exist. Create it now? Choosing 'no' will exit"; then
+            kubectl create namespace "$namespace" --dry-run=client -o yaml | kubectl apply -f -
+            logdebug "namespace '$namespace': OK"
         else
-            local -r err_msg="User chose not to create the namespace. Please create the namespace and/or run the script again."
+            err_msg="User chose not to create the namespace. Please create the namespace and/or run the script again."
             add_problem "User chose not to create the namespace. Exiting." "$err_msg"
             exit_if_problems
         fi
+    elif [ -n "$pull_secret" ] && ! k8s_resource_exists "secret/$pull_secret" "$namespace"; then
+        err_msg="The specified IMAGE_PULL_SECRET '$pull_secret' does not exist in namespace '$namespace'."
+        err_msg+=" Please create it:${__NEWLINE}    - $create_secret_cmd"
+        add_problem "pull secret '$pull_secret' not found in namespace '$namespace'" "$err_msg"
     fi
 }
 
@@ -1907,7 +2072,7 @@ step_detect_resource_count() {
         fatal "invalid resource '$resource': only 'namespaces' or 'nodes' supported"
     fi
 
-    _count="$(kubectl get "$resource" -o json | jq -r '.items | length' 2> /dev/null)"
+    _count="$(k8s_get_resource "$resource" "" "json" | jq -r '.items | length' 2> /dev/null)"
     if [ -z "$_count" ] || [ "$_count" -lt 1 ]; then
         _count=""
     fi
@@ -1970,6 +2135,27 @@ fieldSpecs:
 EOF
     insert_into_file_after_pattern "$kustomization_file" "transformers:" "- $transformer_file_name"
     logdebug "$kustomization_file: added namespace transformer ($transformer_file_name)"
+}
+
+step_kustomize_global_pull_secret_if_needed() {
+    local -r global_pull_secret="${1:-""}"
+    local -r kustomization_file="${2}"
+    local -r kustomization_dir="$(dirname "$kustomization_file")"
+    [ -z "$global_pull_secret" ] && return 0
+
+    [ -z "$kustomization_file" ] && fatal "no kustomization file given"
+    [ ! -f "$kustomization_file" ] && fatal "kustomization file '$kustomization_file' does not exist"
+
+    insert_into_file_after_pattern "$kustomization_file" "patches:" '
+- target:
+    kind: Deployment
+  patch: |-
+    - op: replace
+      path: /spec/template/spec/imagePullSecrets
+      value:
+        - name: "'"${global_pull_secret}"'"
+'
+    logdebug "$kustomization_file: added pull secret patch ($global_pull_secret)"
 }
 
 step_generate_astra_connector_yaml() {
@@ -2120,8 +2306,7 @@ step_collect_existing_trident_info() {
     _TRIDENT_COLLECTION_STEP_CALLED="true"
 
     # TORC CR definition
-    local -r torc_crd="$(kubectl get crd tridentorchestrators.trident.netapp.io -o name 2> /dev/null)"
-    if [ -z "$torc_crd" ]; then
+    if ! k8s_resource_exists "crd/tridentorchestrators.trident.netapp.io"; then
         logdebug "tridentorchestrator crd: not found"
         loginfo "* Trident installation not found."
         return 0
@@ -2130,7 +2315,7 @@ step_collect_existing_trident_info() {
     fi
 
     # TORC CR
-    local -r torc_json="$(kubectl get tridentorchestrator -A -o jsonpath="{.items[0]}" 2> /dev/null)"
+    local -r torc_json="$(k8s_get_resource tridentorchestrator "" jsonpath='{.items[0]}')"
     if [ -z "$torc_json" ]; then
         logdebug "tridentorchestrator: not found"
         loginfo "* Trident not found -- it will be installed."
@@ -2140,13 +2325,13 @@ step_collect_existing_trident_info() {
     fi
 
     # Trident namespace
-    local -r trident_ns="$(echo "$torc_json" | jq -r '.spec.namespace')"
-    if [ -z "$(kubectl get namespace "$trident_ns" -o name 2> /dev/null)" ]; then
+    local -r trident_ns="$(echo "$torc_json" | jq -r '.spec.namespace' 2> /dev/null)"
+    if ! k8s_resource_exists "namespace/$trident_ns"; then
         logdebug "trident namespace '$trident_ns': not found"
         loginfo "* Trident Orchestrator exists, but configured namespace '$trident_ns' not found on cluster."
         return 0
     fi
-    _EXISTING_TORC_NAME="$(echo "$torc_json" | jq -r '.metadata.name')"
+    _EXISTING_TORC_NAME="$(echo "$torc_json" | jq -r '.metadata.name' 2> /dev/null)"
     _EXISTING_TRIDENT_NAMESPACE="$trident_ns"
     loginfo "* Trident namespace: '$_EXISTING_TRIDENT_NAMESPACE'"
 
@@ -2187,8 +2372,17 @@ step_collect_existing_trident_info() {
         logdebug "trident ACP image: not found"
     fi
 
+    # TORC imagePullSecrets
+    local -r torc_pull_secrets="$(echo "$torc_json" | jq -r '.spec.imagePullSecrets | join("\n")' 2> /dev/null)"
+    if [ -n "$torc_pull_secrets" ] && [ "$torc_pull_secrets" != "null" ]; then
+        logdebug "torc pull secrets:${__NEWLINE}$torc_pull_secrets"
+        _EXISTING_TORC_PULL_SECRETS="$torc_pull_secrets"
+    else
+        logdebug "torc pull secrets: not found"
+    fi
+
     # Trident operator
-    local -r trident_operator_json="$(kubectl get deploy/trident-operator -n "$trident_ns" -o json 2> /dev/null)"
+    local -r trident_operator_json="$(k8s_get_resource "deploy/trident-operator" "$trident_ns" "json")"
     if [ -n "$trident_operator_json" ]; then
         local -r containers_length="$(echo "$trident_operator_json" | jq -r '.spec.template.spec.containers | length' 2> /dev/null)"
         # Assume there's only one container (and it's the trident-operator). Not great, but if that ever changes,
@@ -2203,6 +2397,14 @@ step_collect_existing_trident_info() {
         fi
     else
         logdebug "trident operator: not found"
+    fi
+
+    local -r op_pull_secrets="$(echo "$trident_operator_json" | jq -r '[.spec.template.spec.imagePullSecrets.[] | .name] | join("\n")' 2> /dev/null)"
+    if [ -n "$op_pull_secrets" ] && [ "$op_pull_secrets" != "null" ]; then
+        logdebug "trident operator pull secrets:${__NEWLINE}$op_pull_secrets"
+        _EXISTING_TRIDENT_OPERATOR_PULL_SECRETS="$op_pull_secrets"
+    else
+        logdebug "trident operator pull secrets: not found"
     fi
 }
 
@@ -2268,8 +2470,28 @@ step_generate_trident_operator_patch() {
     [ -z "$new_image" ] && fatal "no trident operator image found"
 
     logheader $__DEBUG "Generating Trident Operator patch"
-    local -r patch='[{"op":"replace","path":"/spec/template/spec/containers/0/image","value":"'"$new_image"'"}]'
-    _PATCHES_TRIDENT_OPERATOR+=("deploy/trident-operator -n '$namespace' --type=json -p '$(echo "$patch" | jq '.')'")
+    local -r image_patch='{"op":"replace","path":"/spec/template/spec/containers/0/image","value":"'"$new_image"'"}'
+    local -a patch_list="$image_patch"
+
+    # Update image pull secrets if needed
+    if [ -n "$IMAGE_PULL_SECRET" ]; then
+        if echo "$_EXISTING_TRIDENT_OPERATOR_PULL_SECRETS" | grep -q "^${IMAGE_PULL_SECRET}$" &> /dev/null; then
+            logdebug "image pull secret '$IMAGE_PULL_SECRET' already present in trident-operator"
+        else
+            local -r secret_obj='{"name": "'"$IMAGE_PULL_SECRET"'"}'
+            if [ -z "$_EXISTING_TRIDENT_OPERATOR_PULL_SECRETS" ]; then
+                patch_list+=',{"op":"replace","path":"/spec/template/spec/imagePullSecrets","value":['"$secret_obj"']}'
+            else
+                patch_list+=',{"op":"add","path":"/spec/template/spec/imagePullSecrets/-","value":'"$secret_obj"'}'
+            fi
+        fi
+    fi
+
+    if [ -n "$patch_list" ]; then
+        echo "[${patch_list%,}]"
+        patch_list="'$(echo "[${patch_list%,}]" | jq '.')'"
+        _PATCHES_TRIDENT_OPERATOR+=("deploy/trident-operator -n '$namespace' --type=json -p $patch_list")
+    fi
 }
 
 step_generate_torc_patch() {
@@ -2301,7 +2523,20 @@ step_generate_torc_patch() {
         torc_patch_list+='{"op":"replace","path":"/spec/autosupportImage","value":"'"$autosupport_image"'"},'
     fi
 
-    if [ "${#torc_patch_list[@]}" -gt 0 ]; then
+    # Update image pull secrets if needed
+    if [ -n "$IMAGE_PULL_SECRET" ]; then
+        if echo "$_EXISTING_TORC_PULL_SECRETS" | grep -q "^${IMAGE_PULL_SECRET}$" &> /dev/null; then
+            logdebug "image pull secret '$IMAGE_PULL_SECRET' already present in torc"
+        else
+            if [ -z "$_EXISTING_TRIDENT_OPERATOR_PULL_SECRETS" ]; then
+                torc_patch_list+='{"op":"replace","path":"/spec/imagePullSecrets","value":['"$IMAGE_PULL_SECRET"']},'
+            else
+                torc_patch_list+='{"op":"add","path":"/spec/imagePullSecrets/-","value":"'"$IMAGE_PULL_SECRET"'"},'
+            fi
+        fi
+    fi
+
+    if [ -n "$torc_patch_list" ]; then
         torc_patch_list="'$(echo "[${torc_patch_list%,}]" | jq '.')'"
         _PATCHES_TORC+=("tridentorchestrator $torc_name --type=json -p ${torc_patch_list}")
     fi
@@ -2357,6 +2592,7 @@ step_apply_resources() {
     # Apply operator resources
     logdebug "apply operator resources"
     local output=""
+    local captured_err=""
     if ! is_dry_run; then
         output="$(kubectl apply -k "$operators_dir" 2> "$__ERR_FILE")"
         captured_err="$(get_captured_err)"
@@ -2515,7 +2751,10 @@ exit_if_problems
 step_check_volumesnapshotclasses
 
 # REGISTRY access
-if [ -n "$NAMESPACE" ]; then step_check_namespace_exists; fi
+if [ -n "$NAMESPACE" ]; then
+    step_check_namespace_and_pull_secret_exist
+    exit_if_problems
+fi
 if [ "$SKIP_IMAGE_CHECK" != "true" ]; then
     step_check_all_images_can_be_pulled
 else
@@ -2536,6 +2775,7 @@ exit_if_problems
 step_check_kubeconfig_choice
 step_init_generated_dirs_and_files
 step_kustomize_global_namespace_if_needed "$NAMESPACE" "$__GENERATED_KUSTOMIZATION_FILE"
+step_kustomize_global_pull_secret_if_needed "$IMAGE_PULL_SECRET" "$__GENERATED_KUSTOMIZATION_FILE"
 
 # CONNECTOR yaml
 if components_include_connector; then
@@ -2559,43 +2799,28 @@ if trident_will_be_installed_or_modified; then
         if components_include_trident; then
             # Trident upgrade (includes operator upgrade if needed)
             if trident_image_needs_upgraded; then
-                # if trident version < 23.10
+                # Warn if trident version < 23.10 (ACP requires 23.10+)
                 if version_higher_or_equal "23.07" "$_EXISTING_TRIDENT_VERSION"; then
                     logwarn "Your Trident installation is at version $_EXISTING_TRIDENT_VERSION, while the lowest required version to enable ACP is 23.10."
                 fi
 
+                _generate_torc_args=("$_EXISTING_TORC_NAME" "$(get_config_trident_image)" "" "" "$(get_config_trident_autosupport_image)")
                 if config_trident_image_is_custom; then
-                    local -r custom_image="$(as_full_image "$TRIDENT_IMAGE_REGISTRY" "$TRIDENT_IMAGE_REPO" "$TRIDENT_IMAGE_TAG")"
-                    local warning_message="Warning: we cannot verify the version of the custom Trident image you provided"
-                    warning_message += " ($custom_image). ACP support cannot be guaranteed if upgrading to that image."
-                    logwarn "$warning_message"
-                fi
+                    _warning_message="We cannot verify the version of the custom Trident image you provided"
+                    _warning_message+=" ($(get_config_trident_image). ACP support (23.10+) is not guaranteed."
+                    logwarn "$_warning_message"
 
-                if ! components_include_connector && (components_include_trident || components_include_acp); then
-                    if prompt_user_yes_no "Would you like to upgrade Trident? Choosing no will exit the script (yes/no):"; then
-                        step_generate_torc_patch "$_EXISTING_TORC_NAME" "$(get_config_trident_image)" "" "" "$(get_config_trident_autosupport_image)"
-                        trident_operator_image_needs_upgraded && step_generate_trident_operator_patch
-                    else
-                        exit 0
-                    fi
-                fi
-
-                if components_include_connector; then
-                    if acp_is_enabled; then
-                        if prompt_user_yes_no "Would you like to upgrade Trident?"; then
-                            step_generate_torc_patch "$_EXISTING_TORC_NAME" "$(get_config_trident_image)" "" "" "$(get_config_trident_autosupport_image)"
-                            trident_operator_image_needs_upgraded && step_generate_trident_operator_patch
-                        else
-                            loginfo "Trident will not be upgraded"
-                        fi
-                    else
-                        if prompt_user_yes_no "Would you like to upgrade Trident? If you choose no, ACP will remain disabled"; then
-                            step_generate_torc_patch "$_EXISTING_TORC_NAME" "$(get_config_trident_image)" "" "" "$(get_config_trident_autosupport_image)"
-                            trident_operator_image_needs_upgraded && step_generate_trident_operator_patch
-                        else
-                            loginfo "Trident will not be upgraded and ACP will remain disabled."
-                        fi
-                    fi
+                    step_generate_torc_patch "${_generate_torc_args[@]}"
+                    trident_operator_image_needs_upgraded && step_generate_trident_operator_patch
+                elif prompt_user_yes_no "Would you like to upgrade Trident?"; then
+                    step_generate_torc_patch "${_generate_torc_args[@]}"
+                    trident_operator_image_needs_upgraded && step_generate_trident_operator_patch
+                else
+                    _msg="You have chosen to use a version of Trident that is not supported with the current version"
+                    _msg+=" of Astra Control. This may result in some App Data Management operations not functioning"
+                    _msg+=" correctly or being blocked within Astra Control. It is highly recommended to upgrade"
+                    _msg+=" Trident to ensure compatibility and proper functionality."
+                    logwarn "$_msg"
                 fi
             # Trident operator upgrade (standalone)
             elif trident_operator_image_needs_upgraded; then
