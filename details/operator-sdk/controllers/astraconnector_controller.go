@@ -177,7 +177,7 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 		}
 	}
 
-	if conf.Config.FeatureFlags().DeployNatsConnector() {
+	if conf.Config.FeatureFlags().DeployConnector() {
 		log.Info("Initiating Connector deployment")
 		var connectorResults ctrl.Result
 		var deployError error
@@ -214,7 +214,7 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 		if deployError != nil {
 			// Note: Returning nil in error since we want to wait for the requeue to happen
 			// non nil errors triggers the requeue right away
-			log.Error(err, "Error deploying NatsConnector, requeueing after delay", "delay", conf.Config.ErrorTimeout())
+			log.Error(err, "Error deploying Connector, requeueing after delay", "delay", conf.Config.ErrorTimeout())
 			return connectorResults, nil
 		}
 	}

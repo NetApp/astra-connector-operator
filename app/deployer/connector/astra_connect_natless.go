@@ -83,10 +83,6 @@ func (d *AstraConnectDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx co
 								Value: "info",
 							},
 							{
-								Name:  "NATS_DISABLED",
-								Value: "true",
-							},
-							{
 								Name:  "API_TOKEN_SECRET_REF",
 								Value: m.Spec.Astra.TokenRef,
 							},
@@ -192,17 +188,23 @@ func (d *AstraConnectDeployer) GetServiceObjects(m *v1.AstraConnector, ctx conte
 
 // GetConfigMapObjects returns a ConfigMap object for Astra Connect
 func (d *AstraConnectDeployer) GetConfigMapObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
+	data := map[string]string{
+		"skip_tls_validation": strconv.FormatBool(m.Spec.Astra.SkipTLSValidation),
+	}
+
 	configMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: m.Namespace,
 			Name:      common.AstraConnectName,
 		},
-		Data: map[string]string{
-			//"nats_url":            GetNatsURL(m),
-			"skip_tls_validation": strconv.FormatBool(m.Spec.Astra.SkipTLSValidation),
-		},
+		Data: data,
 	}
-	return []client.Object{configMap}, model.NonMutateFn, nil
+
+	mutateFn := func() error {
+		configMap.Data = data
+		return nil
+	}
+	return []client.Object{configMap}, mutateFn, nil
 }
 
 // GetServiceAccountObjects returns a ServiceAccount object for Astra Connect

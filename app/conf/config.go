@@ -78,8 +78,8 @@ func DefaultConfiguration() *MutableConfiguration {
 		WaitDurationForResource: 5 * time.Minute,
 		ErrorTimeout:            5,
 		FeatureFlags: featureFlags{
-			DeployNatsConnector: true,
-			DeployNeptune:       true,
+			DeployConnector: true,
+			DeployNeptune:   true,
 		},
 	}
 }
@@ -95,8 +95,8 @@ func toImmutableConfig(config *MutableConfiguration) *ImmutableConfiguration {
 		waitDurationForResource: config.WaitDurationForResource,
 		errorTimeout:            config.ErrorTimeout,
 		featureFlags: ImmutableFeatureFlags{
-			deployNatsConnector: config.FeatureFlags.DeployNatsConnector,
-			deployNeptune:       config.FeatureFlags.DeployNeptune,
+			deployConnector: config.FeatureFlags.DeployConnector,
+			deployNeptune:   config.FeatureFlags.DeployNeptune,
 		},
 		config: config,
 	}
@@ -142,17 +142,17 @@ func (i ImmutableConfiguration) FeatureFlags() ImmutableFeatureFlags {
 }
 
 type ImmutableFeatureFlags struct {
-	deployNatsConnector bool
-	deployNeptune       bool
+	deployConnector bool
+	deployNeptune   bool
 }
 
 type featureFlags struct {
-	DeployNatsConnector bool
-	DeployNeptune       bool
+	DeployConnector bool
+	DeployNeptune   bool
 }
 
-func (f ImmutableFeatureFlags) DeployNatsConnector() bool {
-	return f.deployNatsConnector
+func (f ImmutableFeatureFlags) DeployConnector() bool {
+	return f.deployConnector
 }
 
 func (f ImmutableFeatureFlags) DeployNeptune() bool {

@@ -52,8 +52,7 @@ This guide provides instructions for installing the latest version of the Astra 
         clusterName: <CLUSTER_NAME>
         skipTLSValidation: false  # Should be set to false in production environments
         tokenRef: astra-token
-      natsSyncClient:
-        cloudBridgeURL: <ASTRA_CONTROL_HOST_URL>
+        astraControlURL: <ASTRA_CONTROL_HOST_URL>
         hostAliasIP: <ASTRA_HOST_ALIAS_IP_ADDRESS>
       imageRegistry:
         name: cr.astra.netapp.io/astra

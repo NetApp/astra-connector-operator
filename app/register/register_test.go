@@ -102,8 +102,8 @@ func createClusterRegister(astraConnectorInput AstraConnectorInput) (register.Cl
 	}
 
 	if astraConnectorInput.invalidHostDetails {
-		astraConnector.Spec.NatsSyncClient.CloudBridgeURL = testURL
-		astraConnector.Spec.NatsSyncClient.HostAliasIP = testIP
+		astraConnector.Spec.Astra.AstraControlURL = testURL
+		astraConnector.Spec.Astra.HostAliasIP = testIP
 	}
 
 	clusterRegisterUtil := register.NewClusterRegisterUtil(astraConnector, mockHttpClient, fakeClient, k8sUtil, log, context.Background())

@@ -40,8 +40,8 @@ func TestImmutableFeatureFlags(t *testing.T) {
 	// Initialize a test feature flag configuration
 	flags := conf.ImmutableFeatureFlags{}
 
-	if flags.DeployNatsConnector() != false {
-		t.Errorf("Expected true, got %v", flags.DeployNatsConnector())
+	if flags.DeployConnector() != false {
+		t.Errorf("Expected true, got %v", flags.DeployConnector())
 	}
 
 	if flags.DeployNeptune() != false {

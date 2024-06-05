@@ -20,7 +20,7 @@ func (r *AstraConnectorController) deployNatlessConnector(ctx context.Context,
 	astraConnector *v1.AstraConnector, astraConnectorStatus *v1.AstraConnectorStatus) (ctrl.Result, error) {
 	log := ctrllog.FromContext(ctx)
 
-	// let's deploy Astra Connector without Nats
+	// let's deploy Astra Connector
 	connectorDeployers := getDeployers()
 	for _, deployer := range connectorDeployers {
 		err := r.deployResources(ctx, deployer, astraConnector, astraConnectorStatus)

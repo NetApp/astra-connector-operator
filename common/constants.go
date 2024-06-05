@@ -7,8 +7,6 @@ package common
 import (
 	_ "embed"
 	"strings"
-
-	"github.com/NetApp-Polaris/astra-connector-operator/app/conf"
 )
 
 const (
@@ -18,18 +16,13 @@ const (
 	AstraConnectName                 = "astraconnect"
 	AstraConnectorOperatorRepository = "netapp/astra-connector-operator"
 
-	NatsSyncClientDefaultImage          = "natssync-client:2.2.202402012115"
-	NatsSyncClientDefaultCloudBridgeURL = "https://astra.netapp.io"
+	DefaultCloudAstraControlURL = "https://astra.netapp.io"
 
 	NeptuneName = "neptune-controller-manager"
 
 	NeptuneMetricServicePort     = 8443
 	NeptuneMetricServiceProtocol = "TCP"
 	NeptuneReplicas              = 1
-
-	ConnectorNeptuneCapability = "neptuneV1"
-	ConnectorV2Capability      = "connectorV2" // V2 refers specifically to Arch 3.0 connector and beyond
-	ConnectorWatcherCapability = "watcherV1"
 
 	RbacProxyImage = "kube-rbac-proxy:v0.14.1"
 )
@@ -54,16 +47,4 @@ var (
 
 func GetNeptuneRepositories() []string {
 	return []string{"controller", "exechook", "resourcebackup", "resourcedelete", "resourcerestore", "resourcesummaryupload", "restic"}
-}
-
-func GetConnectorCapabilities() []string {
-	capabilities := []string{
-		ConnectorV2Capability,
-		ConnectorWatcherCapability,
-	}
-
-	if conf.Config.FeatureFlags().DeployNeptune() {
-		capabilities = append(capabilities, ConnectorNeptuneCapability)
-	}
-	return capabilities
 }

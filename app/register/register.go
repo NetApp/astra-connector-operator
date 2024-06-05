@@ -131,7 +131,7 @@ func GetAstraHostURL(astraConnector *v1.AstraConnector) string {
 		astraHost = astraConnector.Spec.Astra.AstraControlURL
 		astraHost = strings.TrimSuffix(astraHost, "/")
 	} else {
-		astraHost = common.NatsSyncClientDefaultCloudBridgeURL
+		astraHost = common.DefaultCloudAstraControlURL
 	}
 
 	return astraHost
