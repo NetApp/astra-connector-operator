@@ -1681,7 +1681,7 @@ step_check_config() {
         if [ -z "$NAMESPACE" ]; then
             prompt_user "NAMESPACE" "NAMESPACE is required when specifying an IMAGE_PULL_SECRET. Please enter the namespace:"
         fi
-    elif get_config_custom_registries_with_repo; then
+    elif get_config_custom_registries_with_repo &> /dev/null; then
         local custom_reg_warning="We detected one or more custom registry or repo values"
         custom_reg_warning+=", but no IMAGE_PULL_SECRET was specified. If any of your images are hosted in a private"
         custom_reg_warning+=" registry, an image pull secret will need to be created and IMAGE_PULL_SECRET set."
