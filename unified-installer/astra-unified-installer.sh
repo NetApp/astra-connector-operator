@@ -2108,6 +2108,36 @@ EOF
     fi
 }
 
+step_kustomize_global_namespace_if_needed() {
+    local -r global_namespace="${1:-""}"
+    local -r kustomization_file="${2}"
+    local -r kustomization_dir="$(dirname "$kustomization_file")"
+    [ -z "$global_namespace" ] && return 0
+
+    [ -z "$kustomization_file" ] && fatal "no kustomization file given"
+    [ ! -f "$kustomization_file" ] && fatal "kustomization file '$kustomization_file' does not exist"
+
+    # Add kustomization to set metadata.namespace where it's not already set
+    echo "namespace: $global_namespace" >> "$kustomization_file"
+    logdebug "$kustomization_file: added namespace field ($global_namespace)"
+
+    # This transformer is more forceful than the `namespace` field above but is necessary to set
+    # the namespace on a few resources that aren't caught by the former (the subjects in rolebindings for example).
+    local -r transformer_file_name="namespace-transformer.yaml"
+    cat <<EOF > "$kustomization_dir/$transformer_file_name"
+apiVersion: builtin
+kind: NamespaceTransformer
+metadata:
+  name: thisFieldDoesNotActuallyMatterForTransformers
+  namespace: "${global_namespace}"
+fieldSpecs:
+- path: metadata/namespace
+  create: true
+EOF
+    insert_into_file_after_pattern "$kustomization_file" "transformers:" "- $transformer_file_name"
+    logdebug "$kustomization_file: added namespace transformer ($transformer_file_name)"
+}
+
 step_kustomize_global_pull_secret_if_needed() {
     local -r global_pull_secret="${1:-""}"
     local -r kustomization_file="${2}"
@@ -2174,57 +2204,6 @@ EOF
             logdebug "$kustomization_file: added trident acp secret to namespace $trident_namespace"
         fi
     fi
-
-    insert_into_file_after_pattern "$kustomization_file" "patches:" '
-- target:
-    kind: Deployment
-  patch: |-
-    - op: replace
-      path: /spec/template/spec/imagePullSecrets
-      value:
-        - name: "'"${global_pull_secret}"'"
-'
-    logdebug "$kustomization_file: added pull secret patch ($global_pull_secret)"
-}
-
-step_kustomize_global_namespace_if_needed() {
-    local -r global_namespace="${1:-""}"
-    local -r kustomization_file="${2}"
-    local -r kustomization_dir="$(dirname "$kustomization_file")"
-    [ -z "$global_namespace" ] && return 0
-
-    [ -z "$kustomization_file" ] && fatal "no kustomization file given"
-    [ ! -f "$kustomization_file" ] && fatal "kustomization file '$kustomization_file' does not exist"
-
-    # Add kustomization to set metadata.namespace where it's not already set
-    echo "namespace: $global_namespace" >> "$kustomization_file"
-    logdebug "$kustomization_file: added namespace field ($global_namespace)"
-
-    # This transformer is more forceful than the `namespace` field above but is necessary to set
-    # the namespace on a few resources that aren't caught by the former (the subjects in rolebindings for example).
-    local -r transformer_file_name="namespace-transformer.yaml"
-    cat <<EOF > "$kustomization_dir/$transformer_file_name"
-apiVersion: builtin
-kind: NamespaceTransformer
-metadata:
-  name: thisFieldDoesNotActuallyMatterForTransformers
-  namespace: "${global_namespace}"
-fieldSpecs:
-- path: metadata/namespace
-  create: true
-EOF
-    insert_into_file_after_pattern "$kustomization_file" "transformers:" "- $transformer_file_name"
-    logdebug "$kustomization_file: added namespace transformer ($transformer_file_name)"
-}
-
-step_kustomize_global_pull_secret_if_needed() {
-    local -r global_pull_secret="${1:-""}"
-    local -r kustomization_file="${2}"
-    local -r kustomization_dir="$(dirname "$kustomization_file")"
-    [ -z "$global_pull_secret" ] && return 0
-
-    [ -z "$kustomization_file" ] && fatal "no kustomization file given"
-    [ ! -f "$kustomization_file" ] && fatal "kustomization file '$kustomization_file' does not exist"
 
     insert_into_file_after_pattern "$kustomization_file" "patches:" '
 - target:
