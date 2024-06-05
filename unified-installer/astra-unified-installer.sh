@@ -1353,6 +1353,39 @@ EOF
     echo "$yaml_labels"
 }
 
+add_namespace_transformer_to_kustomization() {
+    local -r namespace="${1:-""}"
+    local -r kustomization_file="${2}"
+    local -r kustomization_dir="$(dirname "$kustomization_file")"
+
+    [ -z "$namespace" ] && fatal "no namespace given"
+    [ -z "$kustomization_file" ] && fatal "no kustomization file given"
+    [ ! -f "$kustomization_file" ] && fatal "kustomization file '$kustomization_file' does not exist"
+
+    # Add kustomization to set metadata.namespace where it's not already set
+    echo "namespace: $namespace" >> "$kustomization_file"
+    logdebug "$kustomization_file: added namespace field ($namespace)"
+
+    # This transformer is more forceful than the `namespace` field above but is necessary to set
+    # the namespace on a few resources that aren't caught by the former (the subjects in rolebindings for example).
+    local -r transformer_file_name="namespace-transformer.yaml"
+    cat <<EOF > "$kustomization_dir/$transformer_file_name"
+apiVersion: builtin
+kind: NamespaceTransformer
+metadata:
+  name: thisFieldDoesNotActuallyMatterForTransformers
+  namespace: "${namespace}"
+fieldSpecs:
+- path: metadata/namespace
+  create: true
+EOF
+    if grep -q "^transformers:" < "$kustomization_file"; then
+        echo "transformers:" >> "$kustomization_file"
+    fi
+    insert_into_file_after_pattern "$kustomization_file" "transformers:" "- $transformer_file_name"
+    logdebug "$kustomization_file: added namespace transformer ($transformer_file_name)"
+}
+
 # k8s_get_resource will get the given k8s resource in the given format and echo the output.
 # If a connection error (or any type of error except for "NotFound") occurs, a problem will be added to make sure
 # script execution is halted.
@@ -1683,7 +1716,7 @@ step_check_config() {
     done
 
     # Env vars with special conditions
-    if get_config_custom_registries_with_repo; then
+    if [ -z "$IMAGE_PULL_SECRET" ] && get_config_custom_registries_with_repo; then
         local custom_reg_warning="We detected one or more custom registry or repo values"
         custom_reg_warning+=", but no IMAGE_PULL_SECRET was specified. If any of your images are hosted in a private"
         custom_reg_warning+=" registry, an image pull secret will need to be created and IMAGE_PULL_SECRET set."
@@ -1695,6 +1728,8 @@ step_check_config() {
     fi
     add_to_config_builder "IMAGE_PULL_SECRET"
     add_to_config_builder "NAMESPACE"
+    add_to_config_builder "CONNECTOR_NAMESPACE"
+    add_to_config_builder "TRIDENT_NAMESPACE"
 
     if prompts_disabled; then
         if [ -z "$DO_NOT_MODIFY_EXISTING_TRIDENT" ]; then
@@ -2109,39 +2144,6 @@ EOF
     fi
 }
 
-add_namespace_transformer_to_kustomization() {
-    local -r namespace="${1:-""}"
-    local -r kustomization_file="${2}"
-    local -r kustomization_dir="$(dirname "$kustomization_file")"
-
-    [ -z "$namespace" ] && fatal "no namespace given"
-    [ -z "$kustomization_file" ] && fatal "no kustomization file given"
-    [ ! -f "$kustomization_file" ] && fatal "kustomization file '$kustomization_file' does not exist"
-
-    # Add kustomization to set metadata.namespace where it's not already set
-    echo "namespace: $namespace" >> "$kustomization_file"
-    logdebug "$kustomization_file: added namespace field ($namespace)"
-
-    # This transformer is more forceful than the `namespace` field above but is necessary to set
-    # the namespace on a few resources that aren't caught by the former (the subjects in rolebindings for example).
-    local -r transformer_file_name="namespace-transformer.yaml"
-    cat <<EOF > "$kustomization_dir/$transformer_file_name"
-apiVersion: builtin
-kind: NamespaceTransformer
-metadata:
-  name: thisFieldDoesNotActuallyMatterForTransformers
-  namespace: "${namespace}"
-fieldSpecs:
-- path: metadata/namespace
-  create: true
-EOF
-    if grep -q "^transformers:" < "$kustomization_file"; then
-        echo "transformers:" >> "$kustomization_file"
-    fi
-    insert_into_file_after_pattern "$kustomization_file" "transformers:" "- $transformer_file_name"
-    logdebug "$kustomization_file: added namespace transformer ($transformer_file_name)"
-}
-
 step_kustomize_global_pull_secret_if_needed() {
     local -r global_pull_secret="${1:-""}"
     local -r kustomization_file="${2}"
@@ -2204,7 +2206,8 @@ transformers:
 EOF
         logdebug "$connector_kustomization_file: OK"
     fi
-    insert_into_file_after_pattern "$top_kustomization_file" "resources:" "- ./$connector_kustomization_dir"
+    local -r connector_base_dir="$(basename "$connector_kustomization_dir")"
+    insert_into_file_after_pattern "$top_kustomization_file" "resources:" "- ./$connector_base_dir"
     insert_into_file_after_pattern "$connector_kustomization_file" "resources:" \
         "- https://github.com/NetApp/astra-connector-operator/unified-installer/?ref=$__GIT_REF_CONNECTOR_OPERATOR"
     logdebug "$connector_kustomization_file: added resources entry for connector kustomization"
@@ -2462,7 +2465,8 @@ EOF
         logdebug "$trident_kustomization_file: OK"
     fi
     # TODO point to https://github.com/NetApp/trident when 24.06 image is available
-    insert_into_file_after_pattern "$top_kustomization_file" "resources:" "- ./${trident_kustomization_dir}"
+    local -r trident_base_dir="$(basename "$trident_kustomization_dir")"
+    insert_into_file_after_pattern "$top_kustomization_file" "resources:" "- ./$trident_base_dir"
     insert_into_file_after_pattern "$trident_kustomization_file" "resources:" \
         "- https://github.com/NetApp/astra-connector-operator/trident-temp/deploy?ref=$__GIT_REF_TRIDENT"
     logdebug "$trident_kustomization_file: added resources entry for trident operator"
