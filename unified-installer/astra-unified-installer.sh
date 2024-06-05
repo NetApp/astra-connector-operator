@@ -1862,8 +1862,6 @@ EOF
         fi
     fi
 
-    
-
     insert_into_file_after_pattern "$kustomization_file" "patches:" '
 - target:
     kind: Deployment
@@ -2196,7 +2194,6 @@ step_generate_torc_patch() {
     if [ -z "$torc_name" ]; then fatal "no trident orchestrator name was given"; fi
 
     logheader $__DEBUG "Generating TORC patch"
-
     local torc_patch_list=""
 
     # Trident
