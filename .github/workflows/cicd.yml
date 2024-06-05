@@ -154,7 +154,8 @@ jobs:
           if [[ "${{ github.ref }}" == 'refs/heads/main' ]]; then
             go run scripts/create_default_images_manifest.go $MANIFEST_FILEPATH $VERSION false
           else
-            go run scripts/create_default_images_manifest.go $MANIFEST_FILEPATH $VERSION true
+            # Currently setting the release bool to false so we don't break downstream pipelines
+            go run scripts/create_default_images_manifest.go $MANIFEST_FILEPATH $VERSION false
           fi
           cat $MANIFEST_FILEPATH
 
