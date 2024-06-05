@@ -1122,6 +1122,33 @@ is_astra_registry() {
     return 1
 }
 
+generate_docker_registry_secret() {
+    local -r pull_secret="$1"
+    local -r docker_username="$2"
+    local -r docker_password="$3"
+    local -r namespace="$4"
+    local -r docker_server="$5"
+    local -r secret_filename="$6"
+
+    [ -z "$pull_secret" ] && fatal "no pull secret given"
+    [ -z "$docker_username" ] && fatal "no docker username given"
+    [ -z "$docker_password" ] && fatal "no docker password given"
+    [ -z "$namespace" ] && fatal "no namespace given"
+    [ -z "$docker_server" ] && fatal "no docker registry given"
+    [ -z "$secret_filename" ] && fatal "no secret filename given"
+
+    local -r secret_yaml="$(kubectl create secret docker-registry "$pull_secret" --docker-username="$docker_username" --docker-password="$docker_password" -n "$namespace" --docker-server="$docker_server" --dry-run=client -o yaml 2> "$__ERR_FILE")"
+    local -r captured_err="$(get_captured_err)"
+
+    if [ -z "$secret_yaml" ] || [ -n "$captured_err" ]; then
+        add_problem "Failed to generate secret for ACS registry '$docker_server': $captured_err"
+        return 1
+    else
+        echo "$secret_yaml" > "$secret_filename"
+        return 0
+    fi
+}
+
 get_registry_credentials_from_pull_secret() {
     local -r pull_secret="$1"
     local -r namespace="$2"
@@ -2876,7 +2903,7 @@ if trident_will_be_installed_or_modified; then
             if ! acp_is_enabled; then
                 if config_acp_image_is_custom || prompt_user_yes_no "Would you like to enable Astra Control Provisioner?"; then
                     # create trident-acp secret
-                    kubectl create secret docker-registry "$IMAGE_PULL_SECRET" --docker-username="$ASTRA_ACCOUNT_ID" --docker-password="$ASTRA_API_TOKEN" -n trident --docker-server="$TRIDENT_ACP_IMAGE_REGISTRY" --dry-run=client -o yaml > "$__GENERATED_TRIDENT_ACP_SECRET_FILE"
+                    generate_docker_registry_secret "$IMAGE_PULL_SECRET" "$ASTRA_ACCOUNT_ID" "$ASTRA_API_TOKEN" "$__DEFAULT_TRIDENT_NAMESPACE" "$TRIDENT_ACP_IMAGE_REGISTRY" "$__GENERATED_TRIDENT_ACP_SECRET_FILE"
                     step_generate_torc_patch "$_EXISTING_TORC_NAME" "" "$(get_config_acp_image)" "true"
                 else
                     loginfo "Astra Control Provisioner will not be enabled."
@@ -2885,7 +2912,7 @@ if trident_will_be_installed_or_modified; then
             elif acp_image_needs_upgraded; then
                 if config_acp_image_is_custom || prompt_user_yes_no "Would you like to upgrade Astra Control Provisioner?"; then
                     # create trident-acp secret
-                    kubectl create secret docker-registry "$IMAGE_PULL_SECRET" --docker-username="$ASTRA_ACCOUNT_ID" --docker-password="$ASTRA_API_TOKEN" -n trident --docker-server="$TRIDENT_ACP_IMAGE_REGISTRY" --dry-run=client -o yaml > "$__GENERATED_TRIDENT_ACP_SECRET_FILE"
+                    generate_docker_registry_secret "$IMAGE_PULL_SECRET" "$ASTRA_ACCOUNT_ID" "$ASTRA_API_TOKEN" "$__DEFAULT_TRIDENT_NAMESPACE" "$TRIDENT_ACP_IMAGE_REGISTRY" "$__GENERATED_TRIDENT_ACP_SECRET_FILE"
                     step_generate_torc_patch "$_EXISTING_TORC_NAME" "" "$(get_config_acp_image)" "true"
                 else
                     loginfo "Astra Control Provisioner will not be upgraded."
