@@ -78,7 +78,15 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 	}
 
 	natsSyncClientStatus := astraConnector.Status.NatsSyncClient
-	natsSyncClientStatus.AstraClusterId = astraConnector.Status.NatsSyncClient.AstraClusterId
+	if astraConnector.Spec.Astra.ClusterId == "" && astraConnector.Spec.Astra.ClusterName == "" {
+		err := fmt.Errorf("clusterID and clusterName both cannot be empty")
+		log.Error(err, "Bad config")
+		return ctrl.Result{}, err
+	} else if astraConnector.Spec.Astra.ClusterId != "" {
+		natsSyncClientStatus.AstraClusterId = astraConnector.Status.NatsSyncClient.AstraClusterId
+	} else {
+		natsSyncClientStatus.AstraClusterId = astraConnector.Status.NatsSyncClient.AstraClusterId
+	}
 
 	if natsSyncClientStatus.Registered == "" {
 		natsSyncClientStatus.Registered = "false"
@@ -184,21 +192,22 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 
 		connectorResults, deployError = r.deployNatlessConnector(ctx, astraConnector, &natsSyncClientStatus)
 
-		// Wait for the cluster to become managed (aka "registered")
-		natsSyncClientStatus.Status = WaitForClusterManagedState
-		_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
-		isManaged, err := waitForManagedCluster(astraConnector, r.Client, log)
-		if !isManaged {
-			log.Error(err, "timed out waiting for cluster to become managed, requeueing after delay", "delay", conf.Config.ErrorTimeout())
-			natsSyncClientStatus.Status = ErrorClusterUnmanaged
-			_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
-			// Do not wait 5min, wait 5sec before requeue instead since we have already been waiting in waitForManagedCluster
-			return ctrl.Result{RequeueAfter: time.Second * conf.Config.ErrorTimeout()}, nil
-		}
-		log.Info("Cluster is managed")
+		// ToDo remove this
+		//// Wait for the cluster to become managed (aka "registered")
+		//natsSyncClientStatus.Status = WaitForClusterManagedState
+		//_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
+		//isManaged, err := waitForManagedCluster(astraConnector, r.Client, log)
+		//if !isManaged {
+		//	log.Error(err, "timed out waiting for cluster to become managed, requeueing after delay", "delay", conf.Config.ErrorTimeout())
+		//	natsSyncClientStatus.Status = ErrorClusterUnmanaged
+		//	_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
+		//	// Do not wait 5min, wait 5sec before requeue instead since we have already been waiting in waitForManagedCluster
+		//	return ctrl.Result{RequeueAfter: time.Second * conf.Config.ErrorTimeout()}, nil
+		//}
+		//log.Info("Cluster is managed")
 
 		// ASUP Setup
-		err = r.createASUPCR(ctx, astraConnector, astraConnector.Spec.Astra.ClusterId)
+		err = r.createASUPCR(ctx, astraConnector, "1")
 		if err != nil {
 			log.Error(err, FailedASUPCreation)
 			natsSyncClientStatus.Status = FailedASUPCreation
@@ -207,7 +216,6 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 		}
 
 		natsSyncClientStatus.Registered = "true"
-		natsSyncClientStatus.AstraClusterId = astraConnector.Spec.Astra.ClusterId
 		natsSyncClientStatus.Status = RegisteredWithAstra
 		_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
 
@@ -217,10 +225,6 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 			log.Error(err, "Error deploying NatsConnector, requeueing after delay", "delay", conf.Config.ErrorTimeout())
 			return connectorResults, nil
 		}
-	}
-
-	if natsSyncClientStatus.AstraClusterId != "" {
-		log.Info(fmt.Sprintf("Updating CR status, clusterID: '%s'", natsSyncClientStatus.AstraClusterId))
 	}
 
 	_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
