@@ -17,13 +17,13 @@ import (
 )
 
 func (r *AstraConnectorController) deployNatlessConnector(ctx context.Context,
-	astraConnector *v1.AstraConnector, natsSyncClientStatus *v1.NatsSyncClientStatus) (ctrl.Result, error) {
+	astraConnector *v1.AstraConnector, astraConnectorStatus *v1.AstraConnectorStatus) (ctrl.Result, error) {
 	log := ctrllog.FromContext(ctx)
 
-	// let's deploy Astra Connector without Nats
+	// let's deploy Astra Connector
 	connectorDeployers := getDeployers()
 	for _, deployer := range connectorDeployers {
-		err := r.deployResources(ctx, deployer, astraConnector, natsSyncClientStatus)
+		err := r.deployResources(ctx, deployer, astraConnector, astraConnectorStatus)
 		if err != nil {
 			// Failed deploying we want status to reflect that for at least 30 seconds before it's requeued so
 			// anyone watching can be informed

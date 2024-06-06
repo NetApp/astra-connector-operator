@@ -33,8 +33,6 @@ func main() {
 	// Connector images
 	images := []string{
 		fmt.Sprintf("%s/astra-connector:%s", defaultImageRegistry, common.ConnectorImageTag),
-		fmt.Sprintf("%s/%s", defaultImageRegistry, common.NatsSyncClientDefaultImage),
-		// fmt.Sprintf("%s/%s", defaultImageRegistry, common.NatsDefaultImage),
 		fmt.Sprintf("%s:%s", common.AstraConnectorOperatorRepository, connectorOperatorVersion),
 		fmt.Sprintf("%s/trident-autosupport:%s", defaultImageRegistry, common.AsupImageTag),
 		fmt.Sprintf("%s/%s", defaultImageRegistry, common.RbacProxyImage),

@@ -127,11 +127,11 @@ type AstraConnector struct {
 
 func GetAstraHostURL(astraConnector *v1.AstraConnector) string {
 	var astraHost string
-	if astraConnector.Spec.NatsSyncClient.CloudBridgeURL != "" {
-		astraHost = astraConnector.Spec.NatsSyncClient.CloudBridgeURL
+	if astraConnector.Spec.Astra.AstraControlURL != "" {
+		astraHost = astraConnector.Spec.Astra.AstraControlURL
 		astraHost = strings.TrimSuffix(astraHost, "/")
 	} else {
-		astraHost = common.NatsSyncClientDefaultCloudBridgeURL
+		astraHost = common.DefaultCloudAstraControlURL
 	}
 
 	return astraHost
@@ -160,8 +160,8 @@ func (c clusterRegisterUtil) SetHttpClient(disableTls bool, astraHost string) er
 		c.Log.WithValues("disableTls", disableTls).Info("TLS Validation Disabled! Not for use in production!")
 	}
 
-	if c.AstraConnector.Spec.NatsSyncClient.HostAliasIP != "" {
-		c.Log.WithValues("HostAliasIP", c.AstraConnector.Spec.NatsSyncClient.HostAliasIP).Info("Using the HostAlias IP")
+	if c.AstraConnector.Spec.Astra.HostAliasIP != "" {
+		c.Log.WithValues("HostAliasIP", c.AstraConnector.Spec.Astra.HostAliasIP).Info("Using the HostAlias IP")
 		cloudBridgeHost, err := c.getAstraHostFromURL(astraHost)
 		if err != nil {
 			return err
@@ -174,10 +174,10 @@ func (c clusterRegisterUtil) SetHttpClient(disableTls bool, astraHost string) er
 
 		http.DefaultTransport.(*http.Transport).DialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
 			if addr == cloudBridgeHost+":443" {
-				addr = c.AstraConnector.Spec.NatsSyncClient.HostAliasIP + ":443"
+				addr = c.AstraConnector.Spec.Astra.HostAliasIP + ":443"
 			}
 			if addr == cloudBridgeHost+":80" {
-				addr = c.AstraConnector.Spec.NatsSyncClient.HostAliasIP + ":80"
+				addr = c.AstraConnector.Spec.Astra.HostAliasIP + ":80"
 			}
 			return dialer.DialContext(ctx, network, addr)
 		}

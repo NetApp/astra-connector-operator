@@ -64,7 +64,6 @@ func TestAstraConnectGetDeploymentObjects(t *testing.T) {
 
 	assert.Equal(t, 10, len(container.Env))
 	assert.Equal(t, "LOG_LEVEL", container.Env[0].Name)
-	assert.Equal(t, "NATS_DISABLED", container.Env[1].Name)
 	assert.Equal(t, "true", container.Env[1].Value)
 
 	assert.Equal(t, 1, len(deployment.Spec.Template.Spec.ImagePullSecrets))
@@ -116,8 +115,7 @@ func DummyAstraConnector() v1.AstraConnector {
 				Secret: "test-secret",
 			},
 			AstraConnect: v1.AstraConnect{
-				Image:    "test-image",
-				Replicas: 1,
+				Image: "test-image",
 			},
 			AutoSupport: v1.AutoSupport{
 				Enrolled: true,

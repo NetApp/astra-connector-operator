@@ -12,12 +12,16 @@ import (
 type Astra struct {
 	// +kubebuilder:validation:Required
 	AccountId string `json:"accountId"`
+	// +kubebuilder:validation:Required
+	AstraControlURL string `json:"astraControlURL,omitempty"`
 	// +kubebuilder:validation:Optional
 	CloudId string `json:"cloudId"`
 	// +kubebuilder:validation:Optional
 	ClusterId string `json:"clusterId"`
 	// +kubebuilder:validation:Optional
 	ClusterName string `json:"clusterName,omitempty"`
+	// +kubebuilder:validation:Optional
+	HostAliasIP string `json:"hostAliasIP,omitempty"`
 	// +kubebuilder:validation:Optional
 	SkipTLSValidation bool   `json:"skipTLSValidation,omitempty"`
 	TokenRef          string `json:"tokenRef,omitempty"`
@@ -36,30 +40,10 @@ type AutoSupport struct {
 	URL string `json:"url,omitempty"`
 }
 
-type NatsSyncClient struct {
-	CloudBridgeURL string `json:"cloudBridgeURL,omitempty"`
-	// +kubebuilder:validation:Optional
-	Image string `json:"image,omitempty"`
-	// +kubebuilder:validation:Optional
-	HostAliasIP string `json:"hostAliasIP,omitempty"`
-	// +kubebuilder:default:=1
-	Replicas int32 `json:"replicas,omitempty"`
-}
-
-// +kubebuilder:validation:Optional
-
-type Nats struct {
-	Image string `json:"image,omitempty"`
-	// +kubebuilder:default:=1
-	Replicas int32 `json:"replicas,omitempty"`
-}
-
 // +kubebuilder:validation:Optional
 
 type AstraConnect struct {
-	Image string `json:"image,omitempty"`
-	// +kubebuilder:default:=1
-	Replicas             int32                       `json:"replicas,omitempty"`
+	Image                string                      `json:"image,omitempty"`
 	ResourceRequirements corev1.ResourceRequirements `json:"resources,omitempty"`
 }
 
@@ -73,12 +57,10 @@ type Neptune struct {
 
 // AstraConnectorSpec defines the desired state of AstraConnector
 type AstraConnectorSpec struct {
-	Astra          Astra          `json:"astra"`
-	NatsSyncClient NatsSyncClient `json:"natsSyncClient,omitempty"`
-	Nats           Nats           `json:"nats,omitempty"`
-	AstraConnect   AstraConnect   `json:"astraConnect,omitempty"`
-	Neptune        Neptune        `json:"neptune"`
-	ImageRegistry  ImageRegistry  `json:"imageRegistry,omitempty"`
+	Astra         Astra         `json:"astra"`
+	AstraConnect  AstraConnect  `json:"astraConnect,omitempty"`
+	Neptune       Neptune       `json:"neptune"`
+	ImageRegistry ImageRegistry `json:"imageRegistry,omitempty"`
 
 	// AutoSupport indicates willingness to participate in NetApp's proactive support application, NetApp Active IQ.
 	// An internet connection is required (port 442) and all support data is anonymized.
@@ -98,11 +80,6 @@ type AstraConnectorSpec struct {
 
 // AstraConnectorStatus defines the observed state of AstraConnector
 type AstraConnectorStatus struct {
-	NatsSyncClient NatsSyncClientStatus `json:"natsSyncClient"`
-}
-
-// NatsSyncClientStatus defines the observed state of NatsSyncClient
-type NatsSyncClientStatus struct {
 	Registered     string `json:"registered"` //todo cluster vs connector registered
 	AstraClusterId string `json:"astraClusterID,omitempty"`
 	Status         string `json:"status"`
@@ -117,9 +94,9 @@ type ImageRegistry struct {
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
-//+kubebuilder:printcolumn:name="Registered",type=string,JSONPath=`.status.natsSyncClient.registered`
-//+kubebuilder:printcolumn:name="AstraClusterID",type=string,JSONPath=`.status.natsSyncClient.astraClusterID`
-//+kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.natsSyncClient.status`
+//+kubebuilder:printcolumn:name="Registered",type=string,JSONPath=`.status.registered`
+//+kubebuilder:printcolumn:name="AstraClusterID",type=string,JSONPath=`.status.astraClusterID`
+//+kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.status`
 
 // AstraConnector is the Schema for the astraconnectors API
 // +kubebuilder:subresource:status

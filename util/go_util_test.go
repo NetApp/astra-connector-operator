@@ -18,16 +18,14 @@ func createAstraConnector() *v1.AstraConnector {
 		},
 		Spec: v1.AstraConnectorSpec{
 			Astra: v1.Astra{
-				TokenRef:    "test-api-token",
-				AccountId:   "test-account-id",
-				ClusterName: "test-cluster-name",
+				TokenRef:        "test-api-token",
+				AccountId:       "test-account-id",
+				ClusterName:     "test-cluster-name",
+				AstraControlURL: "test-url",
 			},
 			AutoSupport: v1.AutoSupport{
 				Enrolled: true,
 				URL:      "https://my-asup",
-			},
-			NatsSyncClient: v1.NatsSyncClient{
-				CloudBridgeURL: "test-url",
 			},
 		},
 	}
@@ -64,8 +62,8 @@ func TestGetJSONFieldName(t *testing.T) {
 		jsonTag := util.GetJSONFieldName(&ac.Spec, &ac.Spec.Astra)
 		assert.Equal(t, "astra", jsonTag)
 
-		jsonTag = util.GetJSONFieldName(&ac.Status, &ac.Status.NatsSyncClient)
-		assert.Equal(t, "natsSyncClient", jsonTag)
+		jsonTag = util.GetJSONFieldName(&ac.Status, &ac.Status)
+		assert.Equal(t, "astraConnectorStatus", jsonTag)
 	})
 
 	t.Run("TestGetJSONFieldName__WhenInvalidStructFieldReturnEmptyString", func(t *testing.T) {

@@ -2327,10 +2327,18 @@ metadata:
 spec:
   astra:
     accountId: ${account_id}
+    astraControlURL: ${astra_url}
     tokenRef: astra-api-token
     cloudId: ${cloud_id}
     clusterId: ${cluster_id}
     skipTLSValidation: ${skip_tls_validation}  # Should be set to false in production environments${labels_field_and_content}
+EOF
+
+if [ -n "$host_alias_ip" ]; then
+    echo "    hostAliasIP: $host_alias_ip" >> "$crs_file"
+fi
+
+cat <<EOF >> "$crs_file"
   imageRegistry:
     name: "${connector_registry}"
     secret: "${connector_regcred_name}"
@@ -2345,13 +2353,6 @@ spec:
         cpu: ".5"
         memory: ${memory_limit}Gi
 EOF
-    {
-      echo "  natsSyncClient:"
-      echo "    cloudBridgeURL: ${astra_url}"
-    }  >> "$crs_file"
-    if [ -n "$host_alias_ip" ]; then
-        echo "    hostAliasIP: $host_alias_ip" >> "$crs_file"
-    fi
 
     if [ -n "$connector_tag" ]; then
       echo "  astraConnect:" >> "$crs_file"
@@ -2781,7 +2782,7 @@ step_monitor_deployment_progress() {
             add_problem "neptune deploy: failed" "Neptune failed to deploy"
         elif ! wait_for_deployment_running "astraconnect" "$connector_ns" "5"; then
             add_problem "astraconnect deploy: failed" "The Astra Connector failed to deploy"
-        elif ! wait_for_cr_state "astraconnectors/astra-connector" ".status.natsSyncClient.status" "Registered with Astra" "$connector_ns"; then
+        elif ! wait_for_cr_state "astraconnectors/astra-connector" ".status.status" "Registered with Astra" "$connector_ns"; then
             add_problem "cluster registration: failed" "Cluster registration failed"
         fi
     fi

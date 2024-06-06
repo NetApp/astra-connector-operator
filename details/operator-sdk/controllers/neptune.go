@@ -12,14 +12,14 @@ import (
 )
 
 func (r *AstraConnectorController) deployNeptune(ctx context.Context,
-	astraConnector *v1.AstraConnector, natsSyncClientStatus *v1.NatsSyncClientStatus) (ctrl.Result, error) {
+	astraConnector *v1.AstraConnector, astraConnectorStatus *v1.AstraConnectorStatus) (ctrl.Result, error) {
 
 	// TODO CRD will be installed as part of our crd install
 	// check if they are installed if not error here or maybe a pre-check
 
 	// Deploy Neptune
 	neptuneDeployer := neptune.NewNeptuneClientDeployerV2()
-	err := r.deployResources(ctx, neptuneDeployer, astraConnector, natsSyncClientStatus)
+	err := r.deployResources(ctx, neptuneDeployer, astraConnector, astraConnectorStatus)
 	if err != nil {
 		// Failed deploying we want status to reflect that for at least 30 seconds before it's requeued so
 		// anyone watching can be informed

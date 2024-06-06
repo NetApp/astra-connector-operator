@@ -9,6 +9,5 @@ spec:
     accountId: Astra Account ID from the API Access page in Astra UI
     skipTLSValidation: true
     clusterName: Name of your cluster
-  natsSyncClient:
-    cloudBridgeURL: https://integration.astra.netapp.io
+    astraControlURL: https://integration.astra.netapp.io
     hostAliasIP: 10.193.60.80

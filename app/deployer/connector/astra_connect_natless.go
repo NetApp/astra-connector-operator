@@ -54,6 +54,7 @@ func (d *AstraConnectDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx co
 
 	connectorImage = fmt.Sprintf("%s/astra-connector:%s", imageRegistry, containerImage)
 	log.Info("Using AstraConnector image", "image", connectorImage)
+	replicaCount := int32(1)
 
 	if m.Spec.Astra.ClusterId == "" && m.Spec.Astra.ClusterName == "" {
 		err := fmt.Errorf("clusterID and clusterName both cannot be empty")
@@ -70,8 +71,7 @@ func (d *AstraConnectDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx co
 			},
 		},
 		Spec: appsv1.DeploymentSpec{
-			// TODO remove option to set replica count in CRD. This should always only-ever be 1
-			Replicas: &m.Spec.AstraConnect.Replicas,
+			Replicas: &replicaCount,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: ls,
 			},
@@ -89,16 +89,12 @@ func (d *AstraConnectDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx co
 								Value: "info",
 							},
 							{
-								Name:  "NATS_DISABLED",
-								Value: "true",
-							},
-							{
 								Name:  "API_TOKEN_SECRET_REF",
 								Value: m.Spec.Astra.TokenRef,
 							},
 							{
 								Name:  "ASTRA_CONTROL_URL",
-								Value: m.Spec.NatsSyncClient.CloudBridgeURL,
+								Value: m.Spec.Astra.AstraControlURL,
 							},
 							{
 								Name:  "ACCOUNT_ID",
@@ -114,7 +110,7 @@ func (d *AstraConnectDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx co
 							},
 							{
 								Name:  "HOST_ALIAS_IP",
-								Value: m.Spec.NatsSyncClient.HostAliasIP,
+								Value: m.Spec.Astra.HostAliasIP,
 							},
 							{
 								Name:  "SKIP_TLS_VALIDATION",
@@ -198,17 +194,23 @@ func (d *AstraConnectDeployer) GetServiceObjects(m *v1.AstraConnector, ctx conte
 
 // GetConfigMapObjects returns a ConfigMap object for Astra Connect
 func (d *AstraConnectDeployer) GetConfigMapObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
+	data := map[string]string{
+		"skip_tls_validation": strconv.FormatBool(m.Spec.Astra.SkipTLSValidation),
+	}
+
 	configMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: m.Namespace,
 			Name:      common.AstraConnectName,
 		},
-		Data: map[string]string{
-			//"nats_url":            GetNatsURL(m),
-			"skip_tls_validation": strconv.FormatBool(m.Spec.Astra.SkipTLSValidation),
-		},
+		Data: data,
 	}
-	return []client.Object{configMap}, model.NonMutateFn, nil
+
+	mutateFn := func() error {
+		configMap.Data = data
+		return nil
+	}
+	return []client.Object{configMap}, mutateFn, nil
 }
 
 // GetServiceAccountObjects returns a ServiceAccount object for Astra Connect
