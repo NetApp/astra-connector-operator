@@ -1129,7 +1129,7 @@ generate_docker_registry_secret() {
     local -r namespace="$4"
     local -r docker_server="$5"
     local -r secret_filename="$6"
-    local -r content="  labels:${__NEWLINE}${_PROCESSED_LABELS}"
+    local -r content="  labels:${__NEWLINE}${_PROCESSED_LABELS_WITH_DEFAULT}"
 
     [ -z "$pull_secret" ] && fatal "no pull secret given"
     [ -z "$docker_username" ] && fatal "no docker username given"
