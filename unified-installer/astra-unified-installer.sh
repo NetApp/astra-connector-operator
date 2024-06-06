@@ -90,6 +90,7 @@ readonly __GENERATED_OPERATORS_DIR="$__GENERATED_CRS_DIR/operators"
 readonly __GENERATED_KUSTOMIZATION_FILE="$__GENERATED_OPERATORS_DIR/kustomization.yaml"
 readonly __GENERATED_PATCHES_TORC_FILE="$__GENERATED_CRS_DIR/post-deploy-patches_torc"
 readonly __GENERATED_PATCHES_TRIDENT_OPERATOR_FILE="$__GENERATED_OPERATORS_DIR/post-deploy-patches_trident-operator"
+readonly __GENERATED_TRIDENT_ACP_SECRET_FILE="$__GENERATED_OPERATORS_DIR/trident-acp-secret.yaml"
 
 readonly __DEBUG=10
 readonly __INFO=20
@@ -1122,6 +1123,35 @@ is_astra_registry() {
     return 1
 }
 
+generate_docker_registry_secret() {
+    local -r pull_secret="$1"
+    local -r docker_username="$2"
+    local -r docker_password="$3"
+    local -r namespace="$4"
+    local -r docker_server="$5"
+    local -r secret_filename="$6"
+    local -r content="  labels:${__NEWLINE}${_PROCESSED_LABELS_WITH_DEFAULT}"
+
+    [ -z "$pull_secret" ] && fatal "no pull secret given"
+    [ -z "$docker_username" ] && fatal "no docker username given"
+    [ -z "$docker_password" ] && fatal "no docker password given"
+    [ -z "$namespace" ] && fatal "no namespace given"
+    [ -z "$docker_server" ] && fatal "no docker registry given"
+    [ -z "$secret_filename" ] && fatal "no secret filename given"
+
+    local -r secret_yaml="$(kubectl create secret docker-registry "$pull_secret" --docker-username="$docker_username" --docker-password="$docker_password" -n "$namespace" --docker-server="$docker_server" --dry-run=client -o yaml 2> "$__ERR_FILE")"
+    local -r captured_err="$(get_captured_err)"
+
+    if [ -z "$secret_yaml" ] || [ -n "$captured_err" ]; then
+        add_problem "Failed to generate secret for ACS registry '$docker_server': $captured_err"
+        return 1
+    else
+        echo "$secret_yaml" > "$secret_filename"
+        insert_into_file_after_pattern "${secret_filename}" "metadata:" "${content}"
+        return 0
+    fi
+}
+
 get_registry_credentials_from_pull_secret() {
     local -r pull_secret="$1"
     local -r namespace="$2"
@@ -1680,7 +1710,12 @@ step_check_config() {
     # Env vars with special conditions
     if [ -n "$IMAGE_PULL_SECRET" ]; then
         if [ -z "$NAMESPACE" ]; then
-            prompt_user "NAMESPACE" "NAMESPACE is required when specifying an IMAGE_PULL_SECRET. Please enter the namespace:"
+            local -r ns_warning="NAMESPACE is required when specifying an IMAGE_PULL_SECRET"
+            if prompts_disabled; then
+                add_problem "$ns_warning"
+            else
+                prompt_user "NAMESPACE" "$ns_warning. Please enter the namespace:"
+            fi
         fi
     elif get_config_custom_registries_with_repo &> /dev/null; then
         local custom_reg_warning="We detected one or more custom registry or repo values"
@@ -2146,10 +2181,68 @@ step_kustomize_global_pull_secret_if_needed() {
     local -r global_pull_secret="${1:-""}"
     local -r kustomization_file="${2}"
     local -r kustomization_dir="$(dirname "$kustomization_file")"
-    [ -z "$global_pull_secret" ] && return 0
+    local -r connector_namespace="$(get_connector_namespace)"
+    local -r trident_namespace="$(get_trident_namespace)"
+    local -r connector_registry="$(join_rpath "$CONNECTOR_IMAGE_REGISTRY" "$(get_base_repo "$CONNECTOR_IMAGE_REPO")")"
+    local -r trident_acp_registry="$(join_rpath "$TRIDENT_ACP_IMAGE_REGISTRY" "$(get_base_repo "$TRIDENT_ACP_IMAGE_REPO")")"
+    local -r encoded_creds=$(echo -n "$ASTRA_ACCOUNT_ID:$ASTRA_API_TOKEN" | base64)
 
     [ -z "$kustomization_file" ] && fatal "no kustomization file given"
     [ ! -f "$kustomization_file" ] && fatal "kustomization file '$kustomization_file' does not exist"
+
+       # SECRET GENERATOR
+    cat <<EOF >> "$kustomization_file"
+generatorOptions:
+  disableNameSuffixHash: true
+secretGenerator:
+- name: astra-api-token
+  namespace: "${connector_namespace}"
+  literals:
+  - apiToken="${ASTRA_API_TOKEN}"
+EOF
+    if [ -z "$global_pull_secret" ]; then
+        # if image pull secret is empty, set same name for connector and trident secret so torc patch works as expected
+        IMAGE_PULL_SECRET="astra-regcred"
+        if components_include_connector; then
+            cat <<EOF >> "$kustomization_file"
+- name: "${IMAGE_PULL_SECRET}"
+  namespace: "${connector_namespace}"
+  type: kubernetes.io/dockerconfigjson
+  literals:
+  - |
+    .dockerconfigjson={
+      "auths": {
+        "${connector_registry}": {
+          "username": "$ASTRA_ACCOUNT_ID",
+          "password": "$ASTRA_API_TOKEN",
+          "auth": "${encoded_creds}"
+        }
+      }
+    }
+EOF
+            logdebug "$kustomization_file: added connector secret to namespace $connector_namespace"
+        fi
+    
+        if components_include_trident && [ "$trident_namespace" != "$connector_namespace" ]; then
+            cat <<EOF >> "$kustomization_file"
+- name: "${IMAGE_PULL_SECRET}"
+  namespace: "${trident_namespace}"
+  type: kubernetes.io/dockerconfigjson
+  literals:
+  - |
+    .dockerconfigjson={
+      "auths": {
+        "${trident_acp_registry}": {
+          "username": "$ASTRA_ACCOUNT_ID",
+          "password": "$ASTRA_API_TOKEN",
+          "auth": "${encoded_creds}"
+        }
+      }
+    }
+EOF
+            logdebug "$kustomization_file: added trident acp secret to namespace $trident_namespace"
+        fi
+    fi
 
     insert_into_file_after_pattern "$kustomization_file" "patches:" '
 - target:
@@ -2215,36 +2308,6 @@ step_generate_astra_connector_yaml() {
       fi
     fi
     loginfo "Memory limit set to: $memory_limit GB"
-
-    # SECRET GENERATOR
-    cat <<EOF >> "$kustomization_file"
-generatorOptions:
-  disableNameSuffixHash: true
-secretGenerator:
-- name: astra-api-token
-  namespace: "${connector_namespace}"
-  literals:
-  - apiToken="${api_token}"
-EOF
-    if [ -z "$IMAGE_PULL_SECRET" ]; then
-        cat <<EOF >> "$kustomization_file"
-- name: "${connector_regcred_name}"
-  namespace: "${connector_namespace}"
-  type: kubernetes.io/dockerconfigjson
-  literals:
-  - |
-    .dockerconfigjson={
-      "auths": {
-        "${connector_registry}": {
-          "username": "${username}",
-          "password": "${password}",
-          "auth": "${encoded_creds}"
-        }
-      }
-    }
-EOF
-    fi
-    logdebug "$kustomization_file: added secrets"
 
     # ASTRA CONNECTOR CR
     local labels_field_and_content_with_default=""
@@ -2483,11 +2546,10 @@ step_generate_trident_operator_patch() {
         if echo "$_EXISTING_TRIDENT_OPERATOR_PULL_SECRETS" | grep -q "^${IMAGE_PULL_SECRET}$" &> /dev/null; then
             logdebug "image pull secret '$IMAGE_PULL_SECRET' already present in trident-operator"
         else
-            local -r secret_obj='{"name": "'"$IMAGE_PULL_SECRET"'"}'
             if [ -z "$_EXISTING_TRIDENT_OPERATOR_PULL_SECRETS" ]; then
-                patch_list+=',{"op":"replace","path":"/spec/template/spec/imagePullSecrets","value":['"$secret_obj"']}'
+                patch_list+=',{"op":"replace","path":"/spec/template/spec/imagePullSecrets","value":[{"name":'"$IMAGE_PULL_SECRET"'}]}'
             else
-                patch_list+=',{"op":"add","path":"/spec/template/spec/imagePullSecrets/-","value":'"$secret_obj"'}'
+                patch_list+=',{"op":"add","path":"/spec/template/spec/imagePullSecrets/-","value":{"name":'"$IMAGE_PULL_SECRET"'}}'
             fi
         fi
     fi
@@ -2598,14 +2660,29 @@ step_apply_resources() {
     local output=""
     local captured_err=""
     if ! is_dry_run; then
+        # apply trident-acp secret if it exists
+        if [ -e "$__GENERATED_TRIDENT_ACP_SECRET_FILE" ]; then
+            output="$(kubectl apply -f "$__GENERATED_TRIDENT_ACP_SECRET_FILE" -n "$(get_trident_namespace)" 2> "$__ERR_FILE")"
+            captured_err="$(get_captured_err)"
+            if [ -z "$output" ] || [ -n "$captured_err" ]; then
+                add_problem "Failed to apply ACS registry secret: $captured_err"
+            fi
+            logdebug "$output"
+        fi
+
         output="$(kubectl apply -k "$operators_dir" 2> "$__ERR_FILE")"
         captured_err="$(get_captured_err)"
-        if echo "$captured_err" | grep -q "Warning:"; then
-            logdebug "captured warning when applying kustomize resources:${__NEWLINE}$captured_err"
-        elif echo "$captured_err" | grep -q "no objects passed to apply"; then
-            logdebug "no kustomize resources to apply, skipping"
-        elif [ -z "$output" ] || [ -n "$captured_err" ]; then
-            add_problem "Failed to apply kustomize resources: $captured_err"
+
+        if [ -n "$captured_err" ]; then
+            while IFS= read -r line; do
+                if echo "$line" | grep -q "Warning:"; then
+                    logdebug "captured warning when applying kustomize resources:${__NEWLINE}$captured_err"
+                elif echo "$line" | grep -q "no objects passed to apply"; then
+                    logdebug "no kustomize resources to apply, skipping"
+                elif [ -z "$output" ] || [ -n "$line" ]; then
+                    add_problem "Failed to apply kustomize resources: $line"
+                fi
+            done < <(echo "$captured_err")
         fi
         logdebug "kustomize apply output:${__NEWLINE}$output"
     fi
@@ -2846,6 +2923,8 @@ if trident_will_be_installed_or_modified; then
             # Enable ACP if needed (includes ACP upgrade)
             if ! acp_is_enabled; then
                 if config_acp_image_is_custom || prompt_user_yes_no "Would you like to enable Astra Control Provisioner?"; then
+                    # create trident-acp secret
+                    generate_docker_registry_secret "$IMAGE_PULL_SECRET" "$ASTRA_ACCOUNT_ID" "$ASTRA_API_TOKEN" "$(get_trident_namespace)" "$TRIDENT_ACP_IMAGE_REGISTRY" "$__GENERATED_TRIDENT_ACP_SECRET_FILE"
                     step_generate_torc_patch "$_EXISTING_TORC_NAME" "" "$(get_config_acp_image)" "true"
                 else
                     loginfo "Astra Control Provisioner will not be enabled."
@@ -2853,6 +2932,8 @@ if trident_will_be_installed_or_modified; then
             # ACP upgrade (ACP already enabled)
             elif acp_image_needs_upgraded; then
                 if config_acp_image_is_custom || prompt_user_yes_no "Would you like to upgrade Astra Control Provisioner?"; then
+                    # create trident-acp secret
+                    generate_docker_registry_secret "$IMAGE_PULL_SECRET" "$ASTRA_ACCOUNT_ID" "$ASTRA_API_TOKEN" "$(get_trident_namespace)" "$TRIDENT_ACP_IMAGE_REGISTRY" "$__GENERATED_TRIDENT_ACP_SECRET_FILE"
                     step_generate_torc_patch "$_EXISTING_TORC_NAME" "" "$(get_config_acp_image)" "true"
                 else
                     loginfo "Astra Control Provisioner will not be upgraded."
