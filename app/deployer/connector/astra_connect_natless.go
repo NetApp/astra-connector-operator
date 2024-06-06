@@ -225,6 +225,11 @@ func (d *AstraConnectDeployer) GetServiceAccountObjects(m *v1.AstraConnector, ct
 func (d *AstraConnectDeployer) GetClusterRoleObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
 	rules := []rbacv1.PolicyRule{
 		{
+			APIGroups: []string{"config.openshift.io"},
+			Resources: []string{"clusteroperators"},
+			Verbs:     []string{"get", "list"},
+		},
+		{
 			APIGroups: []string{"rbac.authorization.k8s.io"},
 			Resources: []string{"clusterroles"},
 			Verbs:     []string{"get", "list"},
