@@ -725,7 +725,8 @@ loginfo() {
 }
 
 logwarn() {
-    log_at_level $__WARN "WARNING: $1"
+    local -r warning="${1#WARNING: }"
+    log_at_level $__WARN "WARNING: $warning"
 }
 
 logerror() {
@@ -1767,10 +1768,14 @@ step_check_k8s_version_in_range() {
     logheader $__DEBUG "Checking if Kubernetes version is within range ($minimum <=> $maximum)..."
 
     local current; current="$(kubectl version -o json 2> "$__ERR_FILE" | jq -r '.serverVersion.gitVersion' 2> /dev/null)"
-    local -r captured_err="$(get_captured_err)"
-    if [ -z "$current" ] || [ "$current" == null ] || [ -n "$captured_err" ]; then
+    local captured_err; captured_err="$(get_captured_err)"
+    if [ -z "$current" ] || [ "$current" == null ]; then
+        [ -z "$captured_err" ] && captured_err="unknown error"
         add_problem "Failed to get your cluster's Kubernetes version: $captured_err"
         return 1
+    fi
+    if echo "$captured_err" | starts_with "WARNING"; then
+        logwarn "$captured_err"
     fi
 
     current=${current#v}
@@ -1794,7 +1799,7 @@ step_check_k8s_permissions() {
     if [ "$has_permission" == "yes" ]; then
         logdebug "k8s permissions: OK"
         return 0
-    elif [ "$has_permission" != "yes" ]; then
+    elif [ "$has_permission" == "no" ]; then
         add_problem "Kubernetes user does not have admin privileges"
     elif [ -n "$captured_err" ]; then
         add_problem "Failed to check if Kubernetes user has admin privilege: $captured_err"
@@ -2488,7 +2493,6 @@ step_generate_trident_operator_patch() {
     fi
 
     if [ -n "$patch_list" ]; then
-        echo "[${patch_list%,}]"
         patch_list="'$(echo "[${patch_list%,}]" | jq '.')'"
         _PATCHES_TRIDENT_OPERATOR+=("deploy/trident-operator -n '$namespace' --type=json -p $patch_list")
     fi
