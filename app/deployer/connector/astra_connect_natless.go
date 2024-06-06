@@ -55,6 +55,12 @@ func (d *AstraConnectDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx co
 	connectorImage = fmt.Sprintf("%s/astra-connector:%s", imageRegistry, containerImage)
 	log.Info("Using AstraConnector image", "image", connectorImage)
 
+	if m.Spec.Astra.ClusterId == "" && m.Spec.Astra.ClusterName == "" {
+		err := fmt.Errorf("clusterID and clusterName both cannot be empty")
+		log.Error(err, "Bad config")
+		return nil, nil, err
+	}
+
 	dep := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      common.AstraConnectName,
@@ -218,6 +224,11 @@ func (d *AstraConnectDeployer) GetServiceAccountObjects(m *v1.AstraConnector, ct
 
 func (d *AstraConnectDeployer) GetClusterRoleObjects(m *v1.AstraConnector, ctx context.Context) ([]client.Object, controllerutil.MutateFn, error) {
 	rules := []rbacv1.PolicyRule{
+		{
+			APIGroups: []string{"config.openshift.io"},
+			Resources: []string{"clusteroperators"},
+			Verbs:     []string{"get", "list"},
+		},
 		{
 			APIGroups: []string{"rbac.authorization.k8s.io"},
 			Resources: []string{"clusterroles"},

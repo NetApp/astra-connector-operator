@@ -92,8 +92,10 @@ readonly __GENERATED_OPERATORS_CONNECTOR_DIR="$__GENERATED_CRS_DIR/operators/con
 readonly __GENERATED_KUSTOMIZATION_FILE="$__GENERATED_OPERATORS_DIR/kustomization.yaml"
 readonly __GENERATED_TRIDENT_KUSTOMIZATION_FILE="$__GENERATED_OPERATORS_TRIDENT_DIR/kustomization.yaml"
 readonly __GENERATED_CONNECTOR_KUSTOMIZATION_FILE="$__GENERATED_OPERATORS_CONNECTOR_DIR/kustomization.yaml"
+
 readonly __GENERATED_PATCHES_TORC_FILE="$__GENERATED_OPERATORS_TRIDENT_DIR/post-deploy-patches_torc"
 readonly __GENERATED_PATCHES_TRIDENT_OPERATOR_FILE="$__GENERATED_OPERATORS_TRIDENT_DIR/post-deploy-patches_trident-operator"
+readonly __GENERATED_TRIDENT_ACP_SECRET_FILE="$__GENERATED_OPERATORS_DIR/trident-acp-secret.yaml"
 
 readonly __DEBUG=10
 readonly __INFO=20
@@ -267,11 +269,11 @@ Optional Environment Variables:
       - Tag ("24.02")
 
     Given the following images :
-      - Astra Trident Operator:    private.registry.io/some/repository/path/trident-operator:24.02
-      - Astra Trident Autosupport: private.registry.io/some/repository/path/trident-autosupport:24.02
-      - Astra Trident:             private.registry.io/some/repository/path/trident:24.02
-      - Astra Trident ACP:         private.registry.io/some/repository/path/trident-acp:24.02
-      - Connector Operator:  private.registry.io/some/repository/path/astra-connector-operator:202405211614-main
+      - Astra Trident Operator:     private.registry.io/some/repository/path/trident-operator:24.02
+      - Astra Trident Autosupport:  private.registry.io/some/repository/path/trident-autosupport:24.02
+      - Astra Trident:              private.registry.io/some/repository/path/trident:24.02
+      - Astra Control Provisioner:  private.registry.io/some/repository/path/trident-acp:24.02
+      - Connector Operator:         private.registry.io/some/repository/path/astra-connector-operator:202405211614-main
 
     An appropriate configuration might be:
       - IMAGE_REGISTRY="private.registry.io"
@@ -286,7 +288,7 @@ Optional Environment Variables:
   CONNECTOR_OPERATOR_IMAGE_REGISTRY  The Docker registry to pull the Connector Operator image from.
   CONNECTOR_IMAGE_REGISTRY           The Docker registry to pull the Connector image from.
   NEPTUNE_IMAGE_REGISTRY             The Docker registry to pull the Neptune image from.
-  TRIDENT_ACP_IMAGE_REGISTRY         The Docker registry to pull the Astra Trident ACP image from.
+  TRIDENT_ACP_IMAGE_REGISTRY         The Docker registry to pull the Astra Control Provisioner image from.
 
   IMAGE_BASE_REPO                    The default base repository path (i.e. excluding the image name) for all images. Overridden by values below.
   TRIDENT_OPERATOR_IMAGE_REPO        The repository path for the Astra Trident Operator image.
@@ -295,12 +297,12 @@ Optional Environment Variables:
   CONNECTOR_OPERATOR_IMAGE_REPO      The repository path for the Connector Operator image.
   CONNECTOR_IMAGE_REPO               The repository path for the Connector image.
   NEPTUNE_IMAGE_REPO                 The repository path for the Neptune image.
-  TRIDENT_ACP_IMAGE_REPO             The repository path for the Astra Trident ACP image.
+  TRIDENT_ACP_IMAGE_REPO             The repository path for the Astra Control Provisioner image.
 
   TRIDENT_IMAGE_TAG                  The tag for the Astra Trident image. Overridden by other 'TRIDENT_' values below.
   TRIDENT_OPERATOR_IMAGE_TAG         The tag for the Astra Trident Operator image.
   TRIDENT_AUTOSUPPORT_IMAGE_TAG      The tag for the Astra Trident Autosupport image.
-  TRIDENT_ACP_IMAGE_TAG              The tag for the Astra Trident ACP image.
+  TRIDENT_ACP_IMAGE_TAG              The tag for the Astra Control Provisioner image.
   CONNECTOR_OPERATOR_IMAGE_TAG       The tag for the Connector Operator image.
 
   ----- Connector Configuration
@@ -1127,6 +1129,35 @@ is_astra_registry() {
     return 1
 }
 
+generate_docker_registry_secret() {
+    local -r pull_secret="$1"
+    local -r docker_username="$2"
+    local -r docker_password="$3"
+    local -r namespace="$4"
+    local -r docker_server="$5"
+    local -r secret_filename="$6"
+    local -r content="  labels:${__NEWLINE}${_PROCESSED_LABELS_WITH_DEFAULT}"
+
+    [ -z "$pull_secret" ] && fatal "no pull secret given"
+    [ -z "$docker_username" ] && fatal "no docker username given"
+    [ -z "$docker_password" ] && fatal "no docker password given"
+    [ -z "$namespace" ] && fatal "no namespace given"
+    [ -z "$docker_server" ] && fatal "no docker registry given"
+    [ -z "$secret_filename" ] && fatal "no secret filename given"
+
+    local -r secret_yaml="$(kubectl create secret docker-registry "$pull_secret" --docker-username="$docker_username" --docker-password="$docker_password" -n "$namespace" --docker-server="$docker_server" --dry-run=client -o yaml 2> "$__ERR_FILE")"
+    local -r captured_err="$(get_captured_err)"
+
+    if [ -z "$secret_yaml" ] || [ -n "$captured_err" ]; then
+        add_problem "Failed to generate secret for ACS registry '$docker_server': $captured_err"
+        return 1
+    else
+        echo "$secret_yaml" > "$secret_filename"
+        insert_into_file_after_pattern "${secret_filename}" "metadata:" "${content}"
+        return 0
+    fi
+}
+
 get_registry_credentials_from_pull_secret() {
     local -r pull_secret="$1"
     local -r namespace="$2"
@@ -1353,39 +1384,6 @@ EOF
     echo "$yaml_labels"
 }
 
-add_namespace_transformer_to_kustomization() {
-    local -r namespace="${1:-""}"
-    local -r kustomization_file="${2}"
-    local -r kustomization_dir="$(dirname "$kustomization_file")"
-
-    [ -z "$namespace" ] && fatal "no namespace given"
-    [ -z "$kustomization_file" ] && fatal "no kustomization file given"
-    [ ! -f "$kustomization_file" ] && fatal "kustomization file '$kustomization_file' does not exist"
-
-    # Add kustomization to set metadata.namespace where it's not already set
-    echo "namespace: $namespace" >> "$kustomization_file"
-    logdebug "$kustomization_file: added namespace field ($namespace)"
-
-    # This transformer is more forceful than the `namespace` field above but is necessary to set
-    # the namespace on a few resources that aren't caught by the former (the subjects in rolebindings for example).
-    local -r transformer_file_name="namespace-transformer.yaml"
-    cat <<EOF > "$kustomization_dir/$transformer_file_name"
-apiVersion: builtin
-kind: NamespaceTransformer
-metadata:
-  name: thisFieldDoesNotActuallyMatterForTransformers
-  namespace: "${namespace}"
-fieldSpecs:
-- path: metadata/namespace
-  create: true
-EOF
-    if grep -q "^transformers:" < "$kustomization_file"; then
-        echo "transformers:" >> "$kustomization_file"
-    fi
-    insert_into_file_after_pattern "$kustomization_file" "transformers:" "- $transformer_file_name"
-    logdebug "$kustomization_file: added namespace transformer ($transformer_file_name)"
-}
-
 # k8s_get_resource will get the given k8s resource in the given format and echo the output.
 # If a connection error (or any type of error except for "NotFound") occurs, a problem will be added to make sure
 # script execution is halted.
@@ -1446,6 +1444,39 @@ k8s_resource_exists() {
     fi
 
     return 1
+}
+
+add_namespace_transformer_to_kustomization() {
+    local -r namespace="${1:-""}"
+    local -r kustomization_file="${2}"
+    local -r kustomization_dir="$(dirname "$kustomization_file")"
+
+    [ -z "$namespace" ] && fatal "no namespace given"
+    [ -z "$kustomization_file" ] && fatal "no kustomization file given"
+    [ ! -f "$kustomization_file" ] && fatal "kustomization file '$kustomization_file' does not exist"
+
+    # Add kustomization to set metadata.namespace where it's not already set
+    echo "namespace: $namespace" >> "$kustomization_file"
+    logdebug "$kustomization_file: added namespace field ($namespace)"
+
+    # This transformer is more forceful than the `namespace` field above but is necessary to set
+    # the namespace on a few resources that aren't caught by the former (the subjects in rolebindings for example).
+    local -r transformer_file_name="namespace-transformer.yaml"
+    cat <<EOF > "$kustomization_dir/$transformer_file_name"
+apiVersion: builtin
+kind: NamespaceTransformer
+metadata:
+  name: thisFieldDoesNotActuallyMatterForTransformers
+  namespace: "${namespace}"
+fieldSpecs:
+- path: metadata/namespace
+  create: true
+EOF
+    if grep -q "^transformers:" < "$kustomization_file"; then
+        echo "transformers:" >> "$kustomization_file"
+    fi
+    insert_into_file_after_pattern "$kustomization_file" "transformers:" "- $transformer_file_name"
+    logdebug "$kustomization_file: added namespace transformer ($transformer_file_name)"
 }
 
 apply_kubectl_patch() {
@@ -2165,6 +2196,85 @@ step_kustomize_global_pull_secret_if_needed() {
     logdebug "$kustomization_file: added pull secret patch ($global_pull_secret)"
 }
 
+step_kustomize_global_pull_secret_if_needed() {
+    local -r global_pull_secret="${1:-""}"
+    local -r kustomization_file="${2}"
+    local -r kustomization_dir="$(dirname "$kustomization_file")"
+    local -r connector_namespace="$(get_connector_namespace)"
+    local -r trident_namespace="$(get_trident_namespace)"
+    local -r connector_registry="$(join_rpath "$CONNECTOR_IMAGE_REGISTRY" "$(get_base_repo "$CONNECTOR_IMAGE_REPO")")"
+    local -r trident_acp_registry="$(join_rpath "$TRIDENT_ACP_IMAGE_REGISTRY" "$(get_base_repo "$TRIDENT_ACP_IMAGE_REPO")")"
+    local -r encoded_creds=$(echo -n "$ASTRA_ACCOUNT_ID:$ASTRA_API_TOKEN" | base64)
+
+    [ -z "$kustomization_file" ] && fatal "no kustomization file given"
+    [ ! -f "$kustomization_file" ] && fatal "kustomization file '$kustomization_file' does not exist"
+
+       # SECRET GENERATOR
+    cat <<EOF >> "$kustomization_file"
+generatorOptions:
+  disableNameSuffixHash: true
+secretGenerator:
+- name: astra-api-token
+  namespace: "${connector_namespace}"
+  literals:
+  - apiToken="${ASTRA_API_TOKEN}"
+EOF
+    if [ -z "$global_pull_secret" ]; then
+        # if image pull secret is empty, set same name for connector and trident secret so torc patch works as expected
+        IMAGE_PULL_SECRET="astra-regcred"
+        if components_include_connector; then
+            cat <<EOF >> "$kustomization_file"
+- name: "${IMAGE_PULL_SECRET}"
+  namespace: "${connector_namespace}"
+  type: kubernetes.io/dockerconfigjson
+  literals:
+  - |
+    .dockerconfigjson={
+      "auths": {
+        "${connector_registry}": {
+          "username": "$ASTRA_ACCOUNT_ID",
+          "password": "$ASTRA_API_TOKEN",
+          "auth": "${encoded_creds}"
+        }
+      }
+    }
+EOF
+            logdebug "$kustomization_file: added connector secret to namespace $connector_namespace"
+        fi
+
+        if components_include_trident && [ "$trident_namespace" != "$connector_namespace" ]; then
+            cat <<EOF >> "$kustomization_file"
+- name: "${IMAGE_PULL_SECRET}"
+  namespace: "${trident_namespace}"
+  type: kubernetes.io/dockerconfigjson
+  literals:
+  - |
+    .dockerconfigjson={
+      "auths": {
+        "${trident_acp_registry}": {
+          "username": "$ASTRA_ACCOUNT_ID",
+          "password": "$ASTRA_API_TOKEN",
+          "auth": "${encoded_creds}"
+        }
+      }
+    }
+EOF
+            logdebug "$kustomization_file: added trident acp secret to namespace $trident_namespace"
+        fi
+    fi
+
+    insert_into_file_after_pattern "$kustomization_file" "patches:" '
+- target:
+    kind: Deployment
+  patch: |-
+    - op: replace
+      path: /spec/template/spec/imagePullSecrets
+      value:
+        - name: "'"${global_pull_secret}"'"
+'
+    logdebug "$kustomization_file: added pull secret patch ($global_pull_secret)"
+}
+
 step_generate_astra_connector_yaml() {
     local -r top_kustomization_file="$__GENERATED_KUSTOMIZATION_FILE"
     local -r connector_kustomization_file="$__GENERATED_CONNECTOR_KUSTOMIZATION_FILE"
@@ -2231,39 +2341,9 @@ EOF
       fi
     fi
     loginfo "Memory limit set to: $memory_limit GB"
-    
+
     # NAMESPACE
     add_namespace_transformer_to_kustomization "$connector_namespace" "$connector_kustomization_file"
-
-    # SECRET GENERATOR
-    cat <<EOF >> "$connector_kustomization_file"
-generatorOptions:
-  disableNameSuffixHash: true
-secretGenerator:
-- name: astra-api-token
-  namespace: "${connector_namespace}"
-  literals:
-  - apiToken="${api_token}"
-EOF
-    if [ -z "$IMAGE_PULL_SECRET" ]; then
-        cat <<EOF >> "$connector_kustomization_file"
-- name: "${connector_regcred_name}"
-  namespace: "${connector_namespace}"
-  type: kubernetes.io/dockerconfigjson
-  literals:
-  - |
-    .dockerconfigjson={
-      "auths": {
-        "${connector_registry}": {
-          "username": "${username}",
-          "password": "${password}",
-          "auth": "${encoded_creds}"
-        }
-      }
-    }
-EOF
-    fi
-    logdebug "$connector_kustomization_file: added secrets"
 
     # ASTRA CONNECTOR CR
     local labels_field_and_content_with_default=""
@@ -2517,11 +2597,10 @@ step_generate_trident_operator_patch() {
         if echo "$_EXISTING_TRIDENT_OPERATOR_PULL_SECRETS" | grep -q "^${IMAGE_PULL_SECRET}$" &> /dev/null; then
             logdebug "image pull secret '$IMAGE_PULL_SECRET' already present in trident-operator"
         else
-            local -r secret_obj='{"name": "'"$IMAGE_PULL_SECRET"'"}'
             if [ -z "$_EXISTING_TRIDENT_OPERATOR_PULL_SECRETS" ]; then
-                patch_list+=',{"op":"replace","path":"/spec/template/spec/imagePullSecrets","value":['"$secret_obj"']}'
+                patch_list+=',{"op":"replace","path":"/spec/template/spec/imagePullSecrets","value":[{"name":'"$IMAGE_PULL_SECRET"'}]}'
             else
-                patch_list+=',{"op":"add","path":"/spec/template/spec/imagePullSecrets/-","value":'"$secret_obj"'}'
+                patch_list+=',{"op":"add","path":"/spec/template/spec/imagePullSecrets/-","value":{"name":'"$IMAGE_PULL_SECRET"'}}'
             fi
         fi
     fi
@@ -2633,14 +2712,29 @@ step_apply_resources() {
     local output=""
     local captured_err=""
     if ! is_dry_run; then
+        # apply trident-acp secret if it exists
+        if [ -e "$__GENERATED_TRIDENT_ACP_SECRET_FILE" ]; then
+            output="$(kubectl apply -f "$__GENERATED_TRIDENT_ACP_SECRET_FILE" -n "$(get_trident_namespace)" 2> "$__ERR_FILE")"
+            captured_err="$(get_captured_err)"
+            if [ -z "$output" ] || [ -n "$captured_err" ]; then
+                add_problem "Failed to apply ACS registry secret: $captured_err"
+            fi
+            logdebug "$output"
+        fi
+
         output="$(kubectl apply -k "$operators_dir" 2> "$__ERR_FILE")"
         captured_err="$(get_captured_err)"
-        if echo "$captured_err" | grep -q "Warning:"; then
-            logdebug "captured warning when applying kustomize resources:${__NEWLINE}$captured_err"
-        elif echo "$captured_err" | grep -q "no objects passed to apply"; then
-            logdebug "no kustomize resources to apply, skipping"
-        elif [ -z "$output" ] || [ -n "$captured_err" ]; then
-            add_problem "Failed to apply kustomize resources: $captured_err"
+
+        if [ -n "$captured_err" ]; then
+            while IFS= read -r line; do
+                if echo "$line" | grep -q "Warning:"; then
+                    logdebug "captured warning when applying kustomize resources:${__NEWLINE}$captured_err"
+                elif echo "$line" | grep -q "no objects passed to apply"; then
+                    logdebug "no kustomize resources to apply, skipping"
+                elif [ -z "$output" ] || [ -n "$line" ]; then
+                    add_problem "Failed to apply kustomize resources: $line"
+                fi
+            done < <(echo "$captured_err")
         fi
         logdebug "kustomize apply output:${__NEWLINE}$output"
     fi
@@ -2841,14 +2935,14 @@ if trident_will_be_installed_or_modified; then
                 # Warn if trident version < 23.10 (ACP requires 23.10+)
                 if version_higher_or_equal "23.07" "$_EXISTING_TRIDENT_VERSION"; then
                     _msg="Your Astra Trident installation is at version $_EXISTING_TRIDENT_VERSION, while the"
-                    _msg+=" lowest required version to enable the Astra Control Provisioner (Trident ACP) is 23.10."
+                    _msg+=" lowest required version to enable the Astra Control Provisioner is 23.10."
                     logwarn "$_msg"
                 fi
 
                 _generate_torc_args=("$_EXISTING_TORC_NAME" "$(get_config_trident_image)" "" "" "$(get_config_trident_autosupport_image)")
                 if config_trident_image_is_custom; then
                     _warning_message="We cannot verify the version of the custom Astra Trident image you provided"
-                    _warning_message+=" ($(get_config_trident_image). Astra Control Provisioner (Trident ACP)"
+                    _warning_message+=" ($(get_config_trident_image). Astra Control Provisioner"
                     _warning_message+=" support (23.10+) is not guaranteed."
                     logwarn "$_warning_message"
 
@@ -2880,17 +2974,21 @@ if trident_will_be_installed_or_modified; then
         if components_include_acp; then
             # Enable ACP if needed (includes ACP upgrade)
             if ! acp_is_enabled; then
-                if config_acp_image_is_custom || prompt_user_yes_no "Would you like to enable the Astra Control Provisioner (Trident ACP)?"; then
+                if config_acp_image_is_custom || prompt_user_yes_no "Would you like to enable Astra Control Provisioner?"; then
+                    # create trident-acp secret
+                    generate_docker_registry_secret "$IMAGE_PULL_SECRET" "$ASTRA_ACCOUNT_ID" "$ASTRA_API_TOKEN" "$(get_trident_namespace)" "$TRIDENT_ACP_IMAGE_REGISTRY" "$__GENERATED_TRIDENT_ACP_SECRET_FILE"
                     step_generate_torc_patch "$_EXISTING_TORC_NAME" "" "$(get_config_acp_image)" "true"
                 else
-                    loginfo "The Astra Control Provisioner (Trident ACP) will not be enabled."
+                    loginfo "Astra Control Provisioner will not be enabled."
                 fi
             # ACP upgrade (ACP already enabled)
             elif acp_image_needs_upgraded; then
-                if config_acp_image_is_custom || prompt_user_yes_no "Would you like to upgrade the Astra Control Provisioner (Trident ACP)?"; then
+                if config_acp_image_is_custom || prompt_user_yes_no "Would you like to upgrade Astra Control Provisioner?"; then
+                    # create trident-acp secret
+                    generate_docker_registry_secret "$IMAGE_PULL_SECRET" "$ASTRA_ACCOUNT_ID" "$ASTRA_API_TOKEN" "$(get_trident_namespace)" "$TRIDENT_ACP_IMAGE_REGISTRY" "$__GENERATED_TRIDENT_ACP_SECRET_FILE"
                     step_generate_torc_patch "$_EXISTING_TORC_NAME" "" "$(get_config_acp_image)" "true"
                 else
-                    loginfo "The Astra Control Provisioner (Trident ACP) will not be upgraded."
+                    loginfo "Astra Control Provisioner will not be upgraded."
                 fi
             fi
         else
