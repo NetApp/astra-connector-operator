@@ -1834,7 +1834,7 @@ step_check_k8s_permissions() {
     if [ "$has_permission" == "yes" ]; then
         logdebug "k8s permissions: OK"
         return 0
-    elif [ "$has_permission" == "no" ]; then
+    elif echo "$has_permission" | grep -q "no"; then
         add_problem "Kubernetes user does not have admin privileges"
     elif [ -n "$captured_err" ]; then
         add_problem "Failed to check if Kubernetes user has admin privilege: $captured_err"
