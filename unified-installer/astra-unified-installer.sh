@@ -156,7 +156,7 @@ get_configs() {
     KUBECONFIG="${KUBECONFIG}"
     COMPONENTS="${COMPONENTS:-$__COMPONENTS_ALL_ASTRA_CONTROL}" # Determines what we'll install/upgrade
     IMAGE_PULL_SECRET="${IMAGE_PULL_SECRET:-}" # TODO ASTRACTL-32772: skip prompt if IMAGE_REGISTRY is default
-    NAMESPACE="${NAMESPACE:-}" # Overrides EVERY resource's namespace (for fresh installs only, not upgrades)
+    NAMESPACE="${NAMESPACE:-}"
         CONNECTOR_NAMESPACE="$(get_connector_namespace)"
         TRIDENT_NAMESPACE="$(get_trident_namespace)"
     LABELS="${LABELS:-}"
@@ -943,6 +943,9 @@ join_rpath() {
     echo "$joined"
 }
 
+# join_str will use the given separator to join all given args beyond the first.
+# Usage: join_str "," "one" "two" "three"
+# Output: one,two,three
 join_str() {
     local -r separator="${1}"
     local -ar strings_to_join=("${@:2}")
