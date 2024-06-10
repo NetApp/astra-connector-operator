@@ -12,6 +12,9 @@
 _PROBLEMS=() # Any failed checks will be added to this array and the program will exit at specific checkpoints if not empty
 _CONFIG_BUILDER=() # Contains the fully resolved config to be output at the end during a dry run
 _KUBERNETES_VERSION=""
+# _RESOURCES_OR_PATCHES_HAVE_BEEN_APPLIED is to determine whether the script did anything or not, so we can
+# let the user if it was a no-op.
+_RESOURCES_OR_PATCHES_HAVE_BEEN_APPLIED="false"
 
 # _TRIDENT_COLLECTION_STEP_CALLED is used as a guardrail to prevent certain functions from being called before
 # existing Trident information (if any) has been collected.
@@ -65,6 +68,9 @@ readonly __COMPONENTS_ACP_ONLY="ACP_ONLY"
 readonly __COMPONENTS_VALID_VALUES=("$__COMPONENTS_ALL_ASTRA_CONTROL" "$__COMPONENTS_TRIDENT_AND_ACP" \
     "$__COMPONENTS_TRIDENT_ONLY" "$__COMPONENTS_ACP_ONLY")
 
+readonly __ASTRA_API_TOKEN_PULL_SECRET="astra-api-token"
+readonly __ASTRA_REGISTRY_IMAGE_PULL_SECRET="astra-regcred"
+
 readonly __DEFAULT_DOCKER_HUB_IMAGE_REGISTRY="docker.io"
 readonly __DEFAULT_DOCKER_HUB_IMAGE_BASE_REPO="netapp"
 readonly __DEFAULT_ASTRA_IMAGE_REGISTRY="cr.astra.netapp.io"
@@ -87,10 +93,15 @@ readonly __PRODUCTION_AUTOSUPPORT_URL="https://support.netapp.com/put/AsupPut"
 readonly __GENERATED_CRS_DIR="./astra-generated"
 readonly __GENERATED_CRS_FILE="$__GENERATED_CRS_DIR/crs.yaml"
 readonly __GENERATED_OPERATORS_DIR="$__GENERATED_CRS_DIR/operators"
+readonly __GENERATED_OPERATORS_TRIDENT_DIR="$__GENERATED_CRS_DIR/operators/trident"
+readonly __GENERATED_OPERATORS_CONNECTOR_DIR="$__GENERATED_CRS_DIR/operators/connector"
 readonly __GENERATED_KUSTOMIZATION_FILE="$__GENERATED_OPERATORS_DIR/kustomization.yaml"
+readonly __GENERATED_TRIDENT_KUSTOMIZATION_FILE="$__GENERATED_OPERATORS_TRIDENT_DIR/kustomization.yaml"
+readonly __GENERATED_CONNECTOR_KUSTOMIZATION_FILE="$__GENERATED_OPERATORS_CONNECTOR_DIR/kustomization.yaml"
+
 readonly __GENERATED_PATCHES_TORC_FILE="$__GENERATED_CRS_DIR/post-deploy-patches_torc"
 readonly __GENERATED_PATCHES_TRIDENT_OPERATOR_FILE="$__GENERATED_OPERATORS_DIR/post-deploy-patches_trident-operator"
-readonly __GENERATED_TRIDENT_ACP_SECRET_FILE="$__GENERATED_OPERATORS_DIR/trident-acp-secret.yaml"
+readonly __GENERATED_TRIDENT_ACP_SECRET_FILE="$__GENERATED_CRS_DIR/trident-acp-secret.yaml"
 
 readonly __DEBUG=10
 readonly __INFO=20
@@ -146,6 +157,8 @@ get_configs() {
     COMPONENTS="${COMPONENTS:-$__COMPONENTS_ALL_ASTRA_CONTROL}" # Determines what we'll install/upgrade
     IMAGE_PULL_SECRET="${IMAGE_PULL_SECRET:-}" # TODO ASTRACTL-32772: skip prompt if IMAGE_REGISTRY is default
     NAMESPACE="${NAMESPACE:-}" # Overrides EVERY resource's namespace (for fresh installs only, not upgrades)
+        CONNECTOR_NAMESPACE="$(get_connector_namespace)"
+        TRIDENT_NAMESPACE="$(get_trident_namespace)"
     LABELS="${LABELS:-}"
     # SKIP_TLS_VALIDATION will skip TLS validation for all requests made during the script.
     SKIP_TLS_VALIDATION="${SKIP_TLS_VALIDATION:-"false"}"
@@ -249,7 +262,9 @@ Optional Environment Variables:
   ----- General Configuration
   COMPONENTS                         One of [${__COMPONENTS_VALID_VALUES[*]}]. Determines what will be installed/upgraded. Default is ALL_ASTRA_CONTROL.
   IMAGE_PULL_SECRET                  Image pull secret for the Docker registry.
-  NAMESPACE                          Overrides EVERY resource's namespace (for fresh installs only, not upgrades).
+  NAMESPACE                          Sets the namespace for all applied resources. If an existing Trident installation is found, its namespace will instead be used for all Trident operations. Overridden by _NAMESPACE values below.
+  CONNECTOR_NAMESPACE                Sets the namespace for all applied Astra Connector resources. Defaults to 'astra-connector'.
+  TRIDENT_NAMESPACE                  Sets the namespace for all applied Astra Trident resources. If an existing Trident installation is found, its namespace will instead be used for all Trident operations. Defaults to 'trident'.
   LABELS                             Labels to be added to the generated resources (disclaimer: does not apply labels to resources created by the operators).
   RESOURCE_LIMITS_PRESET             Resource limit preset to use. Overridden by RESOURCE_LIMITS_CUSTOM_CPU and RESOURCE_LIMITS_CUSTOM_MEMORY (disclaimer: resource limits not currently supported by Astra Trident).
   RESOURCE_LIMITS_CUSTOM_CPU         Custom CPU resource limit. Plain number.
@@ -328,6 +343,7 @@ ingest_config_string() {
 load_config_from_file_if_given() {
     local config_file=$1
     local api_token=$ASTRA_API_TOKEN
+    local ingested_api_token_through_config_file="false"
     local token_warning="We detected that your ASTRA_API_TOKEN was provided through the CONFIG_FILE,"
     token_warning+=" which may pose a security risk! Make sure to store the configuration file in a secure location,"
     token_warning+=" or consider moving the API token out of the file and providing it through the command line only when needed."
@@ -357,17 +373,20 @@ load_config_from_file_if_given() {
 
     # Set config file values first
     ingest_config_string "$(cat "$config_file")"
-    set_log_level
 
     # Check if api token was populated after sourcing config file
     if [ "$api_token" != "$ASTRA_API_TOKEN" ]; then
-        logwarn "$token_warning"
+        ingested_api_token_through_config_file="true"
     fi
 
     # Set previous env second to allow vars provided through the command line to take priority
     ingest_config_string "$previous_env_double_quoted"
     set_log_level
 
+    # Print the token warning AFTER applying the previous env to make sure we respect the final resolved log level
+    if [ "$ingested_api_token_through_config_file" == "true" ]; then
+        logwarn "$token_warning"
+    fi
     logheader $__DEBUG "Loaded configuration from file: $config_file"
 }
 
@@ -413,15 +432,15 @@ components_include_acp() {
 }
 
 get_trident_namespace() {
-    echo "${_EXISTING_TRIDENT_NAMESPACE:-"${NAMESPACE:-"${__DEFAULT_TRIDENT_NAMESPACE}"}"}"
+    echo "${_EXISTING_TRIDENT_NAMESPACE:-"${TRIDENT_NAMESPACE:-"${NAMESPACE:-"$__DEFAULT_TRIDENT_NAMESPACE"}"}"}"
 }
 
 get_connector_operator_namespace() {
-    echo "${NAMESPACE:-"${__DEFAULT_CONNECTOR_OPERATOR_NAMESPACE}"}"
+    get_connector_namespace
 }
 
 get_connector_namespace() {
-    echo "${NAMESPACE:-"${__DEFAULT_CONNECTOR_NAMESPACE}"}"
+    echo "${CONNECTOR_NAMESPACE:-"${NAMESPACE:-"$__DEFAULT_CONNECTOR_NAMESPACE"}"}"
 }
 
 existing_trident_can_be_modified() {
@@ -753,6 +772,19 @@ fatal() {
     exit 1
 }
 
+# remove_kubectl_warnings_from_error_output will output kubectl warnings to stderr and actual errors
+# to stdout, allowing one to examine proper errors separately from warnings.
+# Usage: local -r actual_errors="$(echo "$my_error_output" | remove_kubectl_warnings_from_error_output)"
+remove_kubectl_warnings_from_error_output() {
+    while IFS= read -r line; do
+        if echo "$line" | grep -q "Warning:"; then
+            logdebug "captured kubectl apply warning:${__NEWLINE}$line" 1>&2
+        else
+            echo "$line"
+        fi
+    done
+}
+
 insert_into_file_after_pattern() {
     local -r filepath="$1"
     local -r pattern="$2"
@@ -790,6 +822,12 @@ append_lines_to_file() {
 
     [ -z "$file" ] && fatal "no file given"
     [ "${#lines[@]}" -eq 0 ] && fatal "no lines given"
+
+    if [ ! -f "$file" ]; then
+        if ! touch "$file" 1> /dev/null; then
+            fatal "failed to create file '$file'"
+        fi
+    fi
 
     for line in "${lines[@]}"; do
         echo "$line"
@@ -905,6 +943,30 @@ join_rpath() {
     echo "$joined"
 }
 
+join_str() {
+    local -r separator="${1}"
+    local -ar strings_to_join=("${@:2}")
+    [ "${#strings_to_join[@]}" -eq 0 ] && return 0
+    [ "${#strings_to_join[@]}" -eq 1 ] && echo "$2" && return 0
+    [ -z "$separator" ] && fatal "no separator given"
+
+    local joined=""
+    for str in "${strings_to_join[@]}" ; do
+        [ -n "$joined" ] && joined+="$separator"
+        joined+="$str"
+    done
+
+    echo "$joined"
+}
+
+# is_empty returns 0 (true) if no args or a single empty arg is provided.
+is_empty() {
+    local -r args=("${@}")
+    [ "${#args[@]}" -eq 0 ] && return 0
+    [ "${#args[@]}" -eq 1 ] && [ -z "${args[0]}" ] && return 0
+    return 1
+}
+
 # starts_with checks if a string starts with the given substring.
 # Usage: `echo "abc" | starts_with "ab"` returns 0 (true).
 starts_with() {
@@ -973,7 +1035,7 @@ get_base_repo() {
     local -r image_repo="$1"
     if [ -z "$image_repo" ]; then fatal "no image_repo given"; fi
 
-    local -r base="$(dirname "$image_repo")"
+    local base; base="$(dirname "$image_repo")"
     if [ "$base" == "." ]; then base="$image_repo"; fi
 
     echo "$base"
@@ -1117,10 +1179,175 @@ is_astra_registry() {
     local -r registry_url="$1"
     if [ -z "$registry_url" ]; then fatal "no registry_url given"; fi
 
-    if echo "$registry" | grep -q "cr." && echo "$registry" | grep -q "astra"; then
+    if echo "$registry_url" | grep -q "cr." && echo "$registry_url" | grep -q "astra"; then
         return 0
     fi
     return 1
+}
+
+# find_astra_registry loops through the given list of registries and returns the first one which matches the
+# pattern of an Astra registry.
+find_astra_registry() {
+    local -ar registries=("$@")
+    for reg in "${registries[@]}" ; do
+        if is_astra_registry "$reg"; then
+            echo "$reg"
+            return 0
+        fi
+    done
+    return 1
+}
+
+find_astra_registry_in_connector_images() {
+    find_astra_registry "$CONNECTOR_IMAGE_REGISTRY" "$NEPTUNE_IMAGE_REGISTRY" "$CONNECTOR_OPERATOR_IMAGE_REGISTRY"
+}
+
+find_astra_registry_in_trident_images() {
+    find_astra_registry "$TRIDENT_OPERATOR_IMAGE_REGISTRY" "$TRIDENT_AUTOSUPPORT_IMAGE_REGISTRY" \
+        "$TRIDENT_IMAGE_REGISTRY" "$TRIDENT_ACP_IMAGE_REGISTRY"
+}
+
+generate_kustomization_dirs_and_files() {
+    local -r kustomization_file="$1"
+    local -r add_as_resource_to_top_kustomization_file="${2:-"false"}"
+    local -r kustomization_dir="$(dirname "$kustomization_file")"
+
+    mkdir -p "$kustomization_dir"
+    if [ ! -f "$kustomization_file" ]; then
+        cat <<EOF > "$kustomization_file"
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+patches:
+transformers:
+generatorOptions:
+  disableNameSuffixHash: true
+secretGenerator:
+EOF
+        logdebug "$kustomization_file: OK"
+    fi
+
+    if [ "$add_as_resource_to_top_kustomization_file" == "true" ]; then
+        local -r top_kustomization_file="$__GENERATED_KUSTOMIZATION_FILE"
+        local -r base_dir="$(basename "$kustomization_dir")"
+        insert_into_file_after_pattern "$top_kustomization_file" "resources:" "- ./$base_dir"
+        logdebug "$top_kustomization_file: added resource entry for resource at path '$base_dir'"
+    fi
+}
+
+add_astra_registry_secret_to_kustomization() {
+    local -r kustomization_file="${1}"
+    local -r namespace="${2}"
+    local -r registry="${3}"
+    [ -z "$kustomization_file" ] && fatal "no kustomization file given"
+    [ ! -f "$kustomization_file" ] && fatal "kustomization file '$kustomization_file' does not exist"
+    [ -z "$namespace" ] && fatal "no namespace given"
+    [ -z "$registry" ] && fatal "no registry given"
+
+    local -r account_id="$ASTRA_ACCOUNT_ID"
+    local -r api_token="$ASTRA_API_TOKEN"
+    local -r pull_secret="$__ASTRA_REGISTRY_IMAGE_PULL_SECRET"
+    [ -z "$account_id" ] && fatal "no account_id found"
+    [ -z "$api_token" ] && fatal "no api_token found"
+    [ -z "$pull_secret" ] && fatal "no pull_secret found"
+
+    local -r encoded_creds=$(echo -n "$account_id:$api_token" | base64)
+
+    # Add secret generator
+    insert_into_file_after_pattern "$kustomization_file" "secretGenerator:" \
+'- name: "'"$pull_secret"'"
+  namespace: "'"$namespace"'"
+  type: kubernetes.io/dockerconfigjson
+  literals:
+  - |
+    .dockerconfigjson={
+      "auths": {
+        "'"$registry"'": {
+          "username": "'"$account_id"'",
+          "password": "'"$api_token"'",
+          "auth": "'"$encoded_creds"'"
+        }
+      }
+    }'
+    logdebug "$kustomization_file: added secret '$pull_secret' to namespace '$namespace'"
+}
+
+add_api_token_secret_to_kustomization() {
+    local -r kustomization_file="${1}"
+    local -r namespace="${2}"
+    [ -z "$kustomization_file" ] && fatal "no kustomization file given"
+    [ ! -f "$kustomization_file" ] && fatal "kustomization file '$kustomization_file' does not exist"
+    [ -z "$namespace" ] && fatal "no namespace given"
+
+    local -r api_token="$ASTRA_API_TOKEN"
+    local -r pull_secret="$__ASTRA_API_TOKEN_PULL_SECRET"
+    [ -z "$api_token" ] && fatal "no api_token found"
+    [ -z "$pull_secret" ] && fatal "no pull_secret found"
+
+    # Add API token secret
+    insert_into_file_after_pattern "$kustomization_file" "secretGenerator:" \
+"- name: \"${pull_secret}\"
+  namespace: \"${namespace}\"
+  literals:
+  - apiToken=\"${api_token}\""
+    logdebug "$kustomization_file: added secret '$pull_secret' to namespace '$namespace'"
+}
+
+add_imagepullsecret_patch_to_kustomization() {
+    local -r kustomization_file="${1}"
+    local -a pull_secrets=("${@:2}")
+
+    [ -z "$kustomization_file" ] && fatal "no kustomization file given"
+    [ ! -f "$kustomization_file" ] && fatal "kustomization file '$kustomization_file' does not exist"
+    [ "${#pull_secrets[@]}" -eq 0 ] && fatal "no pull secrets given"
+
+    local patch_entries=""
+    for secret in "${pull_secrets[@]}" ; do
+        is_empty "$secret" && fatal "one of the given secrets is empty"
+        patch_entries+="${__NEWLINE}        - name: \"${secret}\""
+    done
+
+    insert_into_file_after_pattern "$kustomization_file" "patches:" \
+'- target:
+    kind: Deployment
+  patch: |-
+    - op: replace
+      path: /spec/template/spec/imagePullSecrets
+      value:'"${patch_entries}"''
+    logdebug "$kustomization_file: added pull secret patch for [${pull_secrets[*]}]"
+}
+
+add_namespace_transformer_to_kustomization() {
+    local -r namespace="${1:-""}"
+    local -r kustomization_file="${2}"
+    local -r kustomization_dir="$(dirname "$kustomization_file")"
+
+    [ -z "$namespace" ] && fatal "no namespace given"
+    [ -z "$kustomization_file" ] && fatal "no kustomization file given"
+    [ ! -f "$kustomization_file" ] && fatal "kustomization file '$kustomization_file' does not exist"
+
+    # Add kustomization to set metadata.namespace where it's not already set
+    echo "namespace: $namespace" >> "$kustomization_file"
+    logdebug "$kustomization_file: added namespace field ($namespace)"
+
+    # This transformer is more forceful than the `namespace` field above but is necessary to set
+    # the namespace on a few resources that aren't caught by the former (the subjects in rolebindings for example).
+    local -r transformer_file_name="namespace-transformer.yaml"
+    cat <<EOF > "$kustomization_dir/$transformer_file_name"
+apiVersion: builtin
+kind: NamespaceTransformer
+metadata:
+  name: thisFieldDoesNotActuallyMatterForTransformers
+  namespace: "${namespace}"
+fieldSpecs:
+- path: metadata/namespace
+  create: true
+EOF
+    if ! grep -q "^transformers:" < "$kustomization_file"; then
+        echo "transformers:" >> "$kustomization_file"
+    fi
+    insert_into_file_after_pattern "$kustomization_file" "transformers:" "- $transformer_file_name"
+    logdebug "$kustomization_file: added namespace transformer ($transformer_file_name)"
 }
 
 generate_docker_registry_secret() {
@@ -1708,16 +1935,7 @@ step_check_config() {
     done
 
     # Env vars with special conditions
-    if [ -n "$IMAGE_PULL_SECRET" ]; then
-        if [ -z "$NAMESPACE" ]; then
-            local -r ns_warning="NAMESPACE is required when specifying an IMAGE_PULL_SECRET"
-            if prompts_disabled; then
-                add_problem "$ns_warning"
-            else
-                prompt_user "NAMESPACE" "$ns_warning. Please enter the namespace:"
-            fi
-        fi
-    elif get_config_custom_registries_with_repo &> /dev/null; then
+    if [ -z "$IMAGE_PULL_SECRET" ] && get_config_custom_registries_with_repo &> /dev/null; then
         local custom_reg_warning="We detected one or more custom registry or repo values"
         custom_reg_warning+=", but no IMAGE_PULL_SECRET was specified. If any of your images are hosted in a private"
         custom_reg_warning+=" registry, an image pull secret will need to be created and IMAGE_PULL_SECRET set."
@@ -1729,6 +1947,8 @@ step_check_config() {
     fi
     add_to_config_builder "IMAGE_PULL_SECRET"
     add_to_config_builder "NAMESPACE"
+    add_to_config_builder "CONNECTOR_NAMESPACE"
+    add_to_config_builder "TRIDENT_NAMESPACE"
 
     if prompts_disabled; then
         if [ -z "$DO_NOT_MODIFY_EXISTING_TRIDENT" ]; then
@@ -1857,11 +2077,11 @@ step_check_volumesnapshotclasses() {
 }
 
 step_check_namespace_and_pull_secret_exist() {
-    local -r namespace="$NAMESPACE"
-    local -r pull_secret="$IMAGE_PULL_SECRET"
+    local -r namespace="$1"
+    local -r pull_secret="${2:-""}"
     local err_msg=""
 
-    [ -z "$namespace" ] && return 0
+    [ -z "$namespace" ] && fatal "no namespace given"
 
     # Get the first custom registry we come across to put in the `kubectl create secret` command of the error message
     local registry="<REGISTRY>"
@@ -1873,7 +2093,7 @@ step_check_namespace_and_pull_secret_exist() {
 
     if ! k8s_resource_exists "namespace/$namespace"; then
         if [ -n "$pull_secret" ]; then
-            err_msg="The specified NAMESPACE '$namespace' does not exist on the cluster, but IMAGE_PULL_SECRET is set."
+            err_msg="The specified namespace '$namespace' does not exist on the cluster, but IMAGE_PULL_SECRET is set."
             err_msg+=" Please create the namespace and secret:"
             err_msg+="${__NEWLINE}    - kubectl create namespace '$namespace'"
             err_msg+="${__NEWLINE}    - $create_secret_cmd"
@@ -1881,7 +2101,11 @@ step_check_namespace_and_pull_secret_exist() {
             exit_if_problems
         fi
         if prompt_user_yes_no "The namespace $namespace doesn't exist. Create it now? Choosing 'no' will exit"; then
-            kubectl create namespace "$namespace" --dry-run=client -o yaml | kubectl apply -f -
+            if ! is_dry_run; then
+                kubectl create namespace "$namespace" --dry-run=client -o yaml | kubectl apply -f -
+            else
+                logdebug "$(prefix_dryrun) create namespace '$namespace'"
+            fi
             logdebug "namespace '$namespace': OK"
         else
             err_msg="User chose not to create the namespace. Please create the namespace and/or run the script again."
@@ -2104,23 +2328,6 @@ step_check_kubeconfig_choice() {
     fi
 }
 
-# step_query_user_for_resource_count is used to query the user on the number of nodes/namespaces they expect
-# to have on their cluster, which will help us recommend the appropriate resource limit preset.
-step_detect_resource_count() {
-    local -r resource="$1"
-    if ! str_matches_at_least_one "$resource" "namespaces" "nodes"; then
-        fatal "invalid resource '$resource': only 'namespaces' or 'nodes' supported"
-    fi
-
-    _count="$(k8s_get_resource "$resource" "" "json" | jq -r '.items | length' 2> /dev/null)"
-    if [ -z "$_count" ] || [ "$_count" -lt 1 ]; then
-        _count=""
-    fi
-
-    logdebug "Found '$_count' $resource."
-    _return_value="$_count"
-}
-
 step_init_generated_dirs_and_files() {
     local -r kustomization_file="$__GENERATED_KUSTOMIZATION_FILE"
     local -r kustomization_dir="$(dirname "$kustomization_file")"
@@ -2133,136 +2340,14 @@ step_init_generated_dirs_and_files() {
 
     rm -rf "$kustomization_dir" "$crs_dir"
     mkdir -p "$crs_dir"
-    mkdir -p "$kustomization_dir"
 
-    if [ ! -f "$kustomization_file" ]; then
-        cat <<EOF > "$kustomization_file"
-apiVersion: kustomize.config.k8s.io/v1beta1
-kind: Kustomization
-resources:
-patches:
-transformers:
-EOF
-        logdebug "$kustomization_file: OK"
-    fi
-}
-
-step_kustomize_global_namespace_if_needed() {
-    local -r global_namespace="${1:-""}"
-    local -r kustomization_file="${2}"
-    local -r kustomization_dir="$(dirname "$kustomization_file")"
-    [ -z "$global_namespace" ] && return 0
-
-    [ -z "$kustomization_file" ] && fatal "no kustomization file given"
-    [ ! -f "$kustomization_file" ] && fatal "kustomization file '$kustomization_file' does not exist"
-
-    # Add kustomization to set metadata.namespace where it's not already set
-    echo "namespace: $global_namespace" >> "$kustomization_file"
-    logdebug "$kustomization_file: added namespace field ($global_namespace)"
-
-    # This transformer is more forceful than the `namespace` field above but is necessary to set
-    # the namespace on a few resources that aren't caught by the former (the subjects in rolebindings for example).
-    local -r transformer_file_name="namespace-transformer.yaml"
-    cat <<EOF > "$kustomization_dir/$transformer_file_name"
-apiVersion: builtin
-kind: NamespaceTransformer
-metadata:
-  name: thisFieldDoesNotActuallyMatterForTransformers
-  namespace: "${global_namespace}"
-fieldSpecs:
-- path: metadata/namespace
-  create: true
-EOF
-    insert_into_file_after_pattern "$kustomization_file" "transformers:" "- $transformer_file_name"
-    logdebug "$kustomization_file: added namespace transformer ($transformer_file_name)"
-}
-
-step_kustomize_global_pull_secret_if_needed() {
-    local -r global_pull_secret="${1:-""}"
-    local -r kustomization_file="${2}"
-    local -r kustomization_dir="$(dirname "$kustomization_file")"
-    local -r connector_namespace="$(get_connector_namespace)"
-    local -r trident_namespace="$(get_trident_namespace)"
-    local -r connector_registry="$(join_rpath "$CONNECTOR_IMAGE_REGISTRY" "$(get_base_repo "$CONNECTOR_IMAGE_REPO")")"
-    local -r trident_acp_registry="$(join_rpath "$TRIDENT_ACP_IMAGE_REGISTRY" "$(get_base_repo "$TRIDENT_ACP_IMAGE_REPO")")"
-    local -r encoded_creds=$(echo -n "$ASTRA_ACCOUNT_ID:$ASTRA_API_TOKEN" | base64)
-
-    [ -z "$kustomization_file" ] && fatal "no kustomization file given"
-    [ ! -f "$kustomization_file" ] && fatal "kustomization file '$kustomization_file' does not exist"
-
-       # SECRET GENERATOR
-    cat <<EOF >> "$kustomization_file"
-generatorOptions:
-  disableNameSuffixHash: true
-secretGenerator:
-- name: astra-api-token
-  namespace: "${connector_namespace}"
-  literals:
-  - apiToken="${ASTRA_API_TOKEN}"
-EOF
-    if [ -z "$global_pull_secret" ]; then
-        # if image pull secret is empty, set same name for connector and trident secret so torc patch works as expected
-        IMAGE_PULL_SECRET="astra-regcred"
-        if components_include_connector; then
-            cat <<EOF >> "$kustomization_file"
-- name: "${IMAGE_PULL_SECRET}"
-  namespace: "${connector_namespace}"
-  type: kubernetes.io/dockerconfigjson
-  literals:
-  - |
-    .dockerconfigjson={
-      "auths": {
-        "${connector_registry}": {
-          "username": "$ASTRA_ACCOUNT_ID",
-          "password": "$ASTRA_API_TOKEN",
-          "auth": "${encoded_creds}"
-        }
-      }
-    }
-EOF
-            logdebug "$kustomization_file: added connector secret to namespace $connector_namespace"
-        fi
-    
-        if components_include_trident && [ "$trident_namespace" != "$connector_namespace" ]; then
-            cat <<EOF >> "$kustomization_file"
-- name: "${IMAGE_PULL_SECRET}"
-  namespace: "${trident_namespace}"
-  type: kubernetes.io/dockerconfigjson
-  literals:
-  - |
-    .dockerconfigjson={
-      "auths": {
-        "${trident_acp_registry}": {
-          "username": "$ASTRA_ACCOUNT_ID",
-          "password": "$ASTRA_API_TOKEN",
-          "auth": "${encoded_creds}"
-        }
-      }
-    }
-EOF
-            logdebug "$kustomization_file: added trident acp secret to namespace $trident_namespace"
-        fi
-    fi
-
-    insert_into_file_after_pattern "$kustomization_file" "patches:" '
-- target:
-    kind: Deployment
-  patch: |-
-    - op: replace
-      path: /spec/template/spec/imagePullSecrets
-      value:
-        - name: "'"${global_pull_secret}"'"
-'
-    logdebug "$kustomization_file: added pull secret patch ($global_pull_secret)"
+    generate_kustomization_dirs_and_files "$kustomization_file"
 }
 
 step_generate_astra_connector_yaml() {
-    local -r kustomization_file="$__GENERATED_KUSTOMIZATION_FILE"
-    local -r kustomization_dir="$(dirname "$kustomization_file")"
+    local -r connector_kustomization_file="$__GENERATED_CONNECTOR_KUSTOMIZATION_FILE"
     local -r crs_file="$__GENERATED_CRS_FILE"
 
-    [ ! -d "$kustomization_dir" ] && fatal "kustomization directory '$kustomization_dir' does not exist"
-    [ ! -f "$kustomization_file" ] && fatal "kustomization file '$kustomization_file' does not exist"
     [ ! -f "$crs_file" ] && touch "$crs_file"
 
     logheader $__DEBUG "Generating Astra Connector YAML files..."
@@ -2285,9 +2370,25 @@ step_generate_astra_connector_yaml() {
     local -r password="$api_token"
     local -r encoded_creds=$(echo -n "$username:$password" | base64)
 
-    insert_into_file_after_pattern "$kustomization_file" "resources:" \
+    generate_kustomization_dirs_and_files "$connector_kustomization_file" "true"
+    insert_into_file_after_pattern "$connector_kustomization_file" "resources:" \
         "- https://github.com/NetApp/astra-connector-operator/unified-installer/?ref=$__GIT_REF_CONNECTOR_OPERATOR"
-    logdebug "$kustomization_file: added resources entry for connector kustomization"
+    logdebug "$connector_kustomization_file: added resources entry for connector kustomization"
+
+    # API TOKEN secret
+    add_api_token_secret_to_kustomization "$connector_kustomization_file" "$connector_namespace" "$connector_registry"
+
+    # REGISTRY secrets
+    local -a pull_secrets=()
+    local -r astra_reg="$(find_astra_registry_in_connector_images)"
+    if [ -n "$IMAGE_PULL_SECRET" ]; then pull_secrets+=("$IMAGE_PULL_SECRET"); fi
+    if [ -n "$astra_reg" ]; then
+        pull_secrets+=("$__ASTRA_REGISTRY_IMAGE_PULL_SECRET")
+        add_astra_registry_secret_to_kustomization "$connector_kustomization_file" "$connector_namespace" "$astra_reg"
+    fi
+    if ! is_empty "${pull_secrets[@]}"; then
+        add_imagepullsecret_patch_to_kustomization "$connector_kustomization_file" "${pull_secrets[@]}"
+    fi
 
     # Default memory limit
     memory_limit=2
@@ -2308,6 +2409,9 @@ step_generate_astra_connector_yaml() {
       fi
     fi
     loginfo "Memory limit set to: $memory_limit GB"
+
+    # NAMESPACE
+    add_namespace_transformer_to_kustomization "$connector_namespace" "$connector_kustomization_file"
 
     # ASTRA CONNECTOR CR
     local labels_field_and_content_with_default=""
@@ -2488,31 +2592,51 @@ step_existing_trident_flags_compatibility_check() {
 }
 
 step_generate_trident_fresh_install_yaml() {
-    local -r kustomization_file="$__GENERATED_KUSTOMIZATION_FILE"
+    local -r trident_kustomization_file="$__GENERATED_TRIDENT_KUSTOMIZATION_FILE"
     local -r crs_file="$__GENERATED_CRS_FILE"
-    [ ! -f "$kustomization_file" ] && fatal "kustomization file '$kustomization_file' does not exist"
+
     [ ! -f "$crs_file" ] && touch "$crs_file"
 
     logheader $__DEBUG "Generating Astra Trident YAML files..."
+    generate_kustomization_dirs_and_files "$trident_kustomization_file" "true"
 
     # TODO point to https://github.com/NetApp/trident when 24.06 image is available
-    insert_into_file_after_pattern "$kustomization_file" "resources:" \
+    insert_into_file_after_pattern "$trident_kustomization_file" "resources:" \
         "- https://github.com/NetApp/astra-connector-operator/trident-temp/deploy?ref=$__GIT_REF_TRIDENT"
-    logdebug "$kustomization_file: added resources entry for trident operator"
+    logdebug "$trident_kustomization_file: added resources entry for trident operator"
 
     local -r torc_name="$__DEFAULT_TORC_NAME"
     local -r trident_image="$(get_config_trident_image)"
     local -r autosupport_image="$(get_config_trident_autosupport_image)"
     local -r acp_image="$(get_config_acp_image)"
     local -r namespace="$(get_trident_namespace)"
-    local pull_secret="[]"
     local enable_acp="true"
     local labels_field_and_content=""
-    if [ -n "$IMAGE_PULL_SECRET" ]; then pull_secret='["'$IMAGE_PULL_SECRET'"]'; fi
     if [ -n "$_PROCESSED_LABELS_WITH_DEFAULT" ]; then
         labels_field_and_content="${__NEWLINE}  labels:${__NEWLINE}${_PROCESSED_LABELS_WITH_DEFAULT}"
     fi
 
+    # PULL SECRETS
+    # Note: even if the user specified an IMAGE_PULL_SECRET, we still check if there's an Astra registry
+    # in the Trident images and generate/add a secret for it just in case
+    local -a torc_pull_secrets=()
+    local -r astra_reg="$(find_astra_registry_in_trident_images)"
+    if [ -n "$IMAGE_PULL_SECRET" ]; then
+        torc_pull_secrets+=("$IMAGE_PULL_SECRET");
+    fi
+    if [ -n "$astra_reg" ]; then
+        torc_pull_secrets+=("$__ASTRA_REGISTRY_IMAGE_PULL_SECRET")
+        add_astra_registry_secret_to_kustomization "$trident_kustomization_file" "$namespace" "$astra_reg"
+    fi
+    if ! is_empty "${torc_pull_secrets[@]}"; then
+        add_imagepullsecret_patch_to_kustomization "$trident_kustomization_file" "${torc_pull_secrets[@]}"
+    fi
+    local -r torc_pull_secrets_str="[$(join_str "," "${torc_pull_secrets[@]}")]"
+
+    # NAMESPACE
+    add_namespace_transformer_to_kustomization "$namespace" "$trident_kustomization_file"
+
+    # TORC
     cat <<EOF >> "$crs_file"
 apiVersion: trident.netapp.io/v1
 kind: TridentOrchestrator
@@ -2523,7 +2647,7 @@ spec:
   autosupportImage: "${autosupport_image}"
   namespace: "${namespace}"
   tridentImage: "${trident_image}"
-  imagePullSecrets: ${pull_secret}
+  imagePullSecrets: ${torc_pull_secrets_str}
   enableACP: ${enable_acp}
   acpImage: "${acp_image}"
 ---
@@ -2547,9 +2671,9 @@ step_generate_trident_operator_patch() {
             logdebug "image pull secret '$IMAGE_PULL_SECRET' already present in trident-operator"
         else
             if [ -z "$_EXISTING_TRIDENT_OPERATOR_PULL_SECRETS" ]; then
-                patch_list+=',{"op":"replace","path":"/spec/template/spec/imagePullSecrets","value":[{"name":'"$IMAGE_PULL_SECRET"'}]}'
+                patch_list+=',{"op":"replace","path":"/spec/template/spec/imagePullSecrets","value":[{"name":"'"$IMAGE_PULL_SECRET"'"}]}'
             else
-                patch_list+=',{"op":"add","path":"/spec/template/spec/imagePullSecrets/-","value":{"name":'"$IMAGE_PULL_SECRET"'}}'
+                patch_list+=',{"op":"add","path":"/spec/template/spec/imagePullSecrets/-","value":{"name":"'"$IMAGE_PULL_SECRET"'"}}'
             fi
         fi
     fi
@@ -2590,15 +2714,27 @@ step_generate_torc_patch() {
     fi
 
     # Update image pull secrets if needed
-    if [ -n "$IMAGE_PULL_SECRET" ]; then
-        if echo "$_EXISTING_TORC_PULL_SECRETS" | grep -q "^${IMAGE_PULL_SECRET}$" &> /dev/null; then
-            logdebug "image pull secret '$IMAGE_PULL_SECRET' already present in torc"
-        else
-            if [ -z "$_EXISTING_TRIDENT_OPERATOR_PULL_SECRETS" ]; then
-                torc_patch_list+='{"op":"replace","path":"/spec/imagePullSecrets","value":['"$IMAGE_PULL_SECRET"']},'
+    local -a pull_secrets_to_add=()
+    local -a pull_secrets_to_check=("$IMAGE_PULL_SECRET")
+    find_astra_registry_in_trident_images &> /dev/null && pull_secrets_to_check+=("$__ASTRA_REGISTRY_IMAGE_PULL_SECRET")
+
+    for secret in "${pull_secrets_to_check[@]}" ; do
+        if [ -n "$secret" ]; then
+            if echo "$_EXISTING_TORC_PULL_SECRETS" | grep -q "^${secret}$" &> /dev/null; then
+                logdebug "image pull secret '$secret' already present in torc"
             else
-                torc_patch_list+='{"op":"add","path":"/spec/imagePullSecrets/-","value":"'"$IMAGE_PULL_SECRET"'"},'
+                pull_secrets_to_add+=("$secret")
             fi
+        fi
+    done
+    if ! is_empty "${pull_secrets_to_add[@]}"; then
+        if [ -z "$_EXISTING_TRIDENT_OPERATOR_PULL_SECRETS" ]; then
+            local -r secrets_list="$(join_str "${pull_secrets_to_add[@]}" ",")"
+            torc_patch_list+='{"op":"replace","path":"/spec/imagePullSecrets","value":['"$secrets_list"']},'
+        else
+            for secret in "${pull_secrets_to_add[@]}" ; do
+                torc_patch_list+='{"op":"add","path":"/spec/imagePullSecrets/-","value":"'"$secret"'"},'
+            done
         fi
     fi
 
@@ -2632,7 +2768,14 @@ step_add_image_remaps_to_kustomization() {
     echo "images:" >> "$kustomization_file"
     if components_include_trident || trident_operator_image_needs_upgraded; then
         # Trident operator
+        # Note: depending on which Trident YAML we pulled, the ref sometimes excludes 'docker.io', so
+        # we add remaps both with and without to be safe.
         echo "- name: netapp/$__DEFAULT_TRIDENT_OPERATOR_IMAGE_NAME" >> "$kustomization_file"
+        echo "  newName: $(join_rpath "$TRIDENT_OPERATOR_IMAGE_REGISTRY" "$TRIDENT_OPERATOR_IMAGE_REPO")" >> "$kustomization_file"
+        echo "  newTag: \"$TRIDENT_OPERATOR_IMAGE_TAG\"" >> "$kustomization_file"
+
+        local -r default_img="$__DEFAULT_DOCKER_HUB_IMAGE_REGISTRY/$__DEFAULT_DOCKER_HUB_IMAGE_BASE_REPO/$__DEFAULT_TRIDENT_OPERATOR_IMAGE_NAME"
+        echo "- name: $default_img" >> "$kustomization_file"
         echo "  newName: $(join_rpath "$TRIDENT_OPERATOR_IMAGE_REGISTRY" "$TRIDENT_OPERATOR_IMAGE_REPO")" >> "$kustomization_file"
         echo "  newTag: \"$TRIDENT_OPERATOR_IMAGE_TAG\"" >> "$kustomization_file"
         logdebug "$kustomization_file: added Astra Trident Operator image remap"
@@ -2659,41 +2802,50 @@ step_apply_resources() {
     logdebug "apply operator resources"
     local output=""
     local captured_err=""
-    if ! is_dry_run; then
-        # apply trident-acp secret if it exists
-        if [ -e "$__GENERATED_TRIDENT_ACP_SECRET_FILE" ]; then
-            output="$(kubectl apply -f "$__GENERATED_TRIDENT_ACP_SECRET_FILE" -n "$(get_trident_namespace)" 2> "$__ERR_FILE")"
-            captured_err="$(get_captured_err)"
-            if [ -z "$output" ] || [ -n "$captured_err" ]; then
-                add_problem "Failed to apply ACS registry secret: $captured_err"
-            fi
-            logdebug "$output"
-        fi
+    local -a other_args=()
+    is_dry_run && other_args+=("--dry-run=client")
 
-        output="$(kubectl apply -k "$operators_dir" 2> "$__ERR_FILE")"
-        captured_err="$(get_captured_err)"
-
-        if [ -n "$captured_err" ]; then
-            while IFS= read -r line; do
-                if echo "$line" | grep -q "Warning:"; then
-                    logdebug "captured warning when applying kustomize resources:${__NEWLINE}$captured_err"
-                elif echo "$line" | grep -q "no objects passed to apply"; then
-                    logdebug "no kustomize resources to apply, skipping"
-                elif [ -z "$output" ] || [ -n "$line" ]; then
-                    add_problem "Failed to apply kustomize resources: $line"
-                fi
-            done < <(echo "$captured_err")
+    # Apply trident-acp secret if it exists
+    if [ -e "$__GENERATED_TRIDENT_ACP_SECRET_FILE" ]; then
+        output="$(kubectl apply -f "$__GENERATED_TRIDENT_ACP_SECRET_FILE" -n "$(get_trident_namespace)" "${other_args[@]}" 2> "$__ERR_FILE")"
+        captured_err="$(get_captured_err | remove_kubectl_warnings_from_error_output)"
+        if [ -z "$output" ] || [ -n "$captured_err" ]; then
+            add_problem "Failed to apply ACS registry secret: $captured_err"
         fi
-        logdebug "kustomize apply output:${__NEWLINE}$output"
+        logdebug "applied ACS registry secret"
+        logdebug "$output"
+    else
+        logdebug "no ACS registry secret to apply"
     fi
+
+    # Apply kustomize resources
+    local had_resources_to_apply="true"
+    output="$(kubectl apply -k "$operators_dir" "${other_args[@]}" 2> "$__ERR_FILE")"
+    captured_err="$(get_captured_err | remove_kubectl_warnings_from_error_output)"
+    if [ -n "$captured_err" ]; then
+        while IFS= read -r line; do
+            if echo "$line" | grep -q "no objects passed to apply"; then
+                had_resources_to_apply="false"
+            elif [ -z "$output" ] || [ -n "$line" ]; then
+                add_problem "Failed to apply kustomize resources: $line"
+            fi
+        done < <(echo "$captured_err")
+    fi
+    logdebug "kustomize apply output:${__NEWLINE}$output"
+
     exit_if_problems
-    loginfo "* Astra operators have been applied to the cluster."
+    if [ "$had_resources_to_apply" == "true" ]; then
+        _RESOURCES_OR_PATCHES_HAVE_BEEN_APPLIED="true"
+        loginfo "* Astra operators have been applied to the cluster."
+    else
+        loginfo "* No Astra operator resources to apply, skipping."
+    fi
 
     # Apply CRs (if we have any)
     if [ -f "$crs_file_path" ]; then
         logdebug "apply CRs"
         if ! is_dry_run; then
-            output="$(kubectl apply -f "$crs_file_path" 2> "$__ERR_FILE")"
+            output="$(kubectl apply -f "$crs_file_path" "${other_args[@]}" 2> "$__ERR_FILE")"
             captured_err="$(get_captured_err)"
             if [ -z "$output" ] || [ -n "$captured_err" ]; then
                 add_problem "Failed to apply CRs: $captured_err"
@@ -2702,10 +2854,12 @@ step_apply_resources() {
         else
             logdebug "skipped due to dry run"
         fi
+        _RESOURCES_OR_PATCHES_HAVE_BEEN_APPLIED="true"
         loginfo "* Astra CRs have been applied to the cluster."
     else
-        logdebug "No CRs file to apply"
+        loginfo "* No Astra CRs to apply, skipping."
     fi
+
     exit_if_problems
 }
 
@@ -2714,19 +2868,21 @@ step_apply_trident_operator_patches() {
     local -ra patches=("${_PATCHES_TRIDENT_OPERATOR[@]}")
     local -r patches_len="${#patches[@]}"
 
-    if ! trident_will_be_installed_or_modified && [ "$patches_len" -gt 0 ]; then
+    if [ "$patches_len" -eq 0 ]; then
+        loginfo "* No Astra Trident Operator patches to apply, skipping"
+        return 0
+    elif ! trident_will_be_installed_or_modified; then
         fatal "found $patches_len operator patches (expected 0) despite trident not being installed or modified"
     fi
 
-    if debug_is_on && [ "$patches_len" -gt 0 ]; then
-        local disclaimer="# THIS FILE IS FOR DEBUGGING PURPOSES ONLY. These are the patches applied to the"
-        disclaimer+="${__NEWLINE}# Astra Trident Operator deployment when upgrading the Astra Trident Operator."
-        disclaimer+="${__NEWLINE}"
-        append_lines_to_file "${__GENERATED_PATCHES_TRIDENT_OPERATOR_FILE}" "$disclaimer" "${patches[@]}"
-    fi
+    local disclaimer="# THIS FILE IS FOR DEBUGGING PURPOSES ONLY. These are the patches applied to the"
+    disclaimer+="${__NEWLINE}# Astra Trident Operator deployment when upgrading the Astra Trident Operator."
+    disclaimer+="${__NEWLINE}"
+    append_lines_to_file "${__GENERATED_PATCHES_TRIDENT_OPERATOR_FILE}" "$disclaimer" "${patches[@]}"
 
     apply_kubectl_patches "${patches[@]}"
-    logdebug "done"
+    _RESOURCES_OR_PATCHES_HAVE_BEEN_APPLIED="true"
+    loginfo "* Astra Trident Operator has been patched."
 }
 
 step_apply_torc_patches() {
@@ -2734,22 +2890,23 @@ step_apply_torc_patches() {
     local -ra patches=("${_PATCHES_TORC[@]}")
     local -r patches_len="${#patches[@]}"
 
-    if ! trident_will_be_installed_or_modified && [ "$patches_len" -gt 0 ]; then
+    if [ "$patches_len" -eq 0 ]; then
+        loginfo "* No Astra Trident Orchestrator patches to apply, skipping"
+        return 0
+    elif ! trident_will_be_installed_or_modified; then
         fatal "found $patches_len torc patches (expected 0) despite trident not being installed or modified"
     fi
 
-    if debug_is_on && [ "$patches_len" -gt 0 ]; then
-        local disclaimer="# THIS FILE IS FOR DEBUGGING PURPOSES ONLY. These are the patches applied to the"
-        disclaimer+="${__NEWLINE}# TridentOrchestrator resource when upgrading Astra Trident or enabling ACP."
-        disclaimer+="${__NEWLINE}"
-        append_lines_to_file "${__GENERATED_PATCHES_TORC_FILE}" "$disclaimer" "${patches[@]}"
-    fi
+    local disclaimer="# THIS FILE IS FOR DEBUGGING PURPOSES ONLY. These are the patches applied to the"
+    disclaimer+="${__NEWLINE}# TridentOrchestrator resource when upgrading Astra Trident or enabling ACP."
+    disclaimer+="${__NEWLINE}"
+    append_lines_to_file "${__GENERATED_PATCHES_TORC_FILE}" "$disclaimer" "${patches[@]}"
 
     # Take a backup of the TORC just in case
     if [ -n "$_EXISTING_TORC_NAME" ]; then
         local -r backup="$(backup_kubernetes_resource "tridentorchestrator" "$_EXISTING_TORC_NAME" "$__GENERATED_CRS_DIR")"
         if [ -n "$backup" ]; then
-            loginfo "* Created backup for TridentOrchestrator '$_EXISTING_TORC_NAME': '$backup'"
+            loginfo "* Astra Trident Orchestrator backup created: '$backup'"
         elif [ -n "$_return_error" ]; then
             logdebug "failed to create backup for TridentOrchestrator '$_EXISTING_TORC_NAME': $_return_error"
         else
@@ -2758,7 +2915,8 @@ step_apply_torc_patches() {
     fi
 
     apply_kubectl_patches "${patches[@]}"
-    logdebug "done"
+    _RESOURCES_OR_PATCHES_HAVE_BEEN_APPLIED="true"
+    loginfo "* Astra Trident Orchestrator has been patched."
 }
 
 step_monitor_deployment_progress() {
@@ -2832,10 +2990,6 @@ exit_if_problems
 step_check_volumesnapshotclasses
 
 # REGISTRY access
-if [ -n "$NAMESPACE" ]; then
-    step_check_namespace_and_pull_secret_exist
-    exit_if_problems
-fi
 if [ "$SKIP_IMAGE_CHECK" != "true" ]; then
     step_check_all_images_can_be_pulled
 else
@@ -2852,11 +3006,14 @@ else
 fi
 exit_if_problems
 
-# ------------ YAML GENERATION ------------
+# KUBECONFIG, NAMESPACES, PULL SECRET
 step_check_kubeconfig_choice
+components_include_connector && step_check_namespace_and_pull_secret_exist "$CONNECTOR_NAMESPACE" "$IMAGE_PULL_SECRET"
+components_include_trident && step_check_namespace_and_pull_secret_exist "$TRIDENT_NAMESPACE" "$IMAGE_PULL_SECRET"
+exit_if_problems
+
+# ------------ YAML GENERATION ------------
 step_init_generated_dirs_and_files
-step_kustomize_global_namespace_if_needed "$NAMESPACE" "$__GENERATED_KUSTOMIZATION_FILE"
-step_kustomize_global_pull_secret_if_needed "$IMAGE_PULL_SECRET" "$__GENERATED_KUSTOMIZATION_FILE"
 
 # CONNECTOR yaml
 if components_include_connector; then
@@ -2924,7 +3081,7 @@ if trident_will_be_installed_or_modified; then
             if ! acp_is_enabled; then
                 if config_acp_image_is_custom || prompt_user_yes_no "Would you like to enable Astra Control Provisioner?"; then
                     # create trident-acp secret
-                    generate_docker_registry_secret "$IMAGE_PULL_SECRET" "$ASTRA_ACCOUNT_ID" "$ASTRA_API_TOKEN" "$(get_trident_namespace)" "$TRIDENT_ACP_IMAGE_REGISTRY" "$__GENERATED_TRIDENT_ACP_SECRET_FILE"
+                    generate_docker_registry_secret "$__ASTRA_REGISTRY_IMAGE_PULL_SECRET" "$ASTRA_ACCOUNT_ID" "$ASTRA_API_TOKEN" "$(get_trident_namespace)" "$TRIDENT_ACP_IMAGE_REGISTRY" "$__GENERATED_TRIDENT_ACP_SECRET_FILE"
                     step_generate_torc_patch "$_EXISTING_TORC_NAME" "" "$(get_config_acp_image)" "true"
                 else
                     loginfo "Astra Control Provisioner will not be enabled."
@@ -2933,7 +3090,7 @@ if trident_will_be_installed_or_modified; then
             elif acp_image_needs_upgraded; then
                 if config_acp_image_is_custom || prompt_user_yes_no "Would you like to upgrade Astra Control Provisioner?"; then
                     # create trident-acp secret
-                    generate_docker_registry_secret "$IMAGE_PULL_SECRET" "$ASTRA_ACCOUNT_ID" "$ASTRA_API_TOKEN" "$(get_trident_namespace)" "$TRIDENT_ACP_IMAGE_REGISTRY" "$__GENERATED_TRIDENT_ACP_SECRET_FILE"
+                    generate_docker_registry_secret "$__ASTRA_REGISTRY_IMAGE_PULL_SECRET" "$ASTRA_ACCOUNT_ID" "$ASTRA_API_TOKEN" "$(get_trident_namespace)" "$TRIDENT_ACP_IMAGE_REGISTRY" "$__GENERATED_TRIDENT_ACP_SECRET_FILE"
                     step_generate_torc_patch "$_EXISTING_TORC_NAME" "" "$(get_config_acp_image)" "true"
                 else
                     loginfo "Astra Control Provisioner will not be upgraded."
@@ -2954,17 +3111,22 @@ exit_if_problems
 step_apply_resources
 step_apply_trident_operator_patches
 step_apply_torc_patches
-step_monitor_deployment_progress
+[ "$_RESOURCES_OR_PATCHES_HAVE_BEEN_APPLIED" == "true" ] && step_monitor_deployment_progress
 exit_if_problems
 
-if ! is_dry_run; then
+if [ "$_RESOURCES_OR_PATCHES_HAVE_BEEN_APPLIED" != "true" ]; then
+    logheader $__INFO "Cluster management complete (no changes necessary)"
+    _msg="* The cluster was not modified as the chosen components were already in the desired"
+    _msg+=" state or any applicable operation was declined by the user."
+    loginfo "$_msg"
+elif ! is_dry_run; then
     logheader $__INFO "Cluster management complete!"
 else
     debug_is_on && print_built_config
     logheader $__INFO "$(prefix_dryrun "See generated files")"
     loginfo "$(find "$__GENERATED_CRS_DIR" -type f)"
     _msg="You can run 'kustomize build $__GENERATED_OPERATORS_DIR > $__GENERATED_OPERATORS_DIR/resources.yaml'"
-    _msg+=" to view the CRDs and operator resources that will be applied."
+    _msg+=" to view the CRDs and operator resources that will be applied (if any)."
     logln $__INFO "$_msg"
     exit 0
 fi
