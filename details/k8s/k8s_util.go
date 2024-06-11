@@ -7,6 +7,7 @@ package k8s
 import (
 	"context"
 	"github.com/go-logr/logr"
+	semver "github.com/hashicorp/go-version"
 	"github.com/pkg/errors"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apiextv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -30,7 +31,7 @@ type K8sUtil struct {
 type K8sUtilInterface interface {
 	CreateOrUpdateResource(context.Context, client.Object, client.Object, controllerutil.MutateFn) (string, error)
 	DeleteResource(context.Context, client.Object) error
-	VersionGet() (string, error)
+	VersionGet() (string, string, error)
 	IsCRDInstalled(string) bool
 	RESTGet(string) ([]byte, error)
 	K8sClientset() kubernetes.Interface
@@ -69,21 +70,27 @@ func isNamespaceScoped(obj client.Object) bool {
 }
 
 // VersionGet returns the server version of the k8s cluster.
-func (r *K8sUtil) VersionGet() (string, error) {
+func (r *K8sUtil) VersionGet() (string, string, error) {
 	restConfig, err := ctrl.GetConfig()
 	if err != nil {
-		return "", errors.Wrap(err, "error getting kubeconfig")
+		return "", "", errors.Wrap(err, "error getting kubeconfig")
 	}
 	dClient, err := discovery.NewDiscoveryClientForConfig(restConfig)
 	if err != nil {
-		return "", errors.Wrap(err, "error creating discovery client")
+		return "", "", errors.Wrap(err, "error creating discovery client")
 	}
 	versionInfo, err := dClient.ServerVersion()
 	if err != nil {
-		return "", errors.Wrap(err, "error getting server version")
+		return "", "", errors.Wrap(err, "error getting server version")
+	}
+	fullVersionString := versionInfo.String()
+	semanticVersion, err := semver.NewSemver(fullVersionString)
+	if err != nil {
+		r.Log.Error(err, "failed to parse k8s server version")
+		return "", "", err
 	}
 	r.Log.V(3).Info("versionInfo", "versionInfo", versionInfo)
-	return versionInfo.GitVersion, nil
+	return fullVersionString, semanticVersion.String(), nil
 }
 
 // IsCRDInstalled returns the server version of the k8s cluster.

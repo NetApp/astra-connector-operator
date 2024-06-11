@@ -26,6 +26,9 @@ const (
 	ErrorCreateRoles               = "Error creating Roles  %s/%s"
 	ErrorCreateClusterRoles        = "Error creating ClusterRoles %s/%s"
 	ErrorClusterUnmanaged          = "Timed out waiting for cluster to become managed"
+	ErrorGetK8sServiceId           = "Error getting K8s service ID"
+	ErrorClusterIdAndNameEmpty     = "Error: clusterID and clusterName cannot both be empty"
+	ErrorInitiatingRegistration    = "Error initiating cluster registration"
 
 	FailedFinalizerAdd             = "Failed to add finalizer"
 	FailedFinalizerRemove          = "Failed to remove finalizer"

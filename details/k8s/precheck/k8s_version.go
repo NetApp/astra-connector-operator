@@ -15,7 +15,7 @@ const (
 )
 
 func (p *PrecheckClient) RunK8sVersionCheck() error {
-	versionString, err := p.k8sUtil.VersionGet()
+	versionString, _, err := p.k8sUtil.VersionGet()
 	if err != nil {
 		p.log.Error(err, "failed to get k8s version of host cluster")
 		return err

@@ -1,7 +1,6 @@
 /*
- * Copyright (c) 2024. NetApp, Inc. All Rights Reserved.
+* Copyright (c) 2024. NetApp, Inc. All Rights Reserved.
  */
-
 package register_test
 
 import (
@@ -53,7 +52,7 @@ type AstraConnectorInput struct {
 	invalidHostDetails bool
 }
 
-func createClusterRegister(astraConnectorInput AstraConnectorInput) (register.ClusterRegisterUtil, *mocks.HTTPClient, string, client.Client) {
+func createClusterRegister(astraConnectorInput AstraConnectorInput) (register.ClusterRegisterUtil, *mocks.HTTPClient, string, client.Client, error) {
 	log := testutil.CreateLoggerForTesting()
 	mockHttpClient := &mocks.HTTPClient{}
 	fakeClient := testutil.CreateFakeClient()
@@ -106,15 +105,19 @@ func createClusterRegister(astraConnectorInput AstraConnectorInput) (register.Cl
 		astraConnector.Spec.NatsSyncClient.HostAliasIP = testIP
 	}
 
-	clusterRegisterUtil := register.NewClusterRegisterUtil(astraConnector, mockHttpClient, fakeClient, k8sUtil, log, context.Background())
-	return clusterRegisterUtil, mockHttpClient, apiTokenSecret, fakeClient
+	clusterRegisterUtil, err := register.NewClusterRegisterUtil(astraConnector, mockHttpClient, fakeClient, k8sUtil, log, context.Background())
+	if err != nil {
+		return nil, nil, "", nil, err
+	}
+	return clusterRegisterUtil, mockHttpClient, apiTokenSecret, fakeClient, nil
 }
 
 // Tests
 
 func TestGetAPITokenFromSecret(t *testing.T) {
 	t.Run("GetAPITokenFromSecret__SecretNotPresentReturnsError", func(t *testing.T) {
-		clusterRegisterUtil, _, _, _ := createClusterRegister(AstraConnectorInput{})
+		clusterRegisterUtil, _, _, _, err := createClusterRegister(AstraConnectorInput{})
+		assert.NoError(t, err)
 		apiToken, errorReason, err := clusterRegisterUtil.GetAPITokenFromSecret("astra-token")
 
 		assert.Equal(t, apiToken, "")
@@ -123,7 +126,8 @@ func TestGetAPITokenFromSecret(t *testing.T) {
 	})
 
 	t.Run("GetAPITokenFromSecret__SecretInvalidReturnsError", func(t *testing.T) {
-		clusterRegisterUtil, _, apiTokenSecret, fakeClient := createClusterRegister(AstraConnectorInput{})
+		clusterRegisterUtil, _, apiTokenSecret, fakeClient, err := createClusterRegister(AstraConnectorInput{})
+		assert.NoError(t, err)
 
 		secret := &coreV1.Secret{
 			ObjectMeta: metaV1.ObjectMeta{
@@ -136,7 +140,7 @@ func TestGetAPITokenFromSecret(t *testing.T) {
 		}
 
 		// creating secret
-		err := fakeClient.Create(ctx, secret)
+		err = fakeClient.Create(ctx, secret)
 		assert.NoError(t, err)
 
 		apiToken, errorReason, err := clusterRegisterUtil.GetAPITokenFromSecret(apiTokenSecret)
@@ -147,7 +151,8 @@ func TestGetAPITokenFromSecret(t *testing.T) {
 	})
 
 	t.Run("GetAPITokenFromSecret__ReturnsApiToken", func(t *testing.T) {
-		clusterRegisterUtil, _, apiTokenSecret, _ := createClusterRegister(AstraConnectorInput{createTokenSecret: true})
+		clusterRegisterUtil, _, apiTokenSecret, _, err := createClusterRegister(AstraConnectorInput{createTokenSecret: true})
+		assert.NoError(t, err)
 
 		apiToken, errorReason, err := clusterRegisterUtil.GetAPITokenFromSecret(apiTokenSecret)
 		assert.Equal(t, apiToken, "auth-token")

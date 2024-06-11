@@ -148,7 +148,7 @@ envtest: ## Download envtest-setup locally if necessary.
 
 MOCKERY = $(shell pwd)/bin/mockery
 install-mockery: ## Download mockery locally if necessary: https://github.com/vektra/mockery
-	$(call go-get-tool,$(MOCKERY),github.com/vektra/mockery/v2@v2.19.0)
+	$(call go-get-tool,$(MOCKERY),github.com/vektra/mockery/v2@v2.43.2)
 
 GOLANGCI_LINT = $(shell pwd)/bin/golangci-lint
 install-golangci-lint: ## Download golangci-lint locally if necessary: https://github.com/golangci/golangci-lint
