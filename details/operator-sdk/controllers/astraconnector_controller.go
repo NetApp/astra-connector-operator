@@ -256,7 +256,7 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 		}
 
 		natsSyncClientStatus.Registered = "true"
-		natsSyncClientStatus.AstraClusterId = astraConnector.Spec.Astra.ClusterId
+		natsSyncClientStatus.AstraClusterId = clusterId
 		natsSyncClientStatus.Status = RegisteredWithAstra
 		_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
 	}
