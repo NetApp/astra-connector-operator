@@ -694,7 +694,7 @@ func (c clusterRegisterUtil) RegisterCluster(cloudId string, k8sApiServiceId str
 			// Found a duplicate cluster, check if the state of the cluster is already managed.
 			registered, err := c.checkRegistrationStatus(dupeCluster, k8sApiServiceId)
 			if err != nil {
-				errMsg := fmt.Sprintf("unable to check duplicate cluster registration status")
+				errMsg := "unable to check duplicate cluster registration status"
 				return "", errMsg, fmt.Errorf("%s: %w", errMsg, err)
 			}
 			if registered {
@@ -715,7 +715,8 @@ func (c clusterRegisterUtil) RegisterCluster(cloudId string, k8sApiServiceId str
 			pendingCluster.ConnectorInstall = ConnectorInstallStatePending
 			pendingCluster.ApiServiceID = k8sApiServiceId
 
-			cluster, errMsg, err := c.CreateCluster(pendingCluster, cloudId)
+			var cluster *Cluster
+			cluster, errMsg, err = c.CreateCluster(pendingCluster, cloudId)
 			if err != nil {
 				return "", errMsg, fmt.Errorf("unable to create pending cluster record: %w", err)
 			}

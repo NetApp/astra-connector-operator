@@ -181,7 +181,8 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 		return ctrl.Result{RequeueAfter: time.Minute * conf.Config.ErrorTimeout()}, fmt.Errorf("error getting Kubernetes API service ID: %w", err)
 	}
 
-	cloudID, errMsg, err := registerUtil.RegisterCloud()
+	var cloudID, errMsg string
+	cloudID, errMsg, err = registerUtil.RegisterCloud()
 	if err != nil {
 		natsSyncClientStatus.Status = ErrorGetK8sServiceId
 		_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
