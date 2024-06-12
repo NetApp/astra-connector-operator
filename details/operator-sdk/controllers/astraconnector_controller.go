@@ -143,8 +143,8 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 		return ctrl.Result{}, nil
 	}
 
+	k8sUtil := k8s.NewK8sUtil(r.Client, r.Clientset, log)
 	if !astraConnector.Spec.SkipPreCheck {
-		k8sUtil := k8s.NewK8sUtil(r.Client, r.Clientset, log)
 		preCheckClient := precheck.NewPrecheckClient(log, k8sUtil)
 		errList := preCheckClient.Run()
 
@@ -166,6 +166,47 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 		}
 	}
 
+	if astraConnector.Spec.Astra.ClusterId == "" && astraConnector.Spec.Astra.ClusterName == "" {
+		err := fmt.Errorf("clusterID and clusterName both cannot be empty")
+		log.Error(err, "Bad config")
+		natsSyncClientStatus.Status = ErrorClusterIdAndNameEmpty
+		_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
+		return ctrl.Result{RequeueAfter: time.Minute * conf.Config.ErrorTimeout()}, err
+	}
+
+	registerUtil, err := register.NewClusterRegisterUtil(astraConnector, &http.Client{}, r.Client, k8sUtil, log, context.Background())
+	if err != nil {
+		natsSyncClientStatus.Status = ErrorInitiatingRegistration
+		_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
+		return ctrl.Result{RequeueAfter: time.Minute * conf.Config.ErrorTimeout()}, fmt.Errorf("error getting Kubernetes API service ID: %w", err)
+	}
+
+	cloudID, errMsg, err := registerUtil.RegisterCloud()
+	if err != nil {
+		natsSyncClientStatus.Status = ErrorGetK8sServiceId
+		_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
+		return ctrl.Result{RequeueAfter: time.Minute * conf.Config.ErrorTimeout()}, fmt.Errorf("error getting Kubernetes API service ID: %w", err)
+	}
+	astraConnector.Status.CloudId = cloudID
+	_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
+
+	log.Info("Getting Kubernetes API service ID")
+	k8sServiceId, err := r.getK8sApiServiceID(ctx)
+	if err != nil {
+		natsSyncClientStatus.Status = ErrorGetK8sServiceId
+		_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
+		return ctrl.Result{RequeueAfter: time.Minute * conf.Config.ErrorTimeout()}, fmt.Errorf("error getting Kubernetes API service ID: %w", err)
+	}
+
+	clusterId, errMsg, err := registerUtil.RegisterCluster(cloudID, k8sServiceId)
+	if err != nil {
+		natsSyncClientStatus.Status = errMsg
+		_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
+		return ctrl.Result{RequeueAfter: time.Minute * conf.Config.ErrorTimeout()}, fmt.Errorf("error getting Kubernetes API service ID: %w", err)
+	}
+	astraConnector.Status.ClusterId = clusterId
+	_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
+
 	// deploy Neptune
 	if conf.Config.FeatureFlags().DeployNeptune() {
 		log.Info("Initiating Neptune deployment")
@@ -183,47 +224,6 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 		var connectorResults ctrl.Result
 		var deployError error
 
-		if astraConnector.Spec.Astra.ClusterId == "" && astraConnector.Spec.Astra.ClusterName == "" {
-			err := fmt.Errorf("clusterID and clusterName both cannot be empty")
-			log.Error(err, "Bad config")
-			natsSyncClientStatus.Status = ErrorClusterIdAndNameEmpty
-			_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
-			return ctrl.Result{RequeueAfter: time.Minute * conf.Config.ErrorTimeout()}, err
-		}
-
-		registerUtil, err := register.NewClusterRegisterUtil(astraConnector, &http.Client{}, r.Client, nil, log, context.Background())
-		if err != nil {
-			natsSyncClientStatus.Status = ErrorInitiatingRegistration
-			_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
-			return ctrl.Result{RequeueAfter: time.Minute * conf.Config.ErrorTimeout()}, fmt.Errorf("error getting Kubernetes API service ID: %w", err)
-		}
-
-		cloudID, errMsg, err := registerUtil.RegisterCloud()
-		if err != nil {
-			natsSyncClientStatus.Status = ErrorGetK8sServiceId
-			_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
-			return ctrl.Result{RequeueAfter: time.Minute * conf.Config.ErrorTimeout()}, fmt.Errorf("error getting Kubernetes API service ID: %w", err)
-		}
-		astraConnector.Status.CloudId = cloudID
-		_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
-
-		log.Info("Getting Kubernetes API service ID")
-		k8sServiceId, err := r.getK8sApiServiceID(ctx)
-		if err != nil {
-			natsSyncClientStatus.Status = ErrorGetK8sServiceId
-			_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
-			return ctrl.Result{RequeueAfter: time.Minute * conf.Config.ErrorTimeout()}, fmt.Errorf("error getting Kubernetes API service ID: %w", err)
-		}
-
-		clusterId, errMsg, err := registerUtil.RegisterCluster(cloudID, k8sServiceId)
-		if err != nil {
-			natsSyncClientStatus.Status = errMsg
-			_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
-			return ctrl.Result{RequeueAfter: time.Minute * conf.Config.ErrorTimeout()}, fmt.Errorf("error getting Kubernetes API service ID: %w", err)
-		}
-		astraConnector.Status.ClusterId = clusterId
-		_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
-
 		connectorResults, deployError = r.deployNatlessConnector(ctx, astraConnector, &natsSyncClientStatus)
 		if deployError != nil {
 			// Note: Returning nil in error since we want to wait for the requeue to happen
@@ -236,7 +236,7 @@ func (r *AstraConnectorController) Reconcile(ctx context.Context, req ctrl.Reque
 		natsSyncClientStatus.Status = WaitForClusterManagedState
 		_ = r.updateAstraConnectorStatus(ctx, astraConnector, natsSyncClientStatus)
 
-		err = waitForManagedCluster(registerUtil, log)
+		err = waitForManagedCluster(registerUtil, log, clusterId)
 		if err != nil {
 			log.Error(err, "timed out waiting for cluster to become managed, requeueing after delay", "delay", conf.Config.ErrorTimeout())
 			natsSyncClientStatus.Status = ErrorClusterUnmanaged
@@ -371,11 +371,11 @@ func (r *AstraConnectorController) waitForStatusUpdate(astraConnector *v1.AstraC
 	return err
 }
 
-func waitForManagedCluster(registerUtil register.ClusterRegisterUtil, log logr.Logger) error {
-	maxRetries := 5
+func waitForManagedCluster(registerUtil register.ClusterRegisterUtil, log logr.Logger, clusterId string) error {
+	maxRetries := 10
 	waitTime := 3 * time.Second
 	for i := 1; i <= maxRetries; i++ {
-		isManaged, _, err := registerUtil.IsClusterManaged()
+		isManaged, _, err := registerUtil.IsClusterManaged(clusterId)
 		if isManaged {
 			return nil
 		}

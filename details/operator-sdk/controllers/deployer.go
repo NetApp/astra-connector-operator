@@ -114,6 +114,9 @@ func (r *AstraConnectorController) deleteClusterScopedResources(ctx context.Cont
 }
 
 func (r *AstraConnectorController) waitForResourceReady(ctx context.Context, kubeObject client.Object, astraConnector *installer.AstraConnector) error {
+	if kubeObject.GetName() == "neptune-controller-manager" {
+		return nil
+	}
 	log := ctrllog.FromContext(ctx)
 	timeout := time.After(conf.Config.WaitDurationForResource()) // default is 2 mins
 	ticker := time.NewTicker(3 * time.Second)

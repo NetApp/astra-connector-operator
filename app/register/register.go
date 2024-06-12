@@ -109,7 +109,7 @@ func DoRequest(ctx context.Context, client HTTPClient, method, url string, bodyB
 
 type ClusterRegisterUtil interface {
 	GetAPITokenFromSecret(secretName string) (string, string, error)
-	IsClusterManaged() (bool, string, error)
+	IsClusterManaged(clusterId string) (bool, string, error)
 	SetHttpClient(disableTls bool, astraHost string) error
 	RegisterCloud() (string, string, error)
 	RegisterCluster(cloudId string, k8sServiceId string) (string, string, error)
@@ -222,8 +222,8 @@ func (c clusterRegisterUtil) SetHttpClient(disableTls bool, astraHost string) er
 	return nil
 }
 
-func (c clusterRegisterUtil) IsClusterManaged() (bool, string, error) {
-	url := fmt.Sprintf("%s/accounts/%s/topology/v1/managedClusters/%s", c.AstraHostUrl, c.AstraConnector.Spec.Astra.AccountId, c.AstraConnector.Spec.Astra.ClusterId)
+func (c clusterRegisterUtil) IsClusterManaged(clusterId string) (bool, string, error) {
+	url := fmt.Sprintf("%s/accounts/%s/topology/v1/managedClusters/%s", c.AstraHostUrl, c.AstraConnector.Spec.Astra.AccountId, clusterId)
 
 	c.Log.WithValues("ClusterId", c.AstraConnector.Spec.Astra.ClusterId).
 		Info("Checking if cluster is managed")
@@ -521,7 +521,7 @@ func (c clusterRegisterUtil) RegisterCloud() (string, string, error) {
 }
 
 func (c clusterRegisterUtil) ListClusters() ([]Cluster, string, error) {
-	url := fmt.Sprintf("%s/topology/v1/clusters", c.AstraHostUrl)
+	url := fmt.Sprintf("%s/accounts/%s/topology/v1/clusters", c.AstraHostUrl, c.AstraConnector.Spec.Astra.AccountId)
 	headerMap := HeaderMap{Authorization: fmt.Sprintf("Bearer %s", c.ApiToken)}
 	response, err, cancel := DoRequest(c.Ctx, c.Client, http.MethodGet, url, nil, headerMap, c.Log)
 	defer cancel()
@@ -686,7 +686,7 @@ func (c clusterRegisterUtil) RegisterCluster(cloudId string, k8sApiServiceId str
 		// Check for a duplicate cluster (by ApiServiceID) before continuing
 		c.Log.Info("Checking for duplicate cluster records")
 
-		dupeCluster, errMsg, err := c.checkForDuplicateApiServiceIDs(k8sApiServiceId) //todo move this out
+		dupeCluster, errMsg, err := c.checkForDuplicateApiServiceIDs(k8sApiServiceId)
 		if dupeCluster == nil && err != nil {
 			// Legit error
 			return "", errMsg, fmt.Errorf("error checking for duplicate apiServiceID records: %w", err)
@@ -701,6 +701,7 @@ func (c clusterRegisterUtil) RegisterCluster(cloudId string, k8sApiServiceId str
 				c.Log.WithValues("clusterId", dupeCluster.ID).Info("Found duplicate cluster record already registered")
 				return dupeCluster.ID, "", nil
 			}
+			clusterId = dupeCluster.ID
 		} else {
 			// Cluster not found, go create a new pending cluster record
 			c.Log.WithValues("clusterName", c.AstraConnector.Spec.Astra.ClusterName).
