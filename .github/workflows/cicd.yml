@@ -13,7 +13,7 @@ on:
 jobs:
   lint:
     name: Lint
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - name: Set up Go
         uses: actions/setup-go@v2
@@ -34,7 +34,7 @@ jobs:
 
   unit:
     name: Unit Test
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - name: Set up Go
         uses: actions/setup-go@v2
@@ -88,7 +88,7 @@ jobs:
 
   build:
     name: Build
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - name: Set up Go 1.x
         uses: actions/setup-go@v2
@@ -118,7 +118,7 @@ jobs:
         if: ${{ startsWith(github.ref, 'refs/heads/release-') }}
         run: |
           export BASE_VERSION=$(cat version.txt)
-          export VERSION=$BASE_VERSION-$(date +'%Y%m%d%H%M')
+          export VERSION=$BASE_VERSION-$(TARGETARCHdate +'%Y%m%d%H%M')
           echo $VERSION > VERSION
 
       - name: Build Images

@@ -15,6 +15,10 @@ OUTPUT_INSTALL_EXE_DIR := $(BUILD_DIR)/install-exe
 # - use environment variables to overwrite this value (e.g export VERSION=0.0.2)
 VERSION ?= 3.0.1
 
+OS ?= linux
+ARCH ?= amd64
+PLATFORM ?= ${OS}/${ARCH}
+
 # CHANNELS define the bundle channels used in the bundle.
 # Add a new line here if you would like to change its default config. (E.g CHANNELS = "candidate,fast,stable")
 # To re-generate a bundle for other specific channels without changing the standard setup, you can:
@@ -109,14 +113,14 @@ run: manifests generate fmt vet ## Run a controller from your host.
 	go run ./main.go
 
 docker-build: ## Build docker image with the manager.
-	docker build -t ${IMG} .
+	docker build --platform=$(PLATFORM)  -t ${IMG} .
 
 docker-push: ## Push docker image with the manager.
 	docker push ${IMG}
 
 .PHONY: docker-buildx
 docker-buildx: test ## Build and push docker image for the manager for cross-platform support
-	docker buildx build --push --platform=$(PLATFORMS) --tag $(IMG) .
+	docker buildx build --push --platform=$(PLATFORM) --tag $(IMG) .
 
 ##@ Deployment
 
