@@ -29,7 +29,7 @@ func TestDetermineClusterType(t *testing.T) {
 	t.Run("AKS", func(t *testing.T) {
 		clusterTypeChecker, k8sUtil, k8sInterface := createHandler(t)
 		k8sUtil.On("RESTGet", mock.Anything).Return(nil, errors.New("testing"))
-		k8sUtil.On("VersionGet").Return("1.1", nil)
+		k8sUtil.On("VersionGet").Return("1.1", "1.1", nil)
 		clusterRole := &v1.ClusterRole{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "aks-service",
@@ -45,7 +45,7 @@ func TestDetermineClusterType(t *testing.T) {
 	t.Run("Anthos", func(t *testing.T) {
 		clusterTypeChecker, k8sUtil, _ := createHandler(t)
 		k8sUtil.On("RESTGet", "apis/anthos.gke.io").Return(make([]byte, 0), nil)
-		k8sUtil.On("VersionGet").Return("1.1", nil)
+		k8sUtil.On("VersionGet").Return("1.1", "1.1", nil)
 
 		assert.Equal(t, k8s.FlavorAnthos, clusterTypeChecker.DetermineClusterType())
 	})
@@ -54,7 +54,7 @@ func TestDetermineClusterType(t *testing.T) {
 		clusterTypeChecker, k8sUtil, _ := createHandler(t)
 		k8sUtil.On("RESTGet", "apis/management.cattle.io").Return(make([]byte, 0), nil)
 		k8sUtil.On("RESTGet", mock.Anything).Return(nil, errors.New("testing"))
-		k8sUtil.On("VersionGet").Return("1.1", nil)
+		k8sUtil.On("VersionGet").Return("1.1", "1.1", nil)
 
 		assert.Equal(t, k8s.FlavorRKE, clusterTypeChecker.DetermineClusterType())
 	})
@@ -63,7 +63,7 @@ func TestDetermineClusterType(t *testing.T) {
 		clusterTypeChecker, k8sUtil, _ := createHandler(t)
 		k8sUtil.On("RESTGet", "apis/k3s.cattle.io").Return(make([]byte, 0), nil)
 		k8sUtil.On("RESTGet", mock.Anything).Return(nil, errors.New("testing"))
-		k8sUtil.On("VersionGet").Return("1.1", nil)
+		k8sUtil.On("VersionGet").Return("1.1", "1.1", nil)
 
 		assert.Equal(t, k8s.FlavorRKE2, clusterTypeChecker.DetermineClusterType())
 	})
@@ -72,7 +72,7 @@ func TestDetermineClusterType(t *testing.T) {
 		clusterTypeChecker, k8sUtil, _ := createHandler(t)
 		k8sUtil.On("RESTGet", "apis/core.antrea.tanzu.vmware.com").Return(make([]byte, 0), nil)
 		k8sUtil.On("RESTGet", mock.Anything).Return(nil, errors.New("testing"))
-		k8sUtil.On("VersionGet").Return("1.1", nil)
+		k8sUtil.On("VersionGet").Return("1.1", "1.1", nil)
 
 		assert.Equal(t, k8s.FlavorTanzu, clusterTypeChecker.DetermineClusterType())
 	})
@@ -80,7 +80,7 @@ func TestDetermineClusterType(t *testing.T) {
 	t.Run("GKE", func(t *testing.T) {
 		clusterTypeChecker, k8sUtil, _ := createHandler(t)
 		k8sUtil.On("RESTGet", mock.Anything).Return(nil, errors.New("testing"))
-		k8sUtil.On("VersionGet").Return("1.1-gke", nil)
+		k8sUtil.On("VersionGet").Return("1.1-gke", "1.1", nil)
 
 		assert.Equal(t, k8s.FlavorGKE, clusterTypeChecker.DetermineClusterType())
 	})
@@ -88,7 +88,7 @@ func TestDetermineClusterType(t *testing.T) {
 	t.Run("EKS", func(t *testing.T) {
 		clusterTypeChecker, k8sUtil, _ := createHandler(t)
 		k8sUtil.On("RESTGet", mock.Anything).Return(nil, errors.New("testing"))
-		k8sUtil.On("VersionGet").Return("v1.28.5-eks-5e0fdde", nil)
+		k8sUtil.On("VersionGet").Return("v1.28.5-eks-5e0fdde", "1.1", nil)
 
 		assert.Equal(t, k8s.FlavorEKS, clusterTypeChecker.DetermineClusterType())
 	})
@@ -99,7 +99,7 @@ func TestDetermineClusterType(t *testing.T) {
 
 		k8sUtil.On("RESTGet", "apis/config.openshift.io/v1/clusteroperators/openshift-apiserver").Return(versionBytes, nil)
 		k8sUtil.On("RESTGet", mock.Anything).Return(nil, errors.New("testing"))
-		k8sUtil.On("VersionGet").Return("1.1", nil)
+		k8sUtil.On("VersionGet").Return("1.1", "1.1", nil)
 
 		assert.Equal(t, k8s.FlavorOpenShift, clusterTypeChecker.DetermineClusterType())
 	})
