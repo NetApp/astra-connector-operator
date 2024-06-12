@@ -726,6 +726,10 @@ func (c clusterRegisterUtil) RegisterCluster(cloudId string, k8sApiServiceId str
 		clusterId = c.AstraConnector.Spec.Astra.ClusterId
 		// Check that the provided cluster exists
 		cluster, _, err := c.GetCluster(cloudId, clusterId)
+		if err != nil {
+			errMsg := fmt.Sprintf("Error checking cluster '%s' exists: %s", clusterId, err)
+			return "", errMsg, errors.New(errMsg)
+		}
 		if cluster == nil {
 			errMsg := fmt.Sprintf("Cluster with ID '%s' not found, please check that the provided ID is correct", clusterId)
 			return "", errMsg, errors.New(errMsg)
