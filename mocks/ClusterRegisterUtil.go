@@ -44,9 +44,9 @@ func (_m *ClusterRegisterUtil) GetAPITokenFromSecret(secretName string) (string,
 	return r0, r1, r2
 }
 
-// IsClusterManaged provides a mock function with given fields:
-func (_m *ClusterRegisterUtil) IsClusterManaged() (bool, string, error) {
-	ret := _m.Called()
+// IsClusterManaged provides a mock function with given fields: clusterId
+func (_m *ClusterRegisterUtil) IsClusterManaged(clusterId string) (bool, string, error) {
+	ret := _m.Called(clusterId)
 
 	if len(ret) == 0 {
 		panic("no return value specified for IsClusterManaged")
@@ -55,23 +55,23 @@ func (_m *ClusterRegisterUtil) IsClusterManaged() (bool, string, error) {
 	var r0 bool
 	var r1 string
 	var r2 error
-	if rf, ok := ret.Get(0).(func() (bool, string, error)); ok {
-		return rf()
+	if rf, ok := ret.Get(0).(func(string) (bool, string, error)); ok {
+		return rf(clusterId)
 	}
-	if rf, ok := ret.Get(0).(func() bool); ok {
-		r0 = rf()
+	if rf, ok := ret.Get(0).(func(string) bool); ok {
+		r0 = rf(clusterId)
 	} else {
 		r0 = ret.Get(0).(bool)
 	}
 
-	if rf, ok := ret.Get(1).(func() string); ok {
-		r1 = rf()
+	if rf, ok := ret.Get(1).(func(string) string); ok {
+		r1 = rf(clusterId)
 	} else {
 		r1 = ret.Get(1).(string)
 	}
 
-	if rf, ok := ret.Get(2).(func() error); ok {
-		r2 = rf()
+	if rf, ok := ret.Get(2).(func(string) error); ok {
+		r2 = rf(clusterId)
 	} else {
 		r2 = ret.Error(2)
 	}
