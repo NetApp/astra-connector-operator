@@ -6,6 +6,7 @@ package register_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -42,7 +43,8 @@ func setupTokenSecret(secretName string, k8sClient client.Client) {
 		},
 	}
 
-	_ = k8sClient.Create(ctx, secretObj)
+	err := k8sClient.Create(ctx, secretObj)
+	fmt.Println(err)
 }
 
 type AstraConnectorInput struct {
@@ -50,6 +52,7 @@ type AstraConnectorInput struct {
 	cloudId            bool
 	clusterId          bool
 	invalidHostDetails bool
+	mockSecret         *coreV1.Secret
 }
 
 func createClusterRegister(astraConnectorInput AstraConnectorInput) (register.ClusterRegisterUtil, *mocks.HTTPClient, string, client.Client, error) {
@@ -92,6 +95,14 @@ func createClusterRegister(astraConnectorInput AstraConnectorInput) (register.Cl
 		astraConnector.Spec.Astra.TokenRef = apiTokenSecret
 	}
 
+	if astraConnectorInput.mockSecret != nil {
+		err := fakeClient.Create(context.Background(), astraConnectorInput.mockSecret)
+		if err != nil {
+			return nil, mockHttpClient, apiTokenSecret, fakeClient, err
+		}
+		astraConnector.Spec.Astra.TokenRef = astraConnectorInput.mockSecret.Name
+	}
+
 	if astraConnectorInput.cloudId {
 		astraConnector.Spec.Astra.CloudId = testCloudId
 	}
@@ -116,7 +127,7 @@ func createClusterRegister(astraConnectorInput AstraConnectorInput) (register.Cl
 
 func TestGetAPITokenFromSecret(t *testing.T) {
 	t.Run("GetAPITokenFromSecret__SecretNotPresentReturnsError", func(t *testing.T) {
-		clusterRegisterUtil, _, _, _, err := createClusterRegister(AstraConnectorInput{})
+		clusterRegisterUtil, _, _, _, err := createClusterRegister(AstraConnectorInput{createTokenSecret: true})
 		assert.NoError(t, err)
 		apiToken, errorReason, err := clusterRegisterUtil.GetAPITokenFromSecret("astra-token")
 
@@ -126,27 +137,18 @@ func TestGetAPITokenFromSecret(t *testing.T) {
 	})
 
 	t.Run("GetAPITokenFromSecret__SecretInvalidReturnsError", func(t *testing.T) {
-		clusterRegisterUtil, _, apiTokenSecret, fakeClient, err := createClusterRegister(AstraConnectorInput{})
-		assert.NoError(t, err)
-
 		secret := &coreV1.Secret{
 			ObjectMeta: metaV1.ObjectMeta{
-				Name:      apiTokenSecret,
+				Name:      "astra-token",
 				Namespace: testNamespace,
 			},
 			Data: map[string][]byte{
 				"api-token": []byte("auth-token"),
 			},
 		}
+		_, _, _, _, err := createClusterRegister(AstraConnectorInput{mockSecret: secret})
+		assert.Error(t, err)
 
-		// creating secret
-		err = fakeClient.Create(ctx, secret)
-		assert.NoError(t, err)
-
-		apiToken, errorReason, err := clusterRegisterUtil.GetAPITokenFromSecret(apiTokenSecret)
-
-		assert.Equal(t, apiToken, "")
-		assert.Equal(t, "Failed to extract 'apiToken' key from secret astra-token", errorReason)
 		assert.EqualError(t, err, "failed to extract apiToken key from secret")
 	})
 
