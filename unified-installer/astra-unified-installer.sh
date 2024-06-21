@@ -205,6 +205,7 @@ get_configs() {
     ASTRA_ACCOUNT_ID="${ASTRA_ACCOUNT_ID}"
     ASTRA_CLOUD_ID="${ASTRA_CLOUD_ID}"
     ASTRA_CLUSTER_ID="${ASTRA_CLUSTER_ID}"
+    ASTRA_CLUSTER_NAME="${ASTRA_CLUSTER_NAME}"
     CONNECTOR_HOST_ALIAS_IP="${CONNECTOR_HOST_ALIAS_IP:-""}"
     CONNECTOR_HOST_ALIAS_IP="$(process_url "$CONNECTOR_HOST_ALIAS_IP")"
     CONNECTOR_SKIP_TLS_VALIDATION="${CONNECTOR_SKIP_TLS_VALIDATION:-"${SKIP_TLS_VALIDATION:-"false"}"}"
@@ -230,11 +231,13 @@ $(print_usage_and_options)
 
 Required Environment Variables:
   KUBECONFIG                        Path to the KUBECONFIG for the cluster you'd like to manage. Required.
-  ASTRA_API_TOKEN                   The Astra API token. Required, provided by the Astra Control UI.
-  ASTRA_CONTROL_URL                 The Astra Control URL. Required, provided by the Astra Control UI.
-  ASTRA_ACCOUNT_ID                  The Astra account ID. Required, provided by the Astra Control UI.
-  ASTRA_CLOUD_ID                    The Astra cloud ID. Required, provided by the Astra Control UI.
-  ASTRA_CLUSTER_ID                  The Astra cluster ID. Required, provided by the Astra Control UI.
+  ASTRA_API_TOKEN                   The Astra API token. Required, provided by Astra Control if managing via the UI.
+  ASTRA_CONTROL_URL                 The Astra Control URL. Required, provided by Astra Control if managing via the UI.
+  ASTRA_ACCOUNT_ID                  The Astra account ID. Required, provided by Astra Control if managing via the UI.
+  ASTRA_CLUSTER_ID*                 The ID of an existing Astra cluster. Required if ASTRA_CLUSTER_NAME is not set. Provided by Astra Control if managing via the UI.
+  ASTRA_CLUSTER_NAME*               The name of the Astra cluster, which we will create for you. This variable is ignored if ASTRA_CLUSTER_ID is set.
+
+  *Only one of ASTRA_CLUSTER_ID or ASTRA_CLUSTER_NAME is required. If both are provided, ASTRA_CLUSTER_ID will be used and the latter ignored.
 
 Optional Environment Variables:
   ----- Script Functionality
@@ -299,6 +302,7 @@ Optional Environment Variables:
   CONNECTOR_OPERATOR_IMAGE_TAG       The tag for the Connector Operator image.
 
   ----- Connector Configuration
+  ASTRA_CLOUD_ID                     The Astra cloud ID under which the cluster exists (or should be created). If not provided, the generic Astra Control private cloud will be used (and created if it doesn't exist yet).
   CONNECTOR_HOST_ALIAS_IP            Sets a host alias in the Astra Connector pod for connecting to the given ASTRA_CONTROL_URL.
   CONNECTOR_SKIP_TLS_VALIDATION      (WARNING: Not for production use!) Skips TLS validation for the Connector's requests to Astra Control if set to true.
   CONNECTOR_AUTOSUPPORT_ENROLLED     Enrolls the Connector in autosupport if set to true. Default is false.
@@ -1619,55 +1623,53 @@ exit_if_problems() {
 #-- Steps
 #----------------------------------------------------------------------
 step_check_config() {
-    # COMPONENTS and associated vars
-    local trident_vars=()
-    trident_vars+=("TRIDENT_OPERATOR_IMAGE_REGISTRY" "$TRIDENT_OPERATOR_IMAGE_REGISTRY")
-    trident_vars+=("TRIDENT_AUTOSUPPORT_IMAGE_REGISTRY" "$TRIDENT_AUTOSUPPORT_IMAGE_REGISTRY")
-    trident_vars+=("TRIDENT_IMAGE_REGISTRY" "$TRIDENT_IMAGE_REGISTRY")
-    trident_vars+=("TRIDENT_OPERATOR_IMAGE_REPO" "$TRIDENT_OPERATOR_IMAGE_REPO")
-    trident_vars+=("TRIDENT_AUTOSUPPORT_IMAGE_REPO" "$TRIDENT_AUTOSUPPORT_IMAGE_REPO")
-    trident_vars+=("TRIDENT_IMAGE_REPO" "$TRIDENT_IMAGE_REPO")
-    trident_vars+=("TRIDENT_OPERATOR_IMAGE_TAG" "$TRIDENT_OPERATOR_IMAGE_TAG")
-    trident_vars+=("TRIDENT_AUTOSUPPORT_IMAGE_TAG" "$TRIDENT_AUTOSUPPORT_IMAGE_TAG")
-    trident_vars+=("TRIDENT_IMAGE_TAG" "$TRIDENT_IMAGE_TAG")
+    # COMPONENTS and associated required vars
+    local req_trident_vars=()
+    req_trident_vars+=("TRIDENT_OPERATOR_IMAGE_REGISTRY" "$TRIDENT_OPERATOR_IMAGE_REGISTRY")
+    req_trident_vars+=("TRIDENT_AUTOSUPPORT_IMAGE_REGISTRY" "$TRIDENT_AUTOSUPPORT_IMAGE_REGISTRY")
+    req_trident_vars+=("TRIDENT_IMAGE_REGISTRY" "$TRIDENT_IMAGE_REGISTRY")
+    req_trident_vars+=("TRIDENT_OPERATOR_IMAGE_REPO" "$TRIDENT_OPERATOR_IMAGE_REPO")
+    req_trident_vars+=("TRIDENT_AUTOSUPPORT_IMAGE_REPO" "$TRIDENT_AUTOSUPPORT_IMAGE_REPO")
+    req_trident_vars+=("TRIDENT_IMAGE_REPO" "$TRIDENT_IMAGE_REPO")
+    req_trident_vars+=("TRIDENT_OPERATOR_IMAGE_TAG" "$TRIDENT_OPERATOR_IMAGE_TAG")
+    req_trident_vars+=("TRIDENT_AUTOSUPPORT_IMAGE_TAG" "$TRIDENT_AUTOSUPPORT_IMAGE_TAG")
+    req_trident_vars+=("TRIDENT_IMAGE_TAG" "$TRIDENT_IMAGE_TAG")
 
-    local connector_vars=()
-    connector_vars+=("CONNECTOR_OPERATOR_IMAGE_REGISTRY" "$CONNECTOR_OPERATOR_IMAGE_REGISTRY")
-    connector_vars+=("CONNECTOR_IMAGE_REGISTRY" "$CONNECTOR_IMAGE_REGISTRY")
-    connector_vars+=("NEPTUNE_IMAGE_REGISTRY" "$CONNECTOR_OPERATOR_IMAGE_REGISTRY")
-    connector_vars+=("CONNECTOR_OPERATOR_IMAGE_REPO" "$CONNECTOR_OPERATOR_IMAGE_REPO")
-    connector_vars+=("CONNECTOR_IMAGE_REPO" "$CONNECTOR_IMAGE_REPO")
-    connector_vars+=("NEPTUNE_IMAGE_REPO" "$NEPTUNE_IMAGE_REPO")
-    connector_vars+=("CONNECTOR_OPERATOR_IMAGE_TAG" "$CONNECTOR_OPERATOR_IMAGE_TAG")
-    connector_vars+=("ASTRA_CONTROL_URL" "$ASTRA_CONTROL_URL")
-    connector_vars+=("ASTRA_API_TOKEN" "$ASTRA_API_TOKEN")
-    connector_vars+=("ASTRA_ACCOUNT_ID" "$ASTRA_ACCOUNT_ID")
-    connector_vars+=("ASTRA_CLOUD_ID" "$ASTRA_CLOUD_ID")
-    connector_vars+=("ASTRA_CLUSTER_ID" "$ASTRA_CLUSTER_ID")
+    local req_connector_vars=()
+    req_connector_vars+=("CONNECTOR_OPERATOR_IMAGE_REGISTRY" "$CONNECTOR_OPERATOR_IMAGE_REGISTRY")
+    req_connector_vars+=("CONNECTOR_IMAGE_REGISTRY" "$CONNECTOR_IMAGE_REGISTRY")
+    req_connector_vars+=("NEPTUNE_IMAGE_REGISTRY" "$CONNECTOR_OPERATOR_IMAGE_REGISTRY")
+    req_connector_vars+=("CONNECTOR_OPERATOR_IMAGE_REPO" "$CONNECTOR_OPERATOR_IMAGE_REPO")
+    req_connector_vars+=("CONNECTOR_IMAGE_REPO" "$CONNECTOR_IMAGE_REPO")
+    req_connector_vars+=("NEPTUNE_IMAGE_REPO" "$NEPTUNE_IMAGE_REPO")
+    req_connector_vars+=("CONNECTOR_OPERATOR_IMAGE_TAG" "$CONNECTOR_OPERATOR_IMAGE_TAG")
+    req_connector_vars+=("ASTRA_CONTROL_URL" "$ASTRA_CONTROL_URL")
+    req_connector_vars+=("ASTRA_API_TOKEN" "$ASTRA_API_TOKEN")
+    req_connector_vars+=("ASTRA_ACCOUNT_ID" "$ASTRA_ACCOUNT_ID")
 
-    local acp_vars=()
-    acp_vars+=("TRIDENT_ACP_IMAGE_REGISTRY" "$TRIDENT_ACP_IMAGE_REGISTRY")
-    acp_vars+=("TRIDENT_ACP_IMAGE_REPO" "$TRIDENT_ACP_IMAGE_REPO")
-    acp_vars+=("TRIDENT_ACP_IMAGE_TAG" "$TRIDENT_ACP_IMAGE_TAG")
+    local req_acp_vars=()
+    req_acp_vars+=("TRIDENT_ACP_IMAGE_REGISTRY" "$TRIDENT_ACP_IMAGE_REGISTRY")
+    req_acp_vars+=("TRIDENT_ACP_IMAGE_REPO" "$TRIDENT_ACP_IMAGE_REPO")
+    req_acp_vars+=("TRIDENT_ACP_IMAGE_TAG" "$TRIDENT_ACP_IMAGE_TAG")
 
 
     # Parse COMPONENTS to determine what vars we care about
     local required_vars=("KUBECONFIG" "$KUBECONFIG")
     while true; do
         if [ "$COMPONENTS" == "$__COMPONENTS_ALL_ASTRA_CONTROL" ]; then
-            required_vars+=("${trident_vars[@]}")
-            required_vars+=("${acp_vars[@]}")
-            required_vars+=("${connector_vars[@]}")
+            required_vars+=("${req_trident_vars[@]}")
+            required_vars+=("${req_acp_vars[@]}")
+            required_vars+=("${req_connector_vars[@]}")
             break
         elif [ "$COMPONENTS" == "$__COMPONENTS_TRIDENT_AND_ACP" ]; then
-            required_vars+=("${trident_vars[@]}")
-            required_vars+=("${acp_vars[@]}")
+            required_vars+=("${req_trident_vars[@]}")
+            required_vars+=("${req_acp_vars[@]}")
             break
         elif [ "$COMPONENTS" == "$__COMPONENTS_TRIDENT_ONLY" ]; then
-            required_vars+=("${trident_vars[@]}")
+            required_vars+=("${req_trident_vars[@]}")
             break
         elif [ "$COMPONENTS" == "$__COMPONENTS_ACP_ONLY" ]; then
-            required_vars+=("${acp_vars[@]}")
+            required_vars+=("${req_acp_vars[@]}")
             break
         else
             local err="COMPONENTS: invalid value '$COMPONENTS'. Pick one of (${__COMPONENTS_VALID_VALUES[*]})"
@@ -1708,6 +1710,23 @@ step_check_config() {
     done
 
     # Env vars with special conditions
+    # ASTRA_CLOUD_ID, ASTRA_CLUSTER_ID, ASTRA_CLUSTER_NAME
+    if [ -z "$ASTRA_CLUSTER_ID" ] && [ -z "$ASTRA_CLUSTER_NAME" ]; then
+        if prompts_disabled; then
+            local cluster_warning="ASTRA_CLUSTER_ID or ASTRA_CLUSTER_NAME required. Set ASTRA_CLUSTER_ID if the"
+            cluster_warning+=" cluster to manage already exists in Astra Control, or provide an ASTRA_CLUSTER_NAME"
+            cluster_warning+=" and a cluster will be created for you."
+            add_problem "$cluster_warning"
+        else
+            prompt_user "ASTRA_CLUSTER_NAME" "Enter a value for ASTRA_CLUSTER_NAME:"
+        fi
+    elif [ -n "$ASTRA_CLUSTER_ID" ] && [ -n "$ASTRA_CLUSTER_NAME" ]; then
+        local both_values_provided_warning="Both ASTRA_CLUSTER_ID and ASTRA_CLUSTER_NAME are set."
+        both_values_provided_warning+=" ASTRA_CLUSTER_ID will be used, and the other ignored."
+        logwarn "$both_values_provided_warning"
+    fi
+
+    # IMAGE_PULL_SECRET, NAMESPACE
     if [ -n "$IMAGE_PULL_SECRET" ]; then
         if [ -z "$NAMESPACE" ]; then
             local -r ns_warning="NAMESPACE is required when specifying an IMAGE_PULL_SECRET"
@@ -1730,6 +1749,7 @@ step_check_config() {
     add_to_config_builder "IMAGE_PULL_SECRET"
     add_to_config_builder "NAMESPACE"
 
+    # DO_NOT_MODIFY_EXISTING_TRIDENT
     if prompts_disabled; then
         if [ -z "$DO_NOT_MODIFY_EXISTING_TRIDENT" ]; then
             local -r longer_msg="DO_NOT_MODIFY_EXISTING_TRIDENT is required when prompts are disabled."
@@ -2068,7 +2088,9 @@ step_check_astra_control_reachable() {
     fi
 }
 
-step_check_astra_cloud_and_cluster_id() {
+step_check_astra_cloud_id() {
+    [ -z "$ASTRA_CLOUD_ID" ] && fatal "no ASTRA_CLOUD_ID found"
+
     make_astra_control_request "/topology/v1/clouds/$ASTRA_CLOUD_ID"
     local status="$_return_status"
     local body="$_return_body"
@@ -2081,11 +2103,15 @@ step_check_astra_cloud_and_cluster_id() {
         add_problem "Given ASTRA_CLOUD_ID did not pass validation: $err ($status)"
         return 1
     fi
+}
 
-    make_astra_control_request "/topology/v1/clouds/$ASTRA_CLOUD_ID/clusters/$ASTRA_CLUSTER_ID"
-    status="$_return_status"
-    body="$_return_body"
-    err="$_return_error"
+step_check_astra_cluster_id() {
+    [ -z "$ASTRA_CLUSTER_ID" ] && fatal "no ASTRA_CLUSTER_ID found"
+
+    make_astra_control_request "/topology/v1/clusters/$ASTRA_CLUSTER_ID"
+    local status="$_return_status"
+    local body="$_return_body"
+    local err="$_return_error"
     if [ "$status" == 200 ]; then
         logdebug "astra control cluster_id: OK"
     else
@@ -2279,6 +2305,7 @@ step_generate_astra_connector_yaml() {
     local -r account_id="$ASTRA_ACCOUNT_ID"
     local -r cloud_id="$ASTRA_CLOUD_ID"
     local -r cluster_id="$ASTRA_CLUSTER_ID"
+    local -r cluster_name="$ASTRA_CLUSTER_NAME"
     local -r astra_url="$ASTRA_CONTROL_URL"
     local -r api_token="$ASTRA_API_TOKEN"
     local -r username="$account_id"
@@ -2318,6 +2345,15 @@ step_generate_astra_connector_yaml() {
     if [ -n "$_PROCESSED_LABELS" ]; then
         labels_field_and_content="${__NEWLINE}  labels:${__NEWLINE}${_PROCESSED_LABELS}"
     fi
+    local cluster_line=""
+    if [ -n "$cluster_id" ]; then
+        cluster_line="clusterId: $cluster_id"
+    elif [ -n "$cluster_name" ]; then
+        cluster_line="clusterName: $cluster_name"
+    else
+        fatal "no clusterId or clusterName found"
+    fi
+
     cat <<EOF > "$crs_file"
 apiVersion: astra.netapp.io/v1
 kind: AstraConnector
@@ -2329,7 +2365,7 @@ spec:
     accountId: ${account_id}
     tokenRef: astra-api-token
     cloudId: ${cloud_id}
-    clusterId: ${cluster_id}
+    ${cluster_line}
     skipTLSValidation: ${skip_tls_validation}  # Should be set to false in production environments${labels_field_and_content}
   imageRegistry:
     name: "${connector_registry}"
@@ -2846,7 +2882,8 @@ fi
 if components_include_connector && [ "$SKIP_ASTRA_CHECK" != "true" ]; then
     step_check_astra_control_reachable
     exit_if_problems
-    step_check_astra_cloud_and_cluster_id
+    [ -n "$ASTRA_CLOUD_ID" ] && step_check_astra_cloud_id
+    [ -n "$ASTRA_CLUSTER_ID" ] && step_check_astra_cluster_id
 else
     logdebug "skipping all Astra checks (COMPONENTS=${COMPONENTS}, SKIP_ASTRA_CHECK=${SKIP_ASTRA_CHECK})"
 fi
