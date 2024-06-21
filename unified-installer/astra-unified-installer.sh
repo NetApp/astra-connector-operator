@@ -302,7 +302,7 @@ Optional Environment Variables:
   CONNECTOR_OPERATOR_IMAGE_TAG       The tag for the Connector Operator image.
 
   ----- Connector Configuration
-  ASTRA_CLOUD_ID                     The Astra cloud ID under which the cluster exists (or should be created). If not provided, the generic Astra Control private cloud will be used (and created if it doesn't exist yet).
+  ASTRA_CLOUD_ID                     The Astra cloud ID under which the cluster exists or will be created. If not provided, the generic Astra Control private cloud will be used (and created if it doesn't exist yet).
   CONNECTOR_HOST_ALIAS_IP            Sets a host alias in the Astra Connector pod for connecting to the given ASTRA_CONTROL_URL.
   CONNECTOR_SKIP_TLS_VALIDATION      (WARNING: Not for production use!) Skips TLS validation for the Connector's requests to Astra Control if set to true.
   CONNECTOR_AUTOSUPPORT_ENROLLED     Enrolls the Connector in autosupport if set to true. Default is false.
