@@ -48,7 +48,7 @@ func TestIsSupported(t *testing.T) {
 			mockK8sUtil := mocks.NewK8sUtilInterface(t)
 			precheckClient := precheck.NewPrecheckClient(log, mockK8sUtil)
 
-			mockK8sUtil.On("VersionGet").Return(tc.k8sVersion, nil)
+			mockK8sUtil.On("VersionGet").Return(tc.k8sVersion, tc.k8sVersion, nil)
 
 			err := precheckClient.RunK8sVersionCheck()
 			if tc.expectedValid {
