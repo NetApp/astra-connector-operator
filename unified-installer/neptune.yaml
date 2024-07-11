@@ -740,9 +740,49 @@ spec:
                 description: Prefix is an optional path which will be prefixed to the names of all entities stored in the vault.
                 type: string
               providerConfig:
-                additionalProperties:
-                  type: string
                 description: ProviderConfig stores the configuration necessary to access the AppVault using the specified provider.
+                properties:
+                  azure:
+                    description: Azure stores the configurations of Azure storage provider.
+                    properties:
+                      accountName:
+                        type: string
+                      bucketName:
+                        type: string
+                      endpoint:
+                        type: string
+                    required:
+                    - accountName
+                    - bucketName
+                    - endpoint
+                    type: object
+                  gcp:
+                    description: GCP Stores the configurations of GCP storage provider configurations.
+                    properties:
+                      bucketName:
+                        type: string
+                      projectID:
+                        type: string
+                    required:
+                    - bucketName
+                    - projectID
+                    type: object
+                  s3:
+                    description: S3 stores the configurations for storage providers such as ONTAP, StorageGRID, Generic S3, and AWS.
+                    properties:
+                      bucketName:
+                        type: string
+                      endpoint:
+                        type: string
+                      secure:
+                        description: If unspecified, defaults to true.
+                        type: string
+                      skipCertValidation:
+                        type: string
+                    required:
+                    - bucketName
+                    - endpoint
+                    type: object
                 type: object
               providerCredentials:
                 additionalProperties:
