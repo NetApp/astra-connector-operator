@@ -185,7 +185,7 @@ func (c *ClusterTypeChecker) isAKSFlavor() bool {
 // isGKEFlavor - checks for 'gke' in the client git version
 // i.e. "gitVersion": "v1.20.6-gke.1000",
 func (c *ClusterTypeChecker) isGKEFlavor() bool {
-	version, err := c.K8sUtil.VersionGet()
+	version, _, err := c.K8sUtil.VersionGet()
 	if err != nil {
 		return false
 	}
@@ -194,7 +194,7 @@ func (c *ClusterTypeChecker) isGKEFlavor() bool {
 }
 
 func (c *ClusterTypeChecker) isEKSFlavor() bool {
-	version, err := c.K8sUtil.VersionGet()
+	version, _, err := c.K8sUtil.VersionGet()
 	if err != nil {
 		return false
 	}

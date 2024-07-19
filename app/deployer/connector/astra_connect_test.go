@@ -99,9 +99,9 @@ func TestAstraConnect_ClusterIDAndNameEmpty(t *testing.T) {
 	}
 
 	objects, f, err := deployer.GetDeploymentObjects(astraConnector, ctx)
-	assert.Error(t, err)
-	assert.Nil(t, objects)
-	assert.Nil(t, f)
+	assert.NoError(t, err)
+	assert.NotNil(t, objects)
+	assert.NotNil(t, f)
 }
 
 func DummyAstraConnector() v1.AstraConnector {

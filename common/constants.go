@@ -30,6 +30,7 @@ const (
 	ConnectorNeptuneCapability = "neptuneV1"
 	ConnectorV2Capability      = "connectorV2" // V2 refers specifically to Arch 3.0 connector and beyond
 	ConnectorWatcherCapability = "watcherV1"
+	ConnectorNeptuneV1         = "neptuneV1"
 
 	RbacProxyImage = "kube-rbac-proxy:v0.14.1"
 )
@@ -60,6 +61,7 @@ func GetConnectorCapabilities() []string {
 	capabilities := []string{
 		ConnectorV2Capability,
 		ConnectorWatcherCapability,
+		ConnectorNeptuneV1,
 	}
 
 	if conf.Config.FeatureFlags().DeployNeptune() {

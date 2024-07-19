@@ -40,6 +40,8 @@ func (d *AstraConnectDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx co
 	var imageRegistry string
 	var containerImage string
 	var connectorImage string
+	var clusterId string
+	var cloudId string
 	if m.Spec.ImageRegistry.Name != "" {
 		imageRegistry = m.Spec.ImageRegistry.Name
 	} else {
@@ -52,14 +54,20 @@ func (d *AstraConnectDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx co
 		containerImage = common.ConnectorImageTag
 	}
 
+	if m.Spec.Astra.CloudId != "" {
+		cloudId = m.Spec.Astra.CloudId
+	} else {
+		cloudId = m.Status.CloudId
+	}
+
+	if m.Spec.Astra.ClusterId != "" {
+		clusterId = m.Spec.Astra.ClusterId
+	} else {
+		clusterId = m.Status.ClusterId
+	}
+
 	connectorImage = fmt.Sprintf("%s/astra-connector:%s", imageRegistry, containerImage)
 	log.Info("Using AstraConnector image", "image", connectorImage)
-
-	if m.Spec.Astra.ClusterId == "" && m.Spec.Astra.ClusterName == "" {
-		err := fmt.Errorf("clusterID and clusterName both cannot be empty")
-		log.Error(err, "Bad config")
-		return nil, nil, err
-	}
 
 	dep := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -106,11 +114,11 @@ func (d *AstraConnectDeployer) GetDeploymentObjects(m *v1.AstraConnector, ctx co
 							},
 							{
 								Name:  "CLOUD_ID",
-								Value: m.Spec.Astra.CloudId,
+								Value: cloudId,
 							},
 							{
 								Name:  "CLUSTER_ID",
-								Value: m.Spec.Astra.ClusterId,
+								Value: clusterId,
 							},
 							{
 								Name:  "HOST_ALIAS_IP",
